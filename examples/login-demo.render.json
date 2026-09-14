@@ -1,0 +1,1005 @@
+{
+  "ok": true,
+  "entry": "t_login",
+  "revision": 65,
+  "blockKinds": {
+    "mbt": 3,
+    "mbt_check": 3,
+    "mbt_nocheck": 0,
+    "moonbit": 0
+  },
+  "flows": [
+    {
+      "from": "t_login",
+      "to": "t_home",
+      "trigger": "tap:login_btn"
+    },
+    {
+      "from": "t_home",
+      "to": "t_prof",
+      "trigger": "tap:activity_0"
+    }
+  ],
+  "mbt": "---\nmoonbit:\n  backend: native\n  import:\n    - path: moonviz/decl\n      alias: decl\nmoonviz:\n  format: visual-document\n  revision: 65\n  title: MoonViz 文档\n  entry: t_login\n  artboards:\n    - t_login\n    - t_home\n    - t_prof\n  flows:\n    - from: t_login\n      to: t_home\n      trigger: tap:login_btn\n    - from: t_home\n      to: t_prof\n      trigger: tap:activity_0\n---\n\n# MoonViz 文档\n\n这是一份 MoonBit `.mbt.md` 视觉文档。人类画布操作与 Agent 修改都必须回写到本文件；Moonviz 只从本文件重新构建和渲染画布。\n\n## t_login\n\n<!-- moonviz:artboard t_login -->\n```mbt\n///| @moonviz:visual t_login\nfn visual_t_login() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t_login\", width=390, height=844)\n  page.add(@decl.generic_node(id=\"logo\",component=\"badge\",kind=\"rect\",width=@decl.fixed(64),height=@decl.fixed(64),x=163,y=120,text=\"\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=999,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"welcome_title\",component=\"heading\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(36),x=95,y=220,text=\"欢迎回来\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=24,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"subtitle\",component=\"body_text\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(18),x=95,y=258,text=\"登录以继续\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=12,text_color=\"#9098A1\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"email_input\",component=\"text_input\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=340,text=\"邮箱地址\",fill=\"#E8EAF6\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"password_input\",component=\"text_input\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=404,text=\"密码\",fill=\"#E8EAF6\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"forgot_link\",component=\"body_text\",kind=\"text\",width=@decl.fixed(140),height=@decl.fixed(18),x=230,y=468,text=\"忘记密码？\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=12,text_color=\"#9098A1\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"login_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=520,text=\"登 录\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"divider1\",component=\"divider\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(1),x=24,y=600,text=\"\",fill=\"#E0E0E0\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"signup_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=630,text=\"没有账号？立即注册\",fill=\"#E8EAF6\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page\n}\n```\n\n```mbt check\ntest \"t_login visual declaration\" {\n  let page = @decl.prototype(name=\"t_login\", width=390, height=844)\n  page.add(@decl.generic_node(id=\"logo\",component=\"badge\",kind=\"rect\",width=@decl.fixed(64),height=@decl.fixed(64),x=163,y=120,text=\"\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=999,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"welcome_title\",component=\"heading\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(36),x=95,y=220,text=\"欢迎回来\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=24,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"subtitle\",component=\"body_text\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(18),x=95,y=258,text=\"登录以继续\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=12,text_color=\"#9098A1\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"email_input\",component=\"text_input\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=340,text=\"邮箱地址\",fill=\"#E8EAF6\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"password_input\",component=\"text_input\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=404,text=\"密码\",fill=\"#E8EAF6\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"forgot_link\",component=\"body_text\",kind=\"text\",width=@decl.fixed(140),height=@decl.fixed(18),x=230,y=468,text=\"忘记密码？\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=12,text_color=\"#9098A1\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"login_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=520,text=\"登 录\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"divider1\",component=\"divider\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(1),x=24,y=600,text=\"\",fill=\"#E0E0E0\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"signup_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=630,text=\"没有账号？立即注册\",fill=\"#E8EAF6\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  assert_eq(page.check().length(), 0)\n  assert_true(page.render().contains(\"<svg\"))\n}\n```\n\n## t_home\n\n<!-- moonviz:artboard t_home -->\n```mbt\n///| @moonviz:visual t_home\nfn visual_t_home() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t_home\", width=390, height=844)\n  page.add(@decl.generic_node(id=\"top_bar\",component=\"app_bar\",kind=\"rect\",width=@decl.fixed(390),height=@decl.fixed(56),text=\"登录成功\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=24,y=80,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"消息: 3 \\(未读\\)\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=203,y=80,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"收藏: 12\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=24,y=190,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"订单: 8\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_3\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=203,y=190,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"积分: 2\\,460\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"chart_area\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(200),x=24,y=310,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"本周概览\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_title\",component=\"heading\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(24),x=24,y=540,text=\"最近动态\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=16,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=576,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"个人信息完善度 80%，点击查看\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=638,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"新粉丝 +128\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=700,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"作品被收藏 32 次\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_3\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=762,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"收到 5 条新评论\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"bottom_div\",component=\"divider\",kind=\"rect\",width=@decl.fixed(390),height=@decl.fixed(1),y=820,text=\"\",fill=\"#E0E0E0\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page\n}\n```\n\n```mbt check\ntest \"t_home visual declaration\" {\n  let page = @decl.prototype(name=\"t_home\", width=390, height=844)\n  page.add(@decl.generic_node(id=\"top_bar\",component=\"app_bar\",kind=\"rect\",width=@decl.fixed(390),height=@decl.fixed(56),text=\"登录成功\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=24,y=80,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"消息: 3 \\(未读\\)\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=203,y=80,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"收藏: 12\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=24,y=190,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"订单: 8\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_3\",component=\"card\",kind=\"frame\",width=@decl.fixed(163),height=@decl.fixed(96),x=203,y=190,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"积分: 2\\,460\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"chart_area\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(200),x=24,y=310,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"本周概览\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_title\",component=\"heading\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(24),x=24,y=540,text=\"最近动态\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=16,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=576,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"个人信息完善度 80%，点击查看\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=638,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"新粉丝 +128\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=700,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"作品被收藏 32 次\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"activity_3\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=762,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"收到 5 条新评论\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"bottom_div\",component=\"divider\",kind=\"rect\",width=@decl.fixed(390),height=@decl.fixed(1),y=820,text=\"\",fill=\"#E0E0E0\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  assert_eq(page.check().length(), 0)\n  assert_true(page.render().contains(\"<svg\"))\n}\n```\n\n## t_prof\n\n<!-- moonviz:artboard t_prof -->\n```mbt\n///| @moonviz:visual t_prof\nfn visual_t_prof() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t_prof\", width=390, height=844)\n  page.add(@decl.generic_node(id=\"top_bar\",component=\"app_bar\",kind=\"rect\",width=@decl.fixed(390),height=@decl.fixed(56),text=\"个人信息\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"avatar\",component=\"badge\",kind=\"rect\",width=@decl.fixed(104),height=@decl.fixed(104),x=143,y=90,text=\"AB\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=999,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"user_name\",component=\"heading\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(28),x=95,y=214,text=\"张小明 \\(管理员\\)\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=20,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"user_bio\",component=\"body_text\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(18),x=95,y=246,text=\"前端工程师 · 已登录\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=12,text_color=\"#9098A1\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(90),height=@decl.fixed(60),x=44,y=290,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"Posts: 128\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(90),height=@decl.fixed(60),x=154,y=290,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"Followers: 4.2K\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(90),height=@decl.fixed(60),x=264,y=290,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"Following: 389\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"follow_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(163),height=@decl.fixed(44),x=24,y=380,text=\"关注\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=10,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"message_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(163),height=@decl.fixed(44),x=203,y=380,text=\"私信\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=10,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"posts_title\",component=\"heading\",kind=\"text\",width=@decl.fixed(100),height=@decl.fixed(24),x=24,y=450,text=\"最近作品\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=16,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"post_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(96),x=24,y=486,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"设计系统重构方案\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"post_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(96),x=24,y=596,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"移动端组件库 v2\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"post_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(96),x=24,y=706,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"品牌视觉升级\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page\n}\n```\n\n```mbt check\ntest \"t_prof visual declaration\" {\n  let page = @decl.prototype(name=\"t_prof\", width=390, height=844)\n  page.add(@decl.generic_node(id=\"top_bar\",component=\"app_bar\",kind=\"rect\",width=@decl.fixed(390),height=@decl.fixed(56),text=\"个人信息\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"avatar\",component=\"badge\",kind=\"rect\",width=@decl.fixed(104),height=@decl.fixed(104),x=143,y=90,text=\"AB\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=999,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"user_name\",component=\"heading\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(28),x=95,y=214,text=\"张小明 \\(管理员\\)\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=20,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"user_bio\",component=\"body_text\",kind=\"text\",width=@decl.fixed(200),height=@decl.fixed(18),x=95,y=246,text=\"前端工程师 · 已登录\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=12,text_color=\"#9098A1\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(90),height=@decl.fixed(60),x=44,y=290,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"Posts: 128\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(90),height=@decl.fixed(60),x=154,y=290,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"Followers: 4.2K\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"stat_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(90),height=@decl.fixed(60),x=264,y=290,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"Following: 389\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=8,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"follow_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(163),height=@decl.fixed(44),x=24,y=380,text=\"关注\",fill=\"#4B6BFB\",stroke=\"none\",stroke_width=0,radius=10,opacity=1,font_size=14,text_color=\"#FFFFFF\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"message_btn\",component=\"button\",kind=\"rect\",width=@decl.fixed(163),height=@decl.fixed(44),x=203,y=380,text=\"私信\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=10,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"posts_title\",component=\"heading\",kind=\"text\",width=@decl.fixed(100),height=@decl.fixed(24),x=24,y=450,text=\"最近作品\",fill=\"none\",stroke=\"none\",stroke_width=0,radius=0,opacity=1,font_size=16,text_color=\"#1A1C1E\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"post_0\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(96),x=24,y=486,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"设计系统重构方案\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"post_1\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(96),x=24,y=596,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"移动端组件库 v2\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  page.add(@decl.generic_node(id=\"post_2\",component=\"card\",kind=\"frame\",width=@decl.fixed(342),height=@decl.fixed(96),x=24,y=706,layout=@decl.flex(direction=@decl.vertical, gap=8, padding=16, justify=@decl.justify_start),text=\"品牌视觉升级\",fill=\"#FFFFFF\",stroke=\"none\",stroke_width=0,radius=12,opacity=1,font_size=14,text_color=\"#111111\",font_weight=\"normal\",shadow=\"none\",rotate=0,blur=0,blend=\"normal\",line_height=1.5,tracking=0,flip=\"none\",constraint=\"lt\"))\n  assert_eq(page.check().length(), 0)\n  assert_true(page.render().contains(\"<svg\"))\n}\n```\n\n",
+  "artboards": [
+    {
+      "id": "t_login",
+      "name": "t_login",
+      "width": 390,
+      "height": 844,
+      "nodes": [
+        {
+          "id": "logo",
+          "kind": "rect",
+          "component": "badge",
+          "text": "",
+          "rect": {
+            "x": 163,
+            "y": 120,
+            "w": 64,
+            "h": 64
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#4B6BFB",
+            "text_color": "#FFFFFF",
+            "stroke": "none",
+            "radius": 999,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "welcome_title",
+          "kind": "text",
+          "component": "heading",
+          "text": "欢迎回来",
+          "rect": {
+            "x": 95,
+            "y": 220,
+            "w": 200,
+            "h": 36
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#1A1C1E",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 24,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "subtitle",
+          "kind": "text",
+          "component": "body_text",
+          "text": "登录以继续",
+          "rect": {
+            "x": 95,
+            "y": 258,
+            "w": 200,
+            "h": 18
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#9098A1",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 12,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "email_input",
+          "kind": "rect",
+          "component": "text_input",
+          "text": "邮箱地址",
+          "rect": {
+            "x": 24,
+            "y": 340,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#E8EAF6",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "password_input",
+          "kind": "rect",
+          "component": "text_input",
+          "text": "密码",
+          "rect": {
+            "x": 24,
+            "y": 404,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#E8EAF6",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "forgot_link",
+          "kind": "text",
+          "component": "body_text",
+          "text": "忘记密码？",
+          "rect": {
+            "x": 230,
+            "y": 468,
+            "w": 140,
+            "h": 18
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#9098A1",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 12,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "login_btn",
+          "kind": "rect",
+          "component": "button",
+          "text": "登 录",
+          "rect": {
+            "x": 24,
+            "y": 520,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#4B6BFB",
+            "text_color": "#FFFFFF",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "divider1",
+          "kind": "rect",
+          "component": "divider",
+          "text": "",
+          "rect": {
+            "x": 24,
+            "y": 600,
+            "w": 342,
+            "h": 1
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#E0E0E0",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "signup_btn",
+          "kind": "rect",
+          "component": "button",
+          "text": "没有账号？立即注册",
+          "rect": {
+            "x": 24,
+            "y": 630,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#E8EAF6",
+            "text_color": "#1A1C1E",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        }
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"390\" height=\"844\" viewBox=\"0 0 390 844\"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}</style><defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"1\" stdDeviation=\"2\" flood-opacity=\"0.07\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"4\" stdDeviation=\"10\" flood-opacity=\"0.10\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"14\" stdDeviation=\"28\" flood-opacity=\"0.16\"/></filter></defs><rect x=\"0\" y=\"0\" width=\"390\" height=\"844\" fill=\"#F6F7F9\" pointer-events=\"none\"/><g id=\"n_root\" data-kind=\"frame\"><rect x=\"0\" y=\"0\" width=\"390\" height=\"844\" rx=\"0\" fill=\"none\" stroke=\"#C9CFDA\" stroke-width=\"1\" stroke-dasharray=\"4 3\"/><g id=\"n_logo\" data-kind=\"rect\"><rect x=\"163\" y=\"120\" width=\"64\" height=\"64\" rx=\"999\" fill=\"#4B6BFB\"/></g><g id=\"n_welcome_title\" data-kind=\"text\"><text x=\"95\" y=\"244\" font-size=\"24\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#1A1C1E\">欢迎回来</text></g><g id=\"n_subtitle\" data-kind=\"text\"><text x=\"95\" y=\"270\" font-size=\"12\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#9098A1\">登录以继续</text></g><g id=\"n_email_input\" data-kind=\"rect\"><rect x=\"24\" y=\"340\" width=\"342\" height=\"52\" rx=\"12\" fill=\"#E8EAF6\"/><text x=\"195\" y=\"370.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">邮箱地址</text></g><g id=\"n_password_input\" data-kind=\"rect\"><rect x=\"24\" y=\"404\" width=\"342\" height=\"52\" rx=\"12\" fill=\"#E8EAF6\"/><text x=\"195\" y=\"434.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">密码</text></g><g id=\"n_forgot_link\" data-kind=\"text\"><text x=\"230\" y=\"480\" font-size=\"12\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#9098A1\">忘记密码？</text></g><g id=\"n_login_btn\" data-kind=\"rect\"><rect x=\"24\" y=\"520\" width=\"342\" height=\"52\" rx=\"12\" fill=\"#4B6BFB\"/><text x=\"195\" y=\"550.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#FFFFFF\">登 录</text></g><g id=\"n_divider1\" data-kind=\"rect\"><rect x=\"24\" y=\"600\" width=\"342\" height=\"1\" rx=\"0\" fill=\"#E0E0E0\"/></g><g id=\"n_signup_btn\" data-kind=\"rect\"><rect x=\"24\" y=\"630\" width=\"342\" height=\"52\" rx=\"12\" fill=\"#E8EAF6\"/><text x=\"195\" y=\"660.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#1A1C1E\">没有账号？立即注册</text></g></g></svg>"
+    },
+    {
+      "id": "t_home",
+      "name": "t_home",
+      "width": 390,
+      "height": 844,
+      "nodes": [
+        {
+          "id": "top_bar",
+          "kind": "rect",
+          "component": "app_bar",
+          "text": "登录成功",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 390,
+            "h": 56
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#4B6BFB",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_0",
+          "kind": "frame",
+          "component": "card",
+          "text": "消息: 3 (未读)",
+          "rect": {
+            "x": 24,
+            "y": 80,
+            "w": 163,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_1",
+          "kind": "frame",
+          "component": "card",
+          "text": "收藏: 12",
+          "rect": {
+            "x": 203,
+            "y": 80,
+            "w": 163,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_2",
+          "kind": "frame",
+          "component": "card",
+          "text": "订单: 8",
+          "rect": {
+            "x": 24,
+            "y": 190,
+            "w": 163,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_3",
+          "kind": "frame",
+          "component": "card",
+          "text": "积分: 2,460",
+          "rect": {
+            "x": 203,
+            "y": 190,
+            "w": 163,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "chart_area",
+          "kind": "frame",
+          "component": "card",
+          "text": "本周概览",
+          "rect": {
+            "x": 24,
+            "y": 310,
+            "w": 342,
+            "h": 200
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "activity_title",
+          "kind": "text",
+          "component": "heading",
+          "text": "最近动态",
+          "rect": {
+            "x": 24,
+            "y": 540,
+            "w": 200,
+            "h": 24
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#1A1C1E",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 16,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "activity_0",
+          "kind": "frame",
+          "component": "card",
+          "text": "个人信息完善度 80%，点击查看",
+          "rect": {
+            "x": 24,
+            "y": 576,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "activity_1",
+          "kind": "frame",
+          "component": "card",
+          "text": "新粉丝 +128",
+          "rect": {
+            "x": 24,
+            "y": 638,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "activity_2",
+          "kind": "frame",
+          "component": "card",
+          "text": "作品被收藏 32 次",
+          "rect": {
+            "x": 24,
+            "y": 700,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "activity_3",
+          "kind": "frame",
+          "component": "card",
+          "text": "收到 5 条新评论",
+          "rect": {
+            "x": 24,
+            "y": 762,
+            "w": 342,
+            "h": 52
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "bottom_div",
+          "kind": "rect",
+          "component": "divider",
+          "text": "",
+          "rect": {
+            "x": 0,
+            "y": 820,
+            "w": 390,
+            "h": 1
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#E0E0E0",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        }
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"390\" height=\"844\" viewBox=\"0 0 390 844\"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}</style><defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"1\" stdDeviation=\"2\" flood-opacity=\"0.07\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"4\" stdDeviation=\"10\" flood-opacity=\"0.10\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"14\" stdDeviation=\"28\" flood-opacity=\"0.16\"/></filter></defs><rect x=\"0\" y=\"0\" width=\"390\" height=\"844\" fill=\"#F6F7F9\" pointer-events=\"none\"/><g id=\"n_root\" data-kind=\"frame\"><rect x=\"0\" y=\"0\" width=\"390\" height=\"844\" rx=\"0\" fill=\"none\" stroke=\"#C9CFDA\" stroke-width=\"1\" stroke-dasharray=\"4 3\"/><g id=\"n_top_bar\" data-kind=\"rect\"><rect x=\"0\" y=\"0\" width=\"390\" height=\"56\" rx=\"0\" fill=\"#4B6BFB\"/><text x=\"195\" y=\"32.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">登录成功</text></g><g id=\"n_stat_0\" data-kind=\"frame\"><rect x=\"24\" y=\"80\" width=\"163\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"105.5\" y=\"132.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">消息: 3 (未读)</text></g><g id=\"n_stat_1\" data-kind=\"frame\"><rect x=\"203\" y=\"80\" width=\"163\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"284.5\" y=\"132.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">收藏: 12</text></g><g id=\"n_stat_2\" data-kind=\"frame\"><rect x=\"24\" y=\"190\" width=\"163\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"105.5\" y=\"242.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">订单: 8</text></g><g id=\"n_stat_3\" data-kind=\"frame\"><rect x=\"203\" y=\"190\" width=\"163\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"284.5\" y=\"242.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">积分: 2,460</text></g><g id=\"n_chart_area\" data-kind=\"frame\"><rect x=\"24\" y=\"310\" width=\"342\" height=\"200\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"195\" y=\"414.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">本周概览</text></g><g id=\"n_activity_title\" data-kind=\"text\"><text x=\"24\" y=\"556\" font-size=\"16\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#1A1C1E\">最近动态</text></g><g id=\"n_activity_0\" data-kind=\"frame\"><rect x=\"24\" y=\"576\" width=\"342\" height=\"52\" rx=\"8\" fill=\"none\"/><text x=\"195\" y=\"606.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">个人信息完善度 80%，点击查看</text></g><g id=\"n_activity_1\" data-kind=\"frame\"><rect x=\"24\" y=\"638\" width=\"342\" height=\"52\" rx=\"8\" fill=\"none\"/><text x=\"195\" y=\"668.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">新粉丝 +128</text></g><g id=\"n_activity_2\" data-kind=\"frame\"><rect x=\"24\" y=\"700\" width=\"342\" height=\"52\" rx=\"8\" fill=\"none\"/><text x=\"195\" y=\"730.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">作品被收藏 32 次</text></g><g id=\"n_activity_3\" data-kind=\"frame\"><rect x=\"24\" y=\"762\" width=\"342\" height=\"52\" rx=\"8\" fill=\"none\"/><text x=\"195\" y=\"792.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">收到 5 条新评论</text></g><g id=\"n_bottom_div\" data-kind=\"rect\"><rect x=\"0\" y=\"820\" width=\"390\" height=\"1\" rx=\"0\" fill=\"#E0E0E0\"/></g></g></svg>"
+    },
+    {
+      "id": "t_prof",
+      "name": "t_prof",
+      "width": 390,
+      "height": 844,
+      "nodes": [
+        {
+          "id": "top_bar",
+          "kind": "rect",
+          "component": "app_bar",
+          "text": "个人信息",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 390,
+            "h": 56
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "avatar",
+          "kind": "rect",
+          "component": "badge",
+          "text": "AB",
+          "rect": {
+            "x": 143,
+            "y": 90,
+            "w": 104,
+            "h": 104
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#4B6BFB",
+            "text_color": "#FFFFFF",
+            "stroke": "none",
+            "radius": 999,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "user_name",
+          "kind": "text",
+          "component": "heading",
+          "text": "张小明 (管理员)",
+          "rect": {
+            "x": 95,
+            "y": 214,
+            "w": 200,
+            "h": 28
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#1A1C1E",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 20,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "user_bio",
+          "kind": "text",
+          "component": "body_text",
+          "text": "前端工程师 · 已登录",
+          "rect": {
+            "x": 95,
+            "y": 246,
+            "w": 200,
+            "h": 18
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#9098A1",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 12,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_0",
+          "kind": "frame",
+          "component": "card",
+          "text": "Posts: 128",
+          "rect": {
+            "x": 44,
+            "y": 290,
+            "w": 90,
+            "h": 60
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_1",
+          "kind": "frame",
+          "component": "card",
+          "text": "Followers: 4.2K",
+          "rect": {
+            "x": 154,
+            "y": 290,
+            "w": 90,
+            "h": 60
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "stat_2",
+          "kind": "frame",
+          "component": "card",
+          "text": "Following: 389",
+          "rect": {
+            "x": 264,
+            "y": 290,
+            "w": 90,
+            "h": 60
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 8,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "follow_btn",
+          "kind": "rect",
+          "component": "button",
+          "text": "关注",
+          "rect": {
+            "x": 24,
+            "y": 380,
+            "w": 163,
+            "h": 44
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#4B6BFB",
+            "text_color": "#FFFFFF",
+            "stroke": "none",
+            "radius": 10,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "message_btn",
+          "kind": "rect",
+          "component": "button",
+          "text": "私信",
+          "rect": {
+            "x": 203,
+            "y": 380,
+            "w": 163,
+            "h": 44
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 10,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "posts_title",
+          "kind": "text",
+          "component": "heading",
+          "text": "最近作品",
+          "rect": {
+            "x": 24,
+            "y": 450,
+            "w": 100,
+            "h": 24
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "none",
+            "text_color": "#1A1C1E",
+            "stroke": "none",
+            "radius": 0,
+            "opacity": 1,
+            "font_size": 16,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "post_0",
+          "kind": "frame",
+          "component": "card",
+          "text": "设计系统重构方案",
+          "rect": {
+            "x": 24,
+            "y": 486,
+            "w": 342,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "post_1",
+          "kind": "frame",
+          "component": "card",
+          "text": "移动端组件库 v2",
+          "rect": {
+            "x": 24,
+            "y": 596,
+            "w": 342,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        },
+        {
+          "id": "post_2",
+          "kind": "frame",
+          "component": "card",
+          "text": "品牌视觉升级",
+          "rect": {
+            "x": 24,
+            "y": 706,
+            "w": 342,
+            "h": 96
+          },
+          "constraint": "lt",
+          "style": {
+            "fill": "#FFFFFF",
+            "text_color": "#111111",
+            "stroke": "none",
+            "radius": 12,
+            "opacity": 1,
+            "font_size": 14,
+            "weight": "normal",
+            "shadow": "none",
+            "rotate": 0,
+            "blur": 0,
+            "blend": "normal",
+            "line": 1.5,
+            "tracking": 0
+          }
+        }
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"390\" height=\"844\" viewBox=\"0 0 390 844\"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}</style><defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"1\" stdDeviation=\"2\" flood-opacity=\"0.07\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"4\" stdDeviation=\"10\" flood-opacity=\"0.10\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"14\" stdDeviation=\"28\" flood-opacity=\"0.16\"/></filter></defs><rect x=\"0\" y=\"0\" width=\"390\" height=\"844\" fill=\"#F6F7F9\" pointer-events=\"none\"/><g id=\"n_root\" data-kind=\"frame\"><rect x=\"0\" y=\"0\" width=\"390\" height=\"844\" rx=\"0\" fill=\"none\" stroke=\"#C9CFDA\" stroke-width=\"1\" stroke-dasharray=\"4 3\"/><g id=\"n_top_bar\" data-kind=\"rect\"><rect x=\"0\" y=\"0\" width=\"390\" height=\"56\" rx=\"0\" fill=\"#FFFFFF\"/><text x=\"195\" y=\"32.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">个人信息</text></g><g id=\"n_avatar\" data-kind=\"rect\"><rect x=\"143\" y=\"90\" width=\"104\" height=\"104\" rx=\"999\" fill=\"#4B6BFB\"/><text x=\"195\" y=\"146.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#FFFFFF\">AB</text></g><g id=\"n_user_name\" data-kind=\"text\"><text x=\"95\" y=\"234\" font-size=\"20\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#1A1C1E\">张小明 (管理员)</text></g><g id=\"n_user_bio\" data-kind=\"text\"><text x=\"95\" y=\"258\" font-size=\"12\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#9098A1\">前端工程师 · 已登录</text></g><g id=\"n_stat_0\" data-kind=\"frame\"><rect x=\"44\" y=\"290\" width=\"90\" height=\"60\" rx=\"8\" fill=\"none\"/><text x=\"89\" y=\"324.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">Posts: 128</text></g><g id=\"n_stat_1\" data-kind=\"frame\"><rect x=\"154\" y=\"290\" width=\"90\" height=\"60\" rx=\"8\" fill=\"none\"/><text x=\"199\" y=\"324.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">Followers: 4.2K</text></g><g id=\"n_stat_2\" data-kind=\"frame\"><rect x=\"264\" y=\"290\" width=\"90\" height=\"60\" rx=\"8\" fill=\"none\"/><text x=\"309\" y=\"324.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">Following: 389</text></g><g id=\"n_follow_btn\" data-kind=\"rect\"><rect x=\"24\" y=\"380\" width=\"163\" height=\"44\" rx=\"10\" fill=\"#4B6BFB\"/><text x=\"105.5\" y=\"406.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#FFFFFF\">关注</text></g><g id=\"n_message_btn\" data-kind=\"rect\"><rect x=\"203\" y=\"380\" width=\"163\" height=\"44\" rx=\"10\" fill=\"none\"/><text x=\"284.5\" y=\"406.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">私信</text></g><g id=\"n_posts_title\" data-kind=\"text\"><text x=\"24\" y=\"466\" font-size=\"16\" font-weight=\"normal\" letter-spacing=\"0\" fill=\"#1A1C1E\">最近作品</text></g><g id=\"n_post_0\" data-kind=\"frame\"><rect x=\"24\" y=\"486\" width=\"342\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"195\" y=\"538.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">设计系统重构方案</text></g><g id=\"n_post_1\" data-kind=\"frame\"><rect x=\"24\" y=\"596\" width=\"342\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"195\" y=\"648.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">移动端组件库 v2</text></g><g id=\"n_post_2\" data-kind=\"frame\"><rect x=\"24\" y=\"706\" width=\"342\" height=\"96\" rx=\"12\" fill=\"#FFFFFF\"/><text x=\"195\" y=\"758.9\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"normal\" fill=\"#111111\">品牌视觉升级</text></g></g></svg>"
+    }
+  ]
+}
