@@ -1,0 +1,17 @@
+import {
+  "moonviz/core",
+  "moonviz/decl",
+}
+
+options(
+  link: {
+    "wasm-gc": {
+      "exports": [
+        "render_mbt",
+        "validate_mbt",
+        "version_info",
+      ],
+      "use-js-builtin-string": true,
+    },
+  },
+)

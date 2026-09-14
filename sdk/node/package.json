@@ -1,14 +1,23 @@
 {
-  "name": "@moonviz/engine-sdk",
+  "name": "moonviz-engine-sdk",
   "version": "0.3.0",
-  "description": "Node.js integration SDK for the MoonViz prototype design engine (pure MoonBit). Spawn-and-drive the MoonViz CLI from any Node host: sessions, templates, operations, flows, render, export, DDP.",
+  "description": "Node.js integration SDK for the MoonViz prototype design engine (pure MoonBit). Spawn-and-drive the MoonViz CLI from any Node host: sessions, templates, operations, flows, render, dual-gate export, DDP encrypt/decrypt.",
   "type": "module",
   "main": "src/index.js",
   "exports": { ".": "./src/index.js" },
+  "files": ["src", "README.md", "LICENSE"],
   "engines": { "node": ">=18" },
   "scripts": {
-    "test": "node test/selftest.mjs"
+    "test": "node test/selftest.mjs",
+    "prepublishOnly": "npm test"
   },
-  "keywords": ["moonbit", "moonviz", "prototype", "design-engine", "svg", "ai-agent", "ddp"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asdshuaishuai/moonviz.git",
+    "directory": "sdk/node"
+  },
+  "homepage": "https://asdshuaishuai.github.io/moonviz/docs.html#sdk",
+  "bugs": "https://github.com/asdshuaishuai/moonviz/issues",
+  "keywords": ["moonbit", "moonviz", "prototype", "design-engine", "svg", "ai-agent", "mcp", "ddp", "mbt"],
   "license": "MIT"
 }

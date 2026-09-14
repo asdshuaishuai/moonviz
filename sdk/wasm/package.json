@@ -1,0 +1,23 @@
+{
+  "name": "moonviz-engine-wasm",
+  "version": "0.1.0",
+  "description": "WASM-GC build of the MoonViz prototype design engine. Render and validate .mbt.md visual documents in the browser or Node with zero toolchain, zero subprocess — pure WebAssembly.",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": { ".": "./index.mjs" },
+  "files": ["index.mjs", "dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node test/selftest.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asdshuaishuai/moonviz.git",
+    "directory": "sdk/wasm"
+  },
+  "homepage": "https://asdshuaishuai.github.io/moonviz/docs.html#wasm",
+  "bugs": "https://github.com/asdshuaishuai/moonviz/issues",
+  "keywords": ["moonbit", "moonviz", "wasm", "webassembly", "prototype", "design-engine", "svg", "mbt"],
+  "license": "MIT"
+}

@@ -55,6 +55,7 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--ink3);font-si
   <div class="grp">集成方式</div>
   <a href="#cli">CLI 行协议</a>
   <a href="#sdk">Node SDK</a>
+  <a href="#wasm">WASM SDK</a>
   <a href="#mcp">MCP Server</a>
   <a href="#skill">SKILL 技能</a>
   <a href="#studio">Studio / Viewer</a>
@@ -193,6 +194,41 @@ const back = await DDP.decrypt(free.bytes);         // → { mbt }</code></pre>
 <tr><td><code>EngineError</code></td><td>引擎 <code>{ok:false}</code> 响应异常（<code>error</code> 错误码 + <code>detail</code> 原始响应）</td></tr>
 </table>
 <p>自检：<code>cd moonviz && node sdk/node/test/selftest.mjs</code> —— 覆盖 模板 → 操作 → 交互流 → 导出 → 渲染 → DDP1/DDP2 往返全链路。</p>
+</section>
+
+<section id="wasm">
+<h2>WASM SDK（moonviz-engine-wasm）</h2>
+<p>引擎的 <b>WebAssembly GC</b> 构建：渲染与校验管线跑在进程内 wasm 实例里——<b>零工具链、零子进程、零服务器</b>。通过 JS String Builtins，MoonBit String 与宿主字符串直接互通。</p>
+<h3>环境要求</h3>
+<table>
+<tr><th>宿主</th><th>最低版本</th></tr>
+<tr><td>Node.js</td><td><b>22</b>（V8 WasmGC shipping）</td></tr>
+<tr><td>Chrome / Edge</td><td>119+</td></tr>
+<tr><td>Firefox</td><td>120+</td></tr>
+<tr><td>Safari</td><td>18.2+</td></tr>
+</table>
+<h3>用法</h3>
+<pre><code>import { createEngine } from 'moonviz-engine-wasm';
+
+// Node：自动读包内 dist/moonviz.wasm
+const engine = await createEngine();
+
+// 浏览器：传入 Response
+// const engine = await createEngine(fetch('/assets/moonviz.wasm'));
+
+const view = engine.render(mbt);      // 同步、进程内
+// { ok, entry, flows, artboards: [{ id, width, height, svg, nodes }] }
+const check = engine.validate(mbt);
+// { ok, entry, revision, blockKinds }</code></pre>
+<h3>选型</h3>
+<table>
+<tr><th></th><th>moonviz-engine-wasm</th><th>moonviz-engine-sdk</th></tr>
+<tr><td>运行时依赖</td><td>无（wasm 进程内，≈90KB）</td><td>moon 工具链 + 引擎目录 + ddp_codec</td></tr>
+<tr><td>能力面</td><td>render / validate</td><td>全量 CLI：会话 / 编辑 / 交互流 / 双 Gate 导出 / DDP</td></tr>
+<tr><td>延迟</td><td>毫秒级、同步</td><td>每批一次进程 spawn</td></tr>
+<tr><td>DDP 加解密</td><td>✗（Rust 编解码，独立交付）</td><td>✓</td></tr>
+</table>
+<p>重新构建产物：<code>moon build --release --target wasm-gc wasm</code> → 拷贝 <code>_build/wasm-gc/release/build/wasm/wasm.wasm</code> 到 <code>sdk/wasm/dist/moonviz.wasm</code>。边界函数与导出配置见 <code>wasm/main.mbt</code> 与 <code>wasm/moon.pkg</code>。</p>
 </section>
 
 <section id="mcp">

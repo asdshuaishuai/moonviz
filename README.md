@@ -94,10 +94,49 @@
 
 ## 快速开始
 
+### 环境搭建
+
 ```bash
-moon test                                       # 142 项测试全绿
-moon run --target native playground             # 交互式画布（png 命令出 PNG）
-moon run playground                             # 脚本演示
+# 1. 安装 MoonBit 工具链（需要 moon ≥ 最新稳定版）
+curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+moon version    # 验证：~/.moon/bin/moon 已在 PATH
+
+# 2. clone 引擎仓库
+git clone https://github.com/asdshuaishuai/moonviz && cd moonviz
+
+# 3.（可选，DDP 加密分发需要）构建 Rust 编解码器
+cd ddp && cargo build --release && cd ..
+#    产物 ddp/target/release/ddp_codec（stdin JSON → stdout JSON）
+#    可用 MOONVIZ_DDP_HELPER 指定路径；SDK 会自动在 ddp/target/{debug,release} 下查找
+
+# 4. 全量测试（142 项）
+moon test
+```
+
+### 首次运行
+
+```bash
+# A. 有状态 CLI 会话：stdin 逐行命令 → stdout 逐行 JSON
+moon run --target native cli
+template login t_login 390 844     # 从模板建画板
+update t_login welcome_title text="欢迎回来"
+flow t_login t_home login_btn      # 登录按钮 → 跳转主页
+export-mbt-human                    # HumanGate 校验 + 返回 canonical .mbt.md
+exit
+
+# B. 无会话单发：渲染 / 校验（base64 承载多行 MBT 源码）
+moon run --target native cli <<< "render-mbt-b64 $(base64 <<< "$MBT")"
+
+# C. MCP Server（stdio JSON-RPC，接入任意 MCP 客户端）
+moon run --target native mcp
+
+# D. 预编译二进制（无需工具链，毫秒级启动）
+moon build --release --target native mcp
+_build/native/release/build/mcp/mcp.exe   # 自包含可执行（仅链接 libc）
+
+# E. 交互式画布 / 脚本演示
+moon run --target native playground       # 交互式（png 命令出 PNG）
+moon run playground                       # 脚本演示
 ```
 
 ## 目录导览
@@ -140,7 +179,16 @@ moonviz/
 │   ├── svg.mbt        SVG 渲染
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
+├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
+├── mcp/               MCP Server（stdio JSON-RPC，工具面同 CLI）
+├── wasm/              WASM-GC 边界（render_mbt / validate_mbt，JS String Builtins 直通）
+├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
+├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
+├── sdk/wasm/          WASM SDK「moonviz-engine-wasm」：进程内渲染/校验，零工具链（Node ≥22 / 现代浏览器）
+├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-bin-<platform>（预编译平台包）
 ├── playground/        终端画布 + PNG 渲染 + REPL
+├── site/              官网（GitHub Pages：asdshuaishuai.github.io/moonviz/）
+├── scripts/           publish-npm.sh 等发布脚本
 └── docs/              设计文档 01–09
 ```
 
@@ -488,6 +536,49 @@ p.suggest_optimizations(artboard="dashboard")
 
 **评分体系**（0-100）：节点数(30) + 深度(25) + Fill(25) + Hug(20) → A/B/C/D
 
+## 双 Gate 与视觉债
+
+两条编辑路线对同一组不崩谓词（P0–P4）采用不同合并门槛（`core/policy.mbt`）：
+
+| | HumanGate（`export-mbt-human` / `apply-human-mbt-op-b64`） | AgentGate（`export-mbt-agent` / `apply-agent-mbt-op-b64` / `render-mbt-b64`） |
+|---|---|---|
+| 结构谓词（节点丢失/画板空/流断裂） | **硬阻断**——补丁整体拒绝 | **硬阻断** |
+| 视觉谓词（溢出/重叠/对比度） | 软提示——允许合并，违规记为**视觉债（debt）** | **硬阻断**——任何违规整体拒绝 |
+| 典型形态 | 画布拖拽的中间态可以带债保存 | 程序化修改必须一次到位 |
+
+- **debt 不是错误**：人类路线导出结果中 `debt` 字段携带当前视觉债清单，Studio 侧以角标提示，后续操作或 `auto_fix` 可清偿。
+- **Agent 的责任边界**：Agent 路线零容忍——引擎以 Reject 返回阻断性违规清单（画板 + 谓词名 + 详情），Agent 修正后重放补丁；这保证了 Agent 写入永远不劣化文档质量。
+- **渲染即验收**：`render-mbt-b64` 按 AgentGate 级标准从源完整重建，任何路线的产物都要过同一道渲染验收。
+
+## 集成方式总览
+
+六条集成路线，同一份 `.mbt.md` 事实源，同一套双 Gate：
+
+| 路线 | 形态 | 适用 |
+|---|---|---|
+| **CLI 行协议** | `moon run --target native cli`（换行分帧 JSON，一个进程 = 一个有状态 Project 会话） | 脚本、CI、手动驱动 |
+| **MCP** | `npx -y moonviz-mcp`（平台预编译二进制，stdio JSON-RPC）或 `moon run --target native mcp` | Claude Desktop / ZCode / Cursor 等 MCP 客户端 |
+| **Node SDK** | npm `moonviz-engine-sdk`（spawn CLI：会话/Project 构建器/双 Gate 操作/DDP 桥） | Node 宿主的后端/工具链 |
+| **WASM SDK** | npm `moonviz-engine-wasm`（wasm-gc 产物进程内渲染/校验，JS String 直通） | 浏览器、Edge Function、Node ≥22 零依赖渲染 |
+| **SKILL** | 仓库根 `SKILL.md`（Agent 操作规范：事实源纪律/双 Gate 语义/红线） | 任意 coding agent 技能挂载 |
+| **DDP 容器** | Rust `ddp_codec`（DDP1 加密 / DDP2 免密） | 设计文档加密分发、只读查看器 |
+
+MCP 客户端配置（npx 预编译路线）：
+
+```json
+{
+  "mcpServers": {
+    "moonviz": {
+      "command": "npx",
+      "args": ["-y", "moonviz-mcp"],
+      "env": { "MOONVIZ_DIR": "/path/to/moonviz" }
+    }
+  }
+}
+```
+
+环境变量速查：`MOONVIZ_DIR`（引擎根，须含 `cli/moon.pkg`）· `MOONVIZ_MOON`/`MOON`（moon 可执行目录）· `MOONVIZ_DDP_HELPER`（ddp_codec 完整路径）。
+
 ## 架构红线
 
 - **引擎不依赖任何客户端**：core/decl 是纯库
@@ -495,6 +586,8 @@ p.suggest_optimizations(artboard="dashboard")
 - **100% MoonBit**：零手写 JS/Node/前端代码
 
 ## 文档索引
+
+- 官网与完整使用文档：https://asdshuaishuai.github.io/moonviz/ （使用说明 / CLI / Node SDK / WASM / MCP / SKILL / DDP）
 
 1. [01-architecture.md](docs/01-architecture.md) — 分层架构
 2. [02-mbtmd-format.md](docs/02-mbtmd-format.md) — `.mbt.md` 规范与声明 DSL
