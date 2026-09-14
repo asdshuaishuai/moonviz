@@ -48,7 +48,7 @@ jobs:
           cat > "$PKG/package.json" <<EOF
           {
             "name": "moonviz-bin-${{ matrix.platform }}",
-            "version": "$MOONVIZ_VERSION",
+            "version": "${{ env.MOONVIZ_VERSION }}",
             "description": "Prebuilt MoonViz MCP server binary for ${{ matrix.platform }}. Installed automatically by moonviz-mcp — do not depend on this package directly.",
             "type": "module",
             "os": ["${{ startsWith(matrix.platform, 'darwin') && 'darwin' || 'linux' }}"],
@@ -59,7 +59,7 @@ jobs:
           }
           EOF
           sed "s/darwin-arm64/${{ matrix.platform }}/" npm/moonviz-bin-darwin-arm64/README.md > "$PKG/README.md"
-          npm pack "$PKG"
+          npm pack "./$PKG"
       - uses: actions/upload-artifact@v4
         with:
           name: moonviz-bin-${{ matrix.platform }}
