@@ -170,6 +170,8 @@ pub fn Project::apply_template(
     "dashboard" => Ok(self.template_dashboard(ab_name))
     "profile" => Ok(self.template_profile(ab_name))
     "settings" => Ok(self.template_settings(ab_name))
+    "list_detail" => Ok(self.template_list_detail(ab_name))
+    "onboarding" => Ok(self.template_onboarding(ab_name))
     "empty_state" => Ok(self.template_empty_state(ab_name))
     "web_landing" => Ok(self.template_web_landing(ab_name))
     "web_login" => Ok(self.template_web_login(ab_name))
@@ -631,6 +633,58 @@ fn Project::template_settings(self : Project, name : String) -> String {
   self.set_text(ab, "logout_btn", "Log Out")
   self.resize_node(ab, "logout_btn", 342.0, 44.0, 10.0)
 
+  ab
+}
+
+
+// ---------------------------------------------------------------------------
+// 列表-详情模板（微信/IM 类社交应用的核心结构）
+// ---------------------------------------------------------------------------
+fn Project::template_list_detail(self : Project, name : String) -> String {
+  let ab = self.create_artboard(name~, width=390.0, height=844.0)
+  let _ = self.place_comp(ab, "app_bar", "top_bar", variant="surface", x=0.0, y=0.0)
+  self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
+  self.set_text(ab, "top_bar", "Chats")
+  // 会话列表（头像 + 标题 + 预览）
+  let chats = [
+    ("Alice", "See you tomorrow!"),
+    ("Bob", "The prototype looks great"),
+    ("Carol", "Design sync at 3pm"),
+    ("Dave", "Sent the files over"),
+    ("Eve", "Let me check and reply"),
+  ]
+  let mut y = 68.0
+  for ci in 0..<chats.length() {
+    let (who, msg) = chats[ci]
+    let _ = self.place_comp(ab, "card", "chat_\{ci}", variant="default", x=12.0, y~)
+    self.resize_node(ab, "chat_\{ci}", 366.0, 64.0, 10.0)
+    self.set_text(ab, "chat_\{ci}", who + " — " + msg)
+    y = y + 72.0
+  }
+  // 底部详情卡（占位内容区）
+  let _ = self.place_comp(ab, "card", "detail_card", variant="outlined", x=12.0, y=y + 8.0)
+  self.resize_node(ab, "detail_card", 366.0, 120.0, 12.0)
+  self.set_text(ab, "detail_card", "Select a chat to view details")
+  ab
+}
+
+// ---------------------------------------------------------------------------
+// 引导页模板（onboarding 轮播页）
+// ---------------------------------------------------------------------------
+fn Project::template_onboarding(self : Project, name : String) -> String {
+  let ab = self.create_artboard(name~, width=390.0, height=844.0)
+  let _ = self.place_comp(ab, "heading", "ob_title", variant="h2", x=24.0, y=180.0)
+  self.set_text(ab, "ob_title", "Welcome aboard")
+  self.resize_node(ab, "ob_title", 342.0, 40.0, 0.0)
+  let _ = self.place_comp(ab, "body_text", "ob_sub", variant="default", x=24.0, y=236.0)
+  self.set_text(ab, "ob_sub", "Design together with your agent — one plain-text source of truth for humans and AI.")
+  self.resize_node(ab, "ob_sub", 342.0, 72.0, 0.0)
+  let _ = self.place_comp(ab, "button", "ob_next", variant="primary", x=24.0, y=720.0)
+  self.set_text(ab, "ob_next", "Get Started")
+  self.resize_node(ab, "ob_next", 342.0, 48.0, 12.0)
+  let _ = self.place_comp(ab, "button", "ob_skip", variant="secondary", x=24.0, y=780.0)
+  self.set_text(ab, "ob_skip", "Skip")
+  self.resize_node(ab, "ob_skip", 342.0, 40.0, 8.0)
   ab
 }
 
