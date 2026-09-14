@@ -98,10 +98,12 @@ pub fn Project::place_component(
             dy=y,
           ) {
             Err(error) => Err(error)
-            Ok(_) => {
+            Ok(root_id) => {
               self.revision = self.revision + 1
+              // node 透传实例真实根节点 id（instance::<cid>）：
+              // 调用方据此做 move/update/query（见 usercomp.mbt 的 id 命名契约）。
               Ok(
-                "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"component\":\"\{component_id}\",\"source\":\"user\",\"artboard\":\"\{artboard}\"}",
+                "{\"ok\":true,\"op\":\"place\",\"node\":\"\{root_id}\",\"instance\":\"\{instance_id}\",\"component\":\"\{component_id}\",\"source\":\"user\",\"artboard\":\"\{artboard}\"}",
               )
             }
           }

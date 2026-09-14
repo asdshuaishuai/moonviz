@@ -331,17 +331,40 @@ fn apply_mbt_operation(
         }
         let x = if parts.length() >= 6 { parse_d(parts[5]) } else { 0.0 }
         let y = if parts.length() >= 7 { parse_d(parts[6]) } else { 0.0 }
-        match
-          project.place_component(
-            artboard=parts[1],
-            component_id=parts[2],
-            instance_id=parts[3],
-            variant~,
-            x~,
-            y~,
-          ) {
-          Ok(_) => Ok(())
-          Err(error) => Err(error)
+        // 与 cli_exec 的 place 保持一致：尾部 k=v 对为用户组件参数槽
+        let kv : Map[String, String] = Map::new()
+        let mut kv_error = ""
+        for i = 7; i < parts.length(); i = i + 1 {
+          match parts[i].find("=") {
+            None =>
+              if kv_error == "" {
+                kv_error = "place_invalid_arg:" + parts[i]
+              }
+            Some(pos) => {
+              let k = parts[i].substring(start=0, end=pos)
+              let v = parts[i].substring(start=pos + 1)
+              if k != "" {
+                kv.set(k, v)
+              }
+            }
+          }
+        }
+        if kv_error != "" {
+          Err(kv_error)
+        } else {
+          match
+            project.place_component(
+              artboard=parts[1],
+              component_id=parts[2],
+              instance_id=parts[3],
+              variant~,
+              x~,
+              y~,
+              args=kv,
+            ) {
+            Ok(_) => Ok(())
+            Err(error) => Err(error)
+          }
         }
       }
     "flow" =>
@@ -551,6 +574,15 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
                   project_total_violations(model.project)
                 } else {
                   0
+                }
+                // 用户组件注册表是会话级状态（component-compile/library-restore
+                // 写入 CLI 全局 p）；apply-op 从 MBT 重建的 project 需要注入，
+                // 否则该路径 place 用户组件恒 unknown_component。
+                for uid in p.user_components.keys() {
+                  match p.user_components.get(uid) {
+                    Some(udef) => model.project.user_components.set(uid, udef)
+                    None => ()
+                  }
                 }
                 match apply_mbt_operation(model.project, operation) {
                   Err(error) => cli_err(error)

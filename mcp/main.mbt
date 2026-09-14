@@ -319,8 +319,19 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           match @decl.parse_user_component(source) {
             Err(e) => err_json(e)
             Ok(def) => {
-              p.user_components.set(def.id, def)
-              "{\"ok\":true,\"component\":\"\{def.id}\"}"
+              // 与 CLI compile_and_register 同一验收：实例化冒烟确保可画
+              let probe = @core.Document::new({
+                width: def.width + 400.0,
+                height: def.height + 400.0,
+              })
+              match
+                @core.place_user_component(probe, def, "__probe", dx=10.0, dy=10.0) {
+                Err(e) => err_json("usercomp_probe_failed:" + e)
+                Ok(_) => {
+                  p.user_components.set(def.id, def)
+                  "{\"ok\":true,\"component\":\"\{def.id}\"}"
+                }
+              }
             }
           }
       }

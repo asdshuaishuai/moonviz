@@ -131,7 +131,16 @@ fn cmd_component_describe(p : @core.Project, parts : Array[String]) -> String {
       for param in def.params.iter() {
         kvs.push("\{param.name}=<\{param.kind}>")
       }
-      let kv_j = if kvs.length() > 0 { " " + join_arr(kvs).replace_all(old="\", \"", new=" ") } else { "" }
+      let kv_sb = StringBuilder::new()
+      let mut first_kv = true
+      for kv in kvs.iter() {
+        if first_kv == false {
+          kv_sb.write_string(" ")
+        }
+        first_kv = false
+        kv_sb.write_string(kv)
+      }
+      let kv_j = if kvs.length() > 0 { " " + kv_sb.to_string() } else { "" }
       let usage = "place <artboard> \{id} <instance_id> [variant] [x] [y]\{kv_j}"
       "{\"ok\":true,\"id\":\"\{id}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"size\":\"\{def.width}x\{def.height}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"usage\":\"\{@core.json_escape(usage)}\"}"
     }
