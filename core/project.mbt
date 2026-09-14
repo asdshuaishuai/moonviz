@@ -22,6 +22,7 @@ pub(all) struct Project {
   mut flows : Array[FlowEdge]
   mut tokens : DesignTokens
   mut components : Map[String, ComponentDef]
+  mut user_components : Map[String, UserComponentDef]
   mut revision : Int
 }
 
@@ -32,6 +33,7 @@ pub fn Project::new() -> Project {
     flows: [],
     tokens: DesignTokens::default(),
     components: builtin_components(),
+    user_components: Map::new(),
     revision: 1,
   }
 }
@@ -78,13 +80,36 @@ pub fn Project::place_component(
   parent_id? : String = "",
   x? : Double = 0.0,
   y? : Double = 0.0,
+  args? : Map[String, String] = Map::new(),
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard: \{artboard}")
     Some(ab) =>
-      match self.components.get(component_id) {
-        None => Err("unknown_component: \{component_id}")
-        Some(def) => {
+      // 用户组件优先：自定义组件与内置同权，同名时自定义遮蔽内置
+      match self.user_components.get(component_id) {
+        Some(udef) => {
+          match place_user_component(
+            ab.doc,
+            udef,
+            instance_id,
+            variant~,
+            args~,
+            dx=x,
+            dy=y,
+          ) {
+            Err(error) => Err(error)
+            Ok(_) => {
+              self.revision = self.revision + 1
+              Ok(
+                "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"component\":\"\{component_id}\",\"source\":\"user\",\"artboard\":\"\{artboard}\"}",
+              )
+            }
+          }
+        }
+        None =>
+          match self.components.get(component_id) {
+            None => Err("unknown_component: \{component_id}")
+            Some(def) => {
           let node = instantiate_component(
             def,
             instance_id,
@@ -117,7 +142,8 @@ pub fn Project::place_component(
                 false => Err("unknown_parent: \{pid}")
               }
           }
-        }
+            }
+          }
       }
   }
 }

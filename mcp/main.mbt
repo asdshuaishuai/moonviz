@@ -125,7 +125,34 @@ fn tools_definition() -> String {
   let tools : Array[String] = []
   tools.push(tool_def("list_templates", "List all available page templates"))
   tools.push(
-    tool_def("list_components", "List all UI components with variants"),
+    tool_def("list_components", "List all UI components (builtin + user) with variants"),
+  )
+  tools.push(
+    tool_def(
+      "component_compile",
+      "Compile & register a user component from a .mbt.md declaration. args: source_b64",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "component_describe",
+      "Describe a user component (params/variants/usage). args: component_id",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "component_export",
+      "Export a user component as MCF (proprietary container). args: component_id",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "component_import",
+      "Import an MCF container (full re-validation). args: mcf_b64",
+    ),
+  )
+  tools.push(
+    tool_def("library_snapshot", "Dump the user component library for host persistence"),
   )
   tools.push(tool_def("list_tokens", "List design tokens"))
   tools.push(tool_def("list_themes", "List available themes"))
@@ -197,7 +224,119 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
 
   match tool_name {
     "list_templates" => @core.list_templates_json()
-    "list_components" => @core.list_components_json(p.components)
+    "list_components" => {
+      let builtin = @core.list_components_json(p.components)
+      let user_items : Array[String] = []
+      for id in p.user_components.keys() {
+        match p.user_components.get(id) {
+          Some(def) => {
+            let vs : Array[String] = []
+            for v in def.variants.keys() {
+              vs.push("\"\{v}\"")
+            }
+            user_items.push(
+              "{\"id\":\"\{id}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{mcp_join(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+            )
+          }
+          None => ()
+        }
+      }
+      if user_items.length() == 0 {
+        builtin
+      } else {
+        let inner = builtin.substring(start=1, end=builtin.length() - 1)
+        let sep = if inner == "" { "" } else { "," }
+        "[\{inner}\{sep}\{mcp_join(user_items)}]"
+      }
+    }
+    "component_compile" => {
+      if source_b64 == "" {
+        return err_json("missing source_b64")
+      }
+      match decode_b64_text(source_b64) {
+        Err(e) => err_json(e)
+        Ok(text) =>
+          match @decl.parse_user_component(text) {
+            Err(e) => err_json(e)
+            Ok(def) => {
+              let probe = @core.Document::new({
+                width: def.width + 400.0,
+                height: def.height + 400.0,
+              })
+              match
+                @core.place_user_component(probe, def, "__probe", dx=10.0, dy=10.0) {
+                Err(e) => err_json("usercomp_probe_failed:" + e)
+                Ok(_) => {
+                  p.user_components.set(def.id, def)
+                  "{\"ok\":true,\"component\":\"\{def.id}\",\"params_count\":\{def.params.length()}}"
+                }
+              }
+            }
+          }
+      }
+    }
+    "component_describe" => {
+      if component_id == "" {
+        return err_json("missing component_id")
+      }
+      match p.user_components.get(component_id) {
+        None => err_json("unknown_component:" + component_id)
+        Some(def) => {
+          let ps : Array[String] = []
+          for param in def.params.iter() {
+            ps.push(
+              "{\"name\":\"\{param.name}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
+            )
+          }
+          "{\"ok\":true,\"id\":\"\{component_id}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"params\":[\{mcp_join(ps)}]}"
+        }
+      }
+    }
+    "component_export" => {
+      if component_id == "" {
+        return err_json("missing component_id")
+      }
+      match p.user_components.get(component_id) {
+        None => err_json("unknown_component:" + component_id)
+        Some(def) => {
+          let header = "{\"id\":\"\{component_id}\",\"format\":\"mcf-v1\"}"
+          let bytes = @core.mcf_pack(header, def.source)
+          "{\"ok\":true,\"component\":\"\{component_id}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
+        }
+      }
+    }
+    "component_import" => {
+      let mcf_b64 = extract_arg_string(request_line, "mcf_b64")
+      if mcf_b64 == "" {
+        return err_json("missing mcf_b64")
+      }
+      let bytes = @base64.decode(mcf_b64) catch {
+        _ => return err_json("mcf_transport_invalid_base64")
+      }
+      match @core.mcf_unpack(bytes) {
+        Err(e) => err_json(e)
+        Ok((_, source)) =>
+          match @decl.parse_user_component(source) {
+            Err(e) => err_json(e)
+            Ok(def) => {
+              p.user_components.set(def.id, def)
+              "{\"ok\":true,\"component\":\"\{def.id}\"}"
+            }
+          }
+      }
+    }
+    "library_snapshot" => {
+      let items : Array[String] = []
+      for id in p.user_components.keys() {
+        match p.user_components.get(id) {
+          Some(def) => {
+            items.push("{\"id\":\"\{id}\",\"source_b64\":\"\{@base64.encode(@utf8.encode(def.source))}\"}")
+          }
+          None => ()
+        }
+      }
+      "{\"ok\":true,\"count\":\{items.length()},\"components\":[\{mcp_join(items)}]}"
+    }
     "list_tokens" => p.tokens.to_json()
     "list_themes" => {
       let themes = @core.builtin_themes()
@@ -547,4 +686,27 @@ fn join_mcp(parts : Array[String]) -> String {
     sb.write_string(parts[i])
   }
   sb.to_string()
+}
+
+
+///|
+fn mcp_join(items : Array[String]) -> String {
+  let sb = StringBuilder::new()
+  let mut first = true
+  for item in items.iter() {
+    if first == false {
+      sb.write_string(",")
+    }
+    first = false
+    sb.write_string(item)
+  }
+  sb.to_string()
+}
+
+///|
+fn decode_b64_text(payload : String) -> Result[String, String] {
+  let bytes = @base64.decode(payload) catch {
+    _ => return Err("transport_invalid_base64")
+  }
+  Ok(@utf8.decode(bytes) catch { _ => return Err("transport_invalid_utf8") })
 }

@@ -384,7 +384,40 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
   match parts[0] {
     "help" => cli_help()
     "list-templates" => @core.list_templates_json()
-    "list-components" => @core.list_components_json(p.components)
+    "component-compile-b64" => cmd_component_compile(p, parts)
+    "component-describe" => cmd_component_describe(p, parts)
+    "component-delete" => cmd_component_delete(p, parts)
+    "component-export" => cmd_component_export(p, parts)
+    "component-import" => cmd_component_import(p, parts)
+    "library-snapshot" => cmd_library_snapshot(p)
+    "library-restore-b64" => cmd_library_restore(p, parts)
+    "list-components" => {
+      // 合并视图：内置 + 用户自定义（同权，source 标注来源）
+      let builtin = @core.list_components_json(p.components)
+      let user_items : Array[String] = []
+      for id in p.user_components.keys() {
+        match p.user_components.get(id) {
+          Some(def) => {
+            let vs : Array[String] = []
+            for v in def.variants.keys() {
+              vs.push("\"\{v}\"")
+            }
+            user_items.push(
+              "{\"id\":\"\{id}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+            )
+          }
+          None => ()
+        }
+      }
+      if user_items.length() == 0 {
+        builtin
+      } else {
+        // builtin 是 [ ... ]：剥掉首尾括号拼接
+        let inner = builtin.substring(start=1, end=builtin.length() - 1)
+        let sep = if inner == "" { "" } else { "," }
+        "[\{inner}\{sep}\{join_arr(user_items)}]"
+      }
+    }
     "list-tools" => @core.list_tools_json()
     "list-tokens" => p.tokens.to_json()
     "list-themes" => {
@@ -586,17 +619,40 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
         let x = if parts.length() >= 6 { parse_d(parts[5]) } else { 0.0 }
         let y = if parts.length() >= 7 { parse_d(parts[6]) } else { 0.0 }
-        match
-          p.place_component(
-            artboard=ab,
-            component_id=comp,
-            instance_id=nid,
-            variant~,
-            x~,
-            y~,
-          ) {
-          Ok(msg) => msg
-          Err(e) => cli_err(e)
+        // 尾部 k=v 对：用户组件参数槽传参（内置组件忽略）
+        let kv : Map[String, String] = Map::new()
+        let mut kv_error = ""
+        for i = 7; i < parts.length(); i = i + 1 {
+          match parts[i].find("=") {
+            None =>
+              if kv_error == "" {
+                kv_error = "place_invalid_arg:" + parts[i]
+              }
+            Some(pos) => {
+              let k = parts[i].substring(start=0, end=pos)
+              let v = parts[i].substring(start=pos + 1)
+              if k != "" {
+                kv.set(k, v)
+              }
+            }
+          }
+        }
+        if kv_error != "" {
+          cli_err(kv_error)
+        } else {
+          match
+            p.place_component(
+              artboard=ab,
+              component_id=comp,
+              instance_id=nid,
+              variant~,
+              x~,
+              y~,
+              args=kv,
+            ) {
+            Ok(msg) => msg
+            Err(e) => cli_err(e)
+          }
         }
       }
     "query" =>
@@ -967,7 +1023,14 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
 fn cli_help() -> String {
   "Commands:\n" +
   "  list-templates       List all page templates\n" +
-  "  list-components      List all UI components\n" +
+  "  component-compile-b64 <b64>  Compile & register a user component\n" +
+  "  component-describe <id>       Describe a user component (params/usage)\n" +
+  "  component-delete <id>         Remove a user component\n" +
+  "  component-export <id>         Export as MCF (proprietary format)\n" +
+  "  component-import <b64>        Import MCF (full re-validation)\n" +
+  "  library-snapshot              Dump user library (host persists)\n" +
+  "  library-restore-b64 <b64>...  Restore user library at session start\n" +
+  "  list-components      List all UI components (builtin + user)\n" +
   "  list-tools           List all agent tools\n" +
   "  list-tokens          List design tokens\n" +
   "  list-themes          List available themes\n" +

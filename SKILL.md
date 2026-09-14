@@ -77,3 +77,37 @@ The Tauri shell and browser server transport opaque DDP bytes through the authen
 - **Tauri/browser shell**: file dialogs, opaque DDP transport, and visual presentation only.
 - **DDP**: one encrypted `.mbt.md` source.
 
+
+## User Components (custom component registry)
+
+The engine treats custom components exactly like builtins — the registry is
+source-agnostic. Whether the declaration comes from an Agent (natural-language
+translation) or a human (Studio canvas), the artifact is the same: a
+single-artboard `.mbt.md` declaration with a `component:` front-matter section.
+
+Workflow:
+
+```
+# 1. Agent drafts the declaration (params as ${name} slots in node attrs)
+# 2. Compile & register (full pipeline: syntax → single-artboard → param
+#    closure → instantiation probe → registry)
+component-compile-b64 <b64>
+
+# 3. Discover & use exactly like builtins
+list-components        # merged view, source: user
+component-describe <id>  # params/variants/usage template
+place <artboard> <id> <inst> [variant] [x] [y] key=value...
+
+# 4. Share — the ONLY outbound form is the proprietary MCF container
+component-export <id>   # → mcf_b64 (byte source never leaves the engine)
+component-import <b64>  # strict validation (magic/version/CRC×2/fingerprint)
+                        # then FULL re-compilation before registration
+
+# 5. Host-side persistence (engine is IO-free by design)
+library-snapshot        # dump for the host to persist
+library-restore-b64 ... # rehydrate at session start
+```
+
+Rules: `.mbt.md` component source exists only inside the engine/local library;
+outbound distribution is always MCF. MCF is a pure data container — imports are
+re-validated through the same compile pipeline, no code execution surface.

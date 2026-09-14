@@ -11,5 +11,6 @@ options(
     "main.mbt": [ "native" ],
     "main_stub.mbt": [ "not", "native" ],
     "main_test.mbt": [ "native" ],
+    "usercomp_cmd.mbt": [ "native" ],
   },
 )
