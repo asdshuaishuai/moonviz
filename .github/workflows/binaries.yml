@@ -3,7 +3,7 @@ name: Build platform binaries
 on:
   push:
     branches: [main]
-    paths: ['core/**', 'decl/**', 'mcp/**', 'npm/**', '.github/workflows/binaries.yml']
+    paths: ['core/**', 'decl/**', 'cli/**', 'ddp/**', 'mcp/**', 'npm/**', '.github/workflows/binaries.yml']
   workflow_dispatch:
 
 env:
@@ -27,24 +27,50 @@ jobs:
             runner: ubuntu-24.04
           - platform: linux-arm64
             runner: ubuntu-24.04-arm
+          - platform: windows-x64
+            runner: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install MoonBit toolchain (pinned)
+      - name: Install MoonBit toolchain (pinned, unix)
+        if: runner.os != 'Windows'
         run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOON_VERSION"
-      - name: Build MCP server + CLI binaries
+      - name: Install MoonBit toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
+      - name: Build MCP server + CLI binaries (unix)
+        if: runner.os != 'Windows'
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon version
           moon build --release --target native mcp
           moon build --release --target native cli
           file _build/native/release/build/mcp/mcp.exe _build/native/release/build/cli/cli.exe
-      - name: Smoke test (initialize handshake + CLI session)
+      - name: Build MCP server + CLI binaries (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:Path = "$env:USERPROFILE\.moon\bin;$env:Path"
+          moon version
+          moon build --release --target native mcp
+          moon build --release --target native cli
+      - name: Smoke test (unix)
+        if: runner.os != 'Windows'
         run: |
           printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}\n' \
             | _build/native/release/build/mcp/mcp.exe | grep -q '"serverInfo"'
           printf 'list-templates\nexit\n' \
             | _build/native/release/build/cli/cli.exe | grep -q '"login"'
-      - name: Stage npm platform package
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}', 'exit' |
+            &_build/native/release/build/mcp/mcp.exe | Select-String '"serverInfo"'
+          'list-templates', 'exit' |
+            &_build/native/release/build/cli/cli.exe | Select-String '"login"'
+      - name: Stage npm platform package (unix)
+        if: runner.os != 'Windows'
         run: |
           PKG=npm/moonviz-bin-${{ matrix.platform }}
           mkdir -p "$PKG/bin"
@@ -67,6 +93,32 @@ jobs:
           EOF
           sed "s/darwin-arm64/${{ matrix.platform }}/" npm/moonviz-bin-darwin-arm64/README.md > "$PKG/README.md"
           npm pack "./$PKG"
+      - name: Stage npm platform package (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $pkg = "npm/moonviz-bin-${{ matrix.platform }}"
+          New-Item -ItemType Directory -Force "$pkg/bin" | Out-Null
+          Copy-Item _build/native/release/build/mcp/mcp.exe "$pkg/bin/moonviz-mcp.exe"
+          Copy-Item _build/native/release/build/cli/cli.exe "$pkg/bin/moonviz-cli.exe"
+          Copy-Item LICENSE "$pkg/LICENSE"
+          @'
+          {
+            "name": "moonviz-bin-${{ matrix.platform }}",
+            "version": "${{ env.MOONVIZ_VERSION }}",
+            "description": "Prebuilt MoonViz MCP server binary for ${{ matrix.platform }}. Installed automatically by moonviz-mcp — do not depend on this package directly.",
+            "type": "module",
+            "os": ["win32"],
+            "cpu": ["x64"],
+            "files": ["bin", "README.md", "LICENSE"],
+            "license": "MIT",
+            "repository": { "type": "git", "url": "git+https://github.com/asdshuaishuai/moonviz.git", "directory": "npm/moonviz-bin-${{ matrix.platform }}" }
+          }
+          '@ | Set-Content "$pkg/package.json"
+          Get-Content npm/moonviz-bin-darwin-arm64/README.md |
+            ForEach-Object { $_ -replace 'darwin-arm64', '${{ matrix.platform }}' } |
+            Set-Content "$pkg/README.md"
+          npm pack "./$pkg"
       - uses: actions/upload-artifact@v4
         with:
           name: moonviz-bin-${{ matrix.platform }}
