@@ -60,6 +60,7 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--ink3);font-si
   <a href="#skill">SKILL 技能</a>
   <a href="#studio">Studio / Viewer</a>
   <div class="grp">参考</div>
+  <a href="#render-pipeline">渲染管线</a>
   <a href="#ddp">DDP 容器</a>
   <a href="#env">环境变量</a>
   <a href="#refs">深度文档</a>
@@ -292,6 +293,25 @@ cargo tauri build    # 打包 .app / .dmg</code></pre>
 swift build -c release && ./make-app.sh    # 产出 ddpView.app
 ./run.sh [file.ddp]                        # 启动（自动定位相邻 moonviz/）
 ddpView.app/Contents/MacOS/DDPView --selftest &lt;file.ddp&gt; [&lt;pwd&gt;]   # 无头自检</code></pre>
+</section>
+
+<section id="render-pipeline">
+<h2>绘制方案与渲染管线</h2>
+<p>一份 <code>.mbt.md</code> 变成像素的完整链路（详见 <a href="https://github.com/asdshuaishuai/moonviz/blob/main/docs/10-render-pipeline.md">docs/10 完整技术文档</a>）：</p>
+<pre><code>.mbt.md ─①声明加载→ 场景图 Document ─②两遍法布局求解→ 绝对矩形
+        ─③P0–P4 谓词 + 双 Gate 验收→ ┬─ SVG（系统字体栈/elevation 阴影/渐变）
+                                   ├─ PNG（2x 超采样 AA + 纯 MoonBit DEFLATE）
+                                   └─ 终端 ANSI 真彩画布（Camera/pick 拖拽）
+任意宿主后端（Canvas/Skia/OpenGL）经 RenderPlan 显示列表接入</code></pre>
+<table>
+<tr><th>后端</th><th>实现</th><th>特性</th></tr>
+<tr><td><b>SVG</b></td><td><code>core/svg.mbt</code> 字符串构建</td><td>系统字体栈、e1–e3 阴影令牌、linear:/radial: 渐变、多行文本基线公式；Studio/查看器/WASM SDK 共用</td></tr>
+<tr><td><b>PNG</b></td><td><code>playground/render2+png+deflate</code> 自研软光栅</td><td>2x 超采样抗锯齿、圆角扫描线、5×7 位图字体、fixed-Huffman DEFLATE（产物小 5–20 倍），零图像库</td></tr>
+<tr><td><b>终端</b></td><td><code>playground/canvas.mbt</code></td><td>ANSI 真彩字符栅格、相机平移缩放、pick_at 命中支持拖拽编辑</td></tr>
+<tr><td><b>RenderPlan</b></td><td><code>core/runtime.mbt</code></td><td>后端无关显示列表 + 事件协议，宿主只实现解释器</td></tr>
+</table>
+<h3>二进制分发与工具链风险</h3>
+<p>预编译二进制（CLI 1.26MB / MCP 1.10MB）<b>自包含、仅链系统 libc</b>——moon 工具链只存在于编译时。MCP 走 <code>npx moonviz-mcp</code> 平台包；Node SDK 安装 <code>moonviz-bin-&lt;platform&gt;</code> 后自动发现预编译 CLI（或 <code>MOONVIZ_CLI_BIN</code>），全程零工具链。CI 固定 moon 版本（破坏性迭代由显式 PR + 142 项测试挡板），已发布产物永久冻结不受影响。</p>
 </section>
 
 <section id="ddp">

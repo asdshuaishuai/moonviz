@@ -17,13 +17,15 @@ if ! npm whoami >/dev/null 2>&1; then
 fi
 echo "已登录: $(npm whoami)"
 
-echo "==> 重建产物（wasm + native mcp 二进制）"
+echo "==> 重建产物（wasm + native mcp/cli 二进制）"
 moon build --release --target wasm-gc wasm
 cp _build/wasm-gc/release/build/wasm/wasm.wasm sdk/wasm/dist/moonviz.wasm
 moon build --release --target native mcp
+moon build --release --target native cli
 mkdir -p npm/moonviz-bin-darwin-arm64/bin
 cp _build/native/release/build/mcp/mcp.exe npm/moonviz-bin-darwin-arm64/bin/moonviz-mcp
-chmod +x npm/moonviz-bin-darwin-arm64/bin/moonviz-mcp
+cp _build/native/release/build/cli/cli.exe npm/moonviz-bin-darwin-arm64/bin/moonviz-cli
+chmod +x npm/moonviz-bin-darwin-arm64/bin/*
 
 echo "==> 运行自检"
 node sdk/node/test/selftest.mjs

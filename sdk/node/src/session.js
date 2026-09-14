@@ -2,12 +2,15 @@
 // 说明：协议是换行分帧的 JSON——每条命令一行，每行输出一个 JSON 值。
 
 import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const requireFromModule = createRequire(import.meta.url);
+const requireFromCwd = createRequire(join(process.cwd(), 'index.js'));
 
 /** 引擎返回 { ok:false } 时抛出；error 为引擎错误码，detail 保留完整响应。 */
 export class EngineError extends Error {
@@ -23,6 +26,24 @@ export class EngineError extends Error {
 export function defaultMoonvizDir() {
   const candidate = resolve(HERE, '..', '..', '..');
   return existsSync(join(candidate, 'cli', 'moon.pkg')) ? candidate : null;
+}
+
+/**
+ * 定位预编译 CLI 二进制（moonviz-bin-<platform> 平台包或 MOONVIZ_CLI_BIN）。
+ * 命中时整个会话不再依赖 moon 工具链与引擎源码目录。
+ */
+export function findPrebuiltCli() {
+  const explicit = process.env.MOONVIZ_CLI_BIN;
+  if (explicit && existsSync(explicit)) return explicit;
+  const platform = `${process.platform}-${process.arch}`;
+  for (const req of [requireFromModule, requireFromCwd]) {
+    try {
+      const pkg = req.resolve(`moonviz-bin-${platform}/package.json`);
+      const bin = join(pkg, '..', 'bin', 'moonviz-cli');
+      if (existsSync(bin)) return bin;
+    } catch { /* 平台包未安装，继续 */ }
+  }
+  return null;
 }
 
 function findMoon() {
@@ -69,8 +90,12 @@ export class MoonViz {
     this.moonvizDir = options.moonvizDir
       ? resolve(options.moonvizDir)
       : (process.env.MOONVIZ_DIR ? resolve(process.env.MOONVIZ_DIR) : defaultMoonvizDir());
-    if (!this.moonvizDir || !existsSync(join(this.moonvizDir, 'cli'))) {
-      throw new Error('找不到 MoonViz 引擎目录：请传 moonvizDir 或设置 MOONVIZ_DIR（目录需含 cli/moon.pkg）');
+    this.cliBin = options.cliBin ?? findPrebuiltCli();
+    if (!this.cliBin) {
+      // 回退模式：moon run 需要引擎目录（含 cli/moon.pkg）
+      if (!this.moonvizDir || !existsSync(join(this.moonvizDir, 'cli'))) {
+        throw new Error('找不到 MoonViz 引擎入口：安装 moonviz-bin-<platform> 平台包、传 moonvizDir/cliBin、或设置 MOONVIZ_DIR/MOONVIZ_CLI_BIN');
+      }
     }
     this.moonPath = options.moon ?? findMoon() ?? 'moon';
     this.target = options.target ?? 'native';
@@ -83,11 +108,14 @@ export class MoonViz {
    */
   run(commands) {
     if (!Array.isArray(commands) || commands.length === 0) return Promise.resolve([]);
-    return new Promise((resolve, reject) => {
-      const child = spawn(this.moonPath, ['run', '--target', this.target, 'cli'], {
-        cwd: this.moonvizDir,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
+    return new Promise((resolveP, reject) => {
+      // 预编译 CLI：完全自包含（仅链 libc），无 cwd 依赖；回退模式经 moon run。
+      const child = this.cliBin
+        ? spawn(this.cliBin, [], { stdio: ['pipe', 'pipe', 'pipe'] })
+        : spawn(this.moonPath, ['run', '--target', this.target, 'cli'], {
+            cwd: this.moonvizDir,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
       let out = '', err = '';
       child.stdout.on('data', c => (out += c));
       child.stderr.on('data', c => (err += c));
@@ -104,7 +132,7 @@ export class MoonViz {
           reject(new Error(`引擎无输出（exit ${code}）：${err.slice(0, 300)}`));
           return;
         }
-        resolve(results);
+        resolveP(results);
       });
       for (const cmd of commands) child.stdin.write(cmd + '\n');
       child.stdin.write('exit\n');

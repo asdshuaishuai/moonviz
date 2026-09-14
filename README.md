@@ -577,7 +577,42 @@ MCP 客户端配置（npx 预编译路线）：
 }
 ```
 
-环境变量速查：`MOONVIZ_DIR`（引擎根，须含 `cli/moon.pkg`）· `MOONVIZ_MOON`/`MOON`（moon 可执行目录）· `MOONVIZ_DDP_HELPER`（ddp_codec 完整路径）。
+环境变量速查：`MOONVIZ_DIR`（引擎根，须含 `cli/moon.pkg`）· `MOONVIZ_MOON`/`MOON`（moon 可执行目录）· `MOONVIZ_DDP_HELPER`（ddp_codec 完整路径）· `MOONVIZ_CLI_BIN`（预编译 CLI 二进制，优先于 moon run）。
+
+## 技术栈与二进制分发
+
+### 绘制方案一句话
+
+一份 `.mbt.md` → 声明解析（literate 块扫描）→ 场景图（节点树 + Fixed/Fill/Hug 尺寸规格）→ **两遍法布局求解**（先尺寸后位置，失败≠崩溃）→ P0–P4 不崩谓词 + 双 Gate 验收 → 三个纯 MoonBit 渲染后端任意消费：**SVG**（矢量主路径：系统字体栈 + elevation 阴影令牌 + 渐变 paint）、**PNG**（自研软光栅：2x 超采样抗锯齿 + 圆角扫描 + 5×7 位图字体 + 纯 MoonBit DEFLATE，产物小 5–20 倍）、**终端 ANSI 真彩画布**（Camera 平移缩放 + pick 拖拽）。任意宿主后端（Canvas/Skia/OpenGL）经后端无关的 **RenderPlan 显示列表**接入。完整管线见 [docs/10-render-pipeline.md](docs/10-render-pipeline.md)。
+
+### 技术栈构成
+
+| 层 | 技术 | 外部依赖 |
+|---|---|---|
+| 引擎内核 + 三渲染后端 + CLI/MCP | **100% MoonBit** | 仅 `moonbitlang/core` 标准库 |
+| WASM 边界 | MoonBit → wasm-gc | 无（JS String Builtins） |
+| DDP 编解码 | Rust（独立进程 ddp_codec） | argon2 / chacha20poly1305 / zstd |
+| npm 启动器 / Node SDK | 极薄 JS | 零依赖 |
+
+### 二进制分发：moon 只在编译时存在
+
+`moon build --release --target native` 产出**自包含二进制**（CLI 1.26MB / MCP 1.10MB，`otool -L` 验证仅链系统 libc），复制到无 moon、无源码的机器直接可用。分发矩阵：
+
+| 消费者 | 依赖 moon？ | 依赖引擎源码？ |
+|---|---|---|
+| `npx moonviz-mcp`（MCP 客户端） | ✗ | ✗（源侧工具另配 MOONVIZ_DIR） |
+| Node SDK + `moonviz-bin-<platform>` | ✗（自动发现预编译 CLI） | ✗ |
+| 浏览器 / Edge（moonviz-engine-wasm） | ✗ | ✗ |
+| 引擎开发者 | ✓ | ✓ |
+
+### MoonBit 工具链风险管理
+
+MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分四层：
+
+1. **产物冻结**（根本手段）：预编译二进制与 WASM 一经发布即快照——工具链后续破坏性变更不影响任何已分发产物，语言不确定性被隔离在构建时。
+2. **构建 pin**：CI（`binaries.yml`）安装**固定版本** moon（`MOON_VERSION` env，当前 0.1.20260209）；升级工具链必须走显式 PR，配套 142 项测试 + CLI/MCP 冒烟挡板。
+3. **协议稳定**：`SolvedLayout` / `GateDecision` / `RenderPlan` 等对外协议刻意稳定（求解器预留 Cassowary 替换接口），不随语言版本漂移。
+4. **组件隔离兜底**：DDP 已示范非 MoonBit 组件独立进程化路线，极端情况下任何组件可按此模式替换而不动 `.mbt.md` 事实源格式。
 
 ## 架构红线
 
@@ -598,3 +633,4 @@ MCP 客户端配置（npx 预编译路线）：
 7. [07-agent-loop.md](docs/07-agent-loop.md) — Agent 工作流与错误修复循环
 8. [08-roadmap-risks.md](docs/08-roadmap-risks.md) — 实现路径与风险
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit 绘制引擎生态调研
+10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **绘制方案与渲染管线完整技术说明**（声明解析 → 布局 → 谓词 → SVG/PNG/终端三后端 + 技术栈 + 二进制分发与工具链风险）

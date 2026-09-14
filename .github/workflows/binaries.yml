@@ -8,6 +8,8 @@ on:
 
 env:
   MOONVIZ_VERSION: "0.1.0"
+  # 工具链版本锁定：升级必须走显式 PR 并全量跑绿 moon test + 冒烟。
+  MOON_VERSION: "0.1.20260209"
 
 jobs:
   build:
@@ -27,23 +29,28 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-      - name: Install MoonBit toolchain
-        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-      - name: Build MCP server binary
+      - name: Install MoonBit toolchain (pinned)
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOON_VERSION"
+      - name: Build MCP server + CLI binaries
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
+          moon version
           moon build --release --target native mcp
-          file _build/native/release/build/mcp/mcp.exe
-      - name: Smoke test (initialize handshake)
+          moon build --release --target native cli
+          file _build/native/release/build/mcp/mcp.exe _build/native/release/build/cli/cli.exe
+      - name: Smoke test (initialize handshake + CLI session)
         run: |
           printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}\n' \
             | _build/native/release/build/mcp/mcp.exe | grep -q '"serverInfo"'
+          printf 'list-templates\nexit\n' \
+            | _build/native/release/build/cli/cli.exe | grep -q '"login"'
       - name: Stage npm platform package
         run: |
           PKG=npm/moonviz-bin-${{ matrix.platform }}
           mkdir -p "$PKG/bin"
           cp _build/native/release/build/mcp/mcp.exe "$PKG/bin/moonviz-mcp"
-          chmod +x "$PKG/bin/moonviz-mcp"
+          cp _build/native/release/build/cli/cli.exe "$PKG/bin/moonviz-cli"
+          chmod +x "$PKG/bin/moonviz-mcp" "$PKG/bin/moonviz-cli"
           cp LICENSE "$PKG/" 2>/dev/null || printf 'MIT License\n' > "$PKG/LICENSE"
           cat > "$PKG/package.json" <<EOF
           {

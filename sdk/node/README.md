@@ -12,20 +12,25 @@ npm install moonviz-engine-sdk
 
 ## Prerequisites
 
-The SDK drives the engine as an external process. Three things must be resolvable at runtime:
+**Recommended (zero toolchain):** install the prebuilt platform binary alongside the SDK. The engine ships as a self-contained native executable (links only libc — no MoonBit toolchain, no engine sources):
+
+```bash
+npm install moonviz-engine-sdk moonviz-bin-darwin-arm64   # or -linux-x64 / -linux-arm64 / -darwin-x64
+```
+
+The SDK auto-discovers the platform package (or honor `MOONVIZ_CLI_BIN=/path/to/moonviz-cli`). In this mode `new MoonViz()` works with no other setup.
+
+**Fallback (`moon run` mode)** drives the engine through the MoonBit toolchain and requires:
 
 | Requirement | How the SDK finds it | Override |
 |---|---|---|
 | MoonBit toolchain (`moon` executable) | `MOONVIZ_MOON` / `MOON` / `PATH` → `~/.moon/bin/moon` → `/opt/homebrew/bin/moon` | `new MoonViz({ moon: '/path/to/moon' })` |
 | Engine directory (contains `cli/moon.pkg`) | `moonvizDir` option → `MOONVIZ_DIR` env → auto-discovery relative to the SDK package | `new MoonViz({ moonvizDir: '...' })` |
-| `ddp_codec` binary (DDP encrypt/decrypt only) | `MOONVIZ_DDP_HELPER` → `<moonviz>/ddp/target/{debug,release}/ddp_codec` | `DDP.encrypt(mbt, pwd, { codecPath: '...' })` |
 
-If you cloned the [moonviz repository](https://github.com/asdshuaishuai/moonviz) and installed this SDK inside it, everything works out of the box. To use the SDK from an unrelated project, point `moonvizDir` at your clone (and run `moon` once to warm the toolchain cache), or install the toolchain via the [MoonBit installer](https://docs.moonbitlang.com/).
-
-Build the DDP codec once with:
+`ddp_codec` (DDP encrypt/decrypt only) is a separate Rust binary resolved via `MOONVIZ_DDP_HELPER` → `<moonviz>/ddp/target/{debug,release}/ddp_codec`; override with `DDP.encrypt(mbt, pwd, { codecPath: '...' })`. Build it once with:
 
 ```bash
-cd moonviz && (cd ddp && cargo build --release)
+cd moonviz/ddp && cargo build --release
 ```
 
 ## Quick start
@@ -84,6 +89,8 @@ const back   = await DDP.decrypt(free.bytes);        // → { mbt, mode: 'DDP2' 
 
 ### Utilities
 
+- `findPrebuiltCli()` — locate the prebuilt engine binary (`MOONVIZ_CLI_BIN` or `moonviz-bin-<platform>` package); returns `null` in fallback mode.
+- `defaultMoonvizDir()` — engine-directory auto-discovery relative to the SDK package.
 - `encodeProps(props)` — object → CLI `k=v` fragments (strings JSON-quoted).
 - `EngineError` — thrown by `apply()`; `.error` is the engine error code, `.detail` keeps the raw response.
 - `build(engine, recipe)` — one-shot Project factory.
