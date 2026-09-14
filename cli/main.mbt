@@ -342,7 +342,8 @@ fn apply_mbt_operation(
               }
             Some(pos) => {
               let k = parts[i].substring(start=0, end=pos)
-              let v = parts[i].substring(start=pos + 1)
+              // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
+              let v = @decl.unescape_value(parts[i].substring(start=pos + 1))
               if k != "" {
                 kv.set(k, v)
               }
@@ -426,7 +427,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               vs.push("\"\{v}\"")
             }
             user_items.push(
-              "{\"id\":\"\{id}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
             )
           }
           None => ()
@@ -637,7 +638,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "place" =>
-      if parts.length() < 5 {
+      if parts.length() < 4 {
         cli_err("usage: place <artboard> <component> <id> [variant] [x] [y]")
       } else {
         let ab = parts[1]
@@ -662,7 +663,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               }
             Some(pos) => {
               let k = parts[i].substring(start=0, end=pos)
-              let v = parts[i].substring(start=pos + 1)
+              // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
+              let v = @decl.unescape_value(parts[i].substring(start=pos + 1))
               if k != "" {
                 kv.set(k, v)
               }
@@ -1072,7 +1074,6 @@ fn cli_help() -> String {
   "  load-mbt-b64 <b64> Load a complete .mbt.md into the temporary engine cache\n" +
   "  export-mbt-human      Canonical MBT after HumanGate validation\n" +
   "  export-mbt-agent      Canonical MBT after AgentGate validation\n" +
-  "  export-ddp             DDP is handled by the authenticated host codec\n" +
   "  apply-agent-mbt-b64 <b64> Validate and commit Agent MBT source\n" +
   "  apply-human-mbt-op-b64 <mbt> <op> Commit a human MBT operation\n" +
   "  apply-agent-mbt-op-b64 <mbt> <op> Commit an Agent MBT operation\n" +
@@ -1150,20 +1151,6 @@ fn char_at_str(s : String, i : Int) -> String {
   s.substring(start=i, end=i + 1)
 }
 
-///|
-/// 把 parts[from..] 用空格拼回（load 的 JSON 载荷可能含空格）
-fn join_arr_tail(parts : Array[String], from : Int) -> String {
-  let sb = StringBuilder::new()
-  let mut i = from
-  while i < parts.length() {
-    if i > from {
-      sb.write_string(" ")
-    }
-    sb.write_string(parts[i])
-    i = i + 1
-  }
-  sb.to_string()
-}
 
 ///|
 /// 查找子串首次出现位置；未找到返回 -1

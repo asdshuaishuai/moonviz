@@ -7,7 +7,7 @@
 
 ///|
 ///|
-/// 公共注册管线：解析 → 实例化冒烟 → 注册（compile 与 import 同一验收）
+/// 公共注册管线：解析（含内置实例化冒烟）→ 注册（compile 与 import 同一验收）
 fn compile_and_register(
   p : @core.Project,
   text : String,
@@ -15,25 +15,8 @@ fn compile_and_register(
   match @decl.parse_user_component(text) {
     Err(error) => Err(error)
     Ok(def) => {
-      // 实例化冒烟：代入默认参数在临时画板上放一次，确保可画
-      let probe = @core.Document::new({
-        width: def.width + 400.0,
-        height: def.height + 400.0,
-      })
-      match
-        @core.place_user_component(
-          probe,
-          def,
-          "__compile_probe",
-          dx=10.0,
-          dy=10.0,
-        ) {
-        Err(error) => Err("usercomp_probe_failed:" + error)
-        Ok(_) => {
-          p.user_components.set(def.id, def)
-          Ok(def)
-        }
-      }
+      p.user_components.set(def.id, def)
+      Ok(def)
     }
   }
 }
@@ -59,7 +42,7 @@ fn cmd_component_compile(p : @core.Project, parts : Array[String]) -> String {
           for v in def.variants.keys() {
             vs.push("\"\{v}\"")
           }
-          "{\"ok\":true,\"op\":\"component-compile\",\"component\":\"\{def.id}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"source_b64\":\"\{encode_mbt_b64(def.source)}\"}"
+          "{\"ok\":true,\"op\":\"component-compile\",\"component\":\"\{@core.json_escape(def.id)}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"source_b64\":\"\{encode_mbt_b64(def.source)}\"}"
         }
       }
   }
@@ -75,15 +58,11 @@ fn cmd_component_export(p : @core.Project, parts : Array[String]) -> String {
   match p.user_components.get(id) {
     None => cli_err("unknown_component:" + id)
     Some(def) => {
-      let ps : Array[String] = []
-      for param in def.params.iter() {
-        ps.push(
-          "{\"name\":\"\{param.name}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
-        )
+      // header 构造收敛到 core（CLI/MCP 同一 schema）
+      match @core.mcf_pack(@core.mcf_header_json(def), def.source) {
+        Err(error) => cli_err(error)
+        Ok(bytes) => "{\"ok\":true,\"op\":\"component-export\",\"component\":\"\{@core.json_escape(id)}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
       }
-      let header_json = "{\"id\":\"\{id}\",\"description\":\"\{@core.json_escape(def.description)}\",\"params\":[\{join_arr(ps)}],\"format\":\"mcf-v1\"}"
-      let bytes = @core.mcf_pack(header_json, def.source)
-      "{\"ok\":true,\"op\":\"component-export\",\"component\":\"\{id}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
     }
   }
 }
@@ -102,7 +81,7 @@ fn cmd_component_import(p : @core.Project, parts : Array[String]) -> String {
     Ok((header_json, source)) =>
       match compile_and_register(p, source) {
         Err(error) => cli_err(error)
-        Ok(def) => "{\"ok\":true,\"op\":\"component-import\",\"component\":\"\{def.id}\",\"header\":\{@core.json_escape(header_json)}"
+        Ok(def) => "{\"ok\":true,\"op\":\"component-import\",\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header_json)}"
       }
   }
 }
@@ -142,7 +121,7 @@ fn cmd_component_describe(p : @core.Project, parts : Array[String]) -> String {
       }
       let kv_j = if kvs.length() > 0 { " " + kv_sb.to_string() } else { "" }
       let usage = "place <artboard> \{id} <instance_id> [variant] [x] [y]\{kv_j}"
-      "{\"ok\":true,\"id\":\"\{id}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"size\":\"\{def.width}x\{def.height}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"usage\":\"\{@core.json_escape(usage)}\"}"
+      "{\"ok\":true,\"id\":\"\{@core.json_escape(id)}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"size\":\"\{def.width}x\{def.height}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"usage\":\"\{@core.json_escape(usage)}\"}"
     }
   }
 }
@@ -168,7 +147,7 @@ fn cmd_library_snapshot(p : @core.Project) -> String {
     match p.user_components.get(id) {
       Some(def) => {
         items.push(
-          "{\"id\":\"\{id}\",\"source_b64\":\"\{encode_mbt_b64(def.source)}\"}",
+          "{\"id\":\"\{@core.json_escape(id)}\",\"source_b64\":\"\{encode_mbt_b64(def.source)}\"}",
         )
       }
       None => ()

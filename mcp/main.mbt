@@ -154,6 +154,18 @@ fn tools_definition() -> String {
   tools.push(
     tool_def("library_snapshot", "Dump the user component library for host persistence"),
   )
+  tools.push(
+    tool_def(
+      "component_delete",
+      "Remove a user component. args: component_id",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "library_restore",
+      "Restore user components at session start. args: source_b64s (space-separated declarations)",
+    ),
+  )
   tools.push(tool_def("list_tokens", "List design tokens"))
   tools.push(tool_def("list_themes", "List available themes"))
   tools.push(tool_def("list_artboards", "List all artboards"))
@@ -194,7 +206,7 @@ fn tools_definition() -> String {
   tools.push(
     tool_def("generate_responsive", "Generate variants. args: artboard"),
   )
-  let j = join_mcp(tools)
+  let j = mcp_join(tools)
   "[\{j}]"
 }
 
@@ -259,18 +271,8 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           match @decl.parse_user_component(text) {
             Err(e) => err_json(e)
             Ok(def) => {
-              let probe = @core.Document::new({
-                width: def.width + 400.0,
-                height: def.height + 400.0,
-              })
-              match
-                @core.place_user_component(probe, def, "__probe", dx=10.0, dy=10.0) {
-                Err(e) => err_json("usercomp_probe_failed:" + e)
-                Ok(_) => {
-                  p.user_components.set(def.id, def)
-                  "{\"ok\":true,\"component\":\"\{def.id}\",\"params_count\":\{def.params.length()}}"
-                }
-              }
+              p.user_components.set(def.id, def)
+              "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"params_count\":\{def.params.length()}}"
             }
           }
       }
@@ -285,10 +287,29 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           let ps : Array[String] = []
           for param in def.params.iter() {
             ps.push(
-              "{\"name\":\"\{param.name}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
+              "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
             )
           }
-          "{\"ok\":true,\"id\":\"\{component_id}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"params\":[\{mcp_join(ps)}]}"
+          let vs : Array[String] = []
+          for v in def.variants.keys() {
+            vs.push("\"\{v}\"")
+          }
+          let kvs : Array[String] = []
+          for param in def.params.iter() {
+            kvs.push("\{param.name}=<\{param.kind}>")
+          }
+          let kv_sb = StringBuilder::new()
+          let mut first_kv = true
+          for kv in kvs.iter() {
+            if first_kv == false {
+              kv_sb.write_string(" ")
+            }
+            first_kv = false
+            kv_sb.write_string(kv)
+          }
+          let kv_j = if kvs.length() > 0 { " " + kv_sb.to_string() } else { "" }
+          let usage = "place <artboard> \{component_id} <instance_id> [variant] [x] [y]\{kv_j}"
+          "{\"ok\":true,\"id\":\"\{@core.json_escape(component_id)}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"size\":\"\{def.width}x\{def.height}\",\"params\":[\{mcp_join(ps)}],\"variants\":[\{mcp_join(vs)}],\"usage\":\"\{@core.json_escape(usage)}\"}"
         }
       }
     }
@@ -299,9 +320,11 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       match p.user_components.get(component_id) {
         None => err_json("unknown_component:" + component_id)
         Some(def) => {
-          let header = "{\"id\":\"\{component_id}\",\"format\":\"mcf-v1\"}"
-          let bytes = @core.mcf_pack(header, def.source)
-          "{\"ok\":true,\"component\":\"\{component_id}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
+          // header 构造收敛到 core（与 CLI 同一 schema）
+          match @core.mcf_pack(@core.mcf_header_json(def), def.source) {
+            Err(e) => err_json(e)
+            Ok(bytes) => "{\"ok\":true,\"component\":\"\{@core.json_escape(component_id)}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
+          }
         }
       }
     }
@@ -315,23 +338,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       match @core.mcf_unpack(bytes) {
         Err(e) => err_json(e)
-        Ok((_, source)) =>
+        Ok((header, source)) =>
           match @decl.parse_user_component(source) {
             Err(e) => err_json(e)
             Ok(def) => {
-              // 与 CLI compile_and_register 同一验收：实例化冒烟确保可画
-              let probe = @core.Document::new({
-                width: def.width + 400.0,
-                height: def.height + 400.0,
-              })
-              match
-                @core.place_user_component(probe, def, "__probe", dx=10.0, dy=10.0) {
-                Err(e) => err_json("usercomp_probe_failed:" + e)
-                Ok(_) => {
-                  p.user_components.set(def.id, def)
-                  "{\"ok\":true,\"component\":\"\{def.id}\"}"
-                }
-              }
+              p.user_components.set(def.id, def)
+              "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header)}"
             }
           }
       }
@@ -341,12 +353,59 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       for id in p.user_components.keys() {
         match p.user_components.get(id) {
           Some(def) => {
-            items.push("{\"id\":\"\{id}\",\"source_b64\":\"\{@base64.encode(@utf8.encode(def.source))}\"}")
+            items.push("{\"id\":\"\{@core.json_escape(id)}\",\"source_b64\":\"\{@base64.encode(@utf8.encode(def.source))}\"}")
           }
           None => ()
         }
       }
-      "{\"ok\":true,\"count\":\{items.length()},\"components\":[\{mcp_join(items)}]}"
+      "{\"ok\":true,\"op\":\"library-snapshot\",\"count\":\{items.length()},\"components\":[\{mcp_join(items)}]}"
+    }
+    "component_delete" => {
+      if component_id == "" {
+        return err_json("missing component_id")
+      }
+      if p.user_components.contains(component_id) == false {
+        return err_json("unknown_component:" + component_id)
+      }
+      p.user_components.remove(component_id)
+      "{\"ok\":true,\"op\":\"component-delete\",\"component\":\"\{@core.json_escape(component_id)}\"}"
+    }
+    "library_restore" => {
+      let source_b64s = extract_arg_string(request_line, "source_b64s")
+      if source_b64s == "" {
+        return err_json("missing source_b64s")
+      }
+      let mut ok_count = 0
+      let mut first_error = ""
+      for part_view in source_b64s.split(" ") {
+        let part = part_view.to_string()
+        if part == "" {
+          continue
+        }
+        match decode_b64_text(part) {
+          Err(e) => {
+            if first_error == "" {
+              first_error = e
+            }
+          }
+          Ok(text) =>
+            match @decl.parse_user_component(text) {
+              Err(e) => {
+                if first_error == "" {
+                  first_error = e
+                }
+              }
+              Ok(def) => {
+                p.user_components.set(def.id, def)
+                ok_count = ok_count + 1
+              }
+            }
+        }
+      }
+      if first_error != "" {
+        return err_json("library_restore_partial:\{ok_count}:" + first_error)
+      }
+      "{\"ok\":true,\"op\":\"library-restore\",\"count\":\{ok_count}}"
     }
     "list_tokens" => p.tokens.to_json()
     "list_themes" => {
@@ -357,7 +416,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           "{\"name\":\"\{t.name}\",\"display\":\"\{t.display_name}\",\"is_dark\":\{t.is_dark}}",
         )
       }
-      let j = join_mcp(items)
+      let j = mcp_join(items)
       "[\{j}]"
     }
     "list_artboards" => p.list_artboards_json()
@@ -381,6 +440,27 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if artboard == "" || component_id == "" || instance_id == "" {
         return err_json("missing artboard/component_id/instance_id")
       }
+      // 用户组件参数槽：arguments.args = "k=v k=v ..."（空格分隔）
+      let kv : Map[String, String] = Map::new()
+      let raw_args = extract_arg_string(request_line, "args")
+      if raw_args != "" {
+        for part_view in raw_args.split(" ") {
+          let part = part_view.to_string()
+          if part == "" {
+            continue
+          }
+          match part.find("=") {
+            None => return err_json("place_invalid_arg:" + part)
+            Some(pos) => {
+              let k = part.substring(start=0, end=pos)
+              let v = @decl.unescape_value(part.substring(start=pos + 1))
+              if k != "" {
+                kv.set(k, v)
+              }
+            }
+          }
+        }
+      }
       match
         p.place_component(
           artboard~,
@@ -389,6 +469,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           variant~,
           x~,
           y~,
+          args=kv,
         ) {
         Ok(msg) => "{\"ok\":true,\"result\":\"\{msg}\"}"
         Err(e) => err_json(e)
@@ -674,30 +755,7 @@ fn json_escape_text(s : String) -> String {
   sb.to_string()
 }
 
-///|
-fn replace_underscores(s : String) -> String {
-  let sb = StringBuilder::new()
-  for c in s.iter() {
-    if c == '_' {
-      sb.write_char('-')
-    } else {
-      sb.write_char(c)
-    }
-  }
-  sb.to_string()
-}
 
-///|
-fn join_mcp(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
-  for i in 0..<parts.length() {
-    if i > 0 {
-      sb.write_string(",")
-    }
-    sb.write_string(parts[i])
-  }
-  sb.to_string()
-}
 
 
 ///|
@@ -717,7 +775,7 @@ fn mcp_join(items : Array[String]) -> String {
 ///|
 fn decode_b64_text(payload : String) -> Result[String, String] {
   let bytes = @base64.decode(payload) catch {
-    _ => return Err("transport_invalid_base64")
+    _ => return Err("mbt_transport_invalid_base64")
   }
-  Ok(@utf8.decode(bytes) catch { _ => return Err("transport_invalid_utf8") })
+  Ok(@utf8.decode(bytes) catch { _ => return Err("mbt_transport_invalid_utf8") })
 }

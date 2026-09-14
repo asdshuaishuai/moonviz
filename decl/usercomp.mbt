@@ -32,6 +32,7 @@ fn parse_component_meta(
       String,
       Array[@core.UserParam],
       Map[String, Map[String, String]],
+      String,
     ),
     String,
   ] {
@@ -43,7 +44,7 @@ fn parse_component_meta(
   let mut section = 0
   let mut cur_param_name = ""
   let mut cur_variant = ""
-  let mut default_variant_set = false
+  let mut first_variant = "" // 首个声明的变体即默认（实现注释承诺）
   for raw in mbt_lines(front).iter() {
     let line = mbt_trim(raw)
     if line == "" {
@@ -83,7 +84,7 @@ fn parse_component_meta(
         continue
       }
       if mbt_has_prefix(line, "description:") {
-        description = strip_quotes(mbt_trim(safe_slice(line, 13, -1)))
+        description = strip_quotes(mbt_trim(safe_slice(line, 12, -1)))
         continue
       }
       continue
@@ -121,8 +122,8 @@ fn parse_component_meta(
       if mbt_has_prefix(line, "- name:") {
         cur_variant = strip_quotes(mbt_trim(safe_slice(line, 7, -1)))
         variants.set(cur_variant, Map::new())
-        if default_variant_set == false {
-          default_variant_set = true // 首个变体即默认
+        if first_variant == "" {
+          first_variant = cur_variant // 首个变体即默认
         }
         continue
       }
@@ -153,7 +154,7 @@ fn parse_component_meta(
   if variants.length() == 0 {
     variants.set("default", Map::new())
   }
-  Ok((id, description, params, variants))
+  Ok((id, description, params, variants, first_variant))
 }
 
 ///|
@@ -174,7 +175,7 @@ pub fn parse_user_component(
   match scan_mbt(text) {
     Err(error) => Err(error)
     Ok(document) => {
-      let (cid, description, params, variants) = match parse_component_meta(
+      let (cid, description, params, variants, default_variant) = match parse_component_meta(
           document.front_matter,
         ) {
         Err(error) => return Err(error)
@@ -196,7 +197,7 @@ pub fn parse_user_component(
                 category: "user",
                 params,
                 variants,
-                default_variant: "default",
+                default_variant,
                 width: meta.width,
                 height: meta.height,
                 doc: meta.doc,
@@ -215,6 +216,20 @@ pub fn parse_user_component(
                 if declared.contains(r) == false {
                   return Err("usercomp_undeclared_ref:" + r)
                 }
+              }
+              // 实例化冒烟（内置验收）：代入默认参数在临时画板放置一次，
+              // 确保组件可画——CLI compile/import 与 MCP 共用本函数，
+              // 不再各自维护 probe 拷贝。
+              let probe = @core.Document::new({
+                width: def.width + 400.0,
+                height: def.height + 400.0,
+              })
+              match(try? @core.place_user_component(probe, def, "__probe", dx=10.0, dy=10.0)) {
+                Ok(r) =>
+                  if r.is_ok() == false {
+                    return Err("usercomp_probe_failed")
+                  }
+                Err(_) => return Err("usercomp_probe_failed")
               }
               Ok(def)
             }

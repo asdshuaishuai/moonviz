@@ -173,8 +173,50 @@ fn mcf_xor_stream(
 }
 
 ///|
-/// 打包：header_json + mbt 源码 → MCF 字节
-pub fn mcf_pack(header_json : String, mbt_source : String) -> Bytes {
+/// 组件元信息 → MCF header JSON（CLI/MCP 共用的唯一构造点，
+/// 保证同一 mcf-v1 版本的 header schema 一致）
+pub fn mcf_header_json(def : UserComponentDef) -> String {
+  let ps : Array[String] = []
+  for param in def.params.iter() {
+    ps.push(
+      "{\"name\":\"\{json_escape(param.name)}\",\"kind\":\"\{param.kind}\",\"default\":\"\{json_escape(param.default_value)}\"}",
+    )
+  }
+  let vs : Array[String] = []
+  for v in def.variants.keys() {
+    vs.push("\"\{v}\"")
+  }
+  let joined : Array[String] = []
+  for i = 0; i < ps.length(); i = i + 1 {
+    joined.push(ps[i])
+  }
+  "{\"id\":\"\{json_escape(def.id)}\",\"description\":\"\{json_escape(def.description)}\",\"params\":[\{mcf_join_str(joined)}],\"variants\":[\{mcf_join_str(vs)}],\"format\":\"mcf-v1\"}"
+}
+
+///|
+fn mcf_join_str(items : Array[String]) -> String {
+  let sb = StringBuilder::new()
+  let mut first = true
+  for item in items.iter() {
+    if first == false {
+      sb.write_string(",")
+    }
+    first = false
+    sb.write_string(item)
+  }
+  sb.to_string()
+}
+
+///|
+/// 打包：header_json + mbt 源码 → MCF 字节。
+/// header TLV 长度字段是 u16：超限直接拒绝（防静默截断）。
+pub fn mcf_pack(
+  header_json : String,
+  mbt_source : String,
+) -> Result[Bytes, String] {
+  if header_json.length() > 65535 {
+    return Err("mcf_header_too_large:\{header_json.length()}")
+  }
   let header = mcf_wrap_header(header_json)
   let raw : Array[Byte] = []
   let src = @utf8.encode(mbt_source)
@@ -204,7 +246,7 @@ pub fn mcf_pack(header_json : String, mbt_source : String) -> Bytes {
     out.push(b)
   }
   push_le64(out, fnv1a64(MCF_FINGERPRINT_INPUT))
-  bytes_of(out)
+  Ok(bytes_of(out))
 }
 
 ///|
@@ -243,6 +285,10 @@ pub fn mcf_unpack(
   }
   let header_len = read_le32(arr, 6)
   let payload_len = read_le64(arr, 10).to_int()
+  // Int64→Int 截断可为负：先拒绝，再谈总长
+  if payload_len < 0 || payload_len > arr.length() || header_len < 0 {
+    return Err("mcf_payload_len_invalid")
+  }
   let header_crc = read_le32(arr, 18)
   let payload_crc = read_le32(arr, 22)
   if header_len < 3 || header_len > arr.length() {
