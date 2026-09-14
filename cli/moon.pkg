@@ -1,0 +1,15 @@
+import {
+  "moonviz/core",
+  "moonviz/decl",
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
+}
+
+options(
+  "is-main": true,
+  targets: {
+    "main.mbt": [ "native" ],
+    "main_stub.mbt": [ "not", "native" ],
+    "main_test.mbt": [ "native" ],
+  },
+)

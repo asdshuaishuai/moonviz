@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoonViz — AI 时代的 Agent 驱动原型设计引擎</title>
+<meta name="description" content="MoonViz 是纯 MoonBit 实现的原型设计基础引擎：.mbt.md 单一事实源、human 与 Agent 双路线编辑、DDP 加密文档分发。">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+:root{
+  --bg:#F5F7FB;--panel:#FFFFFF;--ink:#0F172A;--ink2:#475569;--ink3:#94A3B8;
+  --line:#E2E8F0;--brand:#4B6BFB;--brand2:#9D5CE6;--ok:#16A34A;--code-bg:#0F172A;--code-ink:#E2E8F0;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.75 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:.86em;background:#EEF2FF;border:1px solid #DBE2F8;border-radius:5px;padding:1px 6px;color:#334155}
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:18px 20px;overflow:auto;font-size:12.5px;line-height:1.65}
+pre code{background:none;border:none;color:inherit;padding:0}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+/* nav */
+nav{position:sticky;top:0;z-index:10;background:rgba(245,247,251,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:22px;height:58px}
+nav .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;color:var(--ink)}
+nav .brand svg{width:26px;height:26px;border-radius:7px;box-shadow:0 2px 8px rgba(15,23,42,.18)}
+nav .links{display:flex;gap:20px;font-size:13.5px;font-weight:600}
+nav .links a{color:var(--ink2)}
+nav .spacer{flex:1}
+nav .cta{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:700;box-shadow:0 3px 10px rgba(75,107,251,.35)}
+nav .cta:hover{text-decoration:none;transform:translateY(-1px)}
+/* hero */
+.hero{padding:72px 0 56px;text-align:center;background:
+  radial-gradient(900px 380px at 20% -10%,rgba(75,107,251,.10),transparent),
+  radial-gradient(900px 380px at 85% 0,rgba(157,92,230,.10),transparent)}
+.hero .logo{width:128px;height:128px;border-radius:30px;box-shadow:0 18px 50px rgba(15,23,42,.22);margin-bottom:26px}
+.hero h1{font-size:40px;line-height:1.22;margin:0 0 14px;font-weight:800;letter-spacing:-.5px}
+.hero h1 .grad{background:linear-gradient(120deg,#4B6BFB,#9D5CE6,#F472B6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{font-size:17px;color:var(--ink2);max-width:720px;margin:0 auto 30px}
+.hero .actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:11px 26px;border-radius:11px;font-weight:700;font-size:14px}
+.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 18px rgba(75,107,251,.35)}
+.btn.primary:hover{text-decoration:none;transform:translateY(-1px)}
+.btn.ghost{border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+.btn.ghost:hover{text-decoration:none;border-color:var(--brand);color:var(--brand)}
+/* stats */
+.stats{display:flex;gap:14px;justify-content:center;margin:44px 0 0;flex-wrap:wrap}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 26px;min-width:150px}
+.stat b{display:block;font-size:22px;color:var(--ink)}
+.stat span{font-size:12px;color:var(--ink3);font-weight:600}
+/* section */
+section{padding:64px 0}
+section.alt{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+h2.sec{font-size:27px;font-weight:800;margin:0 0 8px;letter-spacing:-.3px}
+p.lead{color:var(--ink2);margin:0 0 34px;max-width:760px}
+.grid{display:grid;gap:18px}
+.grid.c3{grid-template-columns:repeat(3,1fr)}
+.grid.c2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:860px){.grid.c3,.grid.c2{grid-template-columns:1fr}.hero h1{font-size:30px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px}
+.card h3{margin:0 0 8px;font-size:16px;font-weight:750;display:flex;align-items:center;gap:9px}
+.card p{margin:0;color:var(--ink2);font-size:13.5px}
+.dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+/* pipeline */
+.pipe{display:flex;gap:0;align-items:stretch;flex-wrap:wrap;margin-top:8px}
+.pipe .node{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;position:relative}
+.pipe .node b{display:block;font-size:13.5px}
+.pipe .node span{font-size:11.5px;color:var(--ink3)}
+.pipe .arrow{align-self:center;color:var(--ink3);padding:0 8px;font-size:18px}
+/* footer */
+footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-size:12.5px;text-align:center}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+.tag.blue{background:#DBEAFE;color:#1D4ED8}.tag.green{background:#DCFCE7;color:#15803D}.tag.purple{background:#F3E8FF;color:#7E22CE}.tag.pink{background:#FCE7F3;color:#BE185D}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <span class="brand"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" rx="116" fill="#EEF3FA"/><path d="M 110 325 C 145 250 205 170 300 155 C 375 142 425 180 440 230 C 452 270 425 315 370 340 C 285 380 180 385 125 345 C 118 340 112 332 110 325 Z" fill="#0F172A"/><path d="M 225 172 C 235 95 255 35 290 25 C 280 75 270 128 285 158 Z" fill="#0F172A"/><path d="M 135 338 C 175 360 255 355 330 328 C 380 310 415 278 418 255 C 395 245 355 275 300 288 C 225 305 165 318 135 338 Z" fill="#fff"/><ellipse cx="355" cy="190" rx="28" ry="14" transform="rotate(-18 355 190)" fill="#fff"/><circle cx="370" cy="216" r="8" fill="#020617" stroke="#38BDF8" stroke-width="1.4"/><circle cx="367.5" cy="213.5" r="2.8" fill="#fff"/><path d="M 300 152 C 290 122 360 102 400 130 C 415 140 405 160 380 160 C 340 160 310 162 300 152 Z" fill="#E11D48"/><path d="M 110 260 C 140 170 250 130 340 160 C 400 180 420 250 380 310 C 330 370 220 380 150 330" stroke="url(#g1)" stroke-width="10" stroke-linecap="round" fill="none" opacity=".55"/><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38BDF8"/><stop offset=".7" stop-color="#C084FC"/><stop offset="1" stop-color="#F472B6"/></linearGradient></defs></svg>MoonViz</span>
+  <div class="links"><a href="docs.html">使用文档</a><a href="docs.html#cli">CLI</a><a href="docs.html#sdk">Node SDK</a><a href="docs.html#mcp">MCP</a><a href="docs.html#skill">SKILL</a></div>
+  <span class="spacer"></span>
+  <a class="cta" href="docs.html#quickstart">快速开始</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <svg class="logo" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <clipPath id="sq"><rect width="512" height="512" rx="116"/></clipPath>
+      <linearGradient id="bgg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FA"/><stop offset="1" stop-color="#CFE0F2"/></linearGradient>
+    </defs>
+    <g clip-path="url(#sq)"><rect width="512" height="512" fill="url(#bgg)"/>
+    <path d="M 70 280 C 100 160 240 100 360 140 C 440 170 460 270 410 350 C 350 430 210 440 130 380 C 80 340 60 260 110 190" stroke="#818CF8" stroke-width="12" stroke-linecap="round" fill="none" opacity=".35"/>
+    <path d="M 120 340 C 90 355 50 360 25 345 C 20 325 45 305 80 300 C 100 295 118 305 130 320 Z" fill="#0F172A"/>
+    <path d="M 120 340 C 95 375 60 400 30 395 C 20 375 35 350 70 332 C 95 322 115 325 130 330 Z" fill="#0F172A"/>
+    <path d="M 110 325 C 145 250 205 170 300 155 C 375 142 425 180 440 230 C 452 270 425 315 370 340 C 285 380 180 385 125 345 C 118 340 112 332 110 325 Z" fill="url(#sk)"/>
+    <path d="M 225 172 C 235 95 255 35 290 25 C 280 75 270 128 285 158 Z" fill="url(#sk)"/>
+    <path d="M 270 160 C 285 148 310 146 325 158 C 315 175 290 180 270 160 Z" fill="#94A3B8" opacity=".5"/>
+    <path d="M 135 338 C 175 360 255 355 330 328 C 380 310 415 278 418 255 C 395 245 355 275 300 288 C 225 305 165 318 135 338 Z" fill="#fff"/>
+    <path d="M 365 298 C 400 292 428 268 430 250 C 408 246 372 268 365 298 Z" fill="#fff"/>
+    <ellipse cx="355" cy="190" rx="28" ry="14" transform="rotate(-18 355 190)" fill="#fff"/>
+    <circle cx="370" cy="216" r="9.5" fill="#1E293B" stroke="#64748B" stroke-width="1.5"/><circle cx="370" cy="216" r="8" fill="#020617" stroke="#38BDF8" stroke-width="1.2"/><circle cx="370" cy="216" r="5" fill="#0B0F19"/><circle cx="367.5" cy="213.5" r="2.8" fill="#fff"/><circle cx="372.5" cy="218.5" r="1.3" fill="#E0F2FE"/>
+    <path d="M 378 238 C 398 246 422 240 432 232" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M 250 310 C 225 345 200 380 215 395 C 235 395 260 350 280 315 Z" fill="#0B1220" opacity=".65"/>
+    <path d="M 300 295 C 325 335 355 368 378 358 C 392 348 365 310 335 282 Z" fill="url(#sk)"/>
+    <path d="M 300 152 C 290 122 360 102 400 130 C 415 140 405 160 380 160 C 340 160 310 162 300 152 Z" fill="url(#br)"/>
+    <path d="M 310 155 C 330 150 370 150 390 157 C 380 162 330 162 310 155 Z" fill="#4C0519"/>
+    <path d="M 348 116 C 346 108 351 105 350 101" stroke="#FB7185" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <g transform="translate(210,285) rotate(-12)"><path d="M 20 15 C 50 5 88 18 82 52 C 76 76 42 80 18 66 C -6 52 -4 25 20 15 Z" fill="url(#wd)"/><ellipse cx="18" cy="48" rx="6" ry="8" fill="#0F172A"/><circle cx="22" cy="26" r="4.5" fill="#FB7185"/><circle cx="36" cy="20" r="4.5" fill="#FCD34D"/><circle cx="52" cy="24" r="4.5" fill="#38BDF8"/><circle cx="64" cy="38" r="4.5" fill="#34D399"/><circle cx="54" cy="58" r="4.5" fill="#C084FC"/></g>
+    <g transform="translate(405,230) rotate(-15)"><path d="M -50 0 L 30 0 L 30 6 L -50 6 Z" fill="url(#wd)"/><rect x="30" y="-1" width="14" height="8" rx="1.5" fill="#94A3B8"/><path d="M 44 -1 C 56 -3 68 3 72 4 C 68 5 56 10 44 8 Z" fill="#F472B6"/><path d="M 60 2 C 66 2 74 4 78 4 C 74 5 66 6 60 5 Z" fill="#FCD34D"/></g>
+    </g>
+    <defs>
+      <linearGradient id="sk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1E293B"/><stop offset=".45" stop-color="#0F172A"/><stop offset="1" stop-color="#030712"/></linearGradient>
+      <linearGradient id="br" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FB7185"/><stop offset=".6" stop-color="#E11D48"/><stop offset="1" stop-color="#9F1239"/></linearGradient>
+      <linearGradient id="wd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F59E0B"/><stop offset=".6" stop-color="#D97706"/><stop offset="1" stop-color="#78350F"/></linearGradient>
+    </defs>
+  </svg>
+  <h1>AI 时代的 <span class="grad">Agent 驱动</span>原型设计引擎</h1>
+  <p class="sub">纯 MoonBit 实现。一份 <code>.mbt.md</code> 视觉文档是唯一事实源——人类画布操作与 Agent 修改都回写同一份源码，每次预览从源重建；通过 DDP 加密容器安全分发。</p>
+  <div class="actions">
+    <a class="btn primary" href="docs.html#quickstart">快速开始</a>
+    <a class="btn ghost" href="docs.html">完整使用文档</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>70+</b><span>Agent 工具</span></div>
+    <div class="stat"><b>8×22</b><span>组件 × 变体</span></div>
+    <div class="stat"><b>2</b><span>导出 Gate（Human/Agent）</span></div>
+    <div class="stat"><b>100%</b><span>MoonBit · 单二进制</span></div>
+  </div>
+</div></header>
+
+<section><div class="wrap">
+  <h2 class="sec">核心理念：单一事实源 + 双路线编辑</h2>
+  <p class="lead">没有隐藏的项目数据库，没有旁路缓存。引擎只认 <code>.mbt.md</code>——它是可编译的 MoonBit literate 源码，也是完整的设计文档。</p>
+  <div class="pipe">
+    <div class="node"><b>.mbt.md</b><span>唯一事实源</span></div><div class="arrow">→</div>
+    <div class="node"><b>Human 编辑</b><span>Studio 画布操作</span></div><div class="arrow">→</div>
+    <div class="node"><b>export-mbt-human</b><span>结构违规硬阻断</span></div><div class="arrow">→</div>
+    <div class="node"><b>Agent 编辑</b><span>CLI / SDK / MCP</span></div><div class="arrow">→</div>
+    <div class="node"><b>export-mbt-agent</b><span>语义级校验</span></div><div class="arrow">→</div>
+    <div class="node"><b>视觉预览</b><span>每次从源重建</span></div>
+  </div>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <h2 class="sec">六种集成方式</h2>
+  <p class="lead">从命令行手动驱动，到 IDE 内 Agent 自动驱动——同一引擎，同一事实源。</p>
+  <div class="grid c3">
+    <a class="card" href="docs.html#cli"><h3><span class="dot" style="background:#4B6BFB"></span>CLI 行协议</h3><p>换行分帧 JSON 协议。一个 CLI 进程 = 一个有状态 Project 会话。模板、操作、交互流、导出、渲染全覆盖。</p></a>
+    <a class="card" href="docs.html#sdk"><h3><span class="dot" style="background:#16A34A"></span>Node SDK</h3><p><code>@moonviz/engine-sdk</code>：MoonViz 会话、Project 高层 API、DDP 加解密。纯传输层，不建第二事实源。</p></a>
+    <a class="card" href="docs.html#mcp"><h3><span class="dot" style="background:#9D5CE6"></span>MCP Server</h3><p>stdio JSON-RPC。read_mbt / render_mbt 源侧工具 + lint / critique / infer 设计智能工具，直接接入 MCP 客户端。</p></a>
+    <a class="card" href="docs.html#skill"><h3><span class="dot" style="background:#F472B6"></span>SKILL 技能</h3><p>SKILL.md 定义 Agent 操作规范：双 Gate 语义、操作命令、约束红线，让任意 coding agent 安全驱动引擎。</p></a>
+    <a class="card" href="docs.html#ddp"><h3><span class="dot" style="background:#F59E0B"></span>DDP 文档分发</h3><p>DDP1 = Argon2id + XChaCha20-Poly1305 加密容器；DDP2 = 免密压缩容器（zstd + CRC32）。Rust 编解码器独立交付。</p></a>
+    <a class="card" href="docs.html#studio"><h3><span class="dot" style="background:#0EA5E9"></span>Studio / Viewer</h3><p>deepDesign Studio（Tauri）提供人类画布；ddpView（macOS 原生）只读查看加密 DDP 文档并渲染交互原型。</p></a>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="sec">60 秒跑通</h2>
+  <p class="lead">前置：安装 <a href="https://docs.moonbitlang.com/">MoonBit 工具链</a>（<code>moon</code> 可执行）。</p>
+  <pre><code># 1. 进入引擎目录
+cd moonviz
+
+# 2. 启动有状态 CLI 会话（stdin 逐行下发命令，stdout 逐行返回 JSON）
+moon run --target native cli
+
+# 3. 会话内构建一个双画板登录原型
+template login t_login 390 844
+template dashboard t_home 390 844
+update t_login welcome_title text="欢迎回来"
+flow t_login t_home login_btn
+export-mbt-human          # ← HumanGate 校验 + 返回 canonical .mbt.md
+
+# 4. 无会话渲染（AgentGate 级重载）
+render-mbt-b64 &lt;base64-mbt&gt;
+
+# 5. 打包 DDP 免密容器（Rust ddp_codec）
+echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/release/ddp_codec</code></pre>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <h2 class="sec">深度设计文档</h2>
+  <p class="lead">引擎仓库 <code>docs/</code> 内含 9 篇架构级文档，覆盖从源码格式到渲染生态的完整链路。</p>
+  <div class="grid c3">
+    <div class="card"><h3>01 · 架构总览</h3><p>分层设计、模块边界、数据流与架构红线。</p></div>
+    <div class="card"><h3>02 · .mbt.md 格式</h3><p>literate 源码规则、moonviz:artboard 块、@decl 公开声明解析。</p></div>
+    <div class="card"><h3>03 · 场景图</h3><p>画板、节点、约束的场景图模型。</p></div>
+    <div class="card"><h3>04 · 布局与谓词</h3><p>fixed/flex 布局谓词与推理引擎。</p></div>
+    <div class="card"><h3>05 · 同步管线</h3><p>源码 ⇄ 场景图 ⇄ 画布的双向同步一致性。</p></div>
+    <div class="card"><h3>06 · 渲染</h3><p>SVG 渲染管线、主题、线框模式。</p></div>
+    <div class="card"><h3>07 · Agent 循环</h3><p>Agent 操作协议、双 Gate、debt 机制。</p></div>
+    <div class="card"><h3>08 · 路线图与风险</h3><p>演进计划与已知风险清单。</p></div>
+    <div class="card"><h3>09 · 渲染生态</h3><p>导出 SVG / DDP / 声明物料的生态位。</p></div>
+  </div>
+</div></section>
+
+<footer>MoonViz · 纯 MoonBit 原型设计引擎 · .mbt.md 单一事实源 · MIT License</footer>
+</body>
+</html>

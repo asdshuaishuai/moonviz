@@ -1,0 +1,13 @@
+import {
+  "moonviz/core",
+  "moonviz/decl",
+  "moonbitlang/core/encoding/base64",
+}
+
+options(
+  "is-main": true,
+  targets: {
+    "main_load.mbt": [ "not", "native" ],
+    "main_repl.mbt": [ "native" ],
+  },
+)

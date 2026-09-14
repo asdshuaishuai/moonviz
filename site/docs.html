@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使用文档 — MoonViz</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+:root{--bg:#F5F7FB;--panel:#FFFFFF;--ink:#0F172A;--ink2:#475569;--ink3:#94A3B8;--line:#E2E8F0;--brand:#4B6BFB;--brand2:#9D5CE6;--code-bg:#0F172A;--code-ink:#E2E8F0;--side-w:216px}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.75 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}
+code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:.86em;background:#EEF2FF;border:1px solid #DBE2F8;border-radius:5px;padding:1px 6px;color:#334155}
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:18px 20px;overflow:auto;font-size:12.5px;line-height:1.65}
+pre code{background:none;border:none;color:inherit;padding:0}
+nav{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .bar{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:20px;height:56px}
+nav .brand{font-weight:800;font-size:14.5px;color:var(--ink)}
+nav .brand a{color:inherit}
+.layout{max-width:1280px;margin:0 auto;padding:0 24px;display:flex;gap:40px}
+aside{width:var(--side-w);flex-shrink:0;position:sticky;top:56px;align-self:flex-start;max-height:calc(100vh - 76px);overflow:auto;padding:26px 0;font-size:13px}
+aside a{display:block;color:var(--ink2);padding:5px 10px;border-radius:7px;font-weight:600}
+aside a:hover{background:#EDF0F7;text-decoration:none;color:var(--brand)}
+aside .grp{font-size:10.5px;font-weight:800;color:var(--ink3);letter-spacing:.08em;margin:16px 10px 4px}
+main{flex:1;min-width:0;padding:30px 0 80px;max-width:860px}
+main section{padding-top:34px;border-top:1px solid var(--line);margin-top:34px}
+main section:first-child{border-top:none;margin-top:0;padding-top:0}
+h1{font-size:30px;font-weight:800;margin:0 0 6px;letter-spacing:-.4px}
+h2{font-size:21px;font-weight:800;margin:38px 0 10px;letter-spacing:-.2px}
+h3{font-size:15.5px;font-weight:750;margin:26px 0 8px}
+p{color:#334155}
+.note{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:13px 18px;font-size:13.5px;color:#1E40AF}
+.warn{background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:13px 18px;font-size:13.5px;color:#9A3412}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{border-bottom:1px solid var(--line);padding:9px 14px;text-align:left;vertical-align:top}
+th{background:#F1F5F9;font-size:12px;letter-spacing:.03em;color:var(--ink2)}
+tr:last-child td{border-bottom:none}
+kbd{font-family:inherit;font-size:11px;background:#F1F5F9;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+footer{border-top:1px solid var(--line);padding:30px 0;color:var(--ink3);font-size:12.5px;text-align:center}
+@media(max-width:960px){aside{display:none}.layout{display:block}}
+</style>
+</head>
+<body>
+
+<nav><div class="bar">
+  <span class="brand"><a href="index.html">← MoonViz</a></span>
+  <span style="color:var(--ink3);font-size:13px">使用文档</span>
+</div></nav>
+
+<div class="layout">
+<aside>
+  <div class="grp">开始</div>
+  <a href="#overview">总览</a>
+  <a href="#quickstart">快速开始</a>
+  <div class="grp">集成方式</div>
+  <a href="#cli">CLI 行协议</a>
+  <a href="#sdk">Node SDK</a>
+  <a href="#mcp">MCP Server</a>
+  <a href="#skill">SKILL 技能</a>
+  <a href="#studio">Studio / Viewer</a>
+  <div class="grp">参考</div>
+  <a href="#ddp">DDP 容器</a>
+  <a href="#env">环境变量</a>
+  <a href="#refs">深度文档</a>
+</aside>
+
+<main>
+
+<h1>MoonViz 使用文档</h1>
+<p>本文覆盖引擎的全部对外集成面：CLI 行协议、Node SDK、MCP Server 与 Agent SKILL。所有路线共享同一份 <code>.mbt.md</code> 事实源与同一套双 Gate 校验。</p>
+
+<section id="overview">
+<h2>总览</h2>
+<p>MoonViz 是用 <b>纯 MoonBit</b> 实现的原型设计基础引擎。核心不变量：</p>
+<ul>
+  <li><b>单一事实源</b> —— 一份 <code>.mbt.md</code>（MoonBit literate 源码）就是整个项目。引擎不维护第二份状态。</li>
+  <li><b>双路线编辑</b> —— 人类画布操作与 Agent 修改都回写同一源文件；导出分 <code>export-mbt-human</code> / <code>export-mbt-agent</code> 两个 Gate。</li>
+  <li><b>预览从源重建</b> —— 任何视觉输出（SVG / 画布）都是对源的即时渲染，不存在旁路缓存。</li>
+  <li><b>加密分发</b> —— 文档以 DDP 容器交付：DDP1 加密（Argon2id + XChaCha20-Poly1305）或 DDP2 免密（zstd + CRC32）。</li>
+</ul>
+<div class="note">引擎目录结构：<code>core/</code>（内核）· <code>cli/</code>（行协议 CLI）· <code>mcp/</code>（MCP Server）· <code>decl/</code>（声明库）· <code>ddp/</code>（Rust 编解码器）· <code>sdk/node/</code>（Node SDK）· <code>playground/</code>（实验场）· <code>SKILL.md</code>（Agent 技能）。</div>
+</section>
+
+<section id="quickstart">
+<h2>快速开始</h2>
+<h3>前置条件</h3>
+<ul>
+  <li><a href="https://docs.moonbitlang.com/">MoonBit 工具链</a>：需要 <code>moon</code> 可执行文件（<code>~/.moon/bin/moon</code> 或 PATH 中）。</li>
+  <li>DDP 加解密需先构建 Rust 工具：<code>cd moonviz/ddp && cargo build --release</code>（产物 <code>ddp/target/release/ddp_codec</code>）。</li>
+</ul>
+<h3>跑通第一条链路</h3>
+<pre><code>cd moonviz
+
+# 有状态会话：stdin 一行命令 → stdout 一行 JSON
+moon run --target native cli
+
+# 会话内：
+template login t_login 390 844        # 从模板建画板
+update t_login welcome_title text="欢迎回来"
+flow t_login t_home login_btn         # 点击 login_btn → 跳转 t_home
+export-mbt-human                       # HumanGate 校验，返回 canonical .mbt.md
+exit</code></pre>
+<p>每条命令返回一行 JSON：<code>{"ok":true,...}</code>；导出命令额外携带 <code>mbt</code>（完整源码）、<code>flows</code>、<code>artboards</code> 等字段。</p>
+<h3>无会话渲染 / 校验</h3>
+<pre><code># 渲染（AgentGate 级重载：MBT 完整重建）
+render-mbt-b64 &lt;base64(mbt)&gt;
+# → {"ok":true,"entry":"t_login","flows":[...],"artboards":[{id,width,height,svg,nodes}]}
+
+# 只校验不渲染
+validate-mbt-b64 &lt;base64(mbt)&gt;
+# → {"ok":true,"entry":...,"revision":...,"blockKinds":{...}}</code></pre>
+</section>
+
+<section id="cli">
+<h2>CLI 行协议</h2>
+<p><b>协议约定</b>：换行分帧 JSON——stdin 每行一条命令，stdout 每行一个 JSON 值。一个 CLI 进程 = 一个有状态 Project 会话；<code>exit</code> 或 stdin EOF 结束会话。</p>
+<pre><code>moon run --target native cli      # 在引擎根目录（含 cli/moon.pkg）执行</code></pre>
+
+<h3>会话内命令（有状态）</h3>
+<table>
+<tr><th>命令</th><th>说明</th></tr>
+<tr><td><code>template &lt;tplId&gt; &lt;name&gt; &lt;w&gt; &lt;h&gt;</code></td><td>从内置模板实例化画板（登录页、仪表盘等 8 个完整页面模板）</td></tr>
+<tr><td><code>create &lt;name&gt; &lt;w&gt; &lt;h&gt;</code></td><td>新建空白画板</td></tr>
+<tr><td><code>duplicate &lt;src&gt; &lt;newName&gt;</code></td><td>复制画板</td></tr>
+<tr><td><code>delete-artboard &lt;id&gt;</code></td><td>删除画板（至少保留一个，引擎侧校验）</td></tr>
+<tr><td><code>update &lt;artboard&gt; &lt;node&gt; k=v …</code></td><td>更新节点属性（text/fill/x/y/w/h/radius/opacity/tracking…；字符串用 JSON 引号）</td></tr>
+<tr><td><code>move &lt;artboard&gt; &lt;node&gt; &lt;x&gt; &lt;y&gt;</code></td><td>移动节点</td></tr>
+<tr><td><code>copy &lt;artboard&gt; &lt;node&gt; &lt;newId&gt; &lt;dx&gt; &lt;dy&gt;</code></td><td>复制节点</td></tr>
+<tr><td><code>flip &lt;artboard&gt; &lt;node&gt; h|v|both|none</code></td><td>翻转</td></tr>
+<tr><td><code>reorder &lt;artboard&gt; &lt;node&gt; front|back|up|down</code></td><td>Z 序调整</td></tr>
+<tr><td><code>group</code> / <code>ungroup</code> / <code>align</code></td><td>编组 / 解组 / 对齐</td></tr>
+<tr><td><code>flow &lt;from&gt; &lt;to&gt; &lt;triggerNode&gt;</code></td><td>建立交互流（tap 触发跳转）</td></tr>
+<tr><td><code>resize-canvas</code> / <code>restyle</code> / <code>theme</code></td><td>画布尺寸 / 重排版式 / 主题</td></tr>
+<tr><td><code>export-mbt-human</code></td><td><b>HumanGate</b> 导出 canonical <code>.mbt.md</code>（结构违规硬阻断）</td></tr>
+<tr><td><code>export-mbt-agent</code></td><td><b>AgentGate</b> 导出（语义级校验）</td></tr>
+<tr><td><code>export-svg</code> / <code>export-artifact</code> / <code>export-decl</code></td><td>导出 SVG / 工件 / 声明物料</td></tr>
+<tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（8 组件 × 22 变体）/ 主题 / 设计 token</td></tr>
+<tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
+<tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
+<tr><td><code>help</code> / <code>list-tools</code> / <code>exit</code></td><td>帮助 / 工具清单 / 退出</td></tr>
+</table>
+
+<h3>无会话命令（单发）</h3>
+<table>
+<tr><th>命令</th><th>说明</th></tr>
+<tr><td><code>render-mbt-b64 &lt;b64&gt;</code></td><td>完整渲染：返回全部画板 SVG + 交互流 + 入口</td></tr>
+<tr><td><code>validate-mbt-b64 &lt;b64&gt;</code></td><td>仅校验：返回 entry / revision / blockKinds</td></tr>
+<tr><td><code>apply-human-mbt-op-b64 &lt;mbt&gt; &lt;op&gt;</code></td><td>Human 操作：输入 MBT + 操作（JSON），返回新 canonical MBT + 渲染</td></tr>
+<tr><td><code>apply-agent-mbt-op-b64 &lt;mbt&gt; &lt;op&gt;</code></td><td>Agent 操作：同上，Gate 为 AgentGate</td></tr>
+<tr><td><code>load-mbt-b64 &lt;b64&gt;</code> / <code>canonical-mbt-b64</code></td><td>载入 / 规范化 MBT</td></tr>
+</table>
+<div class="note"><b>为什么用 base64？</b> MBT 源码是多行 Markdown，用 base64 编码后可安全塞进单行帧，避免换行分帧歧义。</div>
+</section>
+
+<section id="sdk">
+<h2>Node SDK（@moonviz/engine-sdk）</h2>
+<p>SDK 是<b>纯传输 / 编排层</b>：拉起 CLI 子进程、编码命令、解析 JSON 行——不缓存、不建第二事实源。要求 Node ≥ 18，ESM。</p>
+<pre><code>import { MoonViz, Project, DDP, build } from '@moonviz/engine-sdk';
+
+// 1. 引擎客户端（moonvizDir 指向引擎根，含 cli/moon.pkg）
+const engine = new MoonViz({ moonvizDir: '../moonviz' });
+
+// 2. 低层：直接下发一批命令（同一会话）
+const templates = await engine.run(['list-templates']);
+
+// 3. 高层：Project 构建器（累积命令，导出时一次执行）
+const mbt = await build(engine, p => {
+  p.template('login', 't_login', 390, 844);
+  p.template('dashboard', 't_home', 390, 844);
+  p.update('t_login', 'welcome_title', { text: '欢迎回来' });
+  p.flow('t_login', 't_home', 'login_btn');
+});                       // → canonical .mbt.md 文本
+
+// 4. 渲染（AgentGate 重载）
+const r = await engine.render(mbt);        // { ok, entry, flows, artboards }
+
+// 5. 双 Gate 操作
+const r2 = await engine.applyHumanOp(mbt, op);   // Human 编辑
+const r3 = await engine.applyAgentOp(mbt, op);   // Agent 编辑
+
+// 6. DDP 容器
+const { bytes } = await DDP.encrypt(mbt, 'pass');   // DDP1 加密
+const free = await DDP.encrypt(mbt, '');            // DDP2 免密
+const back = await DDP.decrypt(free.bytes);         // → { mbt }</code></pre>
+<h3>API 一览</h3>
+<table>
+<tr><th>导出</th><th>说明</th></tr>
+<tr><td><code>MoonViz</code></td><td>引擎会话类：<code>run(cmds)</code> / <code>last(cmds)</code> / <code>render</code> / <code>validate</code> / <code>applyHumanOp</code> / <code>applyAgentOp</code> / <code>apply</code> / <code>create</code></td></tr>
+<tr><td><code>Project</code></td><td>构建器：<code>template/create/duplicate/deleteArtboard/update/move/flip/reorder/copy/flow/exportHuman</code></td></tr>
+<tr><td><code>DDP</code></td><td><code>encrypt(mbt, password, {codecPath, moonvizDir})</code> / <code>decrypt(bytes, password)</code></td></tr>
+<tr><td><code>build(engine, recipe)</code></td><td>一次性构建工厂</td></tr>
+<tr><td><code>encodeProps(props)</code></td><td>属性对象 → CLI <code>k=v</code> 片段</td></tr>
+<tr><td><code>EngineError</code></td><td>引擎 <code>{ok:false}</code> 响应异常（<code>error</code> 错误码 + <code>detail</code> 原始响应）</td></tr>
+</table>
+<p>自检：<code>cd moonviz && node sdk/node/test/selftest.mjs</code> —— 覆盖 模板 → 操作 → 交互流 → 导出 → 渲染 → DDP1/DDP2 往返全链路。</p>
+</section>
+
+<section id="mcp">
+<h2>MCP Server</h2>
+<p><code>mcp/</code> 是标准 stdio JSON-RPC MCP Server，可直接接入 Claude Desktop、ZCode、Cursor 等任何 MCP 客户端。</p>
+<h3>客户端配置</h3>
+<pre><code>{
+  "mcpServers": {
+    "moonviz": {
+      "command": "moon",
+      "args": ["run", "--target", "native", "mcp"],
+      "cwd": "/path/to/moonviz"
+    }
+  }
+}</code></pre>
+<h3>工具清单（节选）</h3>
+<table>
+<tr><th>工具</th><th>类别</th><th>说明</th></tr>
+<tr><td><code>initialize</code></td><td>会话</td><td>初始化项目会话，返回引擎能力清单</td></tr>
+<tr><td><code>read_mbt</code></td><td>源侧</td><td>读取当前 canonical <code>.mbt.md</code>（源侧唯一读入口）</td></tr>
+<tr><td><code>render_mbt</code></td><td>源侧</td><td>从源渲染全部画板 SVG + 交互流</td></tr>
+<tr><td><code>list_artboards</code> / <code>list_templates</code> / <code>list_components</code> / <code>list_themes</code> / <code>list_tokens</code></td><td>枚举</td><td>画板 / 模板 / 组件 / 主题 / token</td></tr>
+<tr><td><code>apply_template</code> / <code>apply_theme</code></td><td>应用</td><td>实例化模板 / 切换主题</td></tr>
+<tr><td><code>lint_design</code> / <code>auto_fix</code></td><td>质量</td><td>设计 Lint 与自动修复</td></tr>
+<tr><td><code>critique</code></td><td>智能</td><td>AI 设计批评（启发式规则集）</td></tr>
+<tr><td><code>infer_page_type</code> / <code>infer_missing</code></td><td>智能</td><td>页面类型推断 / 缺失元素推断</td></tr>
+<tr><td><code>extract_design_system</code></td><td>智能</td><td>从既有画板反向提取设计系统</td></tr>
+<tr><td><code>generate_spec</code> / <code>generate_responsive</code></td><td>生成</td><td>开发移交标注 / 响应式断点变体</td></tr>
+<tr><td><code>export_svg</code> / <code>export_artifact</code></td><td>导出</td><td>SVG / 工件导出</td></tr>
+<tr><td><code>benchmark</code></td><td>性能</td><td>渲染性能基准</td></tr>
+<tr><td><code>ddp_view</code></td><td>分发</td><td>DDP 容器只读元数据（不暴露变更路径）</td></tr>
+</table>
+<div class="warn"><b>源侧边界</b>：<code>read_mbt</code> 与 <code>render_mbt</code> 是源侧读写入口；<code>ddp_view</code> 严格只读。变更一律走带 Gate 校验的导出路径，杜绝旁路写入。</div>
+</section>
+
+<section id="skill">
+<h2>SKILL 技能（Agent 集成）</h2>
+<p>引擎根目录的 <code>SKILL.md</code> 是给 coding agent（ZCode / Claude Code / Codex 等）的操作规范。将引擎仓库加入 Agent 可访问路径，或在技能目录中引用它，Agent 即可按规范安全驱动引擎。</p>
+<h3>SKILL 约定的核心规范</h3>
+<ul>
+  <li><b>事实源纪律</b>：任何修改必须回写 <code>.mbt.md</code>，禁止只改画布或只改内存态。</li>
+  <li><b>双 Gate 语义</b>：模拟人类操作用 Human 路线（结构违规硬阻断）；程序化批量修改用 Agent 路线（语义级校验 + debt 记账）。</li>
+  <li><b>操作入口</b>：优先 MCP 工具；无 MCP 环境时退回 CLI 行协议；Node 宿主用 SDK。</li>
+  <li><b>渲染即验证</b>：每次修改后用 <code>render_mbt</code> / <code>render-mbt-b64</code> 重建视觉并比对预期。</li>
+  <li><b>红线</b>：不缓存渲染结果、不绕过 Gate 导出、不直接改 DDP 二进制。</li>
+</ul>
+<pre><code># 在 Agent 技能目录中挂载（示例：软链 SKILL.md）
+ln -s /path/to/moonviz/SKILL.md ~/.zcode/skills/moonviz/SKILL.md</code></pre>
+</section>
+
+<section id="studio">
+<h2>Studio 与 Viewer</h2>
+<h3>deepDesign Studio（Tauri，人类路线）</h3>
+<p>仓库 <code>moonviz-demo-tauri</code>。macOS 原生体验的画布编辑器：模板快速起步、双 Gate 编辑、MBT 源码视图、线框/高保真切换、Agent 协作面板。导出即 <code>.mbt.md</code> / DDP。</p>
+<pre><code>cd moonviz-demo-tauri
+cargo tauri dev      # 开发
+cargo tauri build    # 打包 .app / .dmg</code></pre>
+<h3>ddpView（macOS 原生，只读查看器）</h3>
+<p>仓库 <code>ddpView-mac</code>。SwiftUI + AppKit 的 DDP 文档查看器：解密（DDP1/DDP2）→ 校验 → 渲染画板 → 点击交互区跳转。全程只读。</p>
+<pre><code>cd ddpView-mac
+swift build -c release && ./make-app.sh    # 产出 ddpView.app
+./run.sh [file.ddp]                        # 启动（自动定位相邻 moonviz/）
+ddpView.app/Contents/MacOS/DDPView --selftest &lt;file.ddp&gt; [&lt;pwd&gt;]   # 无头自检</code></pre>
+</section>
+
+<section id="ddp">
+<h2>DDP 容器（Rust ddp_codec）</h2>
+<p>DDP 是文档分发格式，由引擎仓库内独立的 Rust 工具 <code>ddp_codec</code> 编解码。协议：stdin 单行 JSON → stdout 单行 JSON。</p>
+<table>
+<tr><th>格式</th><th>构成</th><th>用途</th></tr>
+<tr><td><b>DDP1</b></td><td>Argon2id 密钥派生 + XChaCha20-Poly1305 AEAD</td><td>带密码加密分发；错密码 → 认证失败</td></tr>
+<tr><td><b>DDP2</b></td><td>zstd 压缩 + CRC32 完整性校验（无加密）</td><td>免密场景：预览、CI、演示</td></tr>
+</table>
+<pre><code># 加密（DDP1）
+echo '{"operation":"encrypt","mbt_b64":"…","password":"p@ss"}' | ddp_codec
+# → {"ok":true,"ddp_b64":"…"}
+
+# 免密（DDP2）：password 传空串
+echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp_codec
+
+# 解密
+echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
+# → {"ok":true,"mbt_b64":"…"}</code></pre>
+</section>
+
+<section id="env">
+<h2>环境变量</h2>
+<table>
+<tr><th>变量</th><th>作用</th><th>回退顺序</th></tr>
+<tr><td><code>MOONVIZ_DIR</code></td><td>引擎根目录（须含 <code>cli/moon.pkg</code>）</td><td>参数 <code>moonvizDir</code> → 环境变量 → 自动向上查找（SDK）／相邻目录启发（Viewer）</td></tr>
+<tr><td><code>MOONVIZ_MOON</code> / <code>MOON</code></td><td><code>moon</code> 可执行所在目录</td><td>→ <code>PATH</code> → <code>~/.moon/bin/moon</code> → <code>/opt/homebrew/bin/moon</code></td></tr>
+<tr><td><code>MOONVIZ_DDP_HELPER</code></td><td><code>ddp_codec</code> 完整路径</td><td>→ <code>&lt;moonviz&gt;/ddp/target/{debug,release}/ddp_codec</code></td></tr>
+</table>
+</section>
+
+<section id="refs">
+<h2>深度文档（仓库 docs/）</h2>
+<table>
+<tr><th>#</th><th>文档</th><th>内容</th></tr>
+<tr><td>01</td><td><code>architecture</code></td><td>分层架构与红线</td></tr>
+<tr><td>02</td><td><code>mbtmd-format</code></td><td>.mbt.md literate 源码格式</td></tr>
+<tr><td>03</td><td><code>scene-graph</code></td><td>场景图模型</td></tr>
+<tr><td>04</td><td><code>layout-and-predicates</code></td><td>布局谓词与推理</td></tr>
+<tr><td>05</td><td><code>sync-pipeline</code></td><td>双向同步管线</td></tr>
+<tr><td>06</td><td><code>render</code></td><td>SVG 渲染管线</td></tr>
+<tr><td>07</td><td><code>agent-loop</code></td><td>Agent 循环与双 Gate</td></tr>
+<tr><td>08</td><td><code>roadmap-risks</code></td><td>路线图与风险</td></tr>
+<tr><td>09</td><td><code>rendering-ecosystem</code></td><td>渲染生态位</td></tr>
+</table>
+</section>
+
+</main>
+</div>
+<footer>MoonViz 使用文档 · MIT License</footer>
+</body>
+</html>
