@@ -365,78 +365,6 @@ fn flex_text(l : @core.StackLayout) -> String {
 }
 
 ///|
-fn node_params_list(n : @core.Node) -> Array[String] {
-  let parts : Array[String] = Array::new()
-  parts.push("id=\"\{decl_escape(n.id)}\"")
-  match pos_text(n.x) {
-    Some(v) => parts.push("x=\{v}")
-    None => ()
-  }
-  match pos_text(n.y) {
-    Some(v) => parts.push("y=\{v}")
-    None => ()
-  }
-  match n.component {
-    "text" => {
-      parts.push("content=\"\{decl_escape(n.text)}\"")
-      parts.push("size=\{num_text(n.style.font_size)}")
-      parts.push("weight=\"\{n.style.font_weight}\"")
-      parts.push("color=\"\{n.style.text_color}\"")
-    }
-    "text_input" => {
-      parts.push("width=\{size_text(n.width)}")
-      parts.push("height=\{size_text(n.height)}")
-      parts.push("placeholder=\"\{decl_escape(n.text)}\"")
-    }
-    "button" => {
-      parts.push("width=\{size_text(n.width)}")
-      parts.push("height=\{size_text(n.height)}")
-      parts.push("label=\"\{decl_escape(n.text)}\"")
-    }
-    "image" => {
-      parts.push("width=\{size_text(n.width)}")
-      parts.push("height=\{size_text(n.height)}")
-    }
-    "group" => ()
-    "rect" => {
-      parts.push("width=\{size_text(n.width)}")
-      parts.push("height=\{size_text(n.height)}")
-      parts.push("text=\"\{decl_escape(n.text)}\"")
-    }
-    _ => {
-      parts.push("width=\{size_text(n.width)}")
-      parts.push("height=\{size_text(n.height)}")
-      match n.layout {
-        Some(l) => parts.push("layout=\{flex_text(l)}")
-        None => ()
-      }
-    }
-  }
-  // Studio 的画布属性面板能修改下列字段；canonical MBT 必须无条件记录它们，
-  // 否则人类操作在 Document → MBT → Document 往返时会静默丢失视觉状态。
-  parts.push("fill=\"\{n.style.fill}\"")
-  parts.push("stroke=\"\{n.style.stroke}\"")
-  parts.push("stroke_width=\{num_text(n.style.stroke_width)}")
-  parts.push("radius=\{num_text(n.style.corner_radius)}")
-  parts.push("opacity=\{num_text(n.style.opacity)}")
-  parts.push("font_size=\{num_text(n.style.font_size)}")
-  parts.push("text_color=\"\{n.style.text_color}\"")
-  parts.push("shadow=\"\{n.style.shadow}\"")
-  parts.push("rotate=\{num_text(n.style.rotate)}")
-  parts.push("blur=\{num_text(n.style.blur)}")
-  parts.push("blend=\"\{n.style.blend}\"")
-  parts.push("line=\{num_text(n.style.line_height)}")
-  parts.push("tracking=\{num_text(n.style.tracking)}")
-  parts.push("flip=\"\{n.style.flip}\"")
-  parts.push("text_align=\"\{n.style.text_align}\"")
-  parts.push("font_style=\"\{n.style.font_style}\"")
-  parts.push("stroke_dash=\"\{n.style.stroke_dash}\"")
-  parts.push("visible=\{n.style.visible}")
-  parts.push("constraint=\"\{n.constraint}\"")
-  parts
-}
-
-///|
 fn node_call(n : @core.Node) -> String {
   let parts = Array::new()
   parts.push("id=\"\{decl_escape(n.id)}\"")
@@ -484,6 +412,10 @@ fn node_call(n : @core.Node) -> String {
   parts.push("stroke_dash=\"\{decl_escape(n.style.stroke_dash)}\"")
   parts.push("visible=\{n.style.visible}")
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
+  // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）
+  if n.name != n.id {
+    parts.push("name=\"\{decl_escape(n.name)}\"")
+  }
   "@decl.generic_node(\{join_with(parts, COMMA)})"
 }
 
@@ -748,10 +680,29 @@ fn with_xy(
     None => None
   }
   match (px, py) {
-    (Some(x), Some(y)) => Ok({ ..n, x, y })
-    (Some(x), None) => Ok({ ..n, x })
-    (None, Some(y)) => Ok({ ..n, y })
-    (None, None) => Ok(n)
+    (Some(x), Some(y)) => add_layout({ ..n, x, y }, params, line)
+    (Some(x), None) => add_layout({ ..n, x }, params, line)
+    (None, Some(y)) => add_layout({ ..n, y }, params, line)
+    (None, None) => add_layout(n, params, line)
+  }
+}
+
+///|
+/// 节点级 layout 解析：所有组件类型共用。
+/// 此前只有 frame/兜底分支读取 layout，而序列化端对所有 kind 都写 layout=，
+/// 于是 Rect/button/text/image 上的栈布局在 MBT 往返中被静默丢弃。
+fn add_layout(
+  n : @core.Node,
+  params : Array[(String, String)],
+  line : Int,
+) -> Result[@core.Node, DeclParseError] {
+  match opt_param(params, "layout") {
+    None => Ok(n)
+    Some(v) =>
+      match parse_flex(v, line) {
+        Ok(l) => Ok({ ..n, layout: Some(l) })
+        Err(e) => Err(e)
+      }
   }
 }
 
@@ -1030,6 +981,10 @@ fn build_node(
         Some(v) => str_val(v) != "false"
         None => true
       }
+      let node_name = match opt_param(params, "name") {
+        Some(v) => str_val(v)
+        None => ""
+      }
       let layout : @core.StackLayout? = match opt_param(params, "layout") {
         Some(v) =>
           match parse_flex(v, line) {
@@ -1070,6 +1025,7 @@ fn build_node(
             font_style~,
             stroke_dash~,
             visible~,
+            name=node_name,
           ),
           params,
           line,
@@ -1247,15 +1203,8 @@ fn build_node(
           }
         None => return Err({ line, message: "frame 缺少 height" })
       }
-      let layout : @core.StackLayout? = match opt_param(params, "layout") {
-        Some(v) =>
-          match parse_flex(v, line) {
-            Ok(l) => Some(l)
-            Err(err) => return Err(err)
-          }
-        None => None
-      }
-      let base = frame(id~, width=w, height=h, layout~)
+      // layout 由 with_xy → add_layout 统一解析（覆盖所有组件类型）
+      let base = frame(id~, width=w, height=h)
       let fd : @core.Node = match opt_param(params, "fill") {
         Some(v) => { ..base, style: { ..base.style, fill: str_val(v) } }
         None => base

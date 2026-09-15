@@ -263,6 +263,11 @@ pub fn Project::edit_node(
               cur = { ..cur, constraint: v }
               applied.push("constraint")
             }
+            // 节点显示名（交互标记的载体；仅当偏离 id 时写入 canonical MBT）
+            "name" => {
+              cur = { ..cur, name: v }
+              applied.push("name")
+            }
             "stroke_width" => {
               let sw = if d < 0.0 { 0.0 } else { d }
               cur = { ..cur, style: { ..cur.style, stroke_width: sw } }
@@ -323,6 +328,67 @@ pub fn Project::edit_node(
               } else if v == "start" {
                 cur = { ..cur, y: AlignStart(pos_offset_y(cur.y)) }
                 applied.push("y_mode")
+              }
+            }
+            // 容器栈布局：layout=vertical|horizontal 启用/切换；none 还原为绝对定位。
+            // 此前 StackLayout 只能由模板或 place 产生，update 完全无法设置。
+            "layout" => {
+              match v {
+                "none" => {
+                  cur = { ..cur, layout: None }
+                  applied.push("layout")
+                }
+                "vertical" | "horizontal" => {
+                  let base = match cur.layout {
+                    Some(l) => l
+                    None =>
+                      {
+                        dir: Vertical,
+                        gap: 0.0,
+                        justify: Start,
+                        padding: Padding::uniform(0.0),
+                      }
+                  }
+                  let dir = if v == "horizontal" { Horizontal } else { Vertical }
+                  cur = { ..cur, layout: Some({ ..base, dir }) }
+                  applied.push("layout")
+                }
+                _ => ()
+              }
+            }
+            "gap" => {
+              match cur.layout {
+                Some(l) => {
+                  let g = if d < 0.0 { 0.0 } else { d }
+                  cur = { ..cur, layout: Some({ ..l, gap: g }) }
+                  applied.push("gap")
+                }
+                None => ()
+              }
+            }
+            "justify" => {
+              match cur.layout {
+                Some(l) => {
+                  let j = match v {
+                    "center" => Center
+                    "end" => End
+                    _ => Start
+                  }
+                  cur = { ..cur, layout: Some({ ..l, justify: j }) }
+                  applied.push("justify")
+                }
+                None => ()
+              }
+            }
+            // 统一内边距（四边同值）；细分方向由模板/组件承担
+            "padding" => {
+              match cur.layout {
+                Some(l) => {
+                  let p = if d < 0.0 { 0.0 } else { d }
+                  cur = { ..cur, layout: Some({ ..l, padding: Padding::uniform(p) }) }
+                  applied.push("padding")
+                }
+                None => ()
               }
             }
             _ => ()

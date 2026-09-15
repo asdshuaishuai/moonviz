@@ -138,6 +138,7 @@ pub fn generic_node(
   font_style? : String = "normal",
   stroke_dash? : String = "solid",
   visible? : Bool = true,
+  name? : String = "",
 ) -> @core.Node {
   let node_kind = match kind {
     "text" => @core.Text
@@ -148,7 +149,7 @@ pub fn generic_node(
   }
   {
     ..@core.Node::make(id, node_kind),
-    name: id,
+    name: if name == "" { id } else { name },
     component,
     width,
     height,

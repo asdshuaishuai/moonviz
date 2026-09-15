@@ -270,3 +270,50 @@ fn find_from(text : String, needle : String, from : Int) -> Int? {
   }
   None
 }
+
+///|
+/// 回归：节点 name 与容器 layout 必须经 MBT 往返存活。
+/// 此前 name 完全未序列化（交互标记写在其中，往返即丢），且 layout 只在
+/// frame/兜底分支解析——Rect/button/text/image 上的栈布局会被静默丢弃。
+test "往返：name 与 layout 经 MBT 存活" {
+  let p = @core.Project::new()
+  let ab = match p.apply_template(template_id="login") {
+    Ok(id) => id
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  match p.edit_node(artboard=ab, node_id="login_btn", kvs=[("name", "main_cta"), ("layout", "vertical"), ("gap", "8")]) {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  let model = match project_to_mbt(p) {
+    Ok(m) => m
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let mbt = model.to_mbt()
+  assert_true(mbt.contains("name=\"main_cta\""))
+  assert_true(mbt.contains("@decl.flex("))
+  match load_mbt_project(mbt) {
+    Ok(reloaded) =>
+      match reloaded.project.artboards.get(ab) {
+        Some(rab) =>
+          match rab.doc.nodes.get("login_btn") {
+            Some(n) => {
+              assert_eq(n.name, "main_cta")
+              match n.layout {
+                Some(l) => assert_eq(l.gap, 8.0)
+                None => assert_true(false)
+              }
+            }
+            None => assert_true(false)
+          }
+        None => assert_true(false)
+      }
+    Err(_) => assert_true(false)
+  }
+}
