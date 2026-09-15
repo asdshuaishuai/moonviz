@@ -164,7 +164,7 @@ pub fn Project::apply_template(
   height? : Double = 0.0,
 ) -> Result[String, String] {
   let ab_name = if name == "" { template_id } else { name }
-  match template_id {
+  let result = match template_id {
     "login" => Ok(self.template_login(ab_name))
     "signup" => Ok(self.template_signup(ab_name))
     "dashboard" => Ok(self.template_dashboard(ab_name))
@@ -193,6 +193,16 @@ pub fn Project::apply_template(
       )
     }
     _ => Err("unknown_template: \{template_id}")
+  }
+  match result {
+    Err(e) => Err(e)
+    Ok(ab) => {
+      // 模板规范化：被兄弟完全包含的节点收编为子节点（坐标转相对）。
+      // 宽屏模板以平铺表达视觉嵌套（交通灯在标题栏上、文件项在侧栏内），
+      // 不收编会全部触发 no_sibling_overlap——此前 6/14 模板被 AgentGate 拒绝。
+      self.normalize_nesting(ab)
+      Ok(ab)
+    }
   }
 }
 
@@ -820,4 +830,144 @@ fn jstr9(parts : Array[String]) -> String {
     sb.write_string(parts[i])
   }
   sb.to_string()
+}
+
+///|
+/// 模板结构规范化：把「被兄弟完全包含」的节点收编为该兄弟的子节点。
+///
+/// 设计意图：宽屏模板用平铺节点表达视觉嵌套（标题栏上的交通灯、侧栏里的
+/// 文件项、卡片上的文字）。引擎的包含语义是父子树，兄弟两两不交是
+/// NoSiblingOverlap 谓词的设计不变量——收编后两者同时满足：
+/// 视觉不变（坐标转为父相对），树结构表达真实包含。
+///
+/// 选择「最小的完全包含者」作为新父（最紧拟和）；仅收编 rect 严格被包含
+/// 且包含者非纯装饰尺寸过小者（宽高 ≥ 包含节点）的节点。单趟扫描即可，
+/// 模板层级至多两层嵌套。
+pub fn Project::normalize_nesting(self : Project, artboard_id : String) -> Unit {
+  let ab = match self.artboards.get(artboard_id) {
+    Some(a) => a
+    None => return
+  }
+  let doc = ab.doc
+  let layout = solve(doc)
+  // 收集 (child, new_parent) 决策；先全部决定再执行，避免中途改树影响判定
+  let moves : Array[String] = [] // child_id
+  let new_parents : Array[String] = [] // 与 moves 平行
+  for pid in doc.nodes.keys() {
+    let kids = match doc.nodes.get(pid) {
+      Some(p) => p.children.copy()
+      None => continue
+    }
+    if kids.length() < 2 {
+      continue
+    }
+    // 每个孩子找「最小的完全包含它的兄弟」
+    for k in kids.iter() {
+      let rk = match layout.rect_of(k) {
+        Some(r) => r
+        None => continue
+      }
+      let mut best : String? = None
+      let mut best_area = 1.0e18
+      for other in kids.iter() {
+        if other == k {
+          continue
+        }
+        let ro = match layout.rect_of(other) {
+          Some(r) => r
+          None => continue
+        }
+        // 严格包含：other 的矩形完全覆盖 k
+        if ro.x <= rk.x &&
+          ro.y <= rk.y &&
+          ro.x + ro.width >= rk.x + rk.width &&
+          ro.y + ro.height >= rk.y + rk.height {
+          let area = ro.width * ro.height
+          if area < best_area && area > 0.0 {
+            best_area = area
+            best = Some(other)
+          }
+        }
+      }
+      match best {
+        Some(b) => {
+          moves.push(k)
+          new_parents.push(b)
+        }
+        None => ()
+      }
+    }
+  }
+  // 执行收编：坐标转为新父相对
+  for i = 0; i < moves.length(); i = i + 1 {
+    let child_id = moves[i]
+    let parent_id = new_parents[i]
+    match doc.nodes.get(child_id) {
+      None => continue
+      Some(_) => ()
+    }
+    let old_parent = match doc.find_parent(child_id) {
+      Some(p) => p
+      None => continue
+    }
+    if old_parent == parent_id {
+      continue
+    }
+    match doc.nodes.get(parent_id) {
+      None => continue
+      Some(_) => ()
+    }
+    // 跳过会成环的情况（parent 在 child 子树内）
+    if in_subtree(doc, child_id, parent_id) {
+      continue
+    }
+    let layout2 = solve(doc)
+    let rc = match layout2.rect_of(child_id) {
+      Some(r) => r
+      None => continue
+    }
+    let rp = match layout2.rect_of(parent_id) {
+      Some(r) => r
+      None => continue
+    }
+    // 从旧父摘除
+    let _ = doc.update_node(old_parent, fn(p) {
+      { ..p, children: p.children.filter(c => c != child_id) }
+    })
+    // 相对坐标 + 挂到新父
+    let nx = rc.x - rp.x
+    let ny = rc.y - rp.y
+    let _ = doc.update_node(child_id, fn(c) {
+      { ..c, x: Fixed(nx), y: Fixed(ny) }
+    })
+    let _ = doc.update_node(parent_id, fn(p) {
+      let cs = p.children.copy()
+      cs.push(child_id)
+      { ..p, children: cs }
+    })
+  }
+  if moves.length() > 0 {
+    self.revision = self.revision + 1
+  }
+}
+
+///|
+/// id 是否在 root 的子树内（含 root 自身）
+fn in_subtree(doc : Document, root : String, id : String) -> Bool {
+  if root == id {
+    return true
+  }
+  match doc.nodes.get(root) {
+    None => false
+    Some(n) => {
+      let mut found = false
+      for c in n.children.iter() {
+        if in_subtree(doc, c, id) {
+          found = true
+          break
+        }
+      }
+      found
+    }
+  }
 }

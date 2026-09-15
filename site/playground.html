@@ -35,6 +35,27 @@ main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(
 .bar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
 .bar button:hover{border-color:var(--acc);color:var(--acc)}
 textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;background:transparent;font:12px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:pre;overflow:auto}
+.edwrap{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.edwrap>#hl{position:absolute;inset:0;margin:0;padding:12px 14px;font:12px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:pre;overflow:hidden;pointer-events:none;color:var(--tx2)}
+.edwrap>#hl code{display:block;min-height:100%}
+.edwrap>textarea{position:relative;z-index:1;color:transparent;caret-color:var(--acc);background:transparent;flex:1}
+.edwrap>textarea::selection{background:rgba(75,107,251,.25)}
+/* 语法色板（随主题自适应） */
+.t-com{color:var(--tx3);font-style:italic}
+.t-key{color:#c678dd}
+.t-str{color:#98c379}
+.t-num{color:#d19a66}
+.t-fn{color:#61afef}
+.t-ann{color:#e5c07b}
+.t-yk{color:#61afef}
+.t-head{color:var(--acc);font-weight:700}
+.t-fence{color:var(--tx3);background:rgba(128,128,128,.07)}
+.t-pun{color:var(--tx3)}
+.t-tag{color:#e06c75}
+@media (prefers-color-scheme:light){
+  .t-key{color:#a626a4}.t-str{color:#50a14f}.t-num{color:#986801}
+  .t-fn{color:#4078f2}.t-ann{color:#b76b01}.t-yk{color:#0184bc}.t-tag{color:#e45649}
+}
 #ops{height:150px;border-top:1px solid var(--line);font-size:12px}
 .tabbar{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--line)}
 .tabbar button{border:0;background:transparent;padding:6px 12px;font-size:12px;color:var(--tx3);border-radius:8px 8px 0 0;font-weight:600}
@@ -43,9 +64,12 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 #oplog{max-height:120px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
 #oplog .e{color:var(--err)}
 #oplog .ok{color:var(--ok)}
-.canvas{flex:1;overflow:auto;padding:22px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;background:var(--bg);position:relative}
+.canvas{flex:1;overflow:auto;padding:22px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;position:relative;
+  background-color:var(--bg);
+  background-image:radial-gradient(circle,var(--line) 1px,transparent 1px);
+  background-size:18px 18px}
 .canvas:empty::before{content:'渲染后画板将显示在这里';color:var(--tx3);font-size:12px}
-.shot{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);border-radius:6px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line)}
+.shot{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.06);border-radius:6px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line)}
 .shot.on{border-color:var(--acc)}
 .shot svg{display:block;max-height:min(70vh,740px);width:auto;max-width:100%;height:auto}
 .shot svg g[id^="n_"]{cursor:move}
@@ -121,7 +145,10 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
       <button onclick="applySource()" id="render-btn">渲染</button>
       <button onclick="validate()">校验</button>
     </div>
-    <textarea id="src" spellcheck="false"></textarea>
+    <div class="edwrap">
+      <pre id="hl" aria-hidden="true"><code id="hlc"></code></pre>
+      <textarea id="src" spellcheck="false"></textarea>
+    </div>
     <div id="ops-wrap" class="hide" style="display:flex;flex-direction:column;flex:1;min-height:0">
       <div class="ops-help">
         <div class="ops-quick">
@@ -259,6 +286,83 @@ test "empty_stub visual declaration" {
 
 `;
 
+/* ---------- 双语法高亮：markdown + moonbit ---------- */
+const escH=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const MBT_KW=/\b(fn|let|mut|match|if|else|return|pub|struct|enum|test|for|in|while|continue|break|type|Some|None|Ok|Err|true|false|Unit)\b/g;
+function hlMbtLine(l){
+  // 整行注释（///| 文档注释与普通 //）
+  const dc=l.indexOf('///|'),nc=l.indexOf('//');
+  if(dc===0)return '<span class="t-ann">'+escH(l)+'</span>';
+  if(nc===0)return '<span class="t-com">'+escH(l)+'</span>';
+  let out='',rest=l,done='';
+  // 先按字符串切分，字符串外的部分做关键词/数字/注解高亮
+  const re=/"(?:[^"\\]|\\.)*"/g;let last=0,m;
+  while((m=re.exec(l))!==null){
+    out+=codeSpan(l.slice(last,m.index));
+    out+='<span class="t-str">'+escH(m[0])+'</span>';
+    last=m.index+m[0].length;
+  }
+  out+=codeSpan(l.slice(last));
+  return out;
+  function codeSpan(t){
+    if(!t)return '';
+    // 行内注释
+    const ci=t.indexOf('//');
+    if(ci>=0)return codeCore(t.slice(0,ci))+'<span class="t-com">'+escH(t.slice(ci))+'</span>';
+    return codeCore(t);
+  }
+  function codeCore(t){
+    let r=escH(t);
+    r=r.replace(MBT_KW,'<span class="t-key">$1</span>');
+    r=r.replace(/(@[a-z_][\w.]*)/g,'<span class="t-ann">$1</span>');
+    r=r.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="t-num">$1</span>');
+    r=r.replace(/\b([a-z_][\w]*)\s*(?=\()/g,'<span class="t-fn">$1</span>');
+    return r;
+  }
+}
+function hlYamlLine(l){
+  const m=/^(\s*[\w-]+):(.*)$/.exec(l);
+  if(!m)return escH(l);
+  return '<span class="t-yk">'+escH(m[1])+'</span><span class="t-pun">:</span>'+hlYamlVal(m[2]);
+}
+function hlYamlVal(v){
+  let r=escH(v);
+  r=r.replace(/(&quot;[^&]*?&quot;|"[^"]*")/g,'<span class="t-str">$1</span>');
+  r=r.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="t-num">$1</span>');
+  return r;
+}
+function hlMdLine(l){
+  if(/^#{1,6}\s/.test(l))return '<span class="t-head">'+escH(l)+'</span>';
+  if(/^<!--/.test(l)||/-->\s*$/.test(l))return '<span class="t-tag">'+escH(l)+'</span>';
+  let r=escH(l);
+  r=r.replace(/(`[^`]+`)/g,'<span class="t-str">$1</span>');
+  r=r.replace(/(\*\*[^*]+\*\*)/g,'<span class="t-head">$1</span>');
+  return r;
+}
+function highlight(src){
+  const lines=src.split('\n');
+  let mode='md';
+  const out=[];
+  for(const line of lines){
+    const t=line.trim();
+    if(mode==='md'&&t==='---'){mode='fm';out.push('<span class="t-pun">---</span>');continue;}
+    if(mode==='fm'&&t==='---'){mode='md';out.push('<span class="t-pun">---</span>');continue;}
+    if(mode==='md'&&t.startsWith('```')){mode='mbt';out.push('<span class="t-fence">'+escH(line)+'</span>');continue;}
+    if(mode==='mbt'&&t.startsWith('```')){mode='md';out.push('<span class="t-fence">'+escH(line)+'</span>');continue;}
+    if(mode==='fm'){out.push(hlYamlLine(line));continue;}
+    if(mode==='mbt'){out.push(hlMbtLine(line));continue;}
+    out.push(hlMdLine(line));
+  }
+  return out.join('\n');
+}
+function syncHl(){
+  $('hlc').innerHTML=highlight($('src').value)+'\n';
+  $('hl').scrollTop=$('src').scrollTop;$('hl').scrollLeft=$('src').scrollLeft;
+}
+$('src').addEventListener('input',syncHl);
+$('src').addEventListener('scroll',()=>{$('hl').scrollTop=$('src').scrollTop;$('hl').scrollLeft=$('src').scrollLeft;});
+function setSrc(t){$('src').value=t;syncHl();}
+
 let statusTimer=null;
 function setStatus(ok,msg){
   const p=$('pill'),m=$('msg');
@@ -276,7 +380,7 @@ function setStatus(ok,msg){
 function pushHistory(){history.push(mbt);if(history.length>HISTORY_MAX)history.shift();$('undobtn').style.display=history.length?'':'none';}
 function undo(){
   if(!history.length)return;
-  mbt=history.pop();$('src').value=mbt;
+  mbt=history.pop();setSrc(mbt);
   if(selNode&&!nodeOf(selNode))selNode=null;
   render();setStatus(null,'已撤销');
   $('undobtn').style.display=history.length?'':'none';
@@ -483,7 +587,7 @@ function applyOp(){
   try{
     const r=engine.apply_agent_op(mbt,op);
     logOp(op,r);
-    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;$('src').value=mbt;artIndex=0;render();$('ops').value='';}
+    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;setSrc(mbt);artIndex=0;render();$('ops').value='';}
     else{
       let hint='';
       const e=r.error||'';
@@ -621,8 +725,22 @@ $('tpl').addEventListener('change',e=>{
   // 保留所选：下拉停在刚选的模板上，让用户看得到自己选了什么
   try{
     let base=mbt.trim()?mbt:MINIMAL;
-    let r=engine.apply_agent_op(base, `template ${id} demo`);
-    if(r.ok!==true||!r.mbt){setStatus(false,r.error||'模板载入失败');return;}
+    // 画板以模板 id 命名（唯一）：重名会让新模板节点叠进旧画板，
+    // 节点重叠触发 AgentGate 拒绝——表现为"选了模板但画布没变"。
+    // 同模板重复载入 = 替换：先删旧同名画板。
+    if(base.includes(`artboards:\n    - ${id}\n`)||hasArtboard(base,id)){
+      const rd=engine.apply_agent_op(base, `delete-artboard ${id}`);
+      if(rd.ok===true&&rd.mbt)base=rd.mbt;
+    }
+    // 模板是引擎作者（人类）设计的制品：AgentGate 拒绝（视觉债）时按
+    // HumanGate 载入——这正是双门语义（人类设计带视觉债放行）。
+    let r=engine.apply_agent_op(base, `template ${id} ${id}`);
+    let via='AgentGate';
+    if(r.ok!==true){
+      const rh=engine.apply_human_op(base, `template ${id} ${id}`);
+      if(rh.ok===true&&rh.mbt){r=rh;via='HumanGate（视觉债 '+rh.debt+'）';}
+      else{setStatus(false,r.error||rh.error||'模板载入失败');return;}
+    }
     let doc=r.mbt;
     const abs=(r.artboards||[]).filter(a=>(a.nodes||[]).length===0).map(a=>a.id);
     for(const dead of abs){
@@ -630,14 +748,18 @@ $('tpl').addEventListener('change',e=>{
       if(r2.ok===true&&r2.mbt)doc=r2.mbt;
     }
     pushHistory();
-    mbt=doc;$('src').value=mbt;
-    const newIdx=(JSON.parse(engine.render(mbt)).artboards||[]).findIndex(a=>(a.nodes||[]).length>0);
-    artIndex=Math.max(0,newIdx);selNode=null;
+    mbt=doc;setSrc(mbt);
+    const all=(JSON.parse(engine.render(mbt)).artboards||[]);
+    artIndex=Math.max(0,all.findIndex(a=>a.id===id));
+    selNode=null;
     render();
-    const name=$('tpl').selectedOptions[0]?$('tpl').selectedOptions[0].textContent:id;
-    setStatus(true,`已载入模板：${name} → 画板 ${curAb()?curAb().id:''}（点击画布元素试试拖拽）`);
+    const name=$('tpl').selectedOptions[0]?$('tpl').selectedOptions[0].textContent.split('（')[0]:id;
+    setStatus(true,`已载入：${name} → 画板 ${id}（${curAb()?Math.round(curAb().width)+'×'+Math.round(curAb().height):''}，经${via}）— 点击元素可拖拽`);
   }catch(err){setStatus(false,String(err.message||err));}
 });
+function hasArtboard(src,id){
+  return src.includes(`id="${id}"`)||src.includes(`@moonviz:visual ${id}`);
+}
 
 async function boot(){
   if(!(typeof WebAssembly==='object')||!WebAssembly.instantiate){
@@ -661,7 +783,7 @@ async function boot(){
     $('ver').textContent='engine '+v.engine+' v'+v.version+' · wasm-gc · 全程本地运行';
     const isMac=/Mac|iPhone|iPad/.test(navigator.platform||'');
     $('render-btn').textContent='渲染 '+(isMac?'⌘↵':'Ctrl↵');
-    mbt=EXAMPLE;$('src').value=mbt;
+    mbt=EXAMPLE;setSrc(mbt);
     await loadTemplates();
     render();
     setStatus(null,'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
