@@ -223,6 +223,7 @@ pub fn image(
   id~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
+  src? : String = "",
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Image),
@@ -231,6 +232,7 @@ pub fn image(
     height,
     x: @core.AlignStart(0.0),
     y: @core.AlignStart(0.0),
+    text: src,
   }
 }
 

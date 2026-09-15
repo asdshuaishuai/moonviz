@@ -407,6 +407,49 @@ fn mbt_root_size(root : @core.Node) -> (Double, Double) {
 }
 
 ///|
+///|
+/// frontmatter `tokens:` 段解析：`  <role>: "<value>"` 两空格缩进键值对。
+fn mbt_parse_token_overrides(
+  front : String,
+) -> Map[String, String] {
+  let out : Map[String, String] = Map::new()
+  let lines = mbt_lines(front)
+  let mut in_tokens = false
+  for raw in lines.iter() {
+    let line = mbt_trim(raw)
+    if mbt_has_prefix(line, "moonviz:") || mbt_has_prefix(line, "moonbit:") {
+      in_tokens = false
+    }
+    if line == "tokens:" {
+      in_tokens = true
+      continue
+    }
+    if !in_tokens {
+      continue
+    }
+    // 键值行：role: "#VALUE"（值可带引号）；遇到非缩进的其他段键则退出
+    let colon = line.find(":")
+    match colon {
+      Some(idx) => {
+        let key = mbt_trim(line.substring(start=0, end=idx))
+        let mut value = mbt_trim(line.substring(start=idx + 1))
+        if value.length() >= 2 {
+          let q = value.substring(start=0, end=1)
+          if (q == "\"" || q == "'") && value.substring(start=value.length() - 1) == q {
+            value = value.substring(start=1, end=value.length() - 1)
+          }
+        }
+        if key != "" && value != "" && !key.contains(" ") {
+          out.set(key, value)
+        }
+      }
+      None => ()
+    }
+  }
+  out
+}
+
+///|
 fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
   let flows : Array[@core.FlowEdge] = []
   let lines = mbt_lines(front)
@@ -553,6 +596,16 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       if document.theme != "" {
         project.set_theme_tokens(document.theme)
       }
+      // 令牌自定义覆盖最后叠加：它比主题更具体（设计者明确意图）
+      let overrides = mbt_parse_token_overrides(document.front_matter)
+      for role in overrides.keys() {
+        match overrides.get(role) {
+          Some(v) => {
+            let _ = project.set_token(role, v)
+          }
+          None => ()
+        }
+      }
       match mbt_validate_flows(project) {
         Err(error) => Err(error)
         Ok(_) => Ok({ project, document, entry })
@@ -668,6 +721,37 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   out.write_string("  revision: " + self.project.revision.to_string() + "\n")
   if self.project.active_theme != "" {
     out.write_string("  theme: " + self.project.active_theme + "\n")
+  }
+  match self.project.token_overrides {
+    Some(ov) => {
+      let mut count = 0
+      for role in ov.keys() {
+        // 与默认调色板同值的覆盖不序列化：set 回原值即撤销自定义，
+        // canonical 里不该留下 primary: "#4B6BFB" 这类恒真条目
+        let is_default = match @core.DesignTokens::default().colors.get(role) {
+          Some(dv) =>
+            match ov.get(role) {
+              Some(v) => v == dv
+              None => false
+            }
+          None => false
+        }
+        if !is_default {
+          count = count + 1
+        }
+      }
+      if count > 0 {
+        out.write_string("  tokens:\n")
+        for role in ov.keys() {
+          match ov.get(role) {
+            Some(v) =>
+              out.write_string("    " + role + ": \"" + v + "\"\n")
+            None => ()
+          }
+        }
+      }
+    }
+    None => ()
   }
   out.write_string("  title: " + self.document.title + "\n")
   let ids : Array[String] = []

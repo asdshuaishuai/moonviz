@@ -27,6 +27,9 @@ pub(all) struct Project {
   /// 存于节点名标记，会话内可变模型由此重建；作用于渲染前的节点变换。
   mut node_states : Map[String, ComponentStateDef]
   mut revision : Int
+  /// 令牌自定义覆盖（set_token 产生）：随 canonical MBT frontmatter
+  /// `tokens:` 段往返；load 时在主题恢复后叠加应用。
+  mut token_overrides : Map[String, String]?
   /// 当前主题名（light/dark/nord/…）：随 canonical MBT frontmatter 往返，
   /// 决定渲染层画布底色等 tokens 派生视觉。节点 fill 已是字面量，
   /// 由 apply_theme 的角色重着色负责，加载路径只恢复 tokens 不再重着色。
@@ -44,6 +47,7 @@ pub fn Project::new() -> Project {
     node_states: Map::new(),
     revision: 1,
     active_theme: "light",
+    token_overrides: None,
   }
 }
 
@@ -63,6 +67,7 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.node_states = source.node_states
   self.revision = source.revision
   self.active_theme = source.active_theme
+  self.token_overrides = source.token_overrides
 }
 
 // ---------------------------------------------------------------------------

@@ -515,6 +515,15 @@ pub fn apply_operation(
           Err(error) => Err(error)
         }
       }
+    "token" =>
+      if parts.length() < 3 {
+        Err("mbt_operation_usage:token <name> <value>")
+      } else {
+        match project.set_token(parts[1], parts[2]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
     "fix" =>
       if parts.length() < 2 {
         Err("mbt_operation_usage:fix <artboard>")

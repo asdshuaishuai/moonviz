@@ -296,6 +296,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
         <div class="ops-quick">
           <span class="lbl">快捷</span>
           <button data-op="recolor">换主色</button>
+          <button data-op="token">改令牌</button>
           <button data-op="rename">改标题</button>
           <button data-op="flow">加导航</button>
           <button data-op="hide">隐藏首个节点</button>
@@ -339,6 +340,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <button id="undobtn" onclick="undo()">↩ 撤销</button>
   <button onclick="togglePlay()" id="playBtn">▶ 演示</button>
   <button onclick="downloadSvg()">导出 SVG</button>
+  <button onclick="downloadHtml()" title="单文件可交互原型：节点级导航 / 状态切换 / toast">导出 HTML 原型</button>
 </div>
 <div id="bootlayer"><div class="bootring"></div><p>MoonViz 引擎启动中 · wasm-gc</p></div>
 <script type="module">
@@ -795,7 +797,8 @@ function quickCmd(kind){
   const n=firstNode(ab);
   const abid=ab.id,nid=n?n.id:'';
   const cmds={recolor:n?`update ${abid} ${nid} fill=#FF7A45`:null,rename:n?`update ${abid} ${nid} text=Hello MoonViz`:null,
-    flow:n?`flow ${abid} ${abid} ${nid}`:null,hide:n?`update ${abid} ${nid} visible=false`:null,responsive:`responsive ${abid}`};
+    flow:n?`flow ${abid} ${abid} ${nid}`:null,hide:n?`update ${abid} ${nid} visible=false`:null,responsive:`responsive ${abid}`,
+    token:`token primary #FF7A45`};
   const cmd=cmds[kind];
   if(!cmd){setStatus(false,'当前画板没有可操作节点');return;}
   $('ops').value=cmd;applyOp();
@@ -901,6 +904,15 @@ function downloadSvg(){
   const blob=new Blob([a.svg],{type:'image/svg+xml'});
   const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download=(a.id||'artboard')+'.svg';el.click();
   URL.revokeObjectURL(el.href);
+}
+function downloadHtml(){
+  if(!engine){setStatus(false,'引擎未就绪');return;}
+  const r=engine.exportHtml(mbt);
+  if(r.ok!==true){setStatus(false,r.error||'导出失败');return;}
+  const blob=new Blob([r.html],{type:'text/html'});
+  const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download='moonviz-prototype.html';el.click();
+  URL.revokeObjectURL(el.href);
+  setStatus(true,`✓ HTML 原型已导出（${(r.html.length/1024).toFixed(1)}KB · 节点级交互内置）`);
 }
 async function loadTemplates(){
   try{

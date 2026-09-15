@@ -67,6 +67,23 @@ fn render_node(
           match n.kind {
             Text => render_text_node(sb, n, r)
             Image => {
+              // text 承载 src：http(s)/data URL → 真 <image>（圆角裁剪）；
+              // 空/非 URL → 占位渲染（浅灰底 + 山形/太阳图标）
+              let src = xml_escape(n.text)
+              if has_url_prefix(src) {
+                if n.style.corner_radius > 0.0 {
+                  sb.write_string(
+                    "<clipPath id=\"img_\{svg_id_tag(n.id)}\"><rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\"/></clipPath>",
+                  )
+                  sb.write_string(
+                    "<image href=\"\{src}\" x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" preserveAspectRatio=\"xMidYMid slice\" clip-path=\"url(#img_\{svg_id_tag(n.id)})\"/>",
+                  )
+                } else {
+                  sb.write_string(
+                    "<image href=\"\{src}\" x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" preserveAspectRatio=\"xMidYMid slice\"/>",
+                  )
+                }
+              } else {
               // 图片占位：浅灰底 + 山形/太阳图标 + 细边框，任何尺寸下可辨识
               sb.write_string(
                 "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\" fill=\"#EEF0F4\" stroke=\"#D5DAE3\" stroke-width=\"1\"/>",
@@ -83,6 +100,7 @@ fn render_node(
                 sb.write_string(
                   "<circle cx=\"\{cx + iw * 0.28}\" cy=\"\{cy - ih * 0.42}\" r=\"\{ic * 0.32}\" fill=\"#C3CAD6\"/>",
                 )
+              }
               }
             }
             _ => {
@@ -263,6 +281,22 @@ fn paint_ref_t(color : String, node_id : String) -> String {
 
 ///|
 /// 节点 id → SVG id 安全 tag
+///|
+/// 图片 src 判定：http(s)/data URL 才渲染真 <image>，其余（含空）走占位
+fn has_url_prefix(s : String) -> Bool {
+  let http = "http://"
+  let https = "https://"
+  let data = "data:"
+  if s.length() >= http.length() && s.substring(start=0, end=http.length()) == http {
+    true
+  } else if s.length() >= https.length() && s.substring(start=0, end=https.length()) == https {
+    true
+  } else {
+    s.length() >= data.length() && s.substring(start=0, end=data.length()) == data
+  }
+}
+
+///|
 fn svg_id_tag(id : String) -> String {
   let sb = StringBuilder::new()
   for c in id.iter() {

@@ -183,6 +183,15 @@ fn tools_definition() -> String {
   tools.push(tool_def("benchmark", "Performance benchmark"))
   tools.push(tool_def("auto_fix", "Auto-fix violations. args: artboard"))
   tools.push(tool_def("apply_theme", "Switch theme. args: theme"))
+  tools.push(
+    tool_def("set_token", "Override a design token. args: token, value"),
+  )
+  tools.push(
+    tool_def(
+      "export_html",
+      "Export interactive HTML prototype (node-level flows, state variants)",
+    ),
+  )
   tools.push(tool_def("export_svg", "Export SVG. args: artboard"))
   tools.push(
     tool_def("read_mbt", "Read canonical MBT source. args: source_b64"),
@@ -310,6 +319,8 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
   let instance_id = extract_arg_string(request_line, "instance_id")
   let variant = extract_arg_string(request_line, "variant")
   let theme = extract_arg_string(request_line, "theme")
+  let token = extract_arg_string(request_line, "token")
+  let value = extract_arg_string(request_line, "value")
   let source_b64 = extract_arg_string(request_line, "source_b64")
   let x = extract_arg_num(request_line, "x")
   let y = extract_arg_num(request_line, "y")
@@ -609,6 +620,20 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         Ok(json) => json
         Err(e) => err_json(e)
       }
+    }
+    "set_token" => {
+      if token == "" || value == "" {
+        return err_json("missing token or value")
+      }
+      match p.set_token(token, value) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "export_html" => {
+      let html = p.export_html()
+      let len = html.length().to_string()
+      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{html.substring(start=0, end=120)}...\"}"
     }
     "export_svg" => {
       if artboard == "" {

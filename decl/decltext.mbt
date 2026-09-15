@@ -1173,7 +1173,14 @@ fn build_node(
           }
         None => @core.Fixed(100.0)
       }
-      with_xy(image(id~, width=w, height=h), params, line)
+      // text 承载图片 src（http/https/data URL）；序列化走 generic_node
+      // 的 text= 字段，往返闭环
+      let im = image(id~, width=w, height=h)
+      let im2 = match opt_param(params, "text") {
+        Some(v) => { ..im, text: str_val(v) }
+        None => im
+      }
+      with_xy(im2, params, line)
     }
     "group" => {
       let id : String = match require_id(params, line) {

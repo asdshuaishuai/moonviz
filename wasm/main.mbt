@@ -56,6 +56,19 @@ pub fn apply_agent_op(mbt : String, op : String) -> String {
 }
 
 ///|
+/// 导出可交互 HTML 原型（单文件自包含）：节点级 flow/⚡ 词汇表绑定、
+/// 组件状态 CSS 变体、导航栈与 toast，全部由 .mbt.md 数据驱动。
+pub fn export_html(mbt : String) -> String {
+  match @decl.load_mbt_project(mbt) {
+    Err(error) => "{\"ok\":false,\"error\":\{@core.json_escape(error)}}"
+    Ok(model) => {
+      let html = model.project.export_html()
+      "{\"ok\":true,\"html\":\"\{@core.json_escape(html)}\"}"
+    }
+  }
+}
+
+///|
 /// 模板清单（playground 模板选择器）。
 pub fn list_templates() -> String {
   @core.list_templates_json()

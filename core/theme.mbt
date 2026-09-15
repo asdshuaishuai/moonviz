@@ -344,9 +344,22 @@ pub fn Project::apply_theme(
   }
   match found {
     Some(theme) => {
+      let prior = self.tokens_snapshot()
       self.tokens = theme.tokens
+      // 主题切换保留自定义令牌覆盖：tokens: 段是设计者明确意图，
+      // 换主题只换未覆盖的角色
+      match self.token_overrides {
+        Some(ov) =>
+          for role in ov.keys() {
+            match ov.get(role) {
+              Some(v) => self.tokens.colors.set(role, v)
+              None => ()
+            }
+          }
+        None => ()
+      }
       self.active_theme = theme_name
-      let changed = self.recolor_with(theme.tokens)
+      let changed = self.recolor_with(theme.tokens, prior=Some(prior))
       let is_dark = if theme.is_dark { "true" } else { "false" }
       Ok(
         "{\"ok\":true,\"theme\":\"\{theme_name}\",\"is_dark\":\{is_dark},\"recolored\":\{changed}}",
@@ -429,7 +442,11 @@ fn role_has_suffix(s : String, suffix : String) -> Bool {
 /// tokens 表对已落盘的颜色无效。按默认调色板建立「字面量 → 角色」反查表，
 /// 把匹配的 fill/text_color 重写为新主题的角色值——变更写回 .mbt.md，
 /// 保持唯一事实源语义。
-fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
+fn Project::recolor_with(
+  self : Project,
+  target : DesignTokens,
+  prior? : DesignTokens? = None,
+) -> Int {
   // 字面量 → 角色：以「全部内置主题 ∪ 默认」的调色板并集反查。
   // 操作路径每条命令都从 canonical MBT 重建 Project（tokens 恒为默认），
   // 仅按当前/默认反查会让「nord → light」无从映射——并集保证任一主题的
@@ -451,6 +468,10 @@ fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
   let palettes : Array[DesignTokens] = [DesignTokens::default()]
   for theme in builtin_themes().iter() {
     palettes.push(theme.tokens)
+  }
+  match prior {
+    Some(p) => palettes.push(p)
+    None => ()
   }
   for palette in palettes {
     for role in palette.colors.keys() {
@@ -537,6 +558,20 @@ fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
 }
 
 ///|
+/// 令牌表深快照：recolor 反查需要「变更前」的字面量→角色来源，
+/// 自定义值（set_token 产物）不在任何内置调色板里。
+fn Project::tokens_snapshot(self : Project) -> DesignTokens {
+  let colors : Map[String, String] = Map::new()
+  for role in self.tokens.colors.keys() {
+    match self.tokens.colors.get(role) {
+      Some(v) => colors.set(role, v)
+      None => ()
+    }
+  }
+  { ..self.tokens, colors }
+}
+
+///|
 /// 加载路径恢复主题：只切换 tokens 与 active_theme，不做角色重着色——
 /// canonical MBT 里的节点颜色已是主题字面量，重着色属于 apply_theme 的
 /// 职责，重复执行会把已是目标色的节点原样重写（幂等但徒增 revision）。
@@ -551,7 +586,13 @@ pub fn Project::set_theme_tokens(self : Project, theme_name : String) -> Unit {
 }
 
 ///|
-/// 修改单个令牌值（全局生效）
+/// 修改单个令牌值（全局生效）。
+///
+/// "全局生效"必须包含两件事，只改内存 tokens 表对已落盘的字面量无效：
+/// 1. 记录自定义覆盖（token_overrides），随 canonical MBT frontmatter
+///    `tokens:` 段往返——否则下一条命令从文本重建时覆盖即丢失；
+/// 2. 立即重着色：旧值字面量 → 角色 → 新值，与 apply_theme 同一反查
+///    表，因此同样可逆（换回原值即恢复）。
 pub fn Project::set_token(
   self : Project,
   token_name : String,
@@ -560,8 +601,25 @@ pub fn Project::set_token(
   if !self.tokens.colors.contains(token_name) {
     return Err("unknown_token: " + token_name)
   }
+  let prior = self.tokens_snapshot()
+  let previous = match self.tokens.colors.get(token_name) {
+    Some(v) => v
+    None => ""
+  }
   self.tokens.colors.set(token_name, value)
-  Ok("{\"ok\":true,\"token\":\"\{token_name}\",\"value\":\"\{value}\"}")
+  if self.token_overrides is None {
+    self.token_overrides = Some(Map::new())
+  }
+  match self.token_overrides {
+    Some(ov) => ov.set(token_name, value)
+    None => ()
+  }
+  // recolor_with 在 changed>0 时已 +1；值未变化的重复 set（load 路径）
+  // 不会虚涨 revision
+  let changed = self.recolor_with(self.tokens, prior=Some(prior))
+  Ok(
+    "{\"ok\":true,\"token\":\"\{token_name}\",\"old\":\"\{previous}\",\"value\":\"\{value}\",\"recolored\":\{changed}}",
+  )
 }
 
 ///|

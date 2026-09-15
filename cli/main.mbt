@@ -529,6 +529,19 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "export-html" => {
+      let html = p.export_html()
+      "{\"ok\":true,\"html_length\":\{html.length()},\"html\":\"\{cli_json_escape(html)}\"}"
+    }
+    "token" =>
+      if parts.length() < 3 {
+        cli_err("usage: token <name> <value>")
+      } else {
+        match p.set_token(parts[1], parts[2]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
     "export-svg" =>
       if parts.length() < 2 {
         cli_err("usage: export-svg <artboard>")

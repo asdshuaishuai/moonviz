@@ -33,8 +33,54 @@ pub fn Project::export_html(self : Project) -> String {
   )
   sb.write_string("  .board.active{display:block;background:#fff}\n")
   sb.write_string(
-    "  .flow{padding:12px;font-size:12px;color:#9098a1;text-align:center}\n",
+    "  .flow{padding:12px;font-size:12px;color:#9098a1;text-align:center}\n" +
+    "  g[id^=n_]{cursor:pointer}\n" +
+    "  #mv-toast{position:fixed;left:50%;bottom:10%;transform:translateX(-50%) translateY(20px);background:rgba(20,22,26,.92);color:#fff;padding:10px 22px;border-radius:99px;font-size:14px;opacity:0;transition:all .25s ease;pointer-events:none;z-index:9}\n" +
+    "  #mv-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}\n" +
+    "  .board{transition:opacity .18s ease}\n",
   )
+  // 状态多态 CSS：每个非 default 状态生成一份视觉覆盖（fill/text_color/
+  // font_size）。SVG 表现属性可被 CSS 覆盖，g[#n_x] 挂 .st-<state> 类切换。
+  for node_id in self.node_states.keys() {
+    let def = match self.node_states.get(node_id) {
+      Some(d) => d
+      None => continue
+    }
+    for state_name in def.states.keys() {
+      if state_name == "default" {
+        continue
+      }
+      match def.states.get(state_name) {
+        Some(patch) => {
+          let rules : Array[String] = []
+          match patch.fill {
+            Some(f) =>
+              rules.push(
+                "fill:\{self.tokens.resolve_color(f)}",
+              )
+            None => ()
+          }
+          match patch.text_color {
+            Some(c) =>
+              rules.push(
+                "fill:\{self.tokens.resolve_color(c)}",
+              )
+            None => ()
+          }
+          match patch.font_size {
+            Some(fs) => rules.push("font-size:\{fs}px")
+            None => ()
+          }
+          if rules.length() > 0 {
+            let decl = rules.join(";")
+            let sel = "g#n_" + node_id + ".st-" + state_name
+            sb.write_string("  \{sel} rect,\{sel} text{\{decl}}\n")
+          }
+        }
+        None => ()
+      }
+    }
+  }
   sb.write_string("</style>\n</head>\n<body>\n")
   // Tab 栏
   sb.write_string("<div class=\"tabs\">\n")
@@ -52,7 +98,11 @@ pub fn Project::export_html(self : Project) -> String {
   for id in self.artboards.keys() {
     match self.artboards.get(id) {
       Some(ab) => {
-        let svg = render_svg(ab.doc)
+        let svg = render_svg(
+          ab.doc,
+          surface=self.tokens.resolve_color("surface"),
+          frame=self.tokens.resolve_color("outline"),
+        )
         sb.write_string(
           "<div class=\"board\" id=\"board-\{id}\" style=\"width:\{ab.width.to_int()}px\">\n",
         )
@@ -62,44 +112,120 @@ pub fn Project::export_html(self : Project) -> String {
       None => ()
     }
   }
-  // 导航流
-  if self.flows.length() > 0 {
-    sb.write_string("<div class=\"flow\">\n")
-    for e in self.flows.iter() {
-      sb.write_string("  \{e.from} —[\{e.trigger}]→ \{e.to}<br>\n")
-    }
-    sb.write_string("</div>\n")
-  }
   // JS
+  sb.write_string("<div id=\"mv-toast\"></div>\n")
   sb.write_string("<script>\n")
-  sb.write_string("function show(id){\n")
+  // 交互数据表：[画板, 节点, 动作, 参数]。flows 的 tap:node 前缀与
+  // ⚡trigger→action 词汇表在导出层合并为同一张绑定表。
+  let acts : Array[String] = []
+  for e in self.flows.iter() {
+    let node = if e.trigger.length() > 4 && e.trigger.substring(start=0, end=4) == "tap:" {
+      e.trigger.substring(start=4)
+    } else {
+      ""
+    }
+    if node != "" {
+      acts.push(
+        "[\"\{json_escape(e.from)}\",\"\{json_escape(node)}\",\"navigate\",\"\{json_escape(e.to)}\"]",
+      )
+    }
+  }
+  for ab_id in self.artboards.keys() {
+    match self.artboards.get(ab_id) {
+      Some(ab) =>
+        for nid in ab.doc.nodes.keys() {
+          match ab.doc.nodes.get(nid) {
+            Some(n) =>
+              match parse_interaction_marker(n.name) {
+                Some((trig, spec)) => {
+                  if trig == "tap" {
+                    match action_from_spec(spec) {
+                      Some(NavigateTo(t)) =>
+                        acts.push(
+                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"navigate\",\"\{json_escape(t)}\"]",
+                        )
+                      Some(Back) =>
+                        acts.push(
+                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"back\",\"\"]",
+                        )
+                      Some(ShowToast(msg)) =>
+                        acts.push(
+                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"toast\",\"\{json_escape(msg)}\"]",
+                        )
+                      Some(SetState(id2, st)) =>
+                        acts.push(
+                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"set_state\",\"\{json_escape(id2)}:\{json_escape(st)}\"]",
+                        )
+                      Some(ToggleState(id2, _)) =>
+                        acts.push(
+                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"toggle_state\",\"\{json_escape(id2)}\"]",
+                        )
+                      Some(SetText(id2, txt)) =>
+                        acts.push(
+                          "[\"\{json_escape(id2)}\",\"\{json_escape(nid)}\",\"set_text\",\"\{json_escape(id2)}:\{json_escape(txt)}\"]",
+                        )
+                      _ => ()
+                    }
+                  }
+                }
+                None => ()
+              }
+            None => ()
+          }
+        }
+      None => ()
+    }
+  }
+  // 状态名清单：toggle 恢复到第一个非 default 状态
+  let state_defs : Array[String] = []
+  for node_id in self.node_states.keys() {
+    match self.node_states.get(node_id) {
+      Some(def) => {
+        let names : Array[String] = []
+        for st in def.states.keys() {
+          if st != "default" {
+            names.push(st)
+          }
+        }
+        if names.length() > 0 {
+          let joined = names.join(",")
+          state_defs.push(
+            "\"\{json_escape(node_id)}\":\"\{joined}\"",
+          )
+        }
+      }
+      None => ()
+    }
+  }
+  let states_js = state_defs.join(",")
+  sb.write_string("const MV_STATES={\{states_js}};\n")
+  let acts_js = acts.join(",")
+  sb.write_string("const MV_ACT=[\{acts_js}];\n")
   sb.write_string(
-    "  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))\n",
+    "const MV_STACK=[];const cur=()=>MV_STACK[MV_STACK.length-1];\n",
   )
   sb.write_string(
-    "  document.querySelectorAll('.board').forEach(b=>b.classList.remove('active'))\n",
+    "function show(id,push=true){if(push&&cur()!==id)MV_STACK.push(id);document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');document.getElementById('board-'+id)?.classList.add('active')}\n",
   )
   sb.write_string(
-    "  document.getElementById('tab-'+id).classList.add('active')\n",
+    "function back(){if(MV_STACK.length>1){MV_STACK.pop();show(MV_STACK[MV_STACK.length-1],false)}}\n",
   )
   sb.write_string(
-    "  document.getElementById('board-'+id).classList.add('active')\n",
+    "let mvTimer;function toast(m){const t=document.getElementById('mv-toast');t.textContent=m;t.classList.add('show');clearTimeout(mvTimer);mvTimer=setTimeout(()=>t.classList.remove('show'),1800)}\n",
   )
-  sb.write_string("}\n")
-  // 默认显示第一个
+  sb.write_string(
+    "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st)}\n",
+  )
+  sb.write_string(
+    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t)t.textContent=s}})});\n",
+  )
+  // 默认显示第一个（show 已由上方带导航栈的版本定义）
   let first : String? = None
   for id in self.artboards.keys() {
     match first {
       None => sb.write_string("show('\{id}')\n")
       Some(_) => ()
     }
-  }
-  // 流点击跳转
-  for e in self.flows.iter() {
-    // 简单模拟：点击 from 画板跳到 to
-    sb.write_string(
-      "document.getElementById('board-\{e.from}')?.addEventListener('click',()=>show('\{e.to}'))\n",
-    )
   }
   sb.write_string("</script>\n</body>\n</html>")
   sb.to_string()

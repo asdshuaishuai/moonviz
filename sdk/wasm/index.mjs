@@ -79,6 +79,16 @@ export async function createEngine(source) {
       return JSON.parse(exports.validate_mbt(mbt));
     },
 
+    /**
+     * 导出可交互 HTML 原型（单文件自包含）：节点级 flow/⚡ 词汇表绑定、
+     * 组件状态 CSS 变体、导航栈与 toast。
+     * @param {string} mbt 完整 .mbt.md 源码
+     * @returns {{ok:boolean, html?:string, error?:string}}
+     */
+    exportHtml(mbt) {
+      return JSON.parse(exports.export_html(mbt));
+    },
+
     /** 原始 wasm 导出（高级用法）。 */
     raw: exports,
   };

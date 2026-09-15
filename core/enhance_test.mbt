@@ -92,7 +92,10 @@ test "export_html：生成自包含 HTML" {
   assert_true(html.contains("<!DOCTYPE html>"))
   assert_true(html.contains("id=\"board-home\""))
   assert_true(html.contains("id=\"board-detail\""))
-  assert_true(html.contains("tap:card"))
+  // 新版导出：flow 解析为节点级点击绑定（tap:card → 节点 card 的 navigate）
+  assert_true(html.contains("\"card\""))
+  assert_true(html.contains("\"navigate\""))
+  assert_true(html.contains("MV_ACT"))
   assert_true(html.contains("<script>"))
 }
 
