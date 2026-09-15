@@ -17,6 +17,85 @@
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:var(--tx3);border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-track{background:transparent}
+
+/* ===== 炫酷层：极光 / 蚂蚁线 / 旋转描边 / 编排入场 / 微交互 ===== */
+/* 极光画布：三团慢漂移的品牌色辉光（画布最底层） */
+.aurora{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;filter:blur(46px);opacity:.55}
+.aurora i{position:absolute;border-radius:50%;mix-blend-mode:screen}
+.aurora i:nth-child(1){width:420px;height:420px;left:-8%;top:-12%;background:radial-gradient(circle,#4b6bfb 0%,transparent 65%);animation:drift1 26s ease-in-out infinite alternate}
+.aurora i:nth-child(2){width:360px;height:360px;right:-6%;bottom:-10%;background:radial-gradient(circle,#9d7bff 0%,transparent 65%);animation:drift2 31s ease-in-out infinite alternate}
+.aurora i:nth-child(3){width:300px;height:300px;left:38%;top:46%;background:radial-gradient(circle,#3ad2b5 0%,transparent 65%);opacity:.5;animation:drift3 37s ease-in-out infinite alternate}
+@keyframes drift1{from{transform:translate(0,0) scale(1)}to{transform:translate(120px,80px) scale(1.25)}}
+@keyframes drift2{from{transform:translate(0,0) scale(1.15)}to{transform:translate(-100px,-70px) scale(.9)}}
+@keyframes drift3{from{transform:translate(0,0)}to{transform:translate(-70px,90px) scale(1.2)}}
+.canvaswrap>.canvas{position:relative;z-index:1}
+
+/* 蚂蚁线选框：SVG 描边动画 */
+#selbox svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#selbox svg rect{fill:none;stroke:var(--acc);stroke-width:1.5;stroke-dasharray:6 5;animation:ants .6s linear infinite}
+@keyframes ants{to{stroke-dashoffset:-11}}
+
+/* 活动画板：旋转渐变描边 */
+.shot.on{position:relative}
+.shot.on::after{content:'';position:absolute;inset:-2px;border-radius:9px;padding:1.5px;background:conic-gradient(from var(--ga,0deg),#4b6bfb,#9d7bff,#3ad2b5,#4b6bfb);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spin-g 3.2s linear infinite;pointer-events:none}
+@property --ga{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes spin-g{to{--ga:360deg}}
+
+/* 卡片编排入场 */
+.shot.enter{animation:rise .45s cubic-bezier(.2,.9,.3,1.2) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+
+/* 债徽章呼吸 */
+.debt.some{animation:breathe 2.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 6px rgba(230,150,20,.2)}50%{box-shadow:0 0 16px rgba(230,150,20,.55)}}
+
+/* 主按钮扫光 */
+button.pri{position:relative;overflow:hidden}
+button.pri::before{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);transition:left .45s ease}
+button.pri:hover::before{left:130%}
+button:active{transform:scale(.96)}
+button{transition:all .16s ease}
+
+/* 状态消息弹入 */
+#msg.pop{animation:msgin .3s ease}
+@keyframes msgin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* 图层滑入 */
+.lay{animation:layin .25s ease backwards}
+.lay:nth-child(1){animation-delay:.02s}.lay:nth-child(2){animation-delay:.045s}.lay:nth-child(3){animation-delay:.07s}
+.lay:nth-child(4){animation-delay:.095s}.lay:nth-child(5){animation-delay:.12s}.lay:nth-child(6){animation-delay:.145s}
+.lay:nth-child(7){animation-delay:.17s}.lay:nth-child(8){animation-delay:.19s}.lay:nth-child(n+9){animation-delay:.21s}
+@keyframes layin{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+
+/* toast 弹跳 */
+#toast{transform:translateX(-50%) translateY(14px) scale(.92)}
+#toast.show{transform:translateX(-50%) translateY(0) scale(1);transition:all .3s cubic-bezier(.2,1.4,.4,1)}
+
+/* 品牌脉冲点 */
+#branddot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#6a8bff,#9d7bff);box-shadow:0 0 8px rgba(108,131,255,.8);animation:beat 2.4s ease-in-out infinite;flex:0 0 auto}
+@keyframes beat{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.65}}
+
+/* 启动加载层 */
+#bootlayer{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999;transition:opacity .4s ease}
+#bootlayer.off{opacity:0;pointer-events:none}
+.bootring{width:52px;height:52px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--acc);animation:spin 1s linear infinite}
+.bootring::after{content:''}
+@keyframes spin{to{transform:rotate(360deg)}}
+#bootlayer p{margin:0;font-size:12.5px;color:var(--tx2);letter-spacing:.06em}
+
+/* 面板编辑器标签动效 */
+.tabbar button.on{animation:tabin .25s ease}
+@keyframes tabin{from{opacity:.4}to{opacity:1}}
+
+/* 语法高亮层渐显 */
+.edwrap>#hl{animation:fadein .5s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+
+/* 降低动效偏好 */
+@media (prefers-reduced-motion:reduce){
+  .aurora i,.shot.on::after,.debt.some,#branddot,.bootring{animation:none!important}
+  .shot.enter,.lay,#msg.pop{animation:none!important}
+}
 body{margin:0;background:var(--bg);color:var(--tx);font-size:13px;overflow:hidden}
 header{display:flex;align-items:center;gap:10px;padding:9px 16px;background:color-mix(in srgb,var(--panel) 78%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);position:relative;z-index:5}
 header h1{font-size:14.5px;margin:0;font-weight:800;background:linear-gradient(120deg,#6a8bff,#4b6bfb 40%,#9d7bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.01em}
@@ -160,6 +239,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 </head>
 <body>
 <header>
+  <span id="branddot"></span>
   <h1>MoonViz Playground</h1>
   <span class="ver" id="ver"></span>
   <span class="spacer"></span>
@@ -202,6 +282,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
     <div id="gram-wrap" class="hide gram-body"></div>
   </section>
   <section class="canvaswrap">
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
     <div id="playbar">
       <strong style="font-size:12px">▶ 演示模式</strong>
       <span style="font-size:11px;color:var(--tx3)">点击画板上的元素触发交互（导航 / toast / 状态切换）· Esc 返回上一层 · ✕ 退出</span>
@@ -211,7 +292,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
     </div>
     <div class="canvas" id="canvas"></div>
     <div id="toast"></div>
-    <div id="selbox"><span id="seltag"></span></div>
+    <div id="selbox"><svg><rect x="0.75" y="0.75" width="100%" height="100%" rx="4"/></svg><span id="seltag"></span></div>
   </section>
   <section class="inspector">
     <div class="insp-hd">图层 · 当前画板</div>
@@ -227,6 +308,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <button onclick="togglePlay()" id="playBtn">▶ 演示</button>
   <button onclick="downloadSvg()">导出 SVG</button>
 </div>
+<div id="bootlayer"><div class="bootring"></div><p>MoonViz 引擎启动中 · wasm-gc</p></div>
 <script type="module">
 const $=id=>document.getElementById(id);
 let engine=null, mbt='', artIndex=0, lastResult=null;
@@ -415,6 +497,7 @@ function setStatus(ok,msg){
   p.textContent=ok===null?'…':ok?'OK':'被拒';
   m.textContent=msg||'';
   m.className=ok===false?'err':'';
+  m.classList.remove('pop');void m.offsetWidth;m.classList.add('pop');
   clearTimeout(statusTimer);
   if(ok===false){
     statusTimer=setTimeout(()=>{
@@ -467,7 +550,9 @@ function render(){
     if(selNode&&!nodeOf(selNode))selNode=null;
     const c=$('canvas');c.innerHTML='';
     abs.forEach((a,i)=>{
-      const d=document.createElement('div');d.className='shot'+(i===artIndex?' on':'');
+      const d=document.createElement('div');d.className='shot enter'+(i===artIndex?' on':'');
+      d.style.animationDelay=(i*70)+'ms';
+      d.addEventListener('animationend',()=>d.classList.remove('enter'),{once:true});
       d.innerHTML=`<h4>${a.id} · ${a.width}×${a.height}</h4>${a.svg}`;
       d.querySelector('h4').onclick=(ev)=>{ev.stopPropagation();artIndex=i;render();};
       c.appendChild(d);
@@ -519,6 +604,8 @@ function placeSelbox(){
   box.style.top=(gr.top-cw.top+$('canvas').scrollTop-2)+'px';
   box.style.width=(gr.width+4)+'px';
   box.style.height=(gr.height+4)+'px';
+  const rect=box.querySelector('rect');
+  if(rect){rect.setAttribute('width',gr.width+2.5);rect.setAttribute('height',gr.height+2.5);}
   const n=nodeOf(selNode);
   tag.textContent=selNode+(n?` ${Math.round(n.rect.w)}×${Math.round(n.rect.h)}`:'');
 }
@@ -984,7 +1071,7 @@ applyOp=function(){
 
 async function boot(){
   if(!(typeof WebAssembly==='object')||!WebAssembly.instantiate){
-    document.body.innerHTML='<div class="nosupport">此浏览器不支持 WebAssembly。</div>';return;
+    $('bootlayer').classList.add('off');document.body.innerHTML='<div class="nosupport">此浏览器不支持 WebAssembly。</div>';return;
   }
   try{
     const res=await fetch('assets/moonviz.wasm');
@@ -1008,12 +1095,13 @@ async function boot(){
     await loadTemplates();
     render();
     setStatus(null,'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
+    $('bootlayer').classList.add('off');
   }catch(e){
     const m=String(e.message||e);
     if(m.includes('js-string')||m.includes('string constants')||m.includes('Import #0')){
-      document.body.innerHTML='<div class="nosupport">此浏览器/运行时尚不支持 WASM GC 与 JS String Builtins。<br>请使用 Chrome 119+ / Firefox 120+ / Safari 18.2+ / Edge 119+。</div>';
+      $('bootlayer').classList.add('off');document.body.innerHTML='<div class="nosupport">此浏览器/运行时尚不支持 WASM GC 与 JS String Builtins。<br>请使用 Chrome 119+ / Firefox 120+ / Safari 18.2+ / Edge 119+。</div>';
     }else{
-      document.body.innerHTML='<div class="nosupport">引擎加载失败：'+m+'</div>';
+      $('bootlayer').classList.add('off');document.body.innerHTML='<div class="nosupport">引擎加载失败：'+m+'</div>';
     }
   }
 }
