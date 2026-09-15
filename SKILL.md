@@ -19,6 +19,53 @@ apply-human-mbt-op-b64 <mbt-base64> <operation-base64>
 apply-agent-mbt-op-b64 <mbt-base64> <operation-base64>
 ```
 
+Prebuilt CLI/MCP binaries (no toolchain needed) are published per platform by
+`.github/workflows/binaries.yml` as `moonviz-bin-<platform>` (`bin/moonviz-cli`,
+`bin/moonviz-mcp`).
+
+### Operation grammar (Agent and Human share it)
+
+Structural:
+`create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
+`place <ab> <component> <id> [variant|-] [x] [y] [k=v ...]` ·
+`duplicate <ab> <new_name>` · `delete-artboard <ab>` ·
+`move <ab> <node> <x> <y>` · `copy <ab> <node> <new_id> [dx] [dy]` ·
+`delete <ab> <node>` · `reorder <ab> <node> front|back|up|down` ·
+`flip <ab> <node> h|v|both|none` ·
+`group <ab> <group_id> <n1> <n2> ...` · `ungroup <ab> <group_id>` ·
+`align <ab> <mode> <n1> <n2> ...` · `resize-canvas <ab> <w> <h>` ·
+`responsive <ab>` · `restyle <ab> <component_id> k=v ...`
+
+Node properties (`update <ab> <node> k=v ...`):
+`w h text fill text_color stroke stroke_width radius opacity font_size weight
+shadow rotate blur blend line tracking constraint align italic dash visible
+layout gap justify padding width_mode height_mode x_mode y_mode name`
+
+- `align` `left|center|right`; `italic true|false`; `dash solid|dashed|dotted`
+- `visible false` hides the subtree without deleting it — it also stops
+  rendering *and* hit-testing, so hidden nodes cannot be tapped
+- `layout vertical|horizontal|none` enables/clears a container stack layout;
+  `gap`, `justify start|center|end`, `padding` shape it
+- `width_mode`/`height_mode` `hug|fill`; `w`/`h` also accept `fill`/`hug`
+- `x_mode`/`y_mode` `center|start`; `x=@decl.center`, `x=@decl.end(24)`
+- `name` renames a node (its carrier for interaction markers)
+
+Interaction and state:
+`interact <ab> <node> <trigger> <action_spec>` ·
+`uninteract <ab> <node>` · `interactions <ab>` ·
+`state <ab> <node> <state_name> k=v ...` · `states <ab>` ·
+`set-state <node> <state_name> [toggle]` · `constrain <ab> <intent_text>`
+
+- triggers: `tap long_press swipe_left swipe_right swipe_up swipe_down
+  scroll_end key_enter focus blur`
+- actions: `back` · `haptic` · `navigate_to:<board>` · `show_toast:<msg>` ·
+  `set_text:<node>:<text>` · `set_state:<node>:<state>` ·
+  `toggle_state:<node>` · `play_sound:<name>`
+- interactions persist as name markers and are executed by the runtime:
+  tap resolution is flow → marker → `NodeUpdated`
+- component states persist as `[state:name:k=v,...]` markers and apply as a
+  render-time transform when activated
+
 ## MCP Server
 
 Add to your MCP config:
@@ -35,7 +82,29 @@ Add to your MCP config:
 }
 ```
 
-Source-facing MCP tools include `read_mbt` and `render_mbt`. `ddp_view` is read-only metadata for integrations; it exposes no mutation path.
+44 tools are exposed, covering the same surface as the CLI grammar:
+
+- **Project/template**: `list_templates`, `list_components`, `list_tokens`,
+  `list_themes`, `list_artboards`, `apply_template`, `place_component`
+- **Node editing**: `update_node` (full property key set above), `move_node`
+- **Structure**: `group_nodes`, `ungroup_node`, `align_nodes`,
+  `resize_canvas`, `restyle_component`, `generate_responsive`
+- **Interaction**: `interact`, `uninteract`, `interactions`
+- **Component states**: `define_state`, `set_state`, `list_states`
+- **Inspection**: `query_nodes`, `lint_design`, `critique`, `auto_fix`,
+  `read_mbt`, `render_mbt`, `export_svg`, `generate_spec`,
+  `infer_page_type`, `infer_missing`, `suggest_alignment`,
+  `extract_design_system`, `benchmark`, `export_artifact`
+- **User components**: `component_compile`, `component_describe`,
+  `component_export`, `component_import`, `component_delete`,
+  `library_snapshot`, `library_restore`
+
+`ddp_view` is read-only metadata for integrations; it exposes no mutation path.
+
+Argument passing mirrors the CLI: list-ish arguments are comma-separated
+(`nodes="a,b"`), property arguments are space-separated `k=v`
+(`args="fill=#fff radius=8"`). Parsing tolerates both `"key":"v"` and
+`"key": "v"` JSON spacing.
 
 ## Components
 

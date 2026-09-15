@@ -1401,6 +1401,52 @@ fn cli_help() -> String {
   "  export-svg <ab>      Export artboard as SVG\n" +
   "  export-artifact      Export .moonviz artifact\n" +
   "  spec <ab>            Generate design spec\n" +
+  "\n" +
+  "Node editing (both gates share this grammar):\n" +
+  "  move <ab> <node> <x> <y>          Move node\n" +
+  "  update <ab> <node> k=v [k=v ...]  Edit properties; keys:\n" +
+  "      w h text fill text_color stroke stroke_width radius opacity font_size\n" +
+  "      weight shadow rotate blur blend line tracking constraint align italic\n" +
+  "      dash visible layout gap justify padding width_mode height_mode\n" +
+  "      x_mode y_mode name\n" +
+  "      (align left|center|right; dash solid|dashed|dotted; visible true|false;\n" +
+  "       layout vertical|horizontal|none; width_mode/height_mode hug|fill;\n" +
+  "       x_mode/y_mode center|start; w/h also accept fill|hug)\n" +
+  "  delete <ab> <node>                Delete subtree\n" +
+  "  copy <ab> <node> <new_id> [dx] [dy]   Clone subtree\n" +
+  "  reorder <ab> <node> front|back|up|down   Z-order\n" +
+  "  flip <ab> <node> h|v|both|none    Mirror\n" +
+  "\n" +
+  "Structure:\n" +
+  "  group <ab> <group_id> <n1> <n2> ...   Group nodes\n" +
+  "  ungroup <ab> <group_id>               Ungroup\n" +
+  "  align <ab> <mode> <n1> <n2> ...       mode: left|right|top|bottom|hcenter|vcenter\n" +
+  "  resize-canvas <ab> <w> <h>            Resize + reflow by constraints\n" +
+  "  responsive <ab>                       Generate _tablet/_desktop variants\n" +
+  "  restyle <ab> <component_id> k=v ...   Propagate to component instances\n" +
+  "  duplicate <ab> <new_name>             Duplicate artboard\n" +
+  "  delete-artboard <ab>                  Remove artboard\n" +
+  "\n" +
+  "Interaction (registered markers are executed by the runtime):\n" +
+  "  interact <ab> <node> <trigger> <action_spec>\n" +
+  "      triggers: tap long_press swipe_left swipe_right swipe_up swipe_down\n" +
+  "                scroll_end key_enter focus blur\n" +
+  "      actions:  back | haptic | navigate_to:<board> | show_toast:<msg>\n" +
+  "                | set_text:<node>:<text> | set_state:<node>:<state>\n" +
+  "                | toggle_state:<node> | play_sound:<name>\n" +
+  "  uninteract <ab> <node>            Clear node interactions\n" +
+  "  interactions <ab>                 List (node/trigger/action)\n" +
+  "  flow <from> <to> <node>           Add tap navigation edge\n" +
+  "  flows                             List navigation edges\n" +
+  "  tap <ab> <x> <y>                  Simulate a tap, return state changes\n" +
+  "\n" +
+  "Component states:\n" +
+  "  state <ab> <node> <state_name> k=v ...   Define a state patch\n" +
+  "  states <ab>                              List registered states\n" +
+  "  set-state <node> <state_name> [toggle]   Activate/toggle a state\n" +
+  "\n" +
+  "Layout reasoning:\n" +
+  "  constrain <ab> <intent_text>      e.g. 居中对齐 | 垂直排列 | 等宽 | 间距 16\n" +
   "  exit                 Exit CLI"
 }
 
