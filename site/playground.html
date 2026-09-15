@@ -64,6 +64,16 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 .chips{display:flex;gap:4px;flex-wrap:wrap}
 .chips .ab{background:rgba(75,107,251,.10);color:var(--acc);font-weight:700}
 #oplog .ok{color:var(--ok)}
+.ops-gram{display:flex;flex-direction:column;gap:0}
+#gram-toggle{align-self:flex-start;font-size:11px;padding:2px 10px;border-radius:99px;border:1px dashed var(--line);background:transparent;color:var(--tx3);cursor:pointer}
+#gram-toggle:hover{color:var(--acc);border-color:var(--acc)}
+#gram-body{margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:300px;overflow:auto;background:var(--panel)}
+.gram-tip{margin:0 0 8px;font-size:11px;color:var(--tx3)}
+.gram-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 16px}
+.gram-cat h5{margin:0 0 5px;font-size:10.5px;color:var(--acc);font-weight:700;letter-spacing:.03em}
+.gram-cat .g{font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx2);padding:3px 7px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gram-cat .g:hover{background:rgba(75,107,251,.08);color:var(--acc)}
+.gram-cat .g::before{content:'▸ ';color:var(--tx3)}
 .nosupport{padding:40px;text-align:center;color:var(--err);font-size:14px}
 </style>
 </head>
@@ -99,6 +109,70 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
           <button data-op="responsive">响应式变体</button>
         </div>
         <div class="ops-ids"><span class="lbl">画板/节点（点击插入）</span><div id="idchips" class="chips"></div></div>
+        <div class="ops-gram">
+          <button id="gram-toggle" onclick="toggleGram()">📖 操作语法手册</button>
+          <div id="gram-body" class="hide">
+            <p class="gram-tip">与 CLI / Studio / MCP 完全一致的命令语法。<b>点击任意示例</b>直接填入输入框（回车执行）。</p>
+            <div class="gram-grid">
+              <div class="gram-cat"><h5>画板</h5>
+                <div class="g" data-c="create &lt;名&gt; [宽] [高]">create home 390 844</div>
+                <div class="g" data-c="template &lt;模板id&gt; &lt;名&gt;">template login my_login</div>
+                <div class="g" data-c="duplicate &lt;画板&gt; &lt;新名&gt;">duplicate demo demo_v2</div>
+                <div class="g" data-c="delete-artboard &lt;画板&gt;">delete-artboard demo_v2</div>
+              </div>
+              <div class="gram-cat"><h5>节点</h5>
+                <div class="g" data-c="place &lt;画板&gt; &lt;组件&gt; &lt;id&gt; [变体] [x] [y]">place demo button my_btn - 24 100</div>
+                <div class="g" data-c="move &lt;画板&gt; &lt;节点&gt; x y">move demo my_btn 24 200</div>
+                <div class="g" data-c="copy &lt;画板&gt; &lt;节点&gt; &lt;新id&gt; [dx] [dy]">copy demo my_btn my_btn2 0 80</div>
+                <div class="g" data-c="delete &lt;画板&gt; &lt;节点&gt;">delete demo my_btn2</div>
+                <div class="g" data-c="reorder &lt;画板&gt; &lt;节点&gt; front|back|up|down">reorder demo my_btn front</div>
+                <div class="g" data-c="flip &lt;画板&gt; &lt;节点&gt; h|v|both|none">flip demo my_btn h</div>
+              </div>
+              <div class="gram-cat"><h5>属性 update（k=v 可多个）</h5>
+                <div class="g" data-c="改填充色">update demo my_btn fill=#FF7A45</div>
+                <div class="g" data-c="文字（带空格要引号）">update demo my_btn text="确认提交"</div>
+                <div class="g" data-c="字号/文字色/圆角">update demo my_btn font_size=16 text_color=#FFFFFF radius=12</div>
+                <div class="g" data-c="对齐 left|center|right / 斜体">update demo my_btn align=center italic=true</div>
+                <div class="g" data-c="描边/线型/虚线">update demo my_btn stroke=#333333 stroke_width=2 dash=dashed</div>
+                <div class="g" data-c="透明度/阴影/旋转/模糊">update demo my_btn opacity=0.8 shadow=e2 rotate=5 blur=2</div>
+                <div class="g" data-c="隐藏（不渲染不命中，可恢复）">update demo my_btn visible=false</div>
+                <div class="g" data-c="改名">update demo my_btn name=主按钮</div>
+                <div class="g" data-c="尺寸 hug=包内容 fill=撑满">update demo my_btn width_mode=fill height_mode=hug</div>
+                <div class="g" data-c="宽高也接受 fill/hug">update demo my_btn w=fill h=52</div>
+              </div>
+              <div class="gram-cat"><h5>容器布局</h5>
+                <div class="g" data-c="启用栈布局 vertical|horizontal|none">update demo root layout=vertical gap=8</div>
+                <div class="g" data-c="间距/内边距/对齐">update demo root gap=16 justify=center</div>
+                <div class="g" data-c="子节点居中/贴边">update demo my_btn x_mode=center</div>
+              </div>
+              <div class="gram-cat"><h5>导航与交互</h5>
+                <div class="g" data-c="tap 节点 → 跳转画板">flow demo home my_btn</div>
+                <div class="g" data-c="注册交互（10 触发器 × 9 动作）">interact demo my_btn tap navigate_to:home</div>
+                <div class="g" data-c="toast 提示">interact demo my_btn tap show_toast:已保存</div>
+                <div class="g" data-c="改文字动作">interact demo my_btn tap set_text:my_btn:好的</div>
+                <div class="g" data-c="长按触发">interact demo my_btn long_press back</div>
+                <div class="g" data-c="清除节点交互">uninteract demo my_btn</div>
+              </div>
+              <div class="gram-cat"><h5>组件状态（多态）</h5>
+                <div class="g" data-c="定义状态补丁">state demo my_btn pressed fill=#1E3FA8 radius=8</div>
+                <div class="g" data-c="激活状态">set-state my_btn pressed</div>
+                <div class="g" data-c="切换（再切回 default）">set-state my_btn pressed toggle</div>
+              </div>
+              <div class="gram-cat"><h5>结构与生成</h5>
+                <div class="g" data-c="打组（同父节点）">group demo g1 chat_0 chat_1</div>
+                <div class="g" data-c="解组">ungroup demo g1</div>
+                <div class="g" data-c="对齐 left|right|top|bottom|hcenter|vcenter">align demo left chat_0 chat_1</div>
+                <div class="g" data-c="画板缩放（约束重排）">resize-canvas demo 420 900</div>
+                <div class="g" data-c="生成 _tablet/_desktop 变体">responsive demo</div>
+                <div class="g" data-c="样式传播到同组件全部实例">restyle demo button radius=20</div>
+              </div>
+              <div class="gram-cat"><h5>主题与修复</h5>
+                <div class="g" data-c="light|dark|high_contrast|sepia|nord|sunset">theme dark</div>
+                <div class="g" data-c="自动修复违规">fix demo</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <textarea id="ops" spellcheck="false" placeholder="操作语法与 CLI / Studio / MCP 完全一致，例如：&#10;update <画板> <节点> fill=#FF7A45&#10;上方「画板/节点」芯片给出当前文档可用的真实 id"></textarea>
       <div id="oplog"></div>
@@ -290,6 +364,28 @@ function quickCmd(kind){
 }
 document.querySelectorAll('.ops-quick button[data-op]').forEach(b=>{
   b.addEventListener('click',()=>quickCmd(b.dataset.op));
+});
+function toggleGram(){
+  const b=$('gram-body');
+  b.classList.toggle('hide');
+  $('gram-toggle').textContent=b.classList.contains('hide')?'📖 操作语法手册':'📖 收起手册';
+}
+// 语法示例：点击填入输入框（把通用 id 换成当前文档真实 id，保证可直接回车执行）
+document.querySelectorAll('.gram-cat .g').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const ab=firstAb();
+    const nid=ab&&(firstNode(ab)||{}).id||'';
+    let cmd=el.textContent.trim();
+    if(ab){
+      cmd=cmd.replace(/\bdemo\b/g,ab.id);
+      // 仅对「引用已有节点」的命令替换节点 id；place/copy 的 id 是新建的，不能占用现有名
+      const refs=/^(update|move|delete|reorder|flip|flow|interact|uninteract|state|set-state)\b/.test(cmd);
+      if(refs&&nid)cmd=cmd.replace(/\bmy_btn2?\b/g,nid).replace(/\bchat_[01]\b/g,nid);
+    }
+    $('ops').value=cmd;
+    $('ops').focus();
+    setStatus(null,'已填入示例 — 回车执行（可先改参数）');
+  });
 });
 
 function downloadSvg(){
