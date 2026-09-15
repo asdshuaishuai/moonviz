@@ -3,7 +3,7 @@ name: Deploy docs site to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'core/**', 'decl/**', 'wasm/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # 构建 WASM-GC 引擎，供 playground 在浏览器本地运行
+      - name: Install MoonBit toolchain (pinned)
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOON_VERSION"
+        env:
+          MOON_VERSION: "0.1.20260209"
+      - name: Build wasm engine
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon build --target wasm-gc --release
+          mkdir -p site/assets
+          cp _build/wasm-gc/release/build/wasm/wasm.wasm site/assets/moonviz.wasm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -9,6 +9,8 @@ options(
       "exports": [
         "render_mbt",
         "validate_mbt",
+        "apply_agent_op",
+        "list_templates",
         "version_info",
       ],
       "use-js-builtin-string": true,

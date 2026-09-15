@@ -4,3 +4,4 @@ ddp/target/
 .mooncakes/
 .DS_Store
 node_modules/
+site/assets/

@@ -187,9 +187,9 @@ fn split_params(s : String) -> Array[String] {
 }
 
 ///|
-/// CLI/engine 边界的公共值还原：把 `\" \\ \, \( \) \n \r \t` 还原为字面字符。
+/// 委托 core（转义还原已上移，供操作语法共用）
 pub fn unescape_value(s : String) -> String {
-  unescape_decl(s)
+  @core.unescape_value(s)
 }
 
 ///|

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playground · MoonViz</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--tx:#1a1c1e;--tx2:#5b6470;--tx3:#9098a1;
+  --acc:#4b6bfb;--ok:#1a9e5c;--err:#e05252;--line:#e3e6ec;
+  font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#111214;--panel:#1b1d21;--tx:#e8eaed;--tx2:#a8b0ba;--tx3:#6b7280;--line:#2c2f36}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-size:13px}
+header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:14px;margin:0;font-weight:700}
+header .ver{font-size:11px;color:var(--tx3)}
+header .spacer{flex:1}
+header a{color:var(--tx2);font-size:12px;text-decoration:none}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+select,textarea,input{font:inherit;color:var(--tx)}
+main{display:grid;grid-template-columns:minmax(360px,44%) 1fr;height:calc(100vh - 53px)}
+.editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
+.preview{display:flex;flex-direction:column;min-width:0}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bar label{font-size:11px;color:var(--tx3)}
+textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;background:transparent;font:12px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:pre;overflow:auto}
+#ops{height:110px;border-top:1px solid var(--line);font-size:12px}
+.canvas{flex:1;overflow:auto;padding:18px;display:flex;gap:18px;align-items:flex-start;background:
+  repeating-conic-gradient(var(--bg) 0% 25%, var(--panel) 0% 50%) 50%/24px 24px}
+.canvas .shot{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.10);border-radius:4px;flex:0 0 auto}
+.canvas .shot svg{display:block;border-radius:4px}
+.shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line)}
+.status{padding:5px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--tx3);display:flex;gap:14px;align-items:center}
+.status .pill{padding:1px 8px;border-radius:99px;font-weight:600}
+.pill.ok{background:rgba(26,158,92,.12);color:var(--ok)}
+.pill.err{background:rgba(224,82,82,.12);color:var(--err)}
+#msg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.tabbar{display:flex;gap:2px;padding:6px 12px 0}
+.tabbar button{border:0;background:transparent;padding:5px 10px;font-size:12px;color:var(--tx3);border-radius:8px 8px 0 0}
+.tabbar button.on{background:var(--bg);color:var(--tx);font-weight:700;box-shadow:inset 0 -2px 0 var(--acc)}
+.hide{display:none!important}
+#oplog{max-height:130px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
+#oplog .e{color:var(--err)}
+.nosupport{padding:40px;text-align:center;color:var(--err);font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>MoonViz Playground</h1>
+  <span class="ver" id="ver"></span>
+  <span class="spacer"></span>
+  <a href="index.html">首页</a><a href="docs.html">文档</a>
+  <a href="https://github.com/asdshuaishuai/moonviz">GitHub</a>
+</header>
+<main>
+  <section class="editor">
+    <div class="bar">
+      <label>模板</label>
+      <select id="tpl"><option value="">载入中…</option></select>
+      <span class="spacer" style="flex:1"></span>
+      <button onclick="applySource()">渲染 ⌘↵</button>
+      <button onclick="validate()">校验</button>
+    </div>
+    <div class="tabbar">
+      <button id="tab-src" class="on" onclick="showTab('src')">.mbt.md 源码</button>
+      <button id="tab-ops" onclick="showTab('ops')">操作台（AgentGate）</button>
+    </div>
+    <textarea id="src" spellcheck="false"></textarea>
+    <div id="ops-wrap" class="hide" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <textarea id="ops" spellcheck="false" placeholder="输入一条操作并回车，例如：&#10;update pg btn fill=#FF7A45&#10;flow pg home btn&#10;state pg btn pressed fill=#1E3FA8"></textarea>
+      <div id="oplog"></div>
+    </div>
+  </section>
+  <section class="preview">
+    <div class="canvas" id="canvas"></div>
+    <div class="status">
+      <span class="pill" id="pill">…</span><span id="msg">加载引擎中</span>
+      <button style="margin-left:auto" onclick="downloadSvg()">导出 SVG</button>
+    </div>
+  </section>
+</main>
+<script type="module">
+const $=id=>document.getElementById(id);
+let engine=null, mbt='', artIndex=0;
+
+const EXAMPLE=`---
+moonbit:
+  backend: native
+  import:
+    - path: moonviz/decl
+      alias: decl
+moonviz:
+  format: visual-document
+  revision: 11
+  title: MoonViz 文档
+  entry: demo
+  artboards:
+    - demo
+---
+
+# MoonViz 文档
+
+这是一份 MoonBit \`.mbt.md\` 视觉文档。人类画布操作与 Agent 修改都必须回写到本文件；Moonviz 只从本文件重新构建和渲染画布。
+
+## demo
+
+<!-- moonviz:artboard demo -->
+\`\`\`mbt
+///| @moonviz:visual demo
+fn visual_demo() -> @decl.Prototype {
+  let page = @decl.prototype(name="demo", width=390, height=844)
+  page.add(@decl.generic_node(id="logo",component="badge",kind="rect",width=@decl.fixed(64),height=@decl.fixed(64),x=163,y=120,text="",fill="#4B6BFB",stroke="none",stroke_width=0,radius=999,opacity=1,font_size=14,text_color="#FFFFFF",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="welcome_title",component="heading",kind="text",width=@decl.fixed(200),height=@decl.fixed(36),x=95,y=220,text="Welcome Back",fill="none",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=24,text_color="#1A1C1E",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="subtitle",component="body_text",kind="text",width=@decl.fixed(200),height=@decl.fixed(18),x=95,y=258,text="Sign in to continue",fill="none",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=12,text_color="#9098A1",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="email_input",component="text_input",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=340,text="Email address",fill="#E8EAF6",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#111111",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="password_input",component="text_input",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=404,text="Password",fill="#E8EAF6",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#111111",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="forgot_link",component="body_text",kind="text",width=@decl.fixed(140),height=@decl.fixed(18),x=230,y=468,text="Forgot password?",fill="none",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=12,text_color="#9098A1",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="login_btn",component="button",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=520,text="Sign In",fill="#4B6BFB",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#FFFFFF",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="divider1",component="divider",kind="rect",width=@decl.fixed(342),height=@decl.fixed(1),x=24,y=600,text="",fill="#E0E0E0",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=14,text_color="#111111",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="signup_btn",component="button",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=630,text="Create Account",fill="#E8EAF6",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#1A1C1E",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page
+}
+\`\`\`
+
+\`\`\`mbt check
+test "demo visual declaration" {
+  let page = @decl.prototype(name="demo", width=390, height=844)
+  page.add(@decl.generic_node(id="logo",component="badge",kind="rect",width=@decl.fixed(64),height=@decl.fixed(64),x=163,y=120,text="",fill="#4B6BFB",stroke="none",stroke_width=0,radius=999,opacity=1,font_size=14,text_color="#FFFFFF",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="welcome_title",component="heading",kind="text",width=@decl.fixed(200),height=@decl.fixed(36),x=95,y=220,text="Welcome Back",fill="none",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=24,text_color="#1A1C1E",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="subtitle",component="body_text",kind="text",width=@decl.fixed(200),height=@decl.fixed(18),x=95,y=258,text="Sign in to continue",fill="none",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=12,text_color="#9098A1",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="email_input",component="text_input",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=340,text="Email address",fill="#E8EAF6",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#111111",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="password_input",component="text_input",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=404,text="Password",fill="#E8EAF6",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#111111",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="forgot_link",component="body_text",kind="text",width=@decl.fixed(140),height=@decl.fixed(18),x=230,y=468,text="Forgot password?",fill="none",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=12,text_color="#9098A1",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="login_btn",component="button",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=520,text="Sign In",fill="#4B6BFB",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#FFFFFF",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="divider1",component="divider",kind="rect",width=@decl.fixed(342),height=@decl.fixed(1),x=24,y=600,text="",fill="#E0E0E0",stroke="none",stroke_width=0,radius=0,opacity=1,font_size=14,text_color="#111111",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  page.add(@decl.generic_node(id="signup_btn",component="button",kind="rect",width=@decl.fixed(342),height=@decl.fixed(52),x=24,y=630,text="Create Account",fill="#E8EAF6",stroke="none",stroke_width=0,radius=12,opacity=1,font_size=14,text_color="#1A1C1E",font_weight="normal",shadow="none",rotate=0,blur=0,blend="normal",line_height=1.5,tracking=0,flip="none",text_align="left",font_style="normal",stroke_dash="solid",visible=true,constraint="lt"))
+  assert_eq(page.check().length(), 0)
+  assert_true(page.render().contains("<svg"))
+}
+\`\`\`
+
+`;
+
+const MINIMAL=`---
+moonbit:
+  backend: native
+  import:
+    - path: moonviz/decl
+      alias: decl
+moonviz:
+  format: visual-document
+  revision: 2
+  title: MoonViz 文档
+  entry: empty_stub
+  artboards:
+    - empty_stub
+---
+
+# MoonViz 文档
+
+这是一份 MoonBit \`.mbt.md\` 视觉文档。人类画布操作与 Agent 修改都必须回写到本文件；Moonviz 只从本文件重新构建和渲染画布。
+
+## empty_stub
+
+<!-- moonviz:artboard empty_stub -->
+\`\`\`mbt
+///| @moonviz:visual empty_stub
+fn visual_empty_stub() -> @decl.Prototype {
+  let page = @decl.prototype(name="empty_stub", width=390, height=844)
+  page
+}
+\`\`\`
+
+\`\`\`mbt check
+test "empty_stub visual declaration" {
+  let page = @decl.prototype(name="empty_stub", width=390, height=844)
+  assert_eq(page.check().length(), 0)
+  assert_true(page.render().contains("<svg"))
+}
+\`\`\`
+
+`;
+
+function setStatus(ok,msg){$('pill').className='pill '+(ok?'ok':'err');$('pill').textContent=ok?'OK':'ERR';$('msg').textContent=msg;}
+function logOp(op,res){
+  const row=document.createElement('div');
+  const ok=res.ok===true;
+  row.className=ok?'':'e';
+  row.textContent=`> ${op}  ${ok?'✓ '+(res.revision!==undefined?'rev '+res.revision:''):'✗ '+(res.error||'')}`;
+  $('oplog').prepend(row);
+}
+function showTab(w){
+  $('tab-src').classList.toggle('on',w==='src');
+  $('tab-ops').classList.toggle('on',w==='ops');
+  $('src').classList.toggle('hide',w!=='src');
+  $('ops-wrap').classList.toggle('hide',w!=='ops');
+  (w==='src'?$('src'):$('ops')).focus();
+}
+function artboards(){const r=lastRender();return (r&&r.artboards)||[];}
+let lastResult=null;
+function lastRender(){return lastResult;}
+function downloadSvg(){
+  const abs=artboards();if(!abs.length){toastMsg('无可导出的画板');return;}
+  const a=abs[Math.min(artIndex,abs.length-1)];
+  const blob=new Blob([a.svg],{type:'image/svg+xml'});
+  const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download=(a.id||'artboard')+'.svg';el.click();
+  URL.revokeObjectURL(el.href);
+}
+function toastMsg(m){setStatus(true,m);}
+
+function render(){
+  if(!engine)return;
+  try{
+    const r=engine.render(mbt);
+    lastResult=r;
+    if(!r.ok){setStatus(false,r.error||'render failed');return;}
+    const abs=r.artboards||[];
+    artIndex=Math.min(artIndex,Math.max(0,abs.length-1));
+    const c=$('canvas');c.innerHTML='';
+    abs.forEach((a,i)=>{
+      const d=document.createElement('div');d.className='shot';
+      d.innerHTML=`<h4>${a.id} · ${a.width}×${a.height}${i===artIndex?' · 当前':''}</h4>${a.svg}`;
+      d.style.outline=i===artIndex?'2px solid var(--acc)':'none';
+      d.onclick=()=>{artIndex=i;render();};
+      c.appendChild(d);
+    });
+    if(!abs.length){c.innerHTML='<div style="color:var(--tx3)">空文档 — 在左侧选一个模板，或在操作台执行 template &lt;id&gt; &lt;name&gt;</div>';}
+    const rev=r.revision!==undefined?`rev ${r.revision}`:'';
+    setStatus(true,`渲染成功 · ${abs.length} 画板 · ${rev}`);
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+function applySource(){mbt=$('src').value;render();}
+function validate(){
+  if(!engine)return;
+  const v=engine.validate(mbt);
+  setStatus(v.ok===true, v.ok?`校验通过 · entry ${v.entry||'-'} · rev ${v.revision??'-'}`:(v.error||'校验失败'));
+}
+function applyOp(){
+  const op=$('ops').value.trim();if(!op)return;
+  try{
+    const r=engine.apply_agent_op(mbt,op);
+    logOp(op,r);
+    if(r.ok===true&&r.mbt){
+      mbt=r.mbt;$('src').value=mbt;artIndex=0;render();
+      $('ops').value='';
+    }else{
+      setStatus(false,r.error||'操作被拒绝');
+    }
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+$('ops').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();applyOp();}
+});
+$('src').addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();applySource();}
+});
+async function loadTemplates(){
+  try{
+    const t=engine.list_templates();const arr=JSON.parse(t);
+    $('tpl').innerHTML='<option value="">选择模板…</option>'+
+      arr.map(x=>`<option value="${x.id}">${x.name}（${x.id}）</option>`).join('');
+  }catch(_){$('tpl').innerHTML='<option value="">模板不可用</option>';}
+}
+$('tpl').addEventListener('change',e=>{
+  const id=e.target.value;if(!id)return;
+  try{
+    const base=mbt.trim()?mbt:MINIMAL;
+    const r=engine.apply_agent_op(base, `template ${id} demo`);
+    if(r.ok===true&&r.mbt){mbt=r.mbt;$('src').value=mbt;artIndex=0;render();setStatus(true,'模板已载入：'+id);}
+    else setStatus(false,r.error||'模板载入失败');
+  }catch(err){setStatus(false,String(err.message||err));}
+  e.target.value='';
+});
+
+async function boot(){
+  if(!(typeof WebAssembly==='object')||!WebAssembly.instantiate){
+    document.body.innerHTML='<div class="nosupport">此浏览器不支持 WebAssembly。</div>';return;
+  }
+  try{
+    const res=await fetch('assets/moonviz.wasm');
+    if(!res.ok)throw new Error('moonviz.wasm 加载失败（HTTP '+res.status+'）');
+    const bytes=await res.arrayBuffer();
+    const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
+    const exports=new WebAssembly.Instance(mod,{}).exports;
+    engine={
+      version:()=>JSON.parse(exports.version_info()),
+      render:s=>JSON.parse(exports.render_mbt(s)),
+      validate:s=>JSON.parse(exports.validate_mbt(s)),
+      apply_agent_op:(s,o)=>JSON.parse(exports.apply_agent_op(s,o)),
+      list_templates:()=>exports.list_templates(),
+    };
+    const v=engine.version();
+    $('ver').textContent='engine '+v.engine+' v'+v.version+' · wasm-gc · 全程本地运行';
+    mbt=EXAMPLE;$('src').value=mbt;
+    await loadTemplates();
+    render();
+    setStatus(true,'就绪 — 编辑源码（⌘↵ 渲染）或切到操作台输入操作');
+  }catch(e){
+    const m=String(e.message||e);
+    if(m.includes('js-string')||m.includes('string constants')||m.includes('Import #0')){
+      document.body.innerHTML='<div class="nosupport">此浏览器/运行时尚不支持 WASM GC 与 JS String Builtins。<br>请使用 Chrome 119+ / Firefox 120+ / Safari 18.2+ / Edge 119+。</div>';
+    }else{
+      document.body.innerHTML='<div class="nosupport">引擎加载失败：'+m+'</div>';
+    }
+  }
+}
+boot();
+</script>
+</body>
+</html>

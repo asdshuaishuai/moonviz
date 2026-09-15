@@ -6,7 +6,7 @@
   "main": "index.mjs",
   "exports": { ".": "./index.mjs" },
   "files": ["index.mjs", "dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=22" },
+  "engines": { "node": ">=24" },
   "scripts": {
     "test": "node test/selftest.mjs",
     "prepublishOnly": "npm test"

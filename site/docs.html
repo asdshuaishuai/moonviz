@@ -55,7 +55,7 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--ink3);font-si
   <div class="grp">集成方式</div>
   <a href="#cli">CLI 行协议</a>
   <a href="#sdk">Node SDK</a>
-  <a href="#wasm">WASM SDK</a>
+  <a href="#wasm">WASM SDK</a><a href="playground.html">Playground</a>
   <a href="#mcp">MCP Server</a>
   <a href="#skill">SKILL 技能</a>
   <a href="#studio">Studio / Viewer</a>
@@ -258,6 +258,11 @@ const check = engine.validate(mbt);
 <tr><td><code>infer_page_type</code> / <code>infer_missing</code></td><td>智能</td><td>页面类型推断 / 缺失元素推断</td></tr>
 <tr><td><code>extract_design_system</code></td><td>智能</td><td>从既有画板反向提取设计系统</td></tr>
 <tr><td><code>generate_spec</code> / <code>generate_responsive</code></td><td>生成</td><td>开发移交标注 / 响应式断点变体</td></tr>
+<tr><td><code>update_node</code> / <code>move_node</code></td><td>节点编辑</td><td>修改任意节点属性（30+ 键，含 align/italic/dash/visible/layout/name）</td></tr>
+<tr><td><code>group_nodes</code> / <code>ungroup_node</code> / <code>align_nodes</code></td><td>结构</td><td>打组 / 解组 / 多节点对齐</td></tr>
+<tr><td><code>resize_canvas</code> / <code>restyle_component</code></td><td>结构</td><td>画板缩放（约束重排）/ 主组件样式传播</td></tr>
+<tr><td><code>interact</code> / <code>uninteract</code> / <code>interactions</code></td><td>交互</td><td>注册（10 触发器 × 9 动作）/ 清除 / 结构化回读</td></tr>
+<tr><td><code>define_state</code> / <code>set_state</code> / <code>list_states</code></td><td>组件状态</td><td>多态状态补丁 / 激活切换 / 清单</td></tr>
 <tr><td><code>export_svg</code> / <code>export_artifact</code></td><td>导出</td><td>SVG / 工件导出</td></tr>
 <tr><td><code>benchmark</code></td><td>性能</td><td>渲染性能基准</td></tr>
 <tr><td><code>ddp_view</code></td><td>分发</td><td>DDP 容器只读元数据（不暴露变更路径）</td></tr>

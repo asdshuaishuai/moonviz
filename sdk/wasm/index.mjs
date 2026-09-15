@@ -22,7 +22,19 @@ async function instantiate(bytes) {
     builtins: ['js-string'],
     importedStringConstants: '_',
   });
-  return new WebAssembly.Instance(module, {}).exports;
+  try {
+    return new WebAssembly.Instance(module, {}).exports;
+  } catch (e) {
+    // imported string constants 需要 V8 较新版本：Node 24+ / Chrome 119+ /
+    // Firefox 120+ / Safari 18.2+。Node 22 的 V8 尚未默认启用。
+    if (e.message && e.message.includes('module "_"')) {
+      throw new Error(
+        'This runtime lacks JS-string builtins support (imported string constants). ' +
+          'Use Node 24+ or a current browser (Chrome 119+, Firefox 120+, Safari 18.2+).',
+      );
+    }
+    throw e;
+  }
 }
 
 /**
