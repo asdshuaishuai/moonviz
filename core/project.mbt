@@ -682,7 +682,13 @@ pub fn Project::export_svg(
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard")
     Some(ab) =>
-      Ok(render_svg(ab.doc, surface=self.tokens.resolve_color("surface")))
+      Ok(
+        render_svg(
+          ab.doc,
+          surface=self.tokens.resolve_color("surface"),
+          frame=self.tokens.resolve_color("outline"),
+        ),
+      )
   }
 }
 

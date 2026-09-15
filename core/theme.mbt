@@ -357,6 +357,74 @@ pub fn Project::apply_theme(
 }
 
 ///|
+/// text_color 语境的角色分级（小者优先）：文字位置的十六进制值优先按
+/// 文字角色解释——#1A1C1E 出现在文字上应视为 light.text_primary 而不是
+/// dark.surface，否则 nord 等深色主题会得到「深字压深底」。
+fn role_rank_for_text(role : String) -> Int {
+  if role_has_prefix(role, "text_") {
+    1
+  } else if role_has_prefix(role, "on_") {
+    2
+  } else if role == "surface" || role == "surface_variant" || role == "surface_alt" || role == "background" {
+    3
+  } else if role_has_suffix(role, "_container") {
+    4
+  } else if role == "primary" || role == "secondary" {
+    5
+  } else if role_has_prefix(role, "outline") {
+    6
+  } else {
+    7
+  }
+}
+
+///|
+/// text 语境（彩色底变体）：primary/secondary 底上的文字几乎总是
+/// on_primary/on_secondary 语义——#FFFFFF 出现在按钮上应还原成
+/// on_primary 而不是 surface，否则深色主题往返后按钮文字错位成
+/// text_primary 的深色值。
+fn role_rank_for_text_on(role : String) -> Int {
+  if role_has_prefix(role, "on_") {
+    1
+  } else if role_has_prefix(role, "text_") {
+    2
+  } else {
+    role_rank_for_text(role)
+  }
+}
+
+///|
+/// fill 语境的角色分级：底/容器优先，文字角色殿后（同一字面量被用作
+/// 面色时几乎总是 surface/container 语义）。
+fn role_rank_for_fill(role : String) -> Int {
+  if role == "surface" || role == "surface_variant" || role == "surface_alt" || role == "background" {
+    1
+  } else if role_has_suffix(role, "_container") {
+    2
+  } else if role == "primary" || role == "secondary" {
+    3
+  } else if role_has_prefix(role, "outline") {
+    4
+  } else if role_has_prefix(role, "text_") {
+    5
+  } else if role_has_prefix(role, "on_") {
+    6
+  } else {
+    7
+  }
+}
+
+fn role_has_prefix(s : String, prefix : String) -> Bool {
+  s.length() >= prefix.length() &&
+  s.substring(start=0, end=prefix.length()) == prefix
+}
+
+fn role_has_suffix(s : String, suffix : String) -> Bool {
+  s.length() >= suffix.length() &&
+  s.substring(start=s.length() - suffix.length()) == suffix
+}
+
+///|
 /// 角色重着色：模板/画布把令牌值写成字面量（fill="#4B6BFB"），仅换
 /// tokens 表对已落盘的颜色无效。按默认调色板建立「字面量 → 角色」反查表，
 /// 把匹配的 fill/text_color 重写为新主题的角色值——变更写回 .mbt.md，
@@ -366,7 +434,20 @@ fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
   // 操作路径每条命令都从 canonical MBT 重建 Project（tokens 恒为默认），
   // 仅按当前/默认反查会让「nord → light」无从映射——并集保证任一主题的
   // 字面量都能反查到角色，主题切换无状态可逆。
-  let literal_to_role : Map[String, String] = Map::new()
+  // 字面量 → 候选角色集合。同一字面量在不同主题里可能是不同角色
+  // （#1A1C1E 既是 light.text_primary 也是 dark.surface）——不能取
+  // 「最后写入」那个，按使用处（fill / text_color）的角色类分级选义。
+  let lit_roles : Map[String, Map[String, Bool]] = Map::new()
+  let remember = fn(lit : String, role : String) {
+    match lit_roles.get(lit) {
+      Some(set) => set.set(role, true)
+      None => {
+        let set : Map[String, Bool] = Map::new()
+        set.set(role, true)
+        lit_roles.set(lit, set)
+      }
+    }
+  }
   let palettes : Array[DesignTokens] = [DesignTokens::default()]
   for theme in builtin_themes().iter() {
     palettes.push(theme.tokens)
@@ -374,8 +455,28 @@ fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
   for palette in palettes {
     for role in palette.colors.keys() {
       match palette.colors.get(role) {
-        Some(v) => literal_to_role.set(v, role)
+        Some(v) => remember(v, role)
         None => ()
+      }
+    }
+  }
+  // 引擎默认文字色 #111111（node/decl 出厂值）语义上就是 text_primary
+  remember("#111111", "text_primary")
+  let pick = fn(lit : String, rank : (String) -> Int) -> String? {
+    match lit_roles.get(lit) {
+      None => None
+      Some(set) => {
+        let mut best : String? = None
+        let mut best_rank = 99
+        for role in set.keys() {
+          let r = rank(role)
+          // 严格小于 + 角色名字典序决胜：与 Map 迭代顺序无关，结果确定
+          if r < best_rank || (r == best_rank && best is Some(b) && role < b) {
+            best = Some(role)
+            best_rank = r
+          }
+        }
+        best
       }
     }
   }
@@ -388,7 +489,7 @@ fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
     for nid in ab.doc.nodes.keys() {
       let _ = ab.doc.update_node(nid, fn(n) {
         let mut node = n
-        match literal_to_role.get(n.style.fill) {
+        match pick(n.style.fill, role_rank_for_fill) {
           Some(role) =>
             match target.colors.get(role) {
               Some(v) => {
@@ -401,7 +502,18 @@ fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
             }
           None => ()
         }
-        match literal_to_role.get(n.style.text_color) {
+        // 文字角色按所在底色判别：primary/secondary 实底上的文字优先
+        // on_*（按钮），透明底/容器上的文字优先 text_*（正文/输入框）
+        let text_rank = match pick(node.style.fill, role_rank_for_fill) {
+          Some(r) =>
+            if r == "primary" || r == "secondary" {
+              role_rank_for_text_on
+            } else {
+              role_rank_for_text
+            }
+          None => role_rank_for_text
+        }
+        match pick(n.style.text_color, text_rank) {
           Some(role) =>
             match target.colors.get(role) {
               Some(v) => {

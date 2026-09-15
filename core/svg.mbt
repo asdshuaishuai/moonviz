@@ -9,7 +9,11 @@
 ///
 /// surface 为画布底色令牌值：主题切换后由 Project 侧传入当前主题的
 /// surface（如 nord 的 #2E3440）；默认浅色 #F6F7F9 保持既有文档兼容。
-pub fn render_svg(doc : Document, surface? : String = "#F6F7F9") -> String {
+pub fn render_svg(
+  doc : Document,
+  surface? : String = "#F6F7F9",
+  frame? : String = "#C9CFDA",
+) -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
     Some(r) => r
@@ -36,7 +40,7 @@ pub fn render_svg(doc : Document, surface? : String = "#F6F7F9") -> String {
   )
   // SVG viewBox 自带裁剪（root rect 与 viewBox 同尺寸），不再用 clipPath 包裹：
   // WebKit 对 clip-path 组内元素的 hit-test 会整体失效，原型交互点击会穿透。
-  render_node(sb, doc, doc.root_id, layout)
+  render_node(sb, doc, doc.root_id, layout, surface~, frame~)
   sb.write_string("</svg>")
   sb.to_string()
 }
@@ -47,6 +51,8 @@ fn render_node(
   doc : Document,
   id : String,
   layout : SolvedLayout,
+  surface~ : String,
+  frame~ : String,
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
@@ -98,7 +104,7 @@ fn render_node(
               } else if n.style.fill == "none" && n.text == "" {
                 // 无填充无文字的容器：细虚线边界，避免"幽灵组件"融进背景
                 sb.write_string(
-                  " stroke=\"#C9CFDA\" stroke-width=\"1\" stroke-dasharray=\"4 3\"",
+                  " stroke=\"\{frame}\" stroke-width=\"1\" stroke-dasharray=\"4 3\"",
                 )
               }
               if n.style.opacity != 1.0 {
@@ -153,7 +159,7 @@ fn render_node(
             }
           }
           for cid in n.children.iter() {
-            render_node(sb, doc, cid, layout)
+            render_node(sb, doc, cid, layout, surface~, frame~)
           }
           sb.write_string("</g>")
         }
