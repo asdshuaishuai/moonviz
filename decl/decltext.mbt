@@ -398,6 +398,10 @@ fn node_params_list(n : @core.Node) -> Array[String] {
   parts.push("line=\{num_text(n.style.line_height)}")
   parts.push("tracking=\{num_text(n.style.tracking)}")
   parts.push("flip=\"\{n.style.flip}\"")
+  parts.push("text_align=\"\{n.style.text_align}\"")
+  parts.push("font_style=\"\{n.style.font_style}\"")
+  parts.push("stroke_dash=\"\{n.style.stroke_dash}\"")
+  parts.push("visible=\{n.style.visible}")
   parts.push("constraint=\"\{n.constraint}\"")
   parts
 }
@@ -445,6 +449,10 @@ fn node_call(n : @core.Node) -> String {
   parts.push("line_height=\{num_text(n.style.line_height)}")
   parts.push("tracking=\{num_text(n.style.tracking)}")
   parts.push("flip=\"\{decl_escape(n.style.flip)}\"")
+  parts.push("text_align=\"\{decl_escape(n.style.text_align)}\"")
+  parts.push("font_style=\"\{decl_escape(n.style.font_style)}\"")
+  parts.push("stroke_dash=\"\{decl_escape(n.style.stroke_dash)}\"")
+  parts.push("visible=\{n.style.visible}")
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   "@decl.generic_node(\{join_with(parts, COMMA)})"
 }
@@ -768,6 +776,22 @@ fn apply_decl_style(
     Ok(None) => ()
     Err(error) => return Err(error)
   }
+  match opt_param(params, "text_align") {
+    Some(v) => cur = { ..cur, style: { ..cur.style, text_align: str_val(v) } }
+    None => ()
+  }
+  match opt_param(params, "font_style") {
+    Some(v) => cur = { ..cur, style: { ..cur.style, font_style: str_val(v) } }
+    None => ()
+  }
+  match opt_param(params, "stroke_dash") {
+    Some(v) => cur = { ..cur, style: { ..cur.style, stroke_dash: str_val(v) } }
+    None => ()
+  }
+  match opt_param(params, "visible") {
+    Some(v) => cur = { ..cur, style: { ..cur.style, visible: str_val(v) != "false" } }
+    None => ()
+  }
   match num_opt(params, "radius", line) {
     Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, corner_radius: v } }
     Ok(None) => ()
@@ -948,6 +972,22 @@ fn build_node(
         Some(v) => str_val(v)
         None => "lt"
       }
+      let text_align = match opt_param(params, "text_align") {
+        Some(v) => str_val(v)
+        None => "left"
+      }
+      let font_style = match opt_param(params, "font_style") {
+        Some(v) => str_val(v)
+        None => "normal"
+      }
+      let stroke_dash = match opt_param(params, "stroke_dash") {
+        Some(v) => str_val(v)
+        None => "solid"
+      }
+      let visible = match opt_param(params, "visible") {
+        Some(v) => str_val(v) != "false"
+        None => true
+      }
       let layout : @core.StackLayout? = match opt_param(params, "layout") {
         Some(v) =>
           match parse_flex(v, line) {
@@ -984,6 +1024,10 @@ fn build_node(
             tracking~,
             flip~,
             constraint~,
+            text_align~,
+            font_style~,
+            stroke_dash~,
+            visible~,
           ),
           params,
           line,

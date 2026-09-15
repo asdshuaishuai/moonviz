@@ -134,6 +134,10 @@ pub fn generic_node(
   tracking? : Double = 0.0,
   flip? : String = "none",
   constraint? : String = "lt",
+  text_align? : String = "left",
+  font_style? : String = "normal",
+  stroke_dash? : String = "solid",
+  visible? : Bool = true,
 ) -> @core.Node {
   let node_kind = match kind {
     "text" => @core.Text
@@ -170,6 +174,10 @@ pub fn generic_node(
       line_height,
       tracking,
       flip,
+      text_align,
+      font_style,
+      stroke_dash,
+      visible,
     },
   }
 }

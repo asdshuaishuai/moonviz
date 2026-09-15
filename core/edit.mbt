@@ -254,6 +254,31 @@ pub fn Project::edit_node(
               cur = { ..cur, constraint: v }
               applied.push("constraint")
             }
+            "stroke_width" => {
+              let sw = if d < 0.0 { 0.0 } else { d }
+              cur = { ..cur, style: { ..cur.style, stroke_width: sw } }
+              applied.push("stroke_width")
+            }
+            "align" => {
+              let a = if v == "center" || v == "right" { v } else { "left" }
+              cur = { ..cur, style: { ..cur.style, text_align: a } }
+              applied.push("align")
+            }
+            "italic" => {
+              let f = if v == "true" || v == "1" || v == "italic" { "italic" } else { "normal" }
+              cur = { ..cur, style: { ..cur.style, font_style: f } }
+              applied.push("italic")
+            }
+            "dash" => {
+              let ds = if v == "dashed" || v == "dotted" { v } else { "solid" }
+              cur = { ..cur, style: { ..cur.style, stroke_dash: ds } }
+              applied.push("dash")
+            }
+            "visible" => {
+              let vis = !(v == "false" || v == "0" || v == "off" || v == "hidden")
+              cur = { ..cur, style: { ..cur.style, visible: vis } }
+              applied.push("visible")
+            }
             _ => ()
           }
         }

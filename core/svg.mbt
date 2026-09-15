@@ -47,6 +47,8 @@ fn render_node(
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
+    // 隐藏节点：整棵子树不参与渲染（文档中仍保留，可随时 visible=true 恢复）
+    Some(n) if !n.style.visible => ()
     Some(n) =>
       match layout.rect_of(id) {
         None => ()
@@ -80,9 +82,16 @@ fn render_node(
                 "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\" fill=\"\{paint_ref(n.style.fill, n.id)}\"",
               )
               if n.style.stroke != "none" {
-                sb.write_string(
-                  " stroke=\"\{n.style.stroke}\" stroke-width=\"1\"",
-                )
+                let sw = if n.style.stroke_width > 0.0 {
+                  n.style.stroke_width
+                } else {
+                  1.0
+                }
+                sb.write_string(" stroke=\"\{n.style.stroke}\" stroke-width=\"\{sw}\"")
+                match dash_array(n.style.stroke_dash) {
+                  Some(da) => sb.write_string(" stroke-dasharray=\"\{da}\"")
+                  None => ()
+                }
               } else if n.style.fill == "none" && n.text == "" {
                 // 无填充无文字的容器：细虚线边界，避免"幽灵组件"融进背景
                 sb.write_string(
@@ -118,11 +127,24 @@ fn render_node(
                 )
               }
               sb.write_string("/>")
-              // 带文字的形状（按钮 / 输入框占位符）：水平垂直居中
+              // 带文字的形状（按钮 / 输入框占位符）：默认水平垂直居中，
+              // align=left/right 时改为左/右对齐到内边距
               if n.text != "" {
                 let baseline = r.y + (r.height + n.style.font_size * 0.7) / 2.0
+                let pad = 12.0
+                let (tx, anchor) = match n.style.text_align {
+                  "left" => (r.x + pad, " start")
+                  "right" => (r.x + r.width - pad, " end")
+                  _ => (r.x + r.width / 2.0, " middle")
+                }
                 sb.write_string(
-                  "<text x=\"\{r.x + r.width / 2.0}\" y=\"\{baseline}\" text-anchor=\"middle\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" fill=\"\{n.style.text_color}\">\{xml_escape(n.text)}</text>",
+                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",
+                )
+                if n.style.font_style == "italic" {
+                  sb.write_string(" font-style=\"italic\"")
+                }
+                sb.write_string(
+                  " fill=\"\{n.style.text_color}\">\{xml_escape(n.text)}</text>",
                 )
               }
             }
@@ -142,9 +164,24 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
   let lines = split_lines(n.text)
   let lh = n.style.font_size * n.style.line_height
   let first_baseline = r.y + n.style.font_size * 1.0
+  // 水平对齐：left（默认，x 起点）/ center / right（x 终点 + text-anchor）
+  let (tx, anchor) = match n.style.text_align {
+    "center" => (r.x + r.width / 2.0, " text-anchor=\"middle\"")
+    "right" => (r.x + r.width, " text-anchor=\"end\"")
+    _ => (r.x, "")
+  }
   sb.write_string(
-    "<text x=\"\{r.x}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
+    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
   )
+  if anchor != "" {
+    sb.write_string(anchor)
+  }
+  if n.style.font_style == "italic" {
+    sb.write_string(" font-style=\"italic\"")
+  }
+  if n.style.opacity != 1.0 {
+    sb.write_string(" opacity=\"\{n.style.opacity}\"")
+  }
   if lines.length() == 1 {
     sb.write_string(">\{xml_escape(lines[0])}</text>")
   } else {
@@ -152,10 +189,20 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
     for i in 0..<lines.length() {
       let dy = if i == 0 { 0.0 } else { lh }
       sb.write_string(
-        "<tspan x=\"\{r.x}\" dy=\"\{dy}\">\{xml_escape(lines[i])}</tspan>",
+        "<tspan x=\"\{tx}\" dy=\"\{dy}\">\{xml_escape(lines[i])}</tspan>",
       )
     }
     sb.write_string("</text>")
+  }
+}
+
+///|
+/// 描边线型 → SVG stroke-dasharray 值；solid 返回 None（不输出该属性）
+fn dash_array(dash : String) -> String? {
+  match dash {
+    "dashed" => Some("6 4")
+    "dotted" => Some("1.5 3")
+    _ => None
   }
 }
 

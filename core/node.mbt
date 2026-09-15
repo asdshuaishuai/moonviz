@@ -66,7 +66,7 @@ pub(all) struct StackLayout {
 }
 
 ///|
-/// 视觉样式（v3：Paint DSL 渐变 / 旋转 / 模糊 / 混合 / 排版细节）
+/// 视觉样式（v4：+ 文本对齐 / 斜体 / 描边虚线 / 可见性）
 pub(all) struct NodeStyle {
   fill : String
   stroke : String
@@ -83,6 +83,10 @@ pub(all) struct NodeStyle {
   line_height : Double // 文本行高倍数（默认 1.5）
   tracking : Double // 字距（em）
   flip : String // "none" | "h" | "v" | "both"
+  text_align : String // 文本水平对齐 "left" | "center" | "right"
+  font_style : String // "normal" | "italic"
+  stroke_dash : String // 描边线型 "solid" | "dashed" | "dotted"
+  visible : Bool // false = 隐藏但仍存在于文档（不参与渲染与命中）
 }
 
 ///|
@@ -103,6 +107,10 @@ pub fn NodeStyle::default() -> NodeStyle {
     line_height: 1.5,
     tracking: 0.0,
     flip: "none",
+    text_align: "left",
+    font_style: "normal",
+    stroke_dash: "solid",
+    visible: true,
   }
 }
 
