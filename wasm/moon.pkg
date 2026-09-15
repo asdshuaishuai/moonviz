@@ -10,6 +10,7 @@ options(
         "render_mbt",
         "validate_mbt",
         "apply_agent_op",
+        "apply_human_op",
         "list_templates",
         "version_info",
       ],

@@ -5,6 +5,8 @@
 ///   render_mbt(mbt)        → 引擎 RenderResult JSON（画板 SVG + 交互流）
 ///   validate_mbt(mbt)      → 校验（不渲染）
 ///   apply_agent_op(mbt,op) → 应用一条 Agent 操作语法并提交（AgentGate），
+///   apply_human_op(mbt,op) → 同一语法经 HumanGate（视觉债放行）——画布
+///                            拖拽/属性编辑等人类行为走这里
 ///                            返回 canonical MBT + 渲染结果——与 CLI/Studio
 ///                            同一操作语法，playground 由此获得实时编辑能力
 ///   list_templates()       → 模板清单
@@ -57,4 +59,23 @@ pub fn apply_agent_op(mbt : String, op : String) -> String {
 /// 模板清单（playground 模板选择器）。
 pub fn list_templates() -> String {
   @core.list_templates_json()
+}
+
+///|
+/// 人类路线：同一操作语法，经 HumanGate 提交（结构违规拒绝、视觉债放行）。
+/// 画布直接操作（拖拽移动、属性面板编辑）属于人类行为，应与 Agent 硬门槛
+/// 区分——轻微重叠/越界记为视觉债而非拒绝，对齐 Studio 画布的语义。
+pub fn apply_human_op(mbt : String, op : String) -> String {
+  match @decl.load_mbt_project(mbt) {
+    Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
+    Ok(model) =>
+      match @core.apply_operation(model.project, op) {
+        Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
+        Ok(_) =>
+          match model.commit_and_render(@core.HumanGate) {
+            Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
+            Ok(rendered) => rendered
+          }
+      }
+  }
 }

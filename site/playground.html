@@ -13,48 +13,53 @@
 }
 @media (prefers-color-scheme:dark){:root{--bg:#111214;--panel:#1b1d21;--tx:#e8eaed;--tx2:#a8b0ba;--tx3:#6b7280;--line:#2c2f36}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font-size:13px}
-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+body{margin:0;background:var(--bg);color:var(--tx);font-size:13px;overflow:hidden}
+header{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
 header h1{font-size:14px;margin:0;font-weight:700}
 header .ver{font-size:11px;color:var(--tx3)}
 header .spacer{flex:1}
 header a{color:var(--tx2);font-size:12px;text-decoration:none}
 button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600}
+button:hover{border-color:var(--acc);color:var(--acc)}
 button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
 select,textarea,input{font:inherit;color:var(--tx)}
-select{border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:8px;padding:4px 10px;font-size:12px;max-width:220px;cursor:pointer}
+select{border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:8px;padding:4px 10px;font-size:12px;max-width:230px;cursor:pointer}
 select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 option{background:var(--panel);color:var(--tx)}
-main{display:grid;grid-template-columns:minmax(360px,44%) 1fr;height:calc(100vh - 53px)}
+main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(100vh - 50px)}
+@media (max-width:1080px){main{grid-template-columns:minmax(300px,42%) 1fr}}
 .editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
-.preview{display:flex;flex-direction:column;min-width:0}
+.canvaswrap{display:flex;flex-direction:column;min-width:0;position:relative}
+.inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+@media (max-width:1080px){.inspector{display:none}}
 .bar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
 .bar button:hover{border-color:var(--acc);color:var(--acc)}
-.bar label{font-size:11px;color:var(--tx3)}
 textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;background:transparent;font:12px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:pre;overflow:auto}
-#ops{height:110px;border-top:1px solid var(--line);font-size:12px}
-.canvas{flex:1;overflow:auto;padding:22px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;background:var(--bg)}
+#ops{height:150px;border-top:1px solid var(--line);font-size:12px}
+.tabbar{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--line)}
+.tabbar button{border:0;background:transparent;padding:6px 12px;font-size:12px;color:var(--tx3);border-radius:8px 8px 0 0;font-weight:600}
+.tabbar button.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 -2px 0 var(--acc)}
+.hide{display:none!important}
+#oplog{max-height:120px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
+#oplog .e{color:var(--err)}
+#oplog .ok{color:var(--ok)}
+.canvas{flex:1;overflow:auto;padding:22px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;background:var(--bg);position:relative}
 .canvas:empty::before{content:'渲染后画板将显示在这里';color:var(--tx3);font-size:12px}
-.canvas .shot{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);border-radius:6px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line)}
-.canvas .shot.on{border-color:var(--acc)}
-.canvas .shot svg{display:block;max-height:min(72vh,760px);width:auto;max-width:min(60vw,560px);height:auto}
-.shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line);background:var(--panel)}
-.shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line)}
+.shot{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);border-radius:6px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line)}
+.shot.on{border-color:var(--acc)}
+.shot svg{display:block;max-height:min(70vh,740px);width:auto;max-width:100%;height:auto}
+.shot svg g[id^="n_"]{cursor:move}
+.shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line);background:var(--panel);user-select:none}
+#selbox{position:absolute;border:1.5px solid var(--acc);border-radius:3px;pointer-events:none;display:none;box-shadow:0 0 0 1px rgba(75,107,251,.15)}
+#seltag{position:absolute;background:var(--acc);color:#fff;font-size:10px;padding:1px 7px;border-radius:4px 4px 4px 0;transform:translateY(-100%);white-space:nowrap}
 .status{padding:6px 14px;border-top:1px solid var(--line);font-size:11px;display:flex;gap:10px;align-items:center;min-height:30px}
 .status .pill{padding:1px 9px;border-radius:99px;font-weight:700;font-size:10px;letter-spacing:.03em;flex:0 0 auto}
 .pill.ok{background:rgba(26,158,92,.13);color:var(--ok)}
 .pill.err{background:rgba(224,82,82,.13);color:var(--err)}
 .pill.idle{background:rgba(144,152,161,.13);color:var(--tx3)}
-#msg{color:var(--tx2)}
+#msg{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 #msg.err{color:var(--err)}
 .status button{margin-left:auto}
-#msg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-.tabbar{display:flex;gap:2px;padding:6px 12px 0}
-.tabbar button{border:0;background:transparent;padding:5px 10px;font-size:12px;color:var(--tx3);border-radius:8px 8px 0 0}
-.tabbar button.on{background:var(--bg);color:var(--tx);font-weight:700;box-shadow:inset 0 -2px 0 var(--acc)}
-.hide{display:none!important}
-#oplog{max-height:130px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
-#oplog .e{color:var(--err)}
 .ops-help{border-bottom:1px solid var(--line);padding:8px 12px;display:flex;flex-direction:column;gap:6px}
 .ops-quick{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .ops-quick button,.chips button{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--tx2);cursor:pointer}
@@ -63,18 +68,36 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 .lbl{font-size:10px;color:var(--tx3);font-weight:700;align-self:center}
 .chips{display:flex;gap:4px;flex-wrap:wrap}
 .chips .ab{background:rgba(75,107,251,.10);color:var(--acc);font-weight:700}
-#oplog .ok{color:var(--ok)}
-.ops-gram{display:flex;flex-direction:column;gap:0}
-#gram-toggle{align-self:flex-start;font-size:11px;padding:2px 10px;border-radius:99px;border:1px dashed var(--line);background:transparent;color:var(--tx3);cursor:pointer}
-#gram-toggle:hover{color:var(--acc);border-color:var(--acc)}
-#gram-body{margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:300px;overflow:auto;background:var(--panel)}
-.gram-tip{margin:0 0 8px;font-size:11px;color:var(--tx3)}
-.gram-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 16px}
+.gram-body{flex:1;overflow:auto;padding:12px 14px}
+.gram-tip{margin:0 0 10px;font-size:11.5px;color:var(--tx3)}
+.gram-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 16px}
 .gram-cat h5{margin:0 0 5px;font-size:10.5px;color:var(--acc);font-weight:700;letter-spacing:.03em}
 .gram-cat .g{font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx2);padding:3px 7px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gram-cat .g:hover{background:rgba(75,107,251,.08);color:var(--acc)}
 .gram-cat .g::before{content:'▸ ';color:var(--tx3)}
+.insp-hd{padding:8px 12px;font-size:11px;font-weight:700;color:var(--tx3);border-bottom:1px solid var(--line);letter-spacing:.04em}
+#layers{flex:0 0 auto;max-height:34%;overflow:auto;padding:4px 6px;border-bottom:1px solid var(--line)}
+.lay{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:11.5px;color:var(--tx2);cursor:pointer;white-space:nowrap;overflow:hidden}
+.lay:hover{background:rgba(75,107,251,.06)}
+.lay.on{background:rgba(75,107,251,.12);color:var(--acc);font-weight:700}
+.lay .k{font-size:9.5px;color:var(--tx3);margin-left:auto;flex:0 0 auto}
+#props{flex:1;overflow:auto;padding:10px 12px}
+.pcard{margin-bottom:10px}
+.pcard .pid{font-size:12px;font-weight:700;color:var(--tx)}
+.pcard .pkind{font-size:10px;color:var(--tx3)}
+.prow{display:grid;grid-template-columns:34px 1fr 1fr;gap:6px;align-items:center;margin-top:7px}
+.prow label{font-size:10px;color:var(--tx3);font-weight:700}
+.prow input{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 7px;font-size:11.5px}
+.prow input:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.prow3{display:grid;grid-template-columns:34px 1fr;gap:6px;align-items:center;margin-top:7px}
+.pbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.pbtns button{font-size:11px;padding:4px 6px}
+.pbtns .danger:hover{border-color:var(--err);color:var(--err)}
+.empty-insp{color:var(--tx3);font-size:11.5px;padding:6px 2px;line-height:1.6}
+.colorpair{display:flex;gap:4px;align-items:center}
+.colorpair input[type=color]{width:26px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
 .nosupport{padding:40px;text-align:center;color:var(--err);font-size:14px}
+#undobtn{display:none}
 </style>
 </head>
 <body>
@@ -87,15 +110,16 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 </header>
 <main>
   <section class="editor">
-    <div class="bar">
+    <div class="tabbar">
+      <button id="tab-src" class="on" onclick="showTab('src')">源码</button>
+      <button id="tab-ops" onclick="showTab('ops')">操作台 · AgentGate</button>
+      <button id="tab-gram" onclick="showTab('gram')">📖 语法</button>
+    </div>
+    <div class="bar" id="src-bar">
       <select id="tpl" title="从模板新建画板（追加到当前文档）"><option value="">📐 从模板新建…</option></select>
       <span style="flex:1"></span>
       <button onclick="applySource()" id="render-btn">渲染</button>
       <button onclick="validate()">校验</button>
-    </div>
-    <div class="tabbar">
-      <button id="tab-src" class="on" onclick="showTab('src')">.mbt.md 源码</button>
-      <button id="tab-ops" onclick="showTab('ops')">操作台（AgentGate）</button>
     </div>
     <textarea id="src" spellcheck="false"></textarea>
     <div id="ops-wrap" class="hide" style="display:flex;flex-direction:column;flex:1;min-height:0">
@@ -109,86 +133,34 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
           <button data-op="responsive">响应式变体</button>
         </div>
         <div class="ops-ids"><span class="lbl">画板/节点（点击插入）</span><div id="idchips" class="chips"></div></div>
-        <div class="ops-gram">
-          <button id="gram-toggle" onclick="toggleGram()">📖 操作语法手册</button>
-          <div id="gram-body" class="hide">
-            <p class="gram-tip">与 CLI / Studio / MCP 完全一致的命令语法。<b>点击任意示例</b>直接填入输入框（回车执行）。</p>
-            <div class="gram-grid">
-              <div class="gram-cat"><h5>画板</h5>
-                <div class="g" data-c="create &lt;名&gt; [宽] [高]">create home 390 844</div>
-                <div class="g" data-c="template &lt;模板id&gt; &lt;名&gt;">template login my_login</div>
-                <div class="g" data-c="duplicate &lt;画板&gt; &lt;新名&gt;">duplicate demo demo_v2</div>
-                <div class="g" data-c="delete-artboard &lt;画板&gt;">delete-artboard demo_v2</div>
-              </div>
-              <div class="gram-cat"><h5>节点</h5>
-                <div class="g" data-c="place &lt;画板&gt; &lt;组件&gt; &lt;id&gt; [变体] [x] [y]">place demo button my_btn - 24 100</div>
-                <div class="g" data-c="move &lt;画板&gt; &lt;节点&gt; x y">move demo my_btn 24 200</div>
-                <div class="g" data-c="copy &lt;画板&gt; &lt;节点&gt; &lt;新id&gt; [dx] [dy]">copy demo my_btn my_btn2 0 80</div>
-                <div class="g" data-c="delete &lt;画板&gt; &lt;节点&gt;">delete demo my_btn2</div>
-                <div class="g" data-c="reorder &lt;画板&gt; &lt;节点&gt; front|back|up|down">reorder demo my_btn front</div>
-                <div class="g" data-c="flip &lt;画板&gt; &lt;节点&gt; h|v|both|none">flip demo my_btn h</div>
-              </div>
-              <div class="gram-cat"><h5>属性 update（k=v 可多个）</h5>
-                <div class="g" data-c="改填充色">update demo my_btn fill=#FF7A45</div>
-                <div class="g" data-c="文字（带空格要引号）">update demo my_btn text="确认提交"</div>
-                <div class="g" data-c="字号/文字色/圆角">update demo my_btn font_size=16 text_color=#FFFFFF radius=12</div>
-                <div class="g" data-c="对齐 left|center|right / 斜体">update demo my_btn align=center italic=true</div>
-                <div class="g" data-c="描边/线型/虚线">update demo my_btn stroke=#333333 stroke_width=2 dash=dashed</div>
-                <div class="g" data-c="透明度/阴影/旋转/模糊">update demo my_btn opacity=0.8 shadow=e2 rotate=5 blur=2</div>
-                <div class="g" data-c="隐藏（不渲染不命中，可恢复）">update demo my_btn visible=false</div>
-                <div class="g" data-c="改名">update demo my_btn name=主按钮</div>
-                <div class="g" data-c="尺寸 hug=包内容 fill=撑满">update demo my_btn width_mode=fill height_mode=hug</div>
-                <div class="g" data-c="宽高也接受 fill/hug">update demo my_btn w=fill h=52</div>
-              </div>
-              <div class="gram-cat"><h5>容器布局</h5>
-                <div class="g" data-c="启用栈布局 vertical|horizontal|none">update demo root layout=vertical gap=8</div>
-                <div class="g" data-c="间距/内边距/对齐">update demo root gap=16 justify=center</div>
-                <div class="g" data-c="子节点居中/贴边">update demo my_btn x_mode=center</div>
-              </div>
-              <div class="gram-cat"><h5>导航与交互</h5>
-                <div class="g" data-c="tap 节点 → 跳转画板">flow demo home my_btn</div>
-                <div class="g" data-c="注册交互（10 触发器 × 9 动作）">interact demo my_btn tap navigate_to:home</div>
-                <div class="g" data-c="toast 提示">interact demo my_btn tap show_toast:已保存</div>
-                <div class="g" data-c="改文字动作">interact demo my_btn tap set_text:my_btn:好的</div>
-                <div class="g" data-c="长按触发">interact demo my_btn long_press back</div>
-                <div class="g" data-c="清除节点交互">uninteract demo my_btn</div>
-              </div>
-              <div class="gram-cat"><h5>组件状态（多态）</h5>
-                <div class="g" data-c="定义状态补丁">state demo my_btn pressed fill=#1E3FA8 radius=8</div>
-                <div class="g" data-c="激活状态">set-state my_btn pressed</div>
-                <div class="g" data-c="切换（再切回 default）">set-state my_btn pressed toggle</div>
-              </div>
-              <div class="gram-cat"><h5>结构与生成</h5>
-                <div class="g" data-c="打组（同父节点）">group demo g1 chat_0 chat_1</div>
-                <div class="g" data-c="解组">ungroup demo g1</div>
-                <div class="g" data-c="对齐 left|right|top|bottom|hcenter|vcenter">align demo left chat_0 chat_1</div>
-                <div class="g" data-c="画板缩放（约束重排）">resize-canvas demo 420 900</div>
-                <div class="g" data-c="生成 _tablet/_desktop 变体">responsive demo</div>
-                <div class="g" data-c="样式传播到同组件全部实例">restyle demo button radius=20</div>
-              </div>
-              <div class="gram-cat"><h5>主题与修复</h5>
-                <div class="g" data-c="light|dark|high_contrast|sepia|nord|sunset">theme dark</div>
-                <div class="g" data-c="自动修复违规">fix demo</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-      <textarea id="ops" spellcheck="false" placeholder="操作语法与 CLI / Studio / MCP 完全一致，例如：&#10;update <画板> <节点> fill=#FF7A45&#10;上方「画板/节点」芯片给出当前文档可用的真实 id"></textarea>
+      <textarea id="ops" spellcheck="false" placeholder="AgentGate 操作语法（画布拖拽走 HumanGate，这里演示 Agent 硬门槛）。回车执行：&#10;update <画板> <节点> fill=#FF7A45"></textarea>
       <div id="oplog"></div>
     </div>
+    <div id="gram-wrap" class="hide gram-body"></div>
   </section>
-  <section class="preview">
+  <section class="canvaswrap">
     <div class="canvas" id="canvas"></div>
-    <div class="status">
-      <span class="pill" id="pill">…</span><span id="msg">加载引擎中</span>
-      <button style="margin-left:auto" onclick="downloadSvg()">导出 SVG</button>
-    </div>
+    <div id="selbox"><span id="seltag"></span></div>
+  </section>
+  <section class="inspector">
+    <div class="insp-hd">图层 · 当前画板</div>
+    <div id="layers"></div>
+    <div class="insp-hd">属性 · HumanGate</div>
+    <div id="props"><div class="empty-insp">在画布中点击元素选中<br>拖拽移动 · 右侧改属性<br>Del 删除 · ⌘Z 撤销</div></div>
   </section>
 </main>
+<div class="status">
+  <span class="pill idle" id="pill">…</span><span id="msg">加载引擎中</span>
+  <button id="undobtn" onclick="undo()">↩ 撤销</button>
+  <button onclick="downloadSvg()">导出 SVG</button>
+</div>
 <script type="module">
 const $=id=>document.getElementById(id);
-let engine=null, mbt='', artIndex=0;
+let engine=null, mbt='', artIndex=0, lastResult=null;
+let selNode=null;            // 当前选中节点 id（属于当前画板）
+let history=[];              // mbt 快照栈（撤销）
+const HISTORY_MAX=50;
 
 const EXAMPLE=`---
 moonbit:
@@ -247,7 +219,6 @@ test "demo visual declaration" {
 \`\`\`
 
 `;
-
 const MINIMAL=`---
 moonbit:
   backend: native
@@ -295,106 +266,45 @@ function setStatus(ok,msg){
   p.textContent=ok===null?'…':ok?'OK':'被拒';
   m.textContent=msg||'';
   m.className=ok===false?'err':'';
-  p.title=ok===false?'操作被引擎门禁拒绝——不是崩溃：换参数后在操作台重试':'';
   clearTimeout(statusTimer);
-  if(ok===false){statusTimer=setTimeout(()=>{if(p.className.includes('err')){p.className='pill idle';p.textContent='被拒';}},6000);}
+  if(ok===false){
+    statusTimer=setTimeout(()=>{
+      if(p.className.includes('err')){p.className='pill idle';p.textContent='被拒';m.className='';}
+    },5000);
+  }
+}
+function pushHistory(){history.push(mbt);if(history.length>HISTORY_MAX)history.shift();$('undobtn').style.display=history.length?'':'none';}
+function undo(){
+  if(!history.length)return;
+  mbt=history.pop();$('src').value=mbt;
+  if(selNode&&!nodeOf(selNode))selNode=null;
+  render();setStatus(null,'已撤销');
+  $('undobtn').style.display=history.length?'':'none';
 }
 function logOp(op,res){
   const row=document.createElement('div');
   const ok=res.ok===true;
-  row.className=ok?'':'e';
-  row.textContent=`> ${op}  ${ok?'✓ '+(res.revision!==undefined?'rev '+res.revision:''):'✗ '+(res.error||'')}`;
+  row.className=ok?'ok':'e';
+  row.textContent=`> ${op}  ${ok?'✓ rev '+res.revision:'✗ '+(res.error||'')}`;
   $('oplog').prepend(row);
 }
 function showTab(w){
-  $('tab-src').classList.toggle('on',w==='src');
-  $('tab-ops').classList.toggle('on',w==='ops');
+  ['src','ops','gram'].forEach(t=>{
+    $('tab-'+t).classList.toggle('on',t===w);
+  });
   $('src').classList.toggle('hide',w!=='src');
+  $('src-bar').classList.toggle('hide',w!=='src');
   $('ops-wrap').classList.toggle('hide',w!=='ops');
-  (w==='src'?$('src'):$('ops')).focus();
+  $('gram-wrap').classList.toggle('hide',w!=='gram');
+  if(w==='src')$('src').focus();
+  if(w==='ops')$('ops').focus();
 }
-function artboards(){const r=lastRender();return (r&&r.artboards)||[];}
-let lastResult=null;
-function lastRender(){return lastResult;}
-/// 操作台辅助：真实 id 芯片 + 快捷命令
-function refreshIdChips(abs){
-  const box=$('idchips');if(!box)return;
-  box.innerHTML='';
-  if(!abs.length){box.innerHTML='<span style="font-size:11px;color:var(--tx3)">（空文档 — 先从上方选模板）</span>';return;}
-  abs.forEach(a=>{
-    const b=document.createElement('button');
-    b.className='ab';b.textContent=a.id;b.title='画板';
-    b.onclick=()=>insertToken(a.id);
-    box.appendChild(b);
-    (a.nodes||[]).slice(0,14).forEach(n=>{
-      if(!n.id)return;
-      const nb=document.createElement('button');
-      nb.textContent=n.id;nb.title=(n.text||n.id).slice(0,24);
-      nb.onclick=()=>insertToken(n.id);
-      box.appendChild(nb);
-    });
-  });
-}
-function insertToken(t){
-  const el=$('ops');
-  const cur=el.value;
-  el.value=cur?cur.replace(/\s+$/,'')+' '+t+' ':t+' ';
-  el.focus();
-}
-function firstAb(){
-  const a=artboards();if(!a.length)return null;
-  return a.find(x=>(x.nodes||[]).length>0)||a[0];
-}
+function artboards(){return (lastResult&&lastResult.artboards)||[];}
+function curAb(){return artboards()[artIndex]||null;}
+function nodeOf(id){const a=curAb();return a?(a.nodes||[]).find(n=>n.id===id):null;}
+function activeSvg(){const c=$('canvas').querySelector('.shot.on svg');return c||null;}
+function firstAb(){const a=artboards();return a.find(x=>(x.nodes||[]).length>0)||a[0]||null;}
 function firstNode(ab){const ns=(ab&&ab.nodes)||[];return ns.length?ns[0]:null;}
-function quickCmd(kind){
-  const ab=firstAb();if(!ab){setStatus(false,'先载入模板或写入源码');return;}
-  const n=firstNode(ab);
-  const abid=ab.id,nid=n?n.id:'';
-  const cmds={
-    recolor:n?`update ${abid} ${nid} fill=#FF7A45`:null,
-    rename:n?`update ${abid} ${nid} text=Hello MoonViz`:null,
-    flow:n?`flow ${abid} ${abid} ${nid}`:null,
-    hide:n?`update ${abid} ${nid} visible=false`:null,
-    responsive:`responsive ${abid}`,
-  };
-  const cmd=cmds[kind];
-  if(!cmd){setStatus(false,'当前画板没有可操作节点');return;}
-  $('ops').value=cmd;
-  applyOp();
-}
-document.querySelectorAll('.ops-quick button[data-op]').forEach(b=>{
-  b.addEventListener('click',()=>quickCmd(b.dataset.op));
-});
-function toggleGram(){
-  const b=$('gram-body');
-  b.classList.toggle('hide');
-  $('gram-toggle').textContent=b.classList.contains('hide')?'📖 操作语法手册':'📖 收起手册';
-}
-// 语法示例：点击填入输入框（把通用 id 换成当前文档真实 id，保证可直接回车执行）
-document.querySelectorAll('.gram-cat .g').forEach(el=>{
-  el.addEventListener('click',()=>{
-    const ab=firstAb();
-    const nid=ab&&(firstNode(ab)||{}).id||'';
-    let cmd=el.textContent.trim();
-    if(ab){
-      cmd=cmd.replace(/\bdemo\b/g,ab.id);
-      // 仅对「引用已有节点」的命令替换节点 id；place/copy 的 id 是新建的，不能占用现有名
-      const refs=/^(update|move|delete|reorder|flip|flow|interact|uninteract|state|set-state)\b/.test(cmd);
-      if(refs&&nid)cmd=cmd.replace(/\bmy_btn2?\b/g,nid).replace(/\bchat_[01]\b/g,nid);
-    }
-    $('ops').value=cmd;
-    $('ops').focus();
-    setStatus(null,'已填入示例 — 回车执行（可先改参数）');
-  });
-});
-
-function downloadSvg(){
-  const abs=artboards();if(!abs.length){toastMsg('无可导出的画板');return;}
-  const a=abs[Math.min(artIndex,abs.length-1)];
-  const blob=new Blob([a.svg],{type:'image/svg+xml'});
-  const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download=(a.id||'artboard')+'.svg';el.click();
-  URL.revokeObjectURL(el.href);
-}
 function toastMsg(m){setStatus(true,m);}
 
 function render(){
@@ -404,19 +314,22 @@ function render(){
     lastResult=r;
     if(!r.ok){setStatus(false,r.error||'render failed');return;}
     const abs=r.artboards||[];
-    artIndex=Math.min(artIndex,Math.max(0,abs.length-1));
+    if(artIndex>=abs.length)artIndex=0;
+    if(selNode&&!nodeOf(selNode))selNode=null;
     const c=$('canvas');c.innerHTML='';
-    refreshIdChips(abs);
     abs.forEach((a,i)=>{
-      const d=document.createElement('div');d.className='shot';
-      d.innerHTML=`<h4>${a.id} · ${a.width}×${a.height}${i===artIndex?' · 当前':''}</h4>${a.svg}`;
-      d.className='shot'+(i===artIndex?' on':'');
-      d.onclick=()=>{artIndex=i;render();};
+      const d=document.createElement('div');d.className='shot'+(i===artIndex?' on':'');
+      d.innerHTML=`<h4>${a.id} · ${a.width}×${a.height}</h4>${a.svg}`;
+      d.querySelector('h4').onclick=(ev)=>{ev.stopPropagation();artIndex=i;render();};
       c.appendChild(d);
     });
-    if(!abs.length){c.innerHTML='<div style="color:var(--tx3)">空文档 — 在左侧选一个模板，或在操作台执行 template &lt;id&gt; &lt;name&gt;</div>';}
-    const rev=r.revision!==undefined?`rev ${r.revision}`:'';
-    setStatus(true,`渲染成功 · ${abs.length} 画板 · ${rev}`);
+    if(!abs.length){c.innerHTML='';setStatus(null,'空文档 — 从模板新建或在源码里写内容');}
+    refreshIdChips(abs);renderLayers();renderProps();placeSelbox();
+    if(abs.length){
+      const rev=r.revision!==undefined?`rev ${r.revision}`:'';
+      const debt=r.debt?` · 视觉债 ${r.debt}`:'';
+      setStatus(true,`当前画板 ${abs[artIndex].id}${rev}${debt}`);
+    }
   }catch(e){setStatus(false,String(e.message||e));}
 }
 function applySource(){mbt=$('src').value;render();}
@@ -425,54 +338,305 @@ function validate(){
   const v=engine.validate(mbt);
   setStatus(v.ok===true, v.ok?`校验通过 · entry ${v.entry||'-'} · rev ${v.revision??'-'}`:(v.error||'校验失败'));
 }
+
+/* ---------- 人类行为：画布选中 / 拖拽 / 属性（HumanGate） ---------- */
+function humanOp(op,silentOk){
+  if(!engine)return false;
+  pushHistory();
+  try{
+    const r=engine.apply_human_op(mbt,op);
+    if(r.ok===true&&r.mbt){
+      mbt=r.mbt;$('src').value=mbt;render();
+      if(!silentOk)setStatus(true,`✓ ${op.split(' ').slice(0,2).join(' ')}（HumanGate${r.debt?` · 债 ${r.debt}`:''}）`);
+      return true;
+    }
+    history.pop();$('undobtn').style.display=history.length?'':'none';
+    let hint=(r.error||'').includes('cannot')?' — 该移动会被结构约束拒绝':'';
+    setStatus(false,(r.error||'操作被拒绝')+hint);
+    return false;
+  }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
+}
+
+function select(id){selNode=id;renderLayers();renderProps();placeSelbox();}
+function placeSelbox(){
+  const box=$('selbox'),tag=$('seltag');
+  const svg=activeSvg();
+  if(!selNode||!svg){box.style.display='none';return;}
+  const g=svg.querySelector(`g[id="n_${selNode}"]`);
+  if(!g){box.style.display='none';return;}
+  const gr=g.getBoundingClientRect(), cw=$('canvas').getBoundingClientRect();
+  box.style.display='block';
+  box.style.left=(gr.left-cw.left+$('canvas').scrollLeft-2)+'px';
+  box.style.top=(gr.top-cw.top+$('canvas').scrollTop-2)+'px';
+  box.style.width=(gr.width+4)+'px';
+  box.style.height=(gr.height+4)+'px';
+  const n=nodeOf(selNode);
+  tag.textContent=selNode+(n?` ${Math.round(n.rect.w)}×${Math.round(n.rect.h)}`:'');
+}
+
+/* 拖拽：SVG 坐标换算 + ghost 位移 + 释放提交 HumanGate move */
+let drag=null;
+$('canvas').addEventListener('mousedown',e=>{
+  const g=e.target.closest&&e.target.closest('g[id^="n_"]');
+  if(!g)return;
+  const svg=g.ownerSVGElement;
+  const id=g.id.slice(2);
+  const n=nodeOf(id);
+  if(!n||!svg)return;
+  e.preventDefault();
+  const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+  const loc=pt.matrixTransform(svg.getScreenCTM().inverse());
+  drag={g,svg,id,n,startX:loc.x,startY:loc.y,origX:n.rect.x,origY:n.rect.y,moved:false};
+});
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const pt=drag.svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+  const loc=pt.matrixTransform(drag.svg.getScreenCTM().inverse());
+  const dx=loc.x-drag.startX, dy=loc.y-drag.startY;
+  if(!drag.moved&&Math.hypot(dx,dy)<3)return;
+  drag.moved=true;
+  drag.g.setAttribute('transform',`translate(${dx},${dy})`);
+  $('selbox').style.display='none';
+});
+window.addEventListener('mouseup',()=>{
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(d.moved){
+    const cur=activeSvg();
+    const g=cur?cur.querySelector(`g[id="n_${d.id}"]`):null;
+    const tr=g?g.getAttribute('transform'):null;
+    if(g&&tr)g.removeAttribute('transform');
+    const m=tr&&/\(([-\d.]+),([-\d.]+)\)/.exec(tr);
+    const dx=m?+m[1]:0, dy=m?+m[2]:0;
+    if(Math.abs(dx)+Math.abs(dy)>2){
+      selNode=d.id;
+      humanOp(`move ${curAb().id} ${d.id} ${Math.max(0,Math.round(d.origX+dx))} ${Math.max(0,Math.round(d.origY+dy))}`);
+    }
+  }else{
+    select(d.id);
+  }
+});
+$('canvas').addEventListener('click',e=>{
+  if(!e.target.closest('g[id^="n_"]'))select(null);
+});
+window.addEventListener('keydown',e=>{
+  const inField=/INPUT|TEXTAREA|SELECT/.test(document.activeElement&&document.activeElement.tagName||'');
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!inField){e.preventDefault();undo();return;}
+  if((e.key==='Delete'||e.key==='Backspace')&&!inField&&selNode){
+    e.preventDefault();
+    if(humanOp(`delete ${curAb().id} ${selNode}`)){selNode=null;renderLayers();renderProps();}
+  }
+});
+window.addEventListener('resize',placeSelbox);
+
+/* 图层与属性面板 */
+function renderLayers(){
+  const box=$('layers');const ab=curAb();
+  if(!ab||!(ab.nodes||[]).length){box.innerHTML='<div class="empty-insp" style="padding:6px 8px">（无节点）</div>';return;}
+  box.innerHTML=(ab.nodes||[]).map(n=>
+    `<div class="lay${n.id===selNode?' on':''}" data-id="${n.id}">${n.id}<span class="k">${(n.text||n.kind||'').slice(0,10)}</span></div>`
+  ).join('');
+  box.querySelectorAll('.lay').forEach(el=>el.onclick=()=>select(el.dataset.id));
+}
+function renderProps(){
+  const box=$('props');const n=selNode?nodeOf(selNode):null;
+  if(!n){box.innerHTML='<div class="empty-insp">在画布中点击元素选中<br>拖拽移动 · 右侧改属性<br>Del 删除 · ⌘Z 撤销</div>';return;}
+  const fill=n.style&&n.style.fill&&n.style.fill!=='none'?n.style.fill:'#ffffff';
+  const hex=/^#[0-9a-fA-F]{6}$/.test(fill)?fill:'#ffffff';
+  box.innerHTML=`
+    <div class="pcard">
+      <div class="pid">${n.id}</div>
+      <div class="pkind">${n.kind||''}${n.component?' · '+n.component:''}</div>
+      <div class="prow"><label>X/Y</label><input type="number" id="pv-x" value="${Math.round(n.rect.x)}"><input type="number" id="pv-y" value="${Math.round(n.rect.y)}"></div>
+      <div class="prow"><label>W/H</label><input type="number" id="pv-w" value="${Math.round(n.rect.w)}"><input type="number" id="pv-h" value="${Math.round(n.rect.h)}"></div>
+      <div class="prow3"><label>填充</label><span class="colorpair"><input type="color" id="pv-fill-c" value="${hex}"><input type="text" id="pv-fill" value="${fill}"></span></div>
+      <div class="prow3"><label>文本</label><input type="text" id="pv-text" value="${(n.text||'').replace(/"/g,'&quot;')}"></div>
+      <div class="pbtns">
+        <button onclick="centerH()">居中↔</button><button onclick="centerV()">居中↕</button>
+        <button onclick="hideNode()" class="danger">隐藏</button><button onclick="delNode()" class="danger">删除</button>
+      </div>
+    </div>`;
+  const commit=(op)=>humanOp(op);
+  const numCommit=()=>{
+    const x=+$('pv-x').value,y=+$('pv-y').value;
+    if(Number.isFinite(x)&&Number.isFinite(y)&&(x!==Math.round(n.rect.x)||y!==Math.round(n.rect.y)))
+      commit(`move ${curAb().id} ${n.id} ${x} ${y}`);
+  };
+  ['pv-x','pv-y'].forEach(id=>$(id).addEventListener('change',numCommit));
+  ['pv-w','pv-h'].forEach(id=>$(id).addEventListener('change',()=>{
+    const v=+$(id).value;if(!Number.isFinite(v))return;
+    const key=id==='pv-w'?'w':'h';
+    if(v!==Math.round(key==='w'?n.rect.w:n.rect.h))commit(`update ${curAb().id} ${n.id} ${key}=${v}`);
+  }));
+  const fc=$('pv-fill-c'),ft=$('pv-fill');
+  if(fc&&ft){fc.oninput=()=>{ft.value=fc.value;};ft.addEventListener('change',()=>commit(`update ${curAb().id} ${n.id} fill=${ft.value}`));}
+  $('pv-text').addEventListener('change',()=>commit(`update ${curAb().id} ${n.id} text=${JSON.stringify($('pv-text').value)}`));
+}
+window.centerH=()=>{const n=nodeOf(selNode);if(n&&curAb())humanOp(`move ${curAb().id} ${selNode} ${Math.max(0,Math.round((curAb().width-n.rect.w)/2))} ${Math.round(n.rect.y)}`);};
+window.centerV=()=>{const n=nodeOf(selNode);if(n&&curAb())humanOp(`move ${curAb().id} ${selNode} ${Math.round(n.rect.x)} ${Math.max(0,Math.round((curAb().height-n.rect.h)/2))}`);};
+window.hideNode=()=>{if(selNode)humanOp(`update ${curAb().id} ${selNode} visible=false`);};
+window.delNode=()=>{if(selNode&&humanOp(`delete ${curAb().id} ${selNode}`)){selNode=null;renderLayers();renderProps();}};
+
+/* ---------- 操作台（AgentGate 演示） ---------- */
 function applyOp(){
   const op=$('ops').value.trim();if(!op)return;
   try{
     const r=engine.apply_agent_op(mbt,op);
     logOp(op,r);
-    if(r.ok===true&&r.mbt){
-      mbt=r.mbt;$('src').value=mbt;artIndex=0;render();
-      $('ops').value='';
-    }else{
-      const e=r.error||'操作被拒绝';
+    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;$('src').value=mbt;artIndex=0;render();$('ops').value='';}
+    else{
       let hint='';
+      const e=r.error||'';
       if(e.includes('unknown_artboard')||e.includes('unknown_node'))hint=' — 请用上方芯片里的真实 id';
-      else if(e.includes('mbt_gate_block'))hint=' — 门禁拦截（该修改会破坏设计约束，如重叠/越界）：换个节点或改小数值重试';
+      else if(e.includes('mbt_gate_block'))hint=' — Agent 硬门槛：该修改会破坏设计约束。画布拖拽走 HumanGate（视觉债放行），可对比两种门禁行为';
       setStatus(false,e+hint);
     }
   }catch(e){setStatus(false,String(e.message||e));}
 }
-$('ops').addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();applyOp();}
-});
+$('ops').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();applyOp();}});
 $('src').addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();applySource();}
 });
-const isMac=/Mac|iPhone|iPad/.test(navigator.platform||'');
-$('render-btn').textContent='渲染 '+(isMac?'⌘↵':'Ctrl↵');
+function quickCmd(kind){
+  const ab=firstAb();if(!ab){setStatus(false,'先载入模板或写入源码');return;}
+  const n=firstNode(ab);
+  const abid=ab.id,nid=n?n.id:'';
+  const cmds={recolor:n?`update ${abid} ${nid} fill=#FF7A45`:null,rename:n?`update ${abid} ${nid} text=Hello MoonViz`:null,
+    flow:n?`flow ${abid} ${abid} ${nid}`:null,hide:n?`update ${abid} ${nid} visible=false`:null,responsive:`responsive ${abid}`};
+  const cmd=cmds[kind];
+  if(!cmd){setStatus(false,'当前画板没有可操作节点');return;}
+  $('ops').value=cmd;applyOp();
+}
+document.querySelectorAll('.ops-quick button[data-op]').forEach(b=>b.addEventListener('click',()=>quickCmd(b.dataset.op)));
+function refreshIdChips(abs){
+  const box=$('idchips');if(!box)return;
+  box.innerHTML='';
+  if(!abs.length){box.innerHTML='<span style="font-size:11px;color:var(--tx3)">（空文档）</span>';return;}
+  abs.forEach(a=>{
+    const b=document.createElement('button');b.className='ab';b.textContent=a.id;b.title='画板';
+    b.onclick=()=>insertToken(a.id);box.appendChild(b);
+    (a.nodes||[]).slice(0,14).forEach(n=>{
+      if(!n.id)return;
+      const nb=document.createElement('button');nb.textContent=n.id;nb.title=(n.text||n.id).slice(0,24);
+      nb.onclick=()=>insertToken(n.id);box.appendChild(nb);
+    });
+  });
+}
+function insertToken(t){const el=$('ops');el.value=el.value?el.value.replace(/\s+$/,'')+' '+t+' ':t+' ';el.focus();}
+
+/* ---------- 语法页签 ---------- */
+const GRAM_HTML=`
+<p class="gram-tip">引擎的<b>全部操作语法</b>——与 CLI / Studio / MCP 完全一致。<b>点击任意示例</b>自动切到操作台并填入（引用类命令会替换成当前文档的真实 id）。<br>双门禁：画布拖拽与属性面板走 <b>HumanGate</b>（视觉债放行）；操作台走 <b>AgentGate</b>（硬门槛，破坏设计约束即拒绝）。</p>
+<div class="gram-grid">
+  <div class="gram-cat"><h5>画板</h5>
+    <div class="g" data-c="create &lt;名&gt; [宽] [高]">create home 390 844</div>
+    <div class="g">template login my_login</div>
+    <div class="g">duplicate demo demo_v2</div>
+    <div class="g">delete-artboard demo_v2</div>
+  </div>
+  <div class="gram-cat"><h5>节点</h5>
+    <div class="g">place demo button my_btn - 24 100</div>
+    <div class="g">move demo my_btn 24 200</div>
+    <div class="g">copy demo my_btn my_btn2 0 80</div>
+    <div class="g">delete demo my_btn2</div>
+    <div class="g">reorder demo my_btn front</div>
+    <div class="g">flip demo my_btn h</div>
+  </div>
+  <div class="gram-cat"><h5>属性 update（k=v 可多个）</h5>
+    <div class="g">update demo my_btn fill=#FF7A45</div>
+    <div class="g">update demo my_btn text="确认提交"</div>
+    <div class="g">update demo my_btn font_size=16 text_color=#FFFFFF radius=12</div>
+    <div class="g">update demo my_btn align=center italic=true</div>
+    <div class="g">update demo my_btn stroke=#333333 stroke_width=2 dash=dashed</div>
+    <div class="g">update demo my_btn opacity=0.8 shadow=e2 rotate=5 blur=2</div>
+    <div class="g">update demo my_btn visible=false</div>
+    <div class="g">update demo my_btn name=主按钮</div>
+    <div class="g">update demo my_btn width_mode=fill height_mode=hug</div>
+  </div>
+  <div class="gram-cat"><h5>容器布局</h5>
+    <div class="g">update demo root layout=vertical gap=8</div>
+    <div class="g">update demo root gap=16 justify=center</div>
+    <div class="g">update demo my_btn x_mode=center</div>
+  </div>
+  <div class="gram-cat"><h5>导航与交互</h5>
+    <div class="g">flow demo home my_btn</div>
+    <div class="g">interact demo my_btn tap navigate_to:home</div>
+    <div class="g">interact demo my_btn tap show_toast:已保存</div>
+    <div class="g">interact demo my_btn tap set_text:my_btn:好的</div>
+    <div class="g">interact demo my_btn long_press back</div>
+    <div class="g">uninteract demo my_btn</div>
+  </div>
+  <div class="gram-cat"><h5>组件状态（多态）</h5>
+    <div class="g">state demo my_btn pressed fill=#1E3FA8 radius=8</div>
+    <div class="g">set-state my_btn pressed</div>
+    <div class="g">set-state my_btn pressed toggle</div>
+  </div>
+  <div class="gram-cat"><h5>结构与生成</h5>
+    <div class="g">group demo g1 chat_0 chat_1</div>
+    <div class="g">ungroup demo g1</div>
+    <div class="g">align demo left chat_0 chat_1</div>
+    <div class="g">resize-canvas demo 420 900</div>
+    <div class="g">responsive demo</div>
+    <div class="g">restyle demo button radius=20</div>
+  </div>
+  <div class="gram-cat"><h5>主题与修复</h5>
+    <div class="g">theme dark</div>
+    <div class="g">fix demo</div>
+  </div>
+</div>`;
+$('gram-wrap').innerHTML=GRAM_HTML;
+document.querySelectorAll('.gram-cat .g').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const ab=firstAb();
+    const nid=ab&&(firstNode(ab)||{}).id||'';
+    let cmd=el.textContent.trim();
+    if(ab){
+      cmd=cmd.replace(/\bdemo\b/g,ab.id);
+      const refs=/^(update|move|delete|reorder|flip|flow|interact|uninteract|state|set-state)\b/.test(cmd);
+      if(refs&&nid)cmd=cmd.replace(/\bmy_btn2?\b/g,nid).replace(/\bchat_[01]\b/g,nid);
+    }
+    showTab('ops');
+    $('ops').value=cmd;$('ops').focus();
+    setStatus(null,'已填入示例 — 回车执行（可先改参数）');
+  });
+});
+
+/* ---------- 其它 ---------- */
+function downloadSvg(){
+  const abs=artboards();if(!abs.length){setStatus(false,'无可导出的画板');return;}
+  const a=abs[Math.min(artIndex,abs.length-1)];
+  const blob=new Blob([a.svg],{type:'image/svg+xml'});
+  const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download=(a.id||'artboard')+'.svg';el.click();
+  URL.revokeObjectURL(el.href);
+}
 async function loadTemplates(){
   try{
-    const t=engine.list_templates();const arr=JSON.parse(t);
-    $('tpl').innerHTML='<option value="">选择模板…</option>'+
+    const arr=JSON.parse(engine.list_templates());
+    $('tpl').innerHTML='<option value="">📐 从模板新建…</option>'+
       arr.map(x=>`<option value="${x.id}">${x.name}（${x.id}）</option>`).join('');
   }catch(_){$('tpl').innerHTML='<option value="">模板不可用</option>';}
 }
 $('tpl').addEventListener('change',e=>{
   const id=e.target.value;if(!id)return;
+  // 保留所选：下拉停在刚选的模板上，让用户看得到自己选了什么
   try{
     let base=mbt.trim()?mbt:MINIMAL;
     let r=engine.apply_agent_op(base, `template ${id} demo`);
-    if(r.ok!==true||!r.mbt){setStatus(false,r.error||'模板载入失败');e.target.value='';return;}
+    if(r.ok!==true||!r.mbt){setStatus(false,r.error||'模板载入失败');return;}
     let doc=r.mbt;
-    // 存根起步时清掉空存根画板，避免预览/芯片里残留无节点的占位画板
     const abs=(r.artboards||[]).filter(a=>(a.nodes||[]).length===0).map(a=>a.id);
     for(const dead of abs){
       const r2=engine.apply_agent_op(doc, `delete-artboard ${dead}`);
       if(r2.ok===true&&r2.mbt)doc=r2.mbt;
     }
-    mbt=doc;$('src').value=mbt;artIndex=0;render();setStatus(true,'模板已载入：'+id);
+    pushHistory();
+    mbt=doc;$('src').value=mbt;
+    const newIdx=(JSON.parse(engine.render(mbt)).artboards||[]).findIndex(a=>(a.nodes||[]).length>0);
+    artIndex=Math.max(0,newIdx);selNode=null;
+    render();
+    const name=$('tpl').selectedOptions[0]?$('tpl').selectedOptions[0].textContent:id;
+    setStatus(true,`已载入模板：${name} → 画板 ${curAb()?curAb().id:''}（点击画布元素试试拖拽）`);
   }catch(err){setStatus(false,String(err.message||err));}
-  e.target.value='';
 });
 
 async function boot(){
@@ -490,14 +654,17 @@ async function boot(){
       render:s=>JSON.parse(exports.render_mbt(s)),
       validate:s=>JSON.parse(exports.validate_mbt(s)),
       apply_agent_op:(s,o)=>JSON.parse(exports.apply_agent_op(s,o)),
+      apply_human_op:(s,o)=>JSON.parse(exports.apply_human_op(s,o)),
       list_templates:()=>exports.list_templates(),
     };
     const v=engine.version();
     $('ver').textContent='engine '+v.engine+' v'+v.version+' · wasm-gc · 全程本地运行';
+    const isMac=/Mac|iPhone|iPad/.test(navigator.platform||'');
+    $('render-btn').textContent='渲染 '+(isMac?'⌘↵':'Ctrl↵');
     mbt=EXAMPLE;$('src').value=mbt;
     await loadTemplates();
     render();
-    setStatus(null,'就绪 — 编辑源码后点渲染，或切到操作台用快捷按钮试试');
+    setStatus(null,'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
   }catch(e){
     const m=String(e.message||e);
     if(m.includes('js-string')||m.includes('string constants')||m.includes('Import #0')){
@@ -507,6 +674,8 @@ async function boot(){
     }
   }
 }
+window.showTab=showTab;window.applySource=applySource;window.validate=validate;
+window.downloadSvg=downloadSvg;window.undo=undo;
 boot();
 </script>
 </body>
