@@ -206,13 +206,93 @@ fn tools_definition() -> String {
   tools.push(
     tool_def("generate_responsive", "Generate variants. args: artboard"),
   )
+  // ---- 节点编辑与结构操作（此前 MCP 无法修改任何节点）----
+  tools.push(
+    tool_def(
+      "update_node",
+      "Update node properties. args: artboard, node_id, args (space-separated k=v). keys: w h text fill text_color stroke stroke_width radius opacity font_size weight shadow rotate blur blend line tracking constraint align italic dash visible layout gap justify padding width_mode height_mode x_mode y_mode name",
+    ),
+  )
+  tools.push(
+    tool_def("move_node", "Move node to absolute x/y. args: artboard, node_id, x, y"),
+  )
+  tools.push(
+    tool_def(
+      "group_nodes",
+      "Group nodes into a new group (member coords become group-relative). args: artboard, new_id (group id), nodes (comma-separated ids)",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "ungroup_node",
+      "Ungroup; members return to parent coordinates. args: artboard, node_id (group id)",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "align_nodes",
+      "Align nodes within their bounding box. args: artboard, mode (left|right|top|bottom|hcenter|vcenter), nodes (comma-separated)",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "resize_canvas",
+      "Resize artboard and reflow children per constraints. args: artboard, width, height",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "restyle_component",
+      "Propagate style to every instance of a component. args: artboard, component_id, args (space-separated k=v)",
+    ),
+  )
+  // ---- 交互（注册即生效：运行时消费交互标记）----
+  tools.push(
+    tool_def(
+      "interact",
+      "Attach an interaction to a node. args: artboard, node_id, trigger (tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|key_enter|focus|blur), action_spec (back | haptic | navigate_to:BOARD | show_toast:MSG | set_text:NODE:TEXT | set_state:NODE:STATE | toggle_state:NODE | play_sound:NAME)",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "uninteract",
+      "Remove all interactions from a node. args: artboard, node_id",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "interactions",
+      "List interactions on an artboard (structured node/trigger/action). args: artboard",
+    ),
+  )
+  // ---- 组件多态状态 ----
+  tools.push(
+    tool_def(
+      "define_state",
+      "Define a component state patch (default/pressed/disabled...). args: artboard, node_id, state_name, args (space-separated k=v: fill text_color stroke text radius font_size)",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "set_state",
+      "Activate a node state. args: node_id, state_name, toggle (optional true toggles back to default)",
+    ),
+  )
+  tools.push(
+    tool_def(
+      "list_states",
+      "List registered component states on an artboard. args: artboard",
+    ),
+  )
   let j = mcp_join(tools)
   "[\{j}]"
 }
 
 ///|
 fn tool_def(name : String, desc : String) -> String {
-  "{\"name\":\"\{name}\",\"description\":\"\{desc}\"}"
+  // MCP 规范要求 tools 携带 inputSchema（空 properties 即合法）；
+  // description 必须转义——含引号的描述会破坏整个 tools/list 响应。
+  "{\"name\":\"\{name}\",\"description\":\"\{json_escape_text(desc)}\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}}}"
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +313,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
   let source_b64 = extract_arg_string(request_line, "source_b64")
   let x = extract_arg_num(request_line, "x")
   let y = extract_arg_num(request_line, "y")
+  let node_id = extract_arg_string(request_line, "node_id")
+  let new_id = extract_arg_string(request_line, "new_id")
+  let mode = extract_arg_string(request_line, "mode")
+  let nodes_arg = extract_arg_string(request_line, "nodes")
+  let trigger = extract_arg_string(request_line, "trigger")
+  let action_spec = extract_arg_string(request_line, "action_spec")
+  let state_name = extract_arg_string(request_line, "state_name")
+  let width = extract_arg_num(request_line, "width")
+  let height = extract_arg_num(request_line, "height")
 
   match tool_name {
     "list_templates" => @core.list_templates_json()
@@ -614,6 +703,231 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         Err(e) => err_json(e)
       }
     }
+    // ---- 节点编辑与结构操作 ----
+    "update_node" => {
+      if artboard == "" || node_id == "" {
+        return err_json("missing artboard/node_id")
+      }
+      let raw = extract_arg_string(request_line, "args")
+      if raw == "" {
+        return err_json("missing args (space-separated k=v)")
+      }
+      let kvs : Array[(String, String)] = []
+      for part_view in raw.split(" ") {
+        let part = part_view.to_string()
+        if part == "" {
+          continue
+        }
+        match part.find("=") {
+          None => return err_json("update_invalid_arg:" + part)
+          Some(pos) => {
+            let k = part.substring(start=0, end=pos)
+            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            if k != "" {
+              kvs.push((k, v))
+            }
+          }
+        }
+      }
+      if kvs.length() == 0 {
+        return err_json("no k=v pairs")
+      }
+      match p.edit_node(artboard~, node_id~, kvs~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "move_node" => {
+      if artboard == "" || node_id == "" {
+        return err_json("missing artboard/node_id")
+      }
+      match p.move_node(artboard~, node_id~, x~, y~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "group_nodes" => {
+      if artboard == "" || new_id == "" || nodes_arg == "" {
+        return err_json("missing artboard/new_id/nodes")
+      }
+      let ids : Array[String] = []
+      for v in nodes_arg.split(",") {
+        let t = v.to_string().trim().to_string()
+        if t != "" {
+          ids.push(t)
+        }
+      }
+      if ids.length() < 2 {
+        return err_json("need_two_nodes")
+      }
+      match p.group_nodes(artboard~, node_ids=ids, group_id=new_id) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "ungroup_node" => {
+      if artboard == "" || node_id == "" {
+        return err_json("missing artboard/node_id")
+      }
+      match p.ungroup_node(artboard~, group_id=node_id) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "align_nodes" => {
+      if artboard == "" || mode == "" || nodes_arg == "" {
+        return err_json("missing artboard/mode/nodes")
+      }
+      let ids : Array[String] = []
+      for v in nodes_arg.split(",") {
+        let t = v.to_string().trim().to_string()
+        if t != "" {
+          ids.push(t)
+        }
+      }
+      if ids.length() < 2 {
+        return err_json("need_two_nodes")
+      }
+      match p.align_nodes(artboard~, mode~, node_ids=ids) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "resize_canvas" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      match p.resize_canvas(artboard~, width~, height~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "restyle_component" => {
+      if artboard == "" || component_id == "" {
+        return err_json("missing artboard/component_id")
+      }
+      let raw = extract_arg_string(request_line, "args")
+      let kvs : Array[(String, String)] = []
+      for part_view in raw.split(" ") {
+        let part = part_view.to_string()
+        if part == "" {
+          continue
+        }
+        match part.find("=") {
+          None => return err_json("restyle_invalid_arg:" + part)
+          Some(pos) => {
+            let k = part.substring(start=0, end=pos)
+            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            if k != "" {
+              kvs.push((k, v))
+            }
+          }
+        }
+      }
+      if kvs.length() == 0 {
+        return err_json("missing args (space-separated k=v)")
+      }
+      match p.restyle_component(artboard~, component_id~, kvs~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    // ---- 交互 ----
+    "interact" => {
+      if artboard == "" || node_id == "" || trigger == "" || action_spec == "" {
+        return err_json("missing artboard/node_id/trigger/action_spec")
+      }
+      match p.attach_interaction(artboard~, node_id~, trigger~, action_spec~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "uninteract" => {
+      if artboard == "" || node_id == "" {
+        return err_json("missing artboard/node_id")
+      }
+      match p.detach_interaction(artboard~, node_id~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "interactions" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      match p.interactions_json(artboard~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    // ---- 组件状态 ----
+    "define_state" => {
+      if artboard == "" || node_id == "" || state_name == "" {
+        return err_json("missing artboard/node_id/state_name")
+      }
+      let raw = extract_arg_string(request_line, "args")
+      let mut fill : String? = None
+      let mut text_color : String? = None
+      let mut stroke : String? = None
+      let mut text : String? = None
+      let mut radius : Double? = None
+      let mut font_size : Double? = None
+      for part_view in raw.split(" ") {
+        let part = part_view.to_string()
+        if part == "" {
+          continue
+        }
+        match part.find("=") {
+          None => ()
+          Some(pos) => {
+            let k = part.substring(start=0, end=pos)
+            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let d = @core.parse_double(v)
+            match k {
+              "fill" => fill = Some(v)
+              "text_color" => text_color = Some(v)
+              "stroke" => stroke = Some(v)
+              "text" => text = Some(v)
+              "radius" => radius = Some(d)
+              "font_size" => font_size = Some(d)
+              _ => ()
+            }
+          }
+        }
+      }
+      let patch : @core.NodePatch = {
+        ..@core.NodePatch::empty(),
+        fill,
+        text_color,
+        stroke,
+        text,
+        corner_radius: radius,
+        font_size,
+      }
+      match p.define_component_state(artboard~, node_id~, state_name~, patch~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "set_state" => {
+      if node_id == "" || state_name == "" {
+        return err_json("missing node_id/state_name")
+      }
+      let toggle = extract_arg_string(request_line, "toggle") == "true"
+      match p.set_node_state(node_id~, state_name~, toggle~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "list_states" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      match p.node_states_json(artboard~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
     _ => err_json("unknown_tool: " + tool_name)
   }
 }
@@ -629,21 +943,48 @@ fn err_json(msg : String) -> String {
 // ---------------------------------------------------------------------------
 
 ///|
+/// 定位 params.arguments 对象体起点（容忍 "arguments":{ 与 "arguments": { 两种写法）。
+/// 固定模式会让冒号后带空格的请求全部解析失败（表现为参数 missing）。
+fn find_arguments_body(line : String) -> Int? {
+  let key = "\"arguments\":"
+  match line.find(key) {
+    None => None
+    Some(i) => {
+      let mut j = i + key.length()
+      while j < line.length() && line.get_char(j) == Some(' ') {
+        j = j + 1
+      }
+      if line.get_char(j) == Some('{') {
+        Some(j + 1)
+      } else {
+        None
+      }
+    }
+  }
+}
+
+///|
 /// 从 JSON-RPC params.arguments 中提取字符串参数
 /// 输入行形如: {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apply_template","arguments":{"template_id":"login"}}}
 fn extract_arg_string(line : String, key : String) -> String {
   // 先定位 "arguments":{ ... }
-  let args_idx = match line.find("\"arguments\":{") {
-    Some(i) => i + 13
+  let args_idx = match find_arguments_body(line) {
+    Some(i) => i
     None => return ""
   }
   let args_body = line.substring(start=args_idx)
-  // 在 arguments 对象内查找 key
-  let pattern = "\"" + key + "\":\""
+  // 在 arguments 对象内查找 key（同样容忍 "key": "value" 的空格写法）
+  let pattern = "\"" + key + "\":"
   match args_body.find(pattern) {
     Some(idx) => {
-      let start = idx + pattern.length()
-      let rest = args_body.substring(start~)
+      let mut start = idx + pattern.length()
+      while start < args_body.length() && args_body.get_char(start) == Some(' ') {
+        start = start + 1
+      }
+      if args_body.get_char(start) != Some('"') {
+        return ""
+      }
+      let rest = args_body.substring(start=start + 1)
       match rest.find("\"") {
         Some(end) => rest.substring(start=0, end~)
         None => ""
@@ -656,15 +997,19 @@ fn extract_arg_string(line : String, key : String) -> String {
 ///|
 /// 从 params.arguments 中提取数值参数
 fn extract_arg_num(line : String, key : String) -> Double {
-  let args_idx = match line.find("\"arguments\":{") {
-    Some(i) => i + 13
+  let args_idx = match find_arguments_body(line) {
+    Some(i) => i
     None => return 0.0
   }
   let args_body = line.substring(start=args_idx)
   let pattern = "\"" + key + "\":"
   match args_body.find(pattern) {
     Some(idx) => {
-      let start = idx + pattern.length()
+      let mut start = idx + pattern.length()
+      // 容忍 "key": 123 的空格写法（否则首个字符是空格，数字解析直接为 0）
+      while start < args_body.length() && args_body.get_char(start) == Some(' ') {
+        start = start + 1
+      }
       let rest = args_body.substring(start~)
       let mut result = 0.0
       let mut frac = 0.1
@@ -697,11 +1042,19 @@ fn extract_arg_num(line : String, key : String) -> Double {
 
 ///|
 fn extract_json_string(json : String, key : String) -> String {
-  let pattern = "\"" + key + "\":\""
+  // 容忍 "key":"v" 与 "key": "v" 两种写法：多数 JSON 客户端会在冒号后加空格，
+  // 固定无空格模式会让 method/name 解析为空（表现为 Method not found）。
+  let pattern = "\"" + key + "\":"
   match json.find(pattern) {
     Some(idx) => {
-      let start = idx + pattern.length()
-      let rest = json.substring(start~)
+      let mut start = idx + pattern.length()
+      while start < json.length() && json.get_char(start) == Some(' ') {
+        start = start + 1
+      }
+      if json.get_char(start) != Some('"') {
+        return ""
+      }
+      let rest = json.substring(start=start + 1)
       match rest.find("\"") {
         Some(end) => rest.substring(start=0, end~)
         None => ""

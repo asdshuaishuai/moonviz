@@ -24,7 +24,7 @@ fn collect_subtree(doc : Document, id : String, acc : Array[String]) -> Unit {
 
 ///|
 /// 解析十进制数（含小数与负号）；非法输入返回 0
-fn parse_double(s : String) -> Double {
+pub fn parse_double(s : String) -> Double {
   let mut result = 0.0
   let mut frac = 0.0
   let mut div = 10.0
