@@ -23,6 +23,9 @@ pub(all) struct Project {
   mut tokens : DesignTokens
   mut components : Map[String, ComponentDef]
   mut user_components : Map[String, UserComponentDef]
+  /// 组件多态状态：node_id → 状态定义（default/pressed/disabled/… 的补丁集）。
+  /// 存于节点名标记，会话内可变模型由此重建；作用于渲染前的节点变换。
+  mut node_states : Map[String, ComponentStateDef]
   mut revision : Int
 }
 
@@ -34,6 +37,7 @@ pub fn Project::new() -> Project {
     tokens: DesignTokens::default(),
     components: builtin_components(),
     user_components: Map::new(),
+    node_states: Map::new(),
     revision: 1,
   }
 }
@@ -48,6 +52,10 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.flows = source.flows
   self.tokens = source.tokens
   self.components = source.components
+  // 会话级注册表同样必须随快照替换：漏掉它们会让 load 后重建的
+  // 组件状态表与用户组件注册表凭空消失（前者是状态多态的行为来源）。
+  self.user_components = source.user_components
+  self.node_states = source.node_states
   self.revision = source.revision
 }
 

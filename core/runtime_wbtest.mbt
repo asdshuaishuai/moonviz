@@ -114,12 +114,48 @@ test "嵌入式运行时：输入值管理 + 热重载" {
       // 获取所有输入
       let all = rt.get_all_inputs()
       assert_eq(all.size(), 1)
-      // 热重载
-      match rt.hot_reload("let page = @decl.prototype(name=\"updated\")") {
+      // 热重载：真实替换文档内容（旧实现仅校验非空即返回成功）
+      let layout_before = solve(match rt.project.artboards.get("form") {
+        Some(ab) => ab.doc
+        None => {
+          assert_true(false)
+          return
+        }
+      })
+      let rect_before = match layout_before.rect_of("email") {
+        Some(r) => r
+        None => {
+          assert_true(false)
+          return
+        }
+      }
+      let doc = match rt.project.artboards.get("form") {
+        Some(ab) => ab.doc
+        None => {
+          assert_true(false)
+          return
+        }
+      }
+      // 同一文档结构，但把 email 移开；重载后几何必须随之改变
+      let _ = doc.update_node("email", fn(n) {
+        { ..n, x: AlignStart(rect_before.x + 40.0) }
+      })
+      match rt.hot_reload_doc(doc) {
         Ok(json) => assert_true(json.contains("\"hot_reloaded\":true"))
         Err(_) => assert_true(false)
       }
-      // 热重载后输入值保留
+      let layout_after = solve(match rt.project.artboards.get("form") {
+        Some(ab) => ab.doc
+        None => {
+          assert_true(false)
+          return
+        }
+      })
+      match layout_after.rect_of("email") {
+        Some(r) => assert_true(r.x != rect_before.x)
+        None => assert_true(false)
+      }
+      // 仍存在的节点：输入值保留
       assert_eq(rt.get_input("email"), "alice@test.com")
     }
     Err(_) => assert_true(false)
@@ -304,4 +340,80 @@ test "交互标记：解绑后不再导航" {
     }
   }
   assert_true(!has_nav)
+}
+
+///|
+/// 回归：组件多态状态必须真实生效（此前 define_component_state 丢弃 patch，
+/// 只写一个无人读取的名字标记，签名承诺的状态补丁能力实际不存在）。
+test "组件状态：补丁真实应用且可切换" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="st_ab")
+  let _ = p.place_component(artboard=ab, component_id="button", instance_id="cta")
+  // default 基准 + pressed 覆盖（改填充色）
+  match p.define_component_state(
+    artboard=ab,
+    node_id="cta",
+    state_name="default",
+    patch={ ..NodePatch::empty(), fill: Some("#4B6BFB") },
+  ) {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  match p.define_component_state(
+    artboard=ab,
+    node_id="cta",
+    state_name="pressed",
+    patch={ ..NodePatch::empty(), fill: Some("#1E3FA8") },
+  ) {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  // 回读：两个状态均已登记，当前为 default
+  match p.node_states_json(artboard=ab) {
+    Ok(j) => {
+      assert_true(j.contains("pressed"))
+      assert_true(j.contains("\"current\":\"default\""))
+    }
+    Err(_) => assert_true(false)
+  }
+  // 激活 default → fill 为基准色
+  match p.active_state_patch("cta") {
+    Some(patch) =>
+      match patch.fill {
+        Some(f) => assert_eq(f, "#4B6BFB")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // 切到 pressed：当前状态与生效补丁同步变化
+  match p.set_node_state(node_id="cta", state_name="pressed") {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  match p.active_state_patch("cta") {
+    Some(patch) =>
+      match patch.fill {
+        Some(f) => assert_eq(f, "#1E3FA8")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // toggle 回 default
+  match p.set_node_state(node_id="cta", state_name="pressed", toggle=true) {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  match p.active_state_patch("cta") {
+    Some(patch) =>
+      match patch.fill {
+        Some(f) => assert_eq(f, "#4B6BFB")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // 未定义的状态必须报错，而非静默成功
+  match p.set_node_state(node_id="cta", state_name="nope") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_state"))
+  }
 }

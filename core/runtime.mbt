@@ -5,7 +5,7 @@
 /// 1. `MoonVizRT::create(project)` → 创建运行时实例
 /// 2. `rt.handle_event(event)` → 处理交互事件，返回状态变更列表
 /// 3. `rt.render_plan()` → 获取后端无关的渲染指令（RenderPlan）
-/// 4. `rt.hot_reload(decl)` → 更新声明文本，保留运行时状态
+/// 4. `rt.hot_reload_doc(doc)` → 替换画板文档，保留导航栈与输入值
 ///
 /// RenderPlan 是一个 **显示列表**（display list）：
 /// 任何渲染后端（Canvas / Skia / SVG / 终端 / OpenGL）都能消费。
@@ -232,6 +232,22 @@ fn MoonVizRT::find_flow_target(self : MoonVizRT, node_id : String) -> String? {
 }
 
 ///|
+/// 把节点当前状态的补丁应用到文档（渲染/命中前调用）。
+/// 状态补丁是渲染期变换：不改写 canonical MBT，只在当前会话视图上生效。
+fn MoonVizRT::apply_active_state(self : MoonVizRT, node_id : String) -> Unit {
+  match self.project.active_state_patch(node_id) {
+    None => ()
+    Some(p) =>
+      match self.project.artboards.get(self.nav.current) {
+        Some(ab) => {
+          let _ = ab.doc.update_node(node_id, fn(n) { apply_node_patch(n, p) })
+        }
+        None => ()
+      }
+  }
+}
+
+///|
 /// 执行节点上的交互标记（无 flow 时的回落路径），返回是否已处理。
 /// 标记由 add_interaction 写入节点名；此前只写不读（write-only API），
 /// 本函数让 Trigger/Action 词汇表在运行时真正生效。
@@ -293,6 +309,43 @@ fn MoonVizRT::run_marker(
                 false
               }
             None => false
+          }
+        SetState(id, state) =>
+          match self.project.set_node_state(node_id=id, state_name=state) {
+            Ok(_) => {
+              self.apply_active_state(id)
+              changes.push(NodeUpdated(id))
+              true
+            }
+            Err(_) => false
+          }
+        ToggleState(id, _) =>
+          // 在 default 与最近定义的非 default 状态间切换
+          match self.project.node_states.get(id) {
+            None => false
+            Some(def) => {
+              let mut target = ""
+              for s in def.states.keys() {
+                if s != "default" {
+                  target = s
+                  break
+                }
+              }
+              if target == "" {
+                return false
+              }
+              match
+                self
+                .project
+                .set_node_state(node_id=id, state_name=target, toggle=true) {
+                Ok(_) => {
+                  self.apply_active_state(id)
+                  changes.push(NodeUpdated(id))
+                  true
+                }
+                Err(_) => false
+              }
+            }
           }
         _ => false
       }
@@ -404,23 +457,44 @@ fn rt_walk(
 // ---------------------------------------------------------------------------
 
 ///|
-/// 热重载：替换当前画板的声明文本，保留导航栈和输入值
-pub fn MoonVizRT::hot_reload(
+/// 热重载：用新的文档替换当前画板内容，保留导航栈与仍存在的输入值。
+///
+/// 声明文本解析属于 decl 包，core 不依赖 decl——故本原语接收已解析好的 Document。
+/// 旧版接收字符串却仅校验非空就返回 hot_reloaded:true，是结构性假成功（core 永远
+/// 无法真正解析声明文本），已移除，避免调用方误信变更已生效。
+pub fn MoonVizRT::hot_reload_doc(
   self : MoonVizRT,
-  new_decl : String,
+  doc : Document,
 ) -> Result[String, String] {
-  match self.project.artboards.get(self.nav.current) {
-    None => Err("unknown_artboard")
-    Some(ab) =>
-      match decl_parse_rt(new_decl) {
-        Err(msg) => Err("parse_error: " + msg)
-        Ok(_) =>
-          // 热重载成功（v1 简化：验证通过即可）
-          Ok(
-            "{\"ok\":true,\"artboard\":\"\{self.nav.current}\",\"hot_reloaded\":true}",
-          )
-      }
+  let ab = match self.project.artboards.get(self.nav.current) {
+    Some(a) => a
+    None => return Err("unknown_artboard: \{self.nav.current}")
   }
+  if doc.nodes.length() == 0 {
+    return Err("empty_document")
+  }
+  if !doc.nodes.contains(doc.root_id) {
+    return Err("document_missing_root")
+  }
+  ab.doc.nodes = doc.nodes
+  ab.doc.root_id = doc.root_id
+  ab.doc.revision = ab.doc.revision + 1
+  // 输入值只保留仍然存在的节点，避免残留指向已删除控件的值
+  let kept : Map[String, String] = Map::new()
+  for k in self.input_values.keys() {
+    match self.input_values.get(k) {
+      Some(v) =>
+        if ab.doc.nodes.contains(k) {
+          kept.set(k, v)
+        }
+      None => ()
+    }
+  }
+  self.input_values = kept
+  let n = (ab.doc.nodes.length() - 1).to_string()
+  Ok(
+    "{\"ok\":true,\"artboard\":\"\{self.nav.current}\",\"hot_reloaded\":true,\"nodes\":\{n}}",
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -507,12 +581,6 @@ fn pick_node(doc : Document, layout : SolvedLayout, x : Double, y : Double) -> S
   best
 }
 
-///|
-/// RT 内嵌的声明解析（简化版：只检测合法性，不生成完整 Prototype）
-fn decl_parse_rt(decl : String) -> Result[Unit, String] {
-  if decl.length() == 0 {
-    return Err("empty declaration")
-  }
-  // v1: 简单验证——非空即可（完整解析在 decl 包）
-  Ok(())
-}
+// ---------------------------------------------------------------------------
+// 输入值管理
+// ---------------------------------------------------------------------------

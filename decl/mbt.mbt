@@ -529,6 +529,11 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       for flow in mbt_parse_flows(document.front_matter).iter() {
         project.flows.push(flow)
       }
+      // 组件多态状态随节点名标记往返；内存表需在重建 Project 后回填，
+      // 否则每次 load-mbt-b64 都会丢掉全部状态定义。
+      for artboard_id in project.artboards.keys() {
+        project.rebuild_node_states(artboard=artboard_id)
+      }
       let entry = if document.entry != "" {
         document.entry
       } else {

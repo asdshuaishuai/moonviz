@@ -119,7 +119,7 @@ pub(all) struct InteractionDef {
 pub(all) struct ComponentStateDef {
   node_id : String
   states : Map[String, NodePatch] // "default" → base, "pressed" → darker fill...
-  current : String
+  mut current : String
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +161,11 @@ pub fn Project::add_interaction(
 }
 
 ///|
-/// 为组件定义多态状态
+/// 为组件定义多态状态（真实存储补丁，而非仅写标记）。
+///
+/// 状态作用于渲染/命中前的节点变换：default 为该节点的基准补丁，
+/// pressed/disabled 等为相对基准的覆盖。此前该函数接收 patch 却完全丢弃，
+/// 只留一个无人读取的名字标记——签名承诺的能力实际不存在。
 pub fn Project::define_component_state(
   self : Project,
   artboard~ : String,
@@ -169,20 +173,348 @@ pub fn Project::define_component_state(
   state_name~ : String,
   patch~ : NodePatch,
 ) -> Result[String, String] {
-  match self.artboards.get(artboard) {
-    None => Err("unknown_artboard")
-    Some(ab) => {
-      if !ab.doc.has(node_id) {
-        return Err("unknown_node: \{node_id}")
-      }
-      // v1: 将状态信息编码到节点名（简化存储）
-      let marker = "[state:\{state_name}]"
-      let _ = ab.doc.update_node(node_id, fn(x) {
-        { ..x, name: "\{x.name}\{marker}" }
-      })
-      Ok("{\"ok\":true,\"state\":\"\{node_id}:\{state_name}\"}")
+  let ab = match self.artboards.get(artboard) {
+    Some(a) => a
+    None => return Err("unknown_artboard: \{artboard}")
+  }
+  if !ab.doc.has(node_id) {
+    return Err("unknown_node: \{node_id}")
+  }
+  let def = match self.node_states.get(node_id) {
+    Some(d) => d
+    None => { node_id, states: Map::new(), current: "default" }
+  }
+  def.states.set(state_name, patch)
+  self.node_states.set(node_id, def)
+  // 状态定义必须随 canonical MBT 往返：序列化到节点名标记（[state:...]）。
+  // 仅存内存会在每次 load-mbt-b64 重建 Project 时静默丢失。
+  let count = def.states.size().to_string()
+  let markers = states_to_markers(def)
+  let _ = ab.doc.update_node(node_id, fn(n) {
+    { ..n, name: rebuild_name(n.name, markers) }
+  })
+  self.revision = self.revision + 1
+  Ok(
+    "{\"ok\":true,\"node\":\"\{node_id}\",\"state\":\"\{state_name}\",\"states\":\{count}}",
+  )
+}
+
+///|
+/// 状态定义 → 名字标记列表：`[state:<name>:k=v,k=v]`
+fn states_to_markers(def : ComponentStateDef) -> Array[String] {
+  let out : Array[String] = []
+  for name in def.states.keys() {
+    match def.states.get(name) {
+      Some(p) => out.push("[state:" + name + ":" + patch_to_spec(p) + "]")
+      None => ()
     }
-    None => Err("unknown_artboard")
+  }
+  out
+}
+
+///|
+/// NodePatch → 紧凑规格 "k=v,k=v"（与 marker_to_patch 对称）。
+fn patch_to_spec(p : NodePatch) -> String {
+  let parts : Array[String] = []
+  match p.fill {
+    Some(v) => parts.push("fill=" + v)
+    None => ()
+  }
+  match p.text_color {
+    Some(v) => parts.push("text_color=" + v)
+    None => ()
+  }
+  match p.stroke {
+    Some(v) => parts.push("stroke=" + v)
+    None => ()
+  }
+  match p.text {
+    Some(v) => parts.push("text=" + v)
+    None => ()
+  }
+  match p.corner_radius {
+    Some(v) => parts.push("radius=" + double_text(v))
+    None => ()
+  }
+  match p.font_size {
+    Some(v) => parts.push("font_size=" + double_text(v))
+    None => ()
+  }
+  match p.layout_gap {
+    Some(v) => parts.push("gap=" + double_text(v))
+    None => ()
+  }
+  let sb = StringBuilder::new()
+  for i = 0; i < parts.length(); i = i + 1 {
+    if i > 0 {
+      sb.write_string(",")
+    }
+    sb.write_string(parts[i])
+  }
+  sb.to_string()
+}
+
+///|
+/// 从 name 中提取交互标记（"⚡..."），无则空串。
+pub fn extract_interaction_marker(name : String) -> String {
+  match name.find("⚡") {
+    None => ""
+    Some(i) => {
+      let tail = name.substring(start=i, end=name.length())
+      // 交互标记到下一个状态标记为止
+      match tail.find("[state:") {
+        None => tail.trim().to_string()
+        Some(j) => tail.substring(start=0, end=j).trim().to_string()
+      }
+    }
+  }
+}
+
+///|
+/// 用新的状态标记重建节点名：保留原始名与交互标记，替换全部状态标记。
+pub fn rebuild_name(name : String, state_markers : Array[String]) -> String {
+  let base = strip_all_markers(name)
+  let inter = extract_interaction_marker(name)
+  let sb = StringBuilder::new()
+  sb.write_string(base)
+  if inter != "" {
+    if base != "" {
+      sb.write_string(" ")
+    }
+    sb.write_string(inter)
+  }
+  for m in state_markers.iter() {
+    if sb.to_string() != "" {
+      sb.write_string(" ")
+    }
+    sb.write_string(m)
+  }
+  sb.to_string()
+}
+
+///|
+/// 去掉节点名中的全部标记（交互 ⚡ 与状态 [state:），还原原始名。
+pub fn strip_all_markers(name : String) -> String {
+  let mut cut = name.length()
+  match name.find("⚡") {
+    Some(i) => if i < cut { cut = i }
+    None => ()
+  }
+  match name.find("[state:") {
+    Some(i) => if i < cut { cut = i }
+    None => ()
+  }
+  let head = name.substring(start=0, end=cut)
+  let mut end = head.length()
+  while end > 0 && head.substring(start=end - 1, end=end) == " " {
+    end = end - 1
+  }
+  head.substring(start=0, end=end)
+}
+
+///|
+/// 扫描节点名标记，重建 Project 的状态表（load 后调用）。
+/// 状态定义随名字往返，但内存表需在重建 Project 后重新填充。
+pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit {
+  let ab = match self.artboards.get(artboard) {
+    Some(a) => a
+    None => return
+  }
+  for id in ab.doc.nodes.keys() {
+    match ab.doc.nodes.get(id) {
+      Some(n) =>
+        match parse_state_markers(n.name) {
+          Some(states) => {
+            let def = match self.node_states.get(id) {
+              Some(d) => d
+              None => { node_id: id, states: Map::new(), current: "default" }
+            }
+            for kv in states.iter() {
+              let (sname, patch) = kv
+              def.states.set(sname, patch)
+            }
+            self.node_states.set(id, def)
+          }
+          None => ()
+        }
+      None => ()
+    }
+  }
+}
+
+///|
+/// 解析名字中的全部 [state:name:spec] 标记 → (state_name, patch) 列表。
+pub fn parse_state_markers(name : String) -> Array[(String, NodePatch)]? {
+  let out : Array[(String, NodePatch)] = []
+  let mut rest = name
+  while true {
+    match rest.find("[state:") {
+      None => break
+      Some(i) => {
+        let tail = rest.substring(start=i + 7, end=rest.length())
+        match tail.find("]") {
+          None => break
+          Some(j) => {
+            let body = tail.substring(start=0, end=j)
+            match body.find(":") {
+              None => ()
+              Some(k) => {
+                let sname = body.substring(start=0, end=k)
+                let spec = body.substring(start=k + 1, end=body.length())
+                if sname != "" {
+                  out.push((sname, spec_to_patch(spec)))
+                }
+              }
+            }
+            rest = tail.substring(start=j + 1, end=tail.length())
+          }
+        }
+      }
+    }
+  }
+  if out.length() == 0 {
+    None
+  } else {
+    Some(out)
+  }
+}
+
+///|
+/// 紧凑规格 "k=v,k=v" → NodePatch（与 patch_to_spec 对称）。
+fn spec_to_patch(spec : String) -> NodePatch {
+  let mut fill : String? = None
+  let mut text_color : String? = None
+  let mut stroke : String? = None
+  let mut text : String? = None
+  let mut radius : Double? = None
+  let mut font_size : Double? = None
+  let mut gap : Double? = None
+  for kv in split_commas(spec).iter() {
+    match kv.find("=") {
+      None => ()
+      Some(eq) => {
+        let k = kv.substring(start=0, end=eq)
+        let v = kv.substring(start=eq + 1, end=kv.length())
+        match k {
+          "fill" => fill = Some(v)
+          "text_color" => text_color = Some(v)
+          "stroke" => stroke = Some(v)
+          "text" => text = Some(v)
+          "radius" => radius = Some(parse_double(v))
+          "font_size" => font_size = Some(parse_double(v))
+          "gap" => gap = Some(parse_double(v))
+          _ => ()
+        }
+      }
+    }
+  }
+  {
+    ..NodePatch::empty(),
+    fill,
+    text_color,
+    stroke,
+    text,
+    corner_radius: radius,
+    font_size,
+    layout_gap: gap,
+  }
+}
+
+///|
+fn split_commas(s : String) -> Array[String] {
+  let out : Array[String] = []
+  let cur = StringBuilder::new()
+  for c in s.iter() {
+    if c == ',' {
+      out.push(cur.to_string())
+      cur.reset()
+    } else {
+      cur.write_char(c)
+    }
+  }
+  out.push(cur.to_string())
+  out
+}
+
+///|
+/// 数值 → 紧凑文本（整数省略小数点，与 decl 层 num_text 视觉一致）
+fn double_text(d : Double) -> String {
+  if d == d.to_int().to_double() {
+    d.to_int().to_string()
+  } else {
+    d.to_string()
+  }
+}
+
+
+
+///|
+/// 切换/设置节点当前状态并返回变更后的节点。
+/// ToggleState：在 default 与目标状态间切换；SetState：直接设为目标状态。
+pub fn Project::set_node_state(
+  self : Project,
+  node_id~ : String,
+  state_name~ : String,
+  toggle? : Bool = false,
+) -> Result[String, String] {
+  let def = match self.node_states.get(node_id) {
+    Some(d) => d
+    None => return Err("no_states: \{node_id}")
+  }
+  if !def.states.contains(state_name) {
+    return Err("unknown_state: \{state_name}")
+  }
+  let next = if toggle && def.current == state_name {
+    "default"
+  } else {
+    state_name
+  }
+  def.current = next
+  self.node_states.set(node_id, def)
+  self.revision = self.revision + 1
+  Ok("{\"ok\":true,\"node\":\"\{node_id}\",\"current\":\"\{next}\"}")
+}
+
+///|
+/// 当前状态下节点应有的补丁（default 缺省则返回空补丁）。
+pub fn Project::active_state_patch(self : Project, node_id : String) -> NodePatch? {
+  match self.node_states.get(node_id) {
+    None => None
+    Some(def) =>
+      match def.states.get(def.current) {
+        Some(p) => Some(p)
+        None =>
+          match def.states.get("default") {
+            Some(p) => Some(p)
+            None => None
+          }
+      }
+  }
+}
+
+///|
+/// 结构化回读：节点的全部已定义状态与其当前值。
+pub fn Project::node_states_json(self : Project, artboard~ : String) -> Result[String, String] {
+  match self.artboards.get(artboard) {
+    None => Err("unknown_artboard: \{artboard}")
+    Some(ab) => {
+      let items : Array[String] = []
+      for id in ab.doc.nodes.keys() {
+        match self.node_states.get(id) {
+          Some(def) => {
+            let names : Array[String] = []
+            for s in def.states.keys() {
+              names.push("\"\{s}\"")
+            }
+            items.push(
+              "{\"node\":\"\{id}\",\"current\":\"\{def.current}\",\"states\":[\{jstr12(names)}]}",
+            )
+          }
+          None => ()
+        }
+      }
+      Ok("[\{jstr12(items)}]")
+    }
   }
 }
 

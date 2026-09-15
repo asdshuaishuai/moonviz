@@ -478,6 +478,67 @@ fn apply_mbt_operation(
           Err(error) => Err(error)
         }
       }
+    "state" =>
+      if parts.length() < 5 {
+        Err(
+          "mbt_operation_usage:state <artboard> <node> <state_name> k=v [k=v ...]",
+        )
+      } else {
+        let mut fill : String? = None
+        let mut text_color : String? = None
+        let mut stroke : String? = None
+        let mut text : String? = None
+        let mut radius : Double? = None
+        let mut font_size : Double? = None
+        let mut i = 4
+        while i < parts.length() {
+          let eq = index_of_str(parts[i], "=")
+          if eq > 0 {
+            let k = parts[i].substring(start=0, end=eq)
+            let v = @decl.unescape_value(parts[i].substring(start=eq + 1))
+            let d = parse_d(v)
+            match k {
+              "fill" => fill = Some(v)
+              "text_color" => text_color = Some(v)
+              "stroke" => stroke = Some(v)
+              "text" => text = Some(v)
+              "radius" => radius = Some(d)
+              "font_size" => font_size = Some(d)
+              _ => ()
+            }
+          }
+          i = i + 1
+        }
+        let patch : @core.NodePatch = {
+          ..@core.NodePatch::empty(),
+          fill,
+          text_color,
+          stroke,
+          text,
+          corner_radius: radius,
+          font_size,
+        }
+        match
+          project.define_component_state(
+            artboard=parts[1],
+            node_id=parts[2],
+            state_name=parts[3],
+            patch~,
+          ) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "set-state" =>
+      if parts.length() < 3 {
+        Err("mbt_operation_usage:set-state <node> <state_name> [toggle]")
+      } else {
+        let toggle = parts.length() >= 4 && parts[3] == "toggle"
+        match project.set_node_state(node_id=parts[1], state_name=parts[2], toggle~) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
     "flow" =>
       if parts.length() < 4 {
         Err("mbt_operation_usage:flow <from> <to> <node>")
@@ -1180,6 +1241,92 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         cli_err("usage: interactions <artboard>")
       } else {
         match p.interactions_json(artboard=parts[1]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "state" =>
+      // state <ab> <node> <state_name> k=v ... ：定义组件多态状态补丁
+      if parts.length() < 5 {
+        cli_err(
+          "usage: state <artboard> <node> <state_name> k=v [k=v ...]  (k 同 update: fill/text_color/radius/w/h/...)",
+        )
+      } else {
+        let mut fill : String? = None
+        let mut text_color : String? = None
+        let mut stroke : String? = None
+        let mut text : String? = None
+        let mut nm : String? = None
+        let mut radius : Double? = None
+        let mut font_size : Double? = None
+        let mut gap : Double? = None
+        let mut i = 4
+        let mut bad = ""
+        while i < parts.length() {
+          let eq = index_of_str(parts[i], "=")
+          if eq <= 0 {
+            if bad == "" {
+              bad = "state_invalid_arg:" + parts[i]
+            }
+          } else {
+            let k = parts[i].substring(start=0, end=eq)
+            let v = @decl.unescape_value(parts[i].substring(start=eq + 1))
+            let d = parse_d(v)
+            match k {
+              "fill" => fill = Some(v)
+              "text_color" => text_color = Some(v)
+              "stroke" => stroke = Some(v)
+              "text" => text = Some(v)
+              "name" => nm = Some(v)
+              "radius" => radius = Some(d)
+              "font_size" => font_size = Some(d)
+              "gap" => gap = Some(d)
+              _ => ()
+            }
+          }
+          i = i + 1
+        }
+        if bad != "" {
+          cli_err(bad)
+        } else {
+          let patch : @core.NodePatch = {
+            ..@core.NodePatch::empty(),
+            fill,
+            text_color,
+            stroke,
+            text,
+            name: nm,
+            corner_radius: radius,
+            font_size,
+            layout_gap: gap,
+          }
+          match
+            p.define_component_state(
+              artboard=parts[1],
+              node_id=parts[2],
+              state_name=parts[3],
+              patch~,
+            ) {
+            Ok(json) => json
+            Err(e) => cli_err(e)
+          }
+        }
+      }
+    "states" =>
+      if parts.length() < 2 {
+        cli_err("usage: states <artboard>")
+      } else {
+        match p.node_states_json(artboard=parts[1]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "set-state" =>
+      if parts.length() < 4 {
+        cli_err("usage: set-state <node> <state_name> [toggle]")
+      } else {
+        let toggle = parts.length() >= 5 && parts[4] == "toggle"
+        match p.set_node_state(node_id=parts[1], state_name=parts[2], toggle~) {
           Ok(json) => json
           Err(e) => cli_err(e)
         }
