@@ -452,6 +452,32 @@ fn apply_mbt_operation(
           }
         }
       }
+    "interact" =>
+      if parts.length() < 5 {
+        Err(
+          "mbt_operation_usage:interact <artboard> <node> <trigger> <action_spec>",
+        )
+      } else {
+        match
+          project.attach_interaction(
+            artboard=parts[1],
+            node_id=parts[2],
+            trigger=parts[3],
+            action_spec=parts[4],
+          ) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "uninteract" =>
+      if parts.length() < 3 {
+        Err("mbt_operation_usage:uninteract <artboard> <node>")
+      } else {
+        match project.detach_interaction(artboard=parts[1], node_id=parts[2]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
     "flow" =>
       if parts.length() < 4 {
         Err("mbt_operation_usage:flow <from> <to> <node>")
@@ -1122,6 +1148,60 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "export-artifact" => p.export_artifact(agent_id="cli")
+    "interact" =>
+      // interact <ab> <node> <trigger> <action_spec> ：注册节点交互（写入标记）
+      if parts.length() < 5 {
+        cli_err(
+          "usage: interact <artboard> <node> <trigger> <action_spec>  (trigger: tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|key_enter|focus|blur；action: back|haptic|navigate_to:<ab>|show_toast:\\\"msg\\\"|set_text:<node>:\\\"txt\\\"|set_state:<node>:<st>|toggle_state:<node>|play_sound:<name>)",
+        )
+      } else {
+        match
+          p.attach_interaction(
+            artboard=parts[1],
+            node_id=parts[2],
+            trigger=parts[3],
+            action_spec=parts[4],
+          ) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "uninteract" =>
+      if parts.length() < 3 {
+        cli_err("usage: uninteract <artboard> <node>")
+      } else {
+        match p.detach_interaction(artboard=parts[1], node_id=parts[2]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "interactions" =>
+      if parts.length() < 2 {
+        cli_err("usage: interactions <artboard>")
+      } else {
+        match p.interactions_json(artboard=parts[1]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "constrain" =>
+      // constrain <ab> <text> ：自然语言布局意图（居中对齐 / 垂直排列 / 等宽 / 间距 N）
+      if parts.length() < 3 {
+        cli_err("usage: constrain <artboard> <intent_text>")
+      } else {
+        let raw = line.substring(start=10, end=line.length()).trim().to_string()
+        let sp = index_of_str(raw, " ")
+        if sp <= 0 {
+          cli_err("usage: constrain <artboard> <intent_text>")
+        } else {
+          let ab = raw.substring(start=0, end=sp)
+          let intent = raw.substring(start=sp + 1, end=raw.length())
+          match p.apply_constraint(intent, artboard=ab) {
+            Ok(json) => json
+            Err(e) => cli_err(e)
+          }
+        }
+      }
     "spec" =>
       if parts.length() < 2 {
         cli_err("usage: spec <artboard>")

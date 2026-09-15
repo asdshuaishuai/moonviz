@@ -158,8 +158,10 @@ pub fn MoonVizRT::handle_event(
                   changes.push(ArtboardChanged(target))
                 }
                 None =>
-                  // 没有导航流，可能是状态切换
-                  changes.push(NodeUpdated(node_id))
+                  // 无导航流：尝试节点交互标记（⚡trigger→action）；都没有则报状态更新
+                  if !self.run_marker(node_id, changes) {
+                    changes.push(NodeUpdated(node_id))
+                  }
               }
             }
             None => ()
@@ -176,6 +178,17 @@ pub fn MoonVizRT::handle_event(
             changes.push(ArtboardChanged(prev))
           }
           None => ()
+        }
+      } else {
+        // 键盘导航流：flow <from> <to> - key_<key>
+        let trigger = "key_\{key}"
+        for e in self.project.flows.iter() {
+          if e.from == self.nav.current && e.trigger == trigger {
+            let _ = self.nav.navigate(e.to)
+            changes.push(NavigationPushed(e.to))
+            changes.push(ArtboardChanged(e.to))
+            break
+          }
         }
       }
     SwipeEvent(dir) =>
@@ -205,21 +218,85 @@ pub fn MoonVizRT::handle_event(
 }
 
 ///|
-/// 查找节点的导航流目标
+/// 查找节点的导航流目标。
+/// 必须同时匹配 from == 当前画板：node id 在不同画板间会重名，
+/// 仅按 trigger 匹配会让 A 画板的点击触发 B 画板的跳转。
 fn MoonVizRT::find_flow_target(self : MoonVizRT, node_id : String) -> String? {
   let trigger = "tap:\{node_id}"
   for e in self.project.flows.iter() {
-    if e.trigger == trigger {
-      return Some(e.to)
-    }
-  }
-  // 也匹配简单的 "tap" 触发
-  for e in self.project.flows.iter() {
-    if e.from == self.nav.current && e.trigger == "tap:\{node_id}" {
+    if e.from == self.nav.current && e.trigger == trigger {
       return Some(e.to)
     }
   }
   None
+}
+
+///|
+/// 执行节点上的交互标记（无 flow 时的回落路径），返回是否已处理。
+/// 标记由 add_interaction 写入节点名；此前只写不读（write-only API），
+/// 本函数让 Trigger/Action 词汇表在运行时真正生效。
+fn MoonVizRT::run_marker(
+  self : MoonVizRT,
+  node_id : String,
+  changes : Array[StateChange],
+) -> Bool {
+  let node_name = match self.project.artboards.get(self.nav.current) {
+    Some(ab) =>
+      match ab.doc.nodes.get(node_id) {
+        Some(n) => n.name
+        None => return false
+      }
+    None => return false
+  }
+  let (trigger, spec) = match parse_interaction_marker(node_name) {
+    Some(t) => t
+    None => return false
+  }
+  // 标记仅在 tap 命中时执行；其他触发器由对应事件路径处理
+  if trigger != "tap" {
+    return false
+  }
+  match action_from_spec(spec) {
+    None => false
+    Some(act) =>
+      match act {
+        NavigateTo(target) =>
+          if self.project.artboards.contains(target) {
+            let _ = self.nav.navigate(target)
+            changes.push(NavigationPushed(target))
+            changes.push(ArtboardChanged(target))
+            true
+          } else {
+            false
+          }
+        Back =>
+          match self.nav.go_back() {
+            Some(prev) => {
+              changes.push(NavigationPopped(prev))
+              changes.push(ArtboardChanged(prev))
+              true
+            }
+            None => false
+          }
+        ShowToast(msg) => {
+          self.overlay_toast = Some(msg)
+          changes.push(ToastShown(msg))
+          true
+        }
+        SetText(id, text) =>
+          match self.project.artboards.get(self.nav.current) {
+            Some(ab) =>
+              if ab.doc.update_node(id, fn(n) { { ..n, text } }) {
+                changes.push(NodeUpdated(id))
+                true
+              } else {
+                false
+              }
+            None => false
+          }
+        _ => false
+      }
+  }
 }
 
 // ---------------------------------------------------------------------------

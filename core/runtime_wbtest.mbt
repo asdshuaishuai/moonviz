@@ -205,3 +205,103 @@ test "完整 Agent 嵌入式工作流：创建→交互→运行→导出 artifa
   assert_true(artifact.contains("session-001"))
   assert_true(artifact.contains("Login flow"))
 }
+
+///|
+/// 回归：交互标记必须被运行时消费（此前 add_interaction 只写不读）。
+/// 同时覆盖跨画板误触发修复：仅 trigger 匹配不校验 from 会让 A 画板的
+/// 点击触发 B 画板的跳转（node id 在不同画板间会重名）。
+test "交互标记：无 flow 时由标记驱动导航" {
+  let p = Project::new()
+  let a1 = p.create_artboard(name="ix_a1")
+  let a2 = p.create_artboard(name="ix_a2")
+  let _ = p.place_component(artboard=a1, component_id="button", instance_id="cta")
+  let _ = p.place_component(artboard=a2, component_id="button", instance_id="cta")
+  // 仅注册标记，不建 flow
+  match p.attach_interaction(artboard=a1, node_id="cta", trigger="tap", action_spec="navigate_to:ix_a2") {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  // 结构化回读
+  match p.interactions_json(artboard=a1) {
+    Ok(j) => {
+      assert_true(j.contains("navigate_to:ix_a2"))
+      assert_true(j.contains("\"trigger\":\"tap\""))
+    }
+    Err(_) => assert_true(false)
+  }
+  let rt = match MoonVizRT::create(p, initial_artboard=a1) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  // a2 上同名节点不得触发跳转（from 校验）
+  let stray = rt.handle_event(KeyEvent("escape"))
+  assert_eq(stray.length(), 0)
+  // a1 的 cta 命中 → 导航到 a2
+  let layout = solve(match rt.project.artboards.get(a1) {
+    Some(ab) => ab.doc
+    None => {
+      assert_true(false)
+      return
+    }
+  })
+  let rect = match layout.rect_of("cta") {
+    Some(r) => r
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let changes = rt.handle_event(
+    TapEvent(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0),
+  )
+  assert_eq(rt.current_artboard(), a2)
+  assert_true(changes.length() > 0)
+}
+
+///|
+/// 回归：解绑交互后同一坐标不再导航（回落为状态更新）。
+test "交互标记：解绑后不再导航" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="ix_off")
+  let _ = p.place_component(artboard=ab, component_id="button", instance_id="btn")
+  let _ = p.attach_interaction(artboard=ab, node_id="btn", trigger="tap", action_spec="show_toast:\"hi\"")
+  let _ = p.detach_interaction(artboard=ab, node_id="btn")
+  let rt = match MoonVizRT::create(p, initial_artboard=ab) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let layout = solve(match rt.project.artboards.get(ab) {
+    Some(x) => x.doc
+    None => {
+      assert_true(false)
+      return
+    }
+  })
+  let rect = match layout.rect_of("btn") {
+    Some(r) => r
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let changes = rt.handle_event(
+    TapEvent(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0),
+  )
+  // 无标记 → 仅 NodeUpdated（不再有 toast/nav）
+  let mut has_nav = false
+  for c in changes.iter() {
+    match c {
+      NavigationPushed(_) => has_nav = true
+      ArtboardChanged(_) => has_nav = true
+      ToastShown(_) => has_nav = true
+      _ => ()
+    }
+  }
+  assert_true(!has_nav)
+}
