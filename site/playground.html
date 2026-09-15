@@ -13,9 +13,13 @@
 }
 @media (prefers-color-scheme:dark){:root{--bg:#111214;--panel:#1b1d21;--tx:#e8eaed;--tx2:#a8b0ba;--tx3:#6b7280;--line:#2c2f36}}
 *{box-sizing:border-box}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--tx3);border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
 body{margin:0;background:var(--bg);color:var(--tx);font-size:13px;overflow:hidden}
-header{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
-header h1{font-size:14px;margin:0;font-weight:700}
+header{display:flex;align-items:center;gap:10px;padding:9px 16px;background:color-mix(in srgb,var(--panel) 78%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);position:relative;z-index:5}
+header h1{font-size:14.5px;margin:0;font-weight:800;background:linear-gradient(120deg,#6a8bff,#4b6bfb 40%,#9d7bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.01em}
 header .ver{font-size:11px;color:var(--tx3)}
 header .spacer{flex:1}
 header a{color:var(--tx2);font-size:12px;text-decoration:none}
@@ -28,9 +32,9 @@ select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 option{background:var(--panel);color:var(--tx)}
 main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(100vh - 50px)}
 @media (max-width:1080px){main{grid-template-columns:minmax(300px,42%) 1fr}}
-.editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
+.editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0;background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .canvaswrap{display:flex;flex-direction:column;min-width:0;position:relative}
-.inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0;overflow:hidden;background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 @media (max-width:1080px){.inspector{display:none}}
 .bar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
 .bar button:hover{border-color:var(--acc);color:var(--acc)}
@@ -59,24 +63,31 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 #ops{height:150px;border-top:1px solid var(--line);font-size:12px}
 .tabbar{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--line)}
 .tabbar button{border:0;background:transparent;padding:6px 12px;font-size:12px;color:var(--tx3);border-radius:8px 8px 0 0;font-weight:600}
+.tabbar button{transition:color .15s}
 .tabbar button.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 -2px 0 var(--acc)}
+button,.bpSw button,.themes button{transition:all .15s ease}
 .hide{display:none!important}
 #oplog{max-height:120px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
 #oplog .e{color:var(--err)}
 #oplog .ok{color:var(--ok)}
-.canvas{flex:1;overflow:auto;padding:22px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;position:relative;
+.canvas{flex:1;overflow:auto;padding:26px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;position:relative;
   background-color:var(--bg);
-  background-image:radial-gradient(circle,var(--line) 1px,transparent 1px);
-  background-size:18px 18px}
+  background-image:
+    radial-gradient(600px 320px at 18% 8%,rgba(75,107,251,.07),transparent 60%),
+    radial-gradient(520px 300px at 85% 90%,rgba(157,123,255,.06),transparent 60%),
+    radial-gradient(circle,var(--line) 1px,transparent 1px);
+  background-size:auto,auto,18px 18px}
 .canvas:empty::before{content:'渲染后画板将显示在这里';color:var(--tx3);font-size:12px}
-.shot{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.06);border-radius:6px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line)}
-.shot.on{border-color:var(--acc)}
+.shot{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.06);border-radius:8px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.shot:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.13)}
+.shot.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 4px 20px rgba(75,107,251,.18)}
 .shot svg{display:block;max-height:min(70vh,740px);width:auto;max-width:100%;height:auto}
 .shot svg g[id^="n_"]{cursor:move}
 .shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line);background:var(--panel);user-select:none}
-#selbox{position:absolute;border:1.5px solid var(--acc);border-radius:3px;pointer-events:none;display:none;box-shadow:0 0 0 1px rgba(75,107,251,.15)}
+#selbox{position:absolute;border:1.5px solid var(--acc);border-radius:3px;pointer-events:none;display:none;box-shadow:0 0 0 1px rgba(75,107,251,.2),0 0 14px rgba(75,107,251,.3);transition:box-shadow .15s}
 #seltag{position:absolute;background:var(--acc);color:#fff;font-size:10px;padding:1px 7px;border-radius:4px 4px 4px 0;transform:translateY(-100%);white-space:nowrap}
-.status{padding:6px 14px;border-top:1px solid var(--line);font-size:11px;display:flex;gap:10px;align-items:center;min-height:30px}
+.status{padding:6px 14px;border-top:1px solid var(--line);font-size:11px;display:flex;gap:10px;align-items:center;min-height:30px;background:color-mix(in srgb,var(--panel) 78%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.debt.some{box-shadow:0 0 10px rgba(230,150,20,.25)}
 .status .pill{padding:1px 9px;border-radius:99px;font-weight:700;font-size:10px;letter-spacing:.03em;flex:0 0 auto}
 .pill.ok{background:rgba(26,158,92,.13);color:var(--ok)}
 .pill.err{background:rgba(224,82,82,.13);color:var(--err)}
@@ -111,8 +122,12 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 .pcard .pkind{font-size:10px;color:var(--tx3)}
 .prow{display:grid;grid-template-columns:34px 1fr 1fr;gap:6px;align-items:center;margin-top:7px}
 .prow label{font-size:10px;color:var(--tx3);font-weight:700}
-.prow input{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 7px;font-size:11.5px}
-.prow input:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.prow input,.prow3 input{width:100%;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:6px;padding:3px 7px;font-size:11.5px}
+.prow input:focus,.prow3 input:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.prow3 .colorpair input[type=text]{flex:1}
+input[type=color]{-webkit-appearance:none;appearance:none;width:26px;height:22px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer;flex:0 0 auto}
+input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 .prow3{display:grid;grid-template-columns:34px 1fr;gap:6px;align-items:center;margin-top:7px}
 .pbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
 .pbtns button{font-size:11px;padding:4px 6px}
@@ -755,14 +770,12 @@ $('tpl').addEventListener('change',e=>{
   const id=e.target.value;if(!id)return;
   // 保留所选：下拉停在刚选的模板上，让用户看得到自己选了什么
   try{
-    let base=mbt.trim()?mbt:MINIMAL;
+    // 选哪个模板就显示哪个：从空白存根新建整份文档（替换而非累加）。
+    // 此前是往现有文档追加画板，画布会堆出 1+N 个画板——所见非所选。
+    pushHistory();
+    let base=MINIMAL;
     // 画板以模板 id 命名（唯一）：重名会让新模板节点叠进旧画板，
     // 节点重叠触发 AgentGate 拒绝——表现为"选了模板但画布没变"。
-    // 同模板重复载入 = 替换：先删旧同名画板。
-    if(base.includes(`artboards:\n    - ${id}\n`)||hasArtboard(base,id)){
-      const rd=engine.apply_agent_op(base, `delete-artboard ${id}`);
-      if(rd.ok===true&&rd.mbt)base=rd.mbt;
-    }
     // 模板是引擎作者（人类）设计的制品：AgentGate 拒绝（视觉债）时按
     // HumanGate 载入——这正是双门语义（人类设计带视觉债放行）。
     let r=engine.apply_agent_op(base, `template ${id} ${id}`);
@@ -773,13 +786,14 @@ $('tpl').addEventListener('change',e=>{
       else{setStatus(false,r.error||rh.error||'模板载入失败');return;}
     }
     let doc=r.mbt;
+    // 存根清理与载入同门：带视觉债的文档经 AgentGate 会被整体拒绝，
+    // 删空画板本身无风险，统一走 HumanGate。
     const abs=(r.artboards||[]).filter(a=>(a.nodes||[]).length===0).map(a=>a.id);
     for(const dead of abs){
-      const r2=engine.apply_agent_op(doc, `delete-artboard ${dead}`);
+      const r2=engine.apply_human_op(doc, `delete-artboard ${dead}`);
       if(r2.ok===true&&r2.mbt)doc=r2.mbt;
     }
-    pushHistory();
-    mbt=doc;setSrc(mbt);
+    mbt=doc;setSrc(mbt);selNode=null;
     const all=(JSON.parse(engine.render(mbt)).artboards||[]);
     artIndex=Math.max(0,all.findIndex(a=>a.id===id));
     selNode=null;
@@ -788,9 +802,6 @@ $('tpl').addEventListener('change',e=>{
     setStatus(true,`已载入：${name} → 画板 ${id}（${curAb()?Math.round(curAb().width)+'×'+Math.round(curAb().height):''}，经${via}）— 点击元素可拖拽`);
   }catch(err){setStatus(false,String(err.message||err));}
 });
-function hasArtboard(src,id){
-  return src.includes(`id="${id}"`)||src.includes(`@moonviz:visual ${id}`);
-}
 
 /* ---------- 引擎特点展示：债仪表 / 播放模式 / 双门重试 / 主题 / 断点 ---------- */
 function updateDebt(){
