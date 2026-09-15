@@ -183,12 +183,21 @@ pub fn Project::edit_node(
           let (k, v) = kv
           let d = parse_double(v)
           match k {
+            // w/h 接受数字（Fixed）或 "fill"/"hug" 简写（与 @decl.fill/@decl.hug 同义）
             "w" => {
-              cur = { ..cur, width: Fixed(d) }
+              cur = { ..cur, width: match v {
+                "fill" => Fill
+                "hug" => Hug
+                _ => Fixed(d)
+              } }
               applied.push("w")
             }
             "h" => {
-              cur = { ..cur, height: Fixed(d) }
+              cur = { ..cur, height: match v {
+                "fill" => Fill
+                "hug" => Hug
+                _ => Fixed(d)
+              } }
               applied.push("h")
             }
             "text" => {
@@ -279,6 +288,43 @@ pub fn Project::edit_node(
               cur = { ..cur, style: { ..cur.style, visible: vis } }
               applied.push("visible")
             }
+            // 尺寸模式：hug（包裹内容）/ fill（撑满父容器）——布局引擎早已支持，
+            // 此前只能通过 w/h 写死 Fixed。
+            "width_mode" => {
+              match v {
+                "hug" => cur = { ..cur, width: Hug }
+                "fill" => cur = { ..cur, width: Fill }
+                _ => ()
+              }
+              applied.push("width_mode")
+            }
+            "height_mode" => {
+              match v {
+                "hug" => cur = { ..cur, height: Hug }
+                "fill" => cur = { ..cur, height: Fill }
+                _ => ()
+              }
+              applied.push("height_mode")
+            }
+            // 位置模式：center（父容器居中）/ end（贴 end 边，offset 由 dx/dy 语义另给）
+            "x_mode" => {
+              if v == "center" {
+                cur = { ..cur, x: CenterInParent }
+                applied.push("x_mode")
+              } else if v == "start" {
+                cur = { ..cur, x: AlignStart(pos_offset_x(cur.x)) }
+                applied.push("x_mode")
+              }
+            }
+            "y_mode" => {
+              if v == "center" {
+                cur = { ..cur, y: CenterInParent }
+                applied.push("y_mode")
+              } else if v == "start" {
+                cur = { ..cur, y: AlignStart(pos_offset_y(cur.y)) }
+                applied.push("y_mode")
+              }
+            }
             _ => ()
           }
         }
@@ -289,6 +335,27 @@ pub fn Project::edit_node(
         "{\"ok\":true,\"op\":\"update\",\"node\":\"\{node_id}\",\"fields\":\{applied.length()}}",
       )
     }
+  }
+}
+
+///|
+/// 取位置规格的数值分量（x_mode/y_mode 降级为 AlignStart 时保留原偏移）
+pub fn pos_offset_x(p : PosSpec) -> Double {
+  match p {
+    Fixed(v) => v
+    AlignStart(v) => v
+    AlignEnd(v) => v
+    CenterInParent => 0.0
+  }
+}
+
+///|
+pub fn pos_offset_y(p : PosSpec) -> Double {
+  match p {
+    Fixed(v) => v
+    AlignStart(v) => v
+    AlignEnd(v) => v
+    CenterInParent => 0.0
   }
 }
 

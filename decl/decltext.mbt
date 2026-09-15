@@ -5,7 +5,7 @@
 /// - Agent 编辑 → `parse_decl`：声明文本解析回 Prototype，经谓词后生效
 ///
 /// v1 规范形式约束：
-/// - 位置仅表达 AlignStart(x/y)；Center/AlignEnd 不序列化（v1 限制）。
+/// - 位置表达 AlignStart（裸数字）/ CenterInParent（@decl.center）/ AlignEnd（@decl.end(n)）。
 /// - padding 仅 uniform（与 flex 工厂一致）。
 /// - 字符串值内不允许出现裸逗号/裸括号；引号与反斜杠会被转义并正确还原。
 /// - 组件凭 `component` 语义名还原（button/text_input → rect + 文字标签）。
@@ -308,7 +308,37 @@ fn pos_text(spec : @core.PosSpec) -> String? {
   match spec {
     @core.AlignStart(v) => if v != 0.0 { Some(num_text(v)) } else { None }
     @core.Fixed(v) => if v != 0.0 { Some(num_text(v)) } else { None }
-    _ => None // Center/AlignEnd 不序列化（v1 规范形式限制）
+    @core.CenterInParent => Some(DECL_MARKER + "center")
+    @core.AlignEnd(v) => Some(DECL_MARKER + "end(" + num_text(v) + ")")
+  }
+}
+
+///|
+/// 位置规格解析："@decl.center" → CenterInParent；"@decl.end(24)" → AlignEnd(24)；
+/// "@decl.start(24)" / 裸数字 → AlignStart（default 形式）。
+fn pos_val(v : String, line : Int) -> Result[@core.PosSpec, DeclParseError] {
+  let body : String = if has_prefix_str(v, DECL_MARKER) {
+    v.substring(start=DECL_MARKER.length())
+  } else {
+    v
+  }
+  if body == "center" {
+    Ok(@core.CenterInParent)
+  } else if has_prefix_str(body, "end(") && body.length() > 5 {
+    match parse_number(body.substring(start=4, end=body.length() - 1)) {
+      Some(d) => Ok(@core.AlignEnd(d))
+      None => Err({ line, message: "无法解析 end 位置 \{body}" })
+    }
+  } else if has_prefix_str(body, "start(") && body.length() > 7 {
+    match parse_number(body.substring(start=6, end=body.length() - 1)) {
+      Some(d) => Ok(@core.AlignStart(d))
+      None => Err({ line, message: "无法解析 start 位置 \{body}" })
+    }
+  } else {
+    match parse_number(body) {
+      Some(d) => Ok(@core.AlignStart(d))
+      None => Err({ line, message: "无法解析位置规格 \{body}" })
+    }
   }
 }
 
@@ -701,21 +731,27 @@ fn with_xy(
   params : Array[(String, String)],
   line : Int,
 ) -> Result[@core.Node, DeclParseError] {
-  match num_opt(params, "x", line) {
-    Ok(Some(d)) =>
-      match num_opt(params, "y", line) {
-        Ok(Some(e)) =>
-          Ok({ ..n, x: @core.AlignStart(d), y: @core.AlignStart(e) })
-        Ok(None) => Ok({ ..n, x: @core.AlignStart(d) })
-        Err(err) => Err(err)
+  let px = match opt_param(params, "x") {
+    Some(v) =>
+      match pos_val(v, line) {
+        Ok(p) => Some(p)
+        Err(err) => return Err(err)
       }
-    Ok(None) =>
-      match num_opt(params, "y", line) {
-        Ok(Some(e)) => Ok({ ..n, y: @core.AlignStart(e) })
-        Ok(None) => Ok(n)
-        Err(err) => Err(err)
+    None => None
+  }
+  let py = match opt_param(params, "y") {
+    Some(v) =>
+      match pos_val(v, line) {
+        Ok(p) => Some(p)
+        Err(err) => return Err(err)
       }
-    Err(err) => Err(err)
+    None => None
+  }
+  match (px, py) {
+    (Some(x), Some(y)) => Ok({ ..n, x, y })
+    (Some(x), None) => Ok({ ..n, x })
+    (None, Some(y)) => Ok({ ..n, y })
+    (None, None) => Ok(n)
   }
 }
 
@@ -886,15 +922,21 @@ fn build_node(
           }
         None => return Err({ line, message: "generic_node 缺少 height" })
       }
-      let x = match num_opt(params, "x", line) {
-        Ok(Some(v)) => v
-        Ok(None) => 0.0
-        Err(e) => return Err(e)
+      let x_pos = match opt_param(params, "x") {
+        Some(v) =>
+          match pos_val(v, line) {
+            Ok(p) => p
+            Err(e) => return Err(e)
+          }
+        None => @core.AlignStart(0.0)
       }
-      let y = match num_opt(params, "y", line) {
-        Ok(Some(v)) => v
-        Ok(None) => 0.0
-        Err(e) => return Err(e)
+      let y_pos = match opt_param(params, "y") {
+        Some(v) =>
+          match pos_val(v, line) {
+            Ok(p) => p
+            Err(e) => return Err(e)
+          }
+        None => @core.AlignStart(0.0)
       }
       let text = match opt_param(params, "text") {
         Some(v) => str_val(v)
@@ -1004,8 +1046,8 @@ fn build_node(
             width~,
             height~,
             kind=kind_name,
-            x~,
-            y~,
+            x=@core.pos_offset_x(x_pos),
+            y=@core.pos_offset_y(y_pos),
             text~,
             layout~,
             fill~,
@@ -1032,7 +1074,7 @@ fn build_node(
           params,
           line,
         ) {
-        Ok(node) => Ok(node)
+        Ok(node) => Ok({ ..node, x: x_pos, y: y_pos })
         Err(e) => Err(e)
       }
     }
