@@ -650,7 +650,13 @@ pub fn parse_interaction_marker(name : String) -> (String, String)? {
     }
   }
   let t = trig.to_string()
-  let a = after.to_string()
+  // action 到下一个状态标记为止：交互与状态标记共存于同一 name，
+  // 不截断会把 "[state:...]" 当成 action 的一部分。
+  let raw_after = after.to_string()
+  let a = match raw_after.find("[state:") {
+    Some(i) => raw_after.substring(start=0, end=i).trim().to_string()
+    None => raw_after.trim().to_string()
+  }
   if t == "" || a == "" {
     return None
   }

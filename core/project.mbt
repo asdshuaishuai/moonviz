@@ -293,7 +293,7 @@ pub fn Project::query_nodes(
               match layout.rect_of(id) {
                 Some(r) =>
                   results.push(
-                    "{\"id\":\"\{id}\",\"kind\":\"\{kind_of(n)}\",\"component\":\"\{n.component}\",\"text\":\"\{json_escape_field(n.text)}\",\"rect\":{\"x\":\{r.x},\"y\":\{r.y},\"w\":\{r.width},\"h\":\{r.height}},\"constraint\":\"\{n.constraint}\",\"style\":{\"fill\":\"\{n.style.fill}\",\"text_color\":\"\{n.style.text_color}\",\"stroke\":\"\{n.style.stroke}\",\"radius\":\{n.style.corner_radius},\"opacity\":\{n.style.opacity},\"font_size\":\{n.style.font_size},\"weight\":\"\{n.style.font_weight}\",\"shadow\":\"\{n.style.shadow}\",\"rotate\":\{n.style.rotate},\"blur\":\{n.style.blur},\"blend\":\"\{n.style.blend}\",\"line\":\{n.style.line_height},\"tracking\":\{n.style.tracking}}}",
+                    query_node_json(id, n, r),
                   )
                 None => ()
               }
@@ -304,6 +304,87 @@ pub fn Project::query_nodes(
       }
       Ok("[\{join_str4(results)}]")
     }
+  }
+}
+
+///|
+/// 单个节点的查询 JSON。
+/// 必须与 NodeStyle / Node 的完整字段保持同步：Studio 属性面板、
+/// 图层名与布局控件都从这里取值；漏字段会让引擎已支持的能力在界面上不可达。
+fn query_node_json(id : String, n : Node, r : Rect) -> String {
+  let layout_json = match n.layout {
+    Some(l) =>
+      "{\"dir\":\"" +
+      (match l.dir {
+        Vertical => "vertical"
+        Horizontal => "horizontal"
+      }) +
+      "\",\"gap\":" +
+      l.gap.to_string() +
+      ",\"justify\":\"" +
+      (match l.justify {
+        Start => "start"
+        Center => "center"
+        End => "end"
+      }) +
+      "\",\"padding\":" +
+      l.padding.top.to_string() +
+      "}"
+    None => "null"
+  }
+  let out = StringBuilder::new()
+  out.write_string("{\"id\":\"" + id + "\",")
+  out.write_string("\"kind\":\"" + kind_of(n) + "\",")
+  out.write_string("\"component\":\"" + json_escape_field(n.component) + "\",")
+  out.write_string("\"name\":\"" + json_escape_field(n.name) + "\",")
+  out.write_string("\"text\":\"" + json_escape_field(n.text) + "\",")
+  out.write_string(
+    "\"rect\":{\"x\":" +
+    r.x.to_string() +
+    ",\"y\":" +
+    r.y.to_string() +
+    ",\"w\":" +
+    r.width.to_string() +
+    ",\"h\":" +
+    r.height.to_string() +
+    "},",
+  )
+  out.write_string("\"constraint\":\"" + n.constraint + "\",")
+  out.write_string("\"layout\":" + layout_json + ",")
+  out.write_string("\"width_mode\":\"" + size_mode(n.width) + "\",")
+  out.write_string("\"height_mode\":\"" + size_mode(n.height) + "\",")
+  out.write_string("\"style\":{")
+  out.write_string("\"fill\":\"" + n.style.fill + "\",")
+  out.write_string("\"text_color\":\"" + n.style.text_color + "\",")
+  out.write_string("\"stroke\":\"" + n.style.stroke + "\",")
+  out.write_string("\"stroke_width\":" + n.style.stroke_width.to_string() + ",")
+  out.write_string("\"radius\":" + n.style.corner_radius.to_string() + ",")
+  out.write_string("\"opacity\":" + n.style.opacity.to_string() + ",")
+  out.write_string("\"font_size\":" + n.style.font_size.to_string() + ",")
+  out.write_string("\"weight\":\"" + n.style.font_weight + "\",")
+  out.write_string("\"shadow\":\"" + n.style.shadow + "\",")
+  out.write_string("\"rotate\":" + n.style.rotate.to_string() + ",")
+  out.write_string("\"blur\":" + n.style.blur.to_string() + ",")
+  out.write_string("\"blend\":\"" + n.style.blend + "\",")
+  out.write_string("\"line\":" + n.style.line_height.to_string() + ",")
+  out.write_string("\"tracking\":" + n.style.tracking.to_string() + ",")
+  out.write_string("\"align\":\"" + n.style.text_align + "\",")
+  out.write_string("\"italic\":\"" + n.style.font_style + "\",")
+  out.write_string("\"dash\":\"" + n.style.stroke_dash + "\",")
+  out.write_string(
+    "\"visible\":" + (if n.style.visible { "true" } else { "false" }),
+  )
+  out.write_string("}}")
+  out.to_string()
+}
+
+///|
+/// 尺寸规格 → 模式名（供属性面板回显）
+fn size_mode(s : SizeSpec) -> String {
+  match s {
+    Fixed(_) => "fixed"
+    Fill => "fill"
+    Hug => "hug"
   }
 }
 
