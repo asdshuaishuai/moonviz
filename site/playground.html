@@ -120,6 +120,25 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 .empty-insp{color:var(--tx3);font-size:11.5px;padding:6px 2px;line-height:1.6}
 .colorpair{display:flex;gap:4px;align-items:center}
 .colorpair input[type=color]{width:26px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+#toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);background:rgba(20,22,26,.92);color:#fff;padding:8px 20px;border-radius:99px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:99}
+#toast.show{opacity:1}
+.debt{display:inline-flex;align-items:center;gap:5px;padding:1px 9px;border-radius:99px;font-size:10px;font-weight:700;flex:0 0 auto}
+.debt.zero{background:rgba(26,158,92,.10);color:var(--ok)}
+.debt.some{background:rgba(230,150,20,.15);color:#d99a2b;cursor:pointer}
+.debt.some:hover{background:rgba(230,150,20,.25)}
+.themes{display:flex;gap:4px}
+.themes button{width:20px;height:20px;border-radius:50%;padding:0;border:2px solid var(--line);cursor:pointer}
+.themes button.on{border-color:var(--acc);transform:scale(1.15)}
+.bpsw{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.bpsw button{border:0;border-radius:0;padding:3px 10px;font-size:10.5px;background:var(--panel);color:var(--tx3)}
+.bpsw button.on{background:var(--acc);color:#fff}
+#playbar{display:none;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line);background:rgba(75,107,251,.06)}
+#playbar.on{display:flex}
+.shot.playing svg g[id^="n_"]{cursor:pointer}
+.shot.playing svg g[id^="n_"]:hover{outline:1px dashed var(--acc)}
+.retry{display:none;margin-left:6px;font-size:10px;padding:2px 10px;border-radius:99px;border:1px solid var(--err);color:var(--err);background:transparent}
+.retry.show{display:inline-block}
+.retry:hover{background:rgba(224,82,82,.1)}
 .nosupport{padding:40px;text-align:center;color:var(--err);font-size:14px}
 #undobtn{display:none}
 </style>
@@ -144,6 +163,7 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
       <span style="flex:1"></span>
       <button onclick="applySource()" id="render-btn">渲染</button>
       <button onclick="validate()">校验</button>
+      <span class="themes" id="themes" title="主题系统：一键切换全局设计令牌"></span>
     </div>
     <div class="edwrap">
       <pre id="hl" aria-hidden="true"><code id="hlc"></code></pre>
@@ -167,7 +187,15 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
     <div id="gram-wrap" class="hide gram-body"></div>
   </section>
   <section class="canvaswrap">
+    <div id="playbar">
+      <strong style="font-size:12px">▶ 演示模式</strong>
+      <span style="font-size:11px;color:var(--tx3)">点击画板上的元素触发交互（导航 / toast / 状态切换）· Esc 返回上一层 · ✕ 退出</span>
+      <span style="flex:1"></span>
+      <span id="navcrumb" style="font-size:11px;color:var(--tx2)"></span>
+      <button onclick="exitPlay()" style="padding:2px 12px">✕ 退出</button>
+    </div>
     <div class="canvas" id="canvas"></div>
+    <div id="toast"></div>
     <div id="selbox"><span id="seltag"></span></div>
   </section>
   <section class="inspector">
@@ -481,6 +509,7 @@ function placeSelbox(){
 /* 拖拽：SVG 坐标换算 + ghost 位移 + 释放提交 HumanGate move */
 let drag=null;
 $('canvas').addEventListener('mousedown',e=>{
+  if(playing)return; // 演示模式下画布只响应 tap
   const g=e.target.closest&&e.target.closest('g[id^="n_"]');
   if(!g)return;
   const svg=g.ownerSVGElement;
@@ -761,6 +790,185 @@ function hasArtboard(src,id){
   return src.includes(`id="${id}"`)||src.includes(`@moonviz:visual ${id}`);
 }
 
+/* ---------- 引擎特点展示：债仪表 / 播放模式 / 双门重试 / 主题 / 断点 ---------- */
+function updateDebt(){
+  const d=$('debt');const n=(lastResult&&lastResult.debt)||0;
+  d.className='debt '+(n>0?'some':'zero');
+  d.textContent='债 '+n;
+  d.title=n>0?'视觉债 '+n+' 条：引擎容忍但 AgentGate 不放行。点击运行 fix 自动修复':'零视觉债：文档完全合规';
+  d.onclick=n>0?()=>fixDebt():null;
+}
+function fixDebt(){
+  const ab=curAb();if(!ab)return;
+  if(humanOp(`fix ${ab.id}`,true))setStatus(true,'🔧 fix 已自动修复视觉债（HumanGate：违规严格下降才提交）');
+}
+let lastRejectedOp=null;
+function retryHuman(){
+  if(!lastRejectedOp)return;
+  const op=lastRejectedOp;lastRejectedOp=null;$('retryBtn').classList.remove('show');
+  pushHistory();
+  try{
+    const r=engine.apply_human_op(mbt,op);
+    logOp(op,r);
+    if(r.ok===true&&r.mbt){mbt=r.mbt;setSrc(mbt);render();$('ops').value='';
+      setStatus(true,`同一操作经 HumanGate 通过（视觉债 ${r.debt}）——双门对比完成`);}
+    else{history.pop();setStatus(false,'HumanGate 也拒绝：'+(r.error||''));}
+  }catch(e){history.pop();setStatus(false,String(e.message||e));}
+}
+
+/* ---------- 播放模式：交互运行时（引擎的 flows + 标记交互）---------- */
+let playing=false,navStack=[];
+function togglePlay(){playing?exitPlay():enterPlay();}
+function enterPlay(){
+  if(!artboards().length){setStatus(false,'先载入内容再演示');return;}
+  playing=true;navStack=[curAb()?curAb().id:artboards()[0].id];
+  $('playbar').classList.add('on');$('playBtn').textContent='✕ 退出';
+  if(selNode)select(null);
+  artIndex=artboards().findIndex(a=>a.id===navStack[0]);if(artIndex<0)artIndex=0;
+  render();updateNavCrumb();setStatus(null,'演示模式：点击元素触发交互');
+}
+function exitPlay(){
+  playing=false;navStack=[];
+  $('playbar').classList.remove('on');$('playBtn').textContent='▶ 演示';
+  render();
+}
+window.exitPlay=exitPlay;
+function updateNavCrumb(){
+  $('navcrumb').textContent=navStack.length>1?('⟵ '+navStack.slice(0,-1).join(' / ')):'首页层';
+}
+function showToast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800);
+}
+/* 从 canonical 名字标记解析交互（⚡trigger→action，到 [state: 为止） */
+function parseMarker(name){
+  const i=name.indexOf('⚡');if(i<0)return null;
+  let rest=name.slice(i+1);
+  const j=rest.indexOf('[state:');if(j>=0)rest=rest.slice(0,j);
+  rest=rest.trim();
+  const k=rest.indexOf('→');if(k<0)return null;
+  return{trigger:rest.slice(0,k),action:rest.slice(k+1)};
+}
+function playTap(nodeId){
+  const ab=curAb();if(!ab)return;
+  // 1) 标记交互优先
+  const n=ab.nodes.find(x=>x.id===nodeId);
+  if(n&&n.name){
+    const mk=parseMarker(n.name);
+    if(mk&&mk.trigger==='tap'){execAction(mk.action);return;}
+  }
+  // 2) flow 边（tap:node）
+  const fl=(lastResult&&lastResult.flows||[]).find(f=>f.from===ab.id&&f.trigger==='tap:'+nodeId);
+  if(fl){gotoArtboard(fl.to);return;}
+  setStatus(null,'点击了 '+nodeId+'（无绑定交互）');
+}
+function gotoArtboard(id){
+  const idx=artboards().findIndex(a=>a.id===id);
+  if(idx<0){setStatus(false,'navigate_to: 画板 '+id+' 不存在');return;}
+  navStack.push(id);artIndex=idx;render();updateNavCrumb();
+}
+function execAction(spec){
+  const m=/^(\w+)(?::(.*))?$/.exec(spec);
+  if(!m)return;
+  const[,kind,arg]=m;
+  switch(kind){
+    case 'navigate_to':gotoArtboard(arg);break;
+    case 'show_toast':showToast(arg.replace(/^"|"$/g,''));break;
+    case 'back':if(navStack.length>1){navStack.pop();artIndex=artboards().findIndex(a=>a.id===navStack[navStack.length-1]);render();updateNavCrumb();}break;
+    case 'set_state':{
+      const p=arg.split(':');
+      if(humanOp('set-state '+p[0]+' '+p[1],true))showToast('状态 → '+p[1]);
+      break;}
+    case 'toggle_state':{
+      const p=arg.split(':');
+      if(humanOp('set-state '+p[0]+' '+(p[1]||'pressed')+' toggle',true))showToast('状态切换');
+      break;}
+    case 'set_text':{
+      const ci=arg.indexOf(':');
+      if(ci>0&&humanOp('update '+curAb().id+' '+arg.slice(0,ci)+' text="'+arg.slice(ci+1)+'"',true))setStatus(null,'文字已更新');
+      break;}
+    case 'haptic':showToast('📳 触觉反馈');break;
+    default:showToast(spec);
+  }
+}
+/* 播放模式下画布点击走 playTap 而非选中 */
+document.addEventListener('keydown',e=>{
+  if(!playing)return;
+  if(e.key==='Escape'){
+    e.preventDefault();
+    if(navStack.length>1)execAction('back');else exitPlay();
+  }
+});
+
+/* ---------- 主题 chips ---------- */
+const THEMES=[
+  ['light','#ffffff'],['dark','#1b1d21'],['high_contrast','#000000'],
+  ['sepia','#f5ecd9'],['nord','#2e3440'],['sunset','#ff9e7d'],
+];
+$('themes').innerHTML=THEMES.map(([n,c])=>
+  '<button data-t="'+n+'" title="theme '+n+'" style="background:'+c+'"></button>').join('');
+$('themes').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  if(humanOp('theme '+b.dataset.t,true))setStatus(true,'主题 → '+b.dataset.t+'（全局设计令牌即时切换）');
+});
+
+/* ---------- 响应式断点切换 ---------- */
+function bpVariants(){
+  const ab=curAb();if(!ab)return [];
+  const base=ab.id.replace(/_(tablet|desktop)$/,'');
+  return artboards().filter(a=>a.id===base||a.id===base+'_tablet'||a.id===base+'_desktop');
+}
+function renderBpSwitch(){
+  const old=$('bpsw');if(old)old.remove();
+  const vs=bpVariants();
+  if(vs.length<2)return;
+  const bar=$('playbar');
+  const sw=document.createElement('span');sw.className='bpsw';sw.id='bpsw';
+  sw.style.marginLeft='8px';
+  sw.innerHTML=vs.map(a=>{
+    const bp=a.id.endsWith('_tablet')?'平板':a.id.endsWith('_desktop')?'桌面':'手机';
+    return '<button data-i="'+artboards().indexOf(a)+'" class="'+(a.id===curAb().id?'on':'')+'">'+bp+'</button>';
+  }).join('');
+  sw.querySelectorAll('button').forEach(b=>b.onclick=()=>{artIndex=+b.dataset.i;render();});
+  bar.appendChild(sw);
+}
+
+/* ---------- render() 增强：债仪表 / 播放态 / 断点 ---------- */
+const _render_orig=render;
+render=function(){
+  _render_orig();
+  updateDebt();renderBpSwitch();
+  if(playing){
+    const shot=document.querySelector('.shot.on');
+    if(shot)shot.classList.add('playing');
+  }
+};
+/* 画布点击在播放模式下改道 */
+$('canvas').addEventListener('click',e=>{
+  if(!playing)return;
+  const g=e.target.closest&&e.target.closest('g[id^="n_"]');
+  if(g){e.stopPropagation();playTap(g.id.slice(2));}
+},true);
+
+/* Agent 拒绝时提供 HumanGate 重试入口 */
+const _applyOp_orig=applyOp;
+applyOp=function(){
+  const op=$('ops').value.trim();if(!op)return;
+  try{
+    const r=engine.apply_agent_op(mbt,op);
+    logOp(op,r);
+    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;setSrc(mbt);artIndex=0;render();$('ops').value='';$('retryBtn').classList.remove('show');lastRejectedOp=null;}
+    else{
+      const err=r.error||'';
+      lastRejectedOp=op;
+      $('retryBtn').classList.toggle('show',err.includes('mbt_gate_block'));
+      let hint='';
+      if(err.includes('unknown_artboard')||err.includes('unknown_node'))hint=' — 请用上方芯片里的真实 id';
+      else if(err.includes('mbt_gate_block'))hint=' — AgentGate 硬门槛：点击「HumanGate 重试」看同一操作在人类门下的行为';
+      setStatus(false,err+hint);
+    }
+  }catch(e){setStatus(false,String(e.message||e));}
+};
+
 async function boot(){
   if(!(typeof WebAssembly==='object')||!WebAssembly.instantiate){
     document.body.innerHTML='<div class="nosupport">此浏览器不支持 WebAssembly。</div>';return;
@@ -798,6 +1006,7 @@ async function boot(){
 }
 window.showTab=showTab;window.applySource=applySource;window.validate=validate;
 window.downloadSvg=downloadSvg;window.undo=undo;
+window.togglePlay=togglePlay;window.retryHuman=retryHuman;window.fixDebt=fixDebt;
 boot();
 </script>
 </body>
