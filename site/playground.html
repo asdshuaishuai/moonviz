@@ -206,8 +206,10 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
   </section>
 </main>
 <div class="status">
-  <span class="pill idle" id="pill">…</span><span id="msg">加载引擎中</span>
+  <span class="pill idle" id="pill">…</span><span id="debt" class="debt zero" title="视觉债：引擎容忍但 AgentGate 不放行的违规数">债 0</span><span id="msg">加载引擎中</span>
+  <button class="retry" id="retryBtn" onclick="retryHuman()">↻ HumanGate 重试</button>
   <button id="undobtn" onclick="undo()">↩ 撤销</button>
+  <button onclick="togglePlay()" id="playBtn">▶ 演示</button>
   <button onclick="downloadSvg()">导出 SVG</button>
 </div>
 <script type="module">
@@ -792,7 +794,7 @@ function hasArtboard(src,id){
 
 /* ---------- 引擎特点展示：债仪表 / 播放模式 / 双门重试 / 主题 / 断点 ---------- */
 function updateDebt(){
-  const d=$('debt');const n=(lastResult&&lastResult.debt)||0;
+  const d=$('debt');if(!d)return;const n=(lastResult&&lastResult.debt)||0;
   d.className='debt '+(n>0?'some':'zero');
   d.textContent='债 '+n;
   d.title=n>0?'视觉债 '+n+' 条：引擎容忍但 AgentGate 不放行。点击运行 fix 自动修复':'零视觉债：文档完全合规';
@@ -834,10 +836,10 @@ function exitPlay(){
 }
 window.exitPlay=exitPlay;
 function updateNavCrumb(){
-  $('navcrumb').textContent=navStack.length>1?('⟵ '+navStack.slice(0,-1).join(' / ')):'首页层';
+  const nc=$('navcrumb');if(!nc)return;nc.textContent=navStack.length>1?('⟵ '+navStack.slice(0,-1).join(' / ')):'首页层';
 }
 function showToast(msg){
-  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  const t=$('toast');if(t){t.textContent=msg;t.classList.add('show');}
   clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800);
 }
 /* 从 canonical 名字标记解析交互（⚡trigger→action，到 [state: 为止） */
