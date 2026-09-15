@@ -145,7 +145,7 @@ pub fn MoonVizRT::handle_event(
       match self.project.artboards.get(self.nav.current) {
         Some(ab) => {
           let layout = solve(ab.doc)
-          let hit = pick_node(layout, x, y)
+          let hit = pick_node(ab.doc, layout, x, y)
           match hit {
             Some(node_id) => {
               // 查找该节点是否有交互定义（通过 flow）
@@ -279,6 +279,7 @@ fn rt_walk(
   layout : SolvedLayout,
 ) -> Unit {
   match (doc.nodes.get(id), layout.rect_of(id)) {
+    (Some(n), Some(r)) if !n.style.visible => ()
     (Some(n), Some(r)) => {
       match n.kind {
         Text =>
@@ -407,18 +408,21 @@ pub fn MoonVizRT::can_go_back(self : MoonVizRT) -> Bool {
 // ---------------------------------------------------------------------------
 
 ///|
-fn pick_node(layout : SolvedLayout, x : Double, y : Double) -> String? {
+fn pick_node(doc : Document, layout : SolvedLayout, x : Double, y : Double) -> String? {
   let mut best : String? = None
   let mut best_area : Double = 1000000000000000000.0
   for id in layout.rects.keys() {
     match layout.rect_of(id) {
       Some(r) =>
-        if x >= r.x && y >= r.y && x < r.x + r.width && y < r.y + r.height {
-          let area = r.width * r.height
-          if area < best_area && id != "root" {
-            best = Some(id)
-            best_area = area
+        match doc.nodes.get(id) {
+          Some(n) if n.style.visible && x >= r.x && y >= r.y && x < r.x + r.width && y < r.y + r.height => {
+            let area = r.width * r.height
+            if area < best_area && id != "root" {
+              best = Some(id)
+              best_area = area
+            }
           }
+          _ => ()
         }
       None => ()
     }

@@ -178,3 +178,45 @@ test "Agent 超级工作流：模板→布局推理→响应式→全链路" {
   let html = p.export_html()
   assert_true(html.contains(login))
 }
+
+///|
+/// 回归：绝对定位画板（模板）的响应式变体必须不越界。
+/// 曾经的实现把绝对定位画布强行改成横向栈布局，节点按流式依次排开导致
+/// x 单调累加越界，自产变体过不了引擎自身的 contained_in_parent 门禁。
+test "响应式：绝对定位画板变体不越界（门禁自洽）" {
+  let p = Project::new()
+  let login = match p.apply_template(template_id="login") {
+    Ok(id) => id
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  match p.generate_responsive(artboard=login) {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  for suffix in ["_tablet", "_desktop"] {
+    let vid = login + suffix
+    match p.artboards.get(vid) {
+      Some(ab) => {
+        let layout = solve(ab.doc)
+        for id in ab.doc.nodes.keys() {
+          if id == ab.doc.root_id {
+            continue
+          }
+          match layout.rect_of(id) {
+            Some(r) => {
+              assert_true(r.x >= -0.001)
+              assert_true(r.y >= -0.001)
+              assert_true(r.x + r.width <= ab.width + 0.001)
+              assert_true(r.y + r.height <= ab.height + 0.001)
+            }
+            None => ()
+          }
+        }
+      }
+      None => assert_true(false)
+    }
+  }
+}

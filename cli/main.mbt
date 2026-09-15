@@ -368,6 +368,90 @@ fn apply_mbt_operation(
           }
         }
       }
+    "group" =>
+      if parts.length() < 5 {
+        Err("mbt_operation_usage:group <artboard> <group_id> <n1> <n2> [n3 ...]")
+      } else {
+        let ids : Array[String] = []
+        let mut i = 3
+        while i < parts.length() {
+          ids.push(parts[i])
+          i = i + 1
+        }
+        match project.group_nodes(artboard=parts[1], node_ids=ids, group_id=parts[2]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "ungroup" =>
+      if parts.length() < 3 {
+        Err("mbt_operation_usage:ungroup <artboard> <group_id>")
+      } else {
+        match project.ungroup_node(artboard=parts[1], group_id=parts[2]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "align" =>
+      if parts.length() < 5 {
+        Err("mbt_operation_usage:align <artboard> <mode> <n1> <n2> [n3 ...]")
+      } else {
+        let ids : Array[String] = []
+        let mut i = 3
+        while i < parts.length() {
+          ids.push(parts[i])
+          i = i + 1
+        }
+        match project.align_nodes(artboard=parts[1], mode=parts[2], node_ids=ids) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "resize-canvas" =>
+      if parts.length() < 4 {
+        Err("mbt_operation_usage:resize-canvas <artboard> <width> <height>")
+      } else {
+        match project.resize_canvas(
+          artboard=parts[1], width=parse_d(parts[2]), height=parse_d(parts[3]),
+        ) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "responsive" =>
+      if parts.length() < 2 {
+        Err("mbt_operation_usage:responsive <artboard>")
+      } else {
+        match project.generate_responsive(artboard=parts[1]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
+    "restyle" =>
+      if parts.length() < 4 {
+        Err("mbt_operation_usage:restyle <artboard> <component_id> k=v [k=v ...]")
+      } else {
+        let kvs : Array[(String, String)] = []
+        let mut i = 3
+        while i < parts.length() {
+          let eq = index_of_str(parts[i], "=")
+          if eq > 0 {
+            kvs.push((
+              parts[i].substring(start=0, end=eq),
+              @decl.unescape_value(parts[i].substring(start=eq + 1)),
+            ))
+          }
+          i = i + 1
+        }
+        if kvs.length() == 0 {
+          Err("mbt_operation_no_kv_pairs")
+        } else {
+          match project.restyle_component(artboard=parts[1], component_id=parts[2], kvs~) {
+            Ok(_) => Ok(())
+            Err(error) => Err(error)
+          }
+        }
+      }
     "flow" =>
       if parts.length() < 4 {
         Err("mbt_operation_usage:flow <from> <to> <node>")

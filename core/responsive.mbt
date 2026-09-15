@@ -99,11 +99,160 @@ pub fn Project::generate_responsive(
 }
 
 ///|
+/// 响应式适配分发：
+/// - 栈布局画板（root 有 layout）：走流式重排（改 dir/gap/padding，子项由布局引擎定位）
+/// - 绝对定位画板（root 无 layout）：走等比几何缩放 + 居中
+///   绝对定位画板若被强行改成栈布局，绝对坐标会被当作流式子项依次排开
+///   （x 单调累加越界），生成的变体连引擎自身的 contained_in_parent 门禁都过不了。
 fn adapt_layout(doc : Document, bp : Breakpoint) -> Unit {
-  match bp.name {
-    "tablet" => adapt_tablet(doc)
-    "desktop" => adapt_desktop(doc)
-    _ => ()
+  let root_layout = match doc.nodes.get(doc.root_id) {
+    Some(r) => r.layout
+    None => return
+  }
+  match root_layout {
+    Some(_) =>
+      match bp.name {
+        "tablet" => adapt_tablet(doc)
+        "desktop" => adapt_desktop(doc)
+        _ => ()
+      }
+    None => adapt_absolute(doc, bp)
+  }
+}
+
+///|
+/// 绝对定位画板：整棵子树等比缩放并居中到目标断点。
+/// 顶层子项额外施加平移（其坐标相对画板原点）；更深层子项坐标相对父容器，
+/// 只做缩放即可保持相对关系，避免重复平移。
+fn adapt_absolute(doc : Document, bp : Breakpoint) -> Unit {
+  let layout = solve(doc)
+  let mut min_x = 1.0e18
+  let mut min_y = 1.0e18
+  let mut max_x = -1.0e18
+  let mut max_y = -1.0e18
+  let mut has_geometry = false
+  for id in doc.nodes.keys() {
+    if id != doc.root_id {
+      match layout.rect_of(id) {
+        Some(r) => {
+          has_geometry = true
+          if r.x < min_x {
+            min_x = r.x
+          }
+          if r.y < min_y {
+            min_y = r.y
+          }
+          if r.x + r.width > max_x {
+            max_x = r.x + r.width
+          }
+          if r.y + r.height > max_y {
+            max_y = r.y + r.height
+          }
+        }
+        None => ()
+      }
+    }
+  }
+  if !has_geometry {
+    return
+  }
+  let bw = max_x - min_x
+  let bh = max_y - min_y
+  if bw <= 0.0 || bh <= 0.0 {
+    return
+  }
+  let margin = match bp.name {
+    "tablet" => 32.0
+    "desktop" => 48.0
+    _ => 24.0
+  }
+  let avail_w = bp.width - margin * 2.0
+  let avail_h = bp.height - margin * 2.0
+  if avail_w <= 0.0 || avail_h <= 0.0 {
+    return
+  }
+  let sx = avail_w / bw
+  let sy = avail_h / bh
+  let mut scale = if sx < sy { sx } else { sy }
+  // 上限 3x：避免小尺寸设计被放大到失真
+  if scale > 3.0 {
+    scale = 3.0
+  }
+  let scaled_w = bw * scale
+  let scaled_h = bh * scale
+  let ox = margin + (avail_w - scaled_w) / 2.0 - min_x * scale
+  let oy = margin + (avail_h - scaled_h) / 2.0 - min_y * scale
+  for id in doc.nodes.keys() {
+    if id == doc.root_id {
+      continue
+    }
+    let is_top = match doc.find_parent(id) {
+      Some(pid) => pid == doc.root_id
+      None => false
+    }
+    let _ = doc.update_node(id, fn(n) {
+      let sx_pos = scale_pos_x(n.x, scale)
+      let sy_pos = scale_pos_y(n.y, scale)
+      let nx = if is_top { shift_pos_x(sx_pos, ox) } else { sx_pos }
+      let ny = if is_top { shift_pos_y(sy_pos, oy) } else { sy_pos }
+      {
+        ..n,
+        x: nx,
+        y: ny,
+        width: scale_size_spec(n.width, scale),
+        height: scale_size_spec(n.height, scale),
+      }
+    })
+  }
+}
+
+///|
+fn scale_pos_x(p : PosSpec, s : Double) -> PosSpec {
+  match p {
+    Fixed(v) => Fixed(v * s)
+    AlignStart(v) => AlignStart(v * s)
+    AlignEnd(v) => AlignEnd(v)
+    CenterInParent => CenterInParent
+  }
+}
+
+///|
+fn scale_pos_y(p : PosSpec, s : Double) -> PosSpec {
+  match p {
+    Fixed(v) => Fixed(v * s)
+    AlignStart(v) => AlignStart(v * s)
+    AlignEnd(v) => AlignEnd(v)
+    CenterInParent => CenterInParent
+  }
+}
+
+///|
+fn shift_pos_x(p : PosSpec, d : Double) -> PosSpec {
+  match p {
+    Fixed(v) => Fixed(v + d)
+    AlignStart(v) => AlignStart(v + d)
+    AlignEnd(v) => AlignEnd(v)
+    CenterInParent => CenterInParent
+  }
+}
+
+///|
+fn shift_pos_y(p : PosSpec, d : Double) -> PosSpec {
+  match p {
+    Fixed(v) => Fixed(v + d)
+    AlignStart(v) => AlignStart(v + d)
+    AlignEnd(v) => AlignEnd(v)
+    CenterInParent => CenterInParent
+  }
+}
+
+///|
+/// 缩放尺寸规格：Fill/Hug 由布局引擎自适应，仅 Fixed 参与缩放
+fn scale_size_spec(s : SizeSpec, factor : Double) -> SizeSpec {
+  match s {
+    Fixed(v) => Fixed(v * factor)
+    Fill => Fill
+    Hug => Hug
   }
 }
 
