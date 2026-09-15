@@ -6,7 +6,10 @@
 
 ///|
 /// 文档 → SVG 字符串（根矩形即画布尺寸，浅底）
-pub fn render_svg(doc : Document) -> String {
+///
+/// surface 为画布底色令牌值：主题切换后由 Project 侧传入当前主题的
+/// surface（如 nord 的 #2E3440）；默认浅色 #F6F7F9 保持既有文档兼容。
+pub fn render_svg(doc : Document, surface? : String = "#F6F7F9") -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
     Some(r) => r
@@ -29,7 +32,7 @@ pub fn render_svg(doc : Document) -> String {
     "<defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"1\" stdDeviation=\"2\" flood-opacity=\"0.07\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"4\" stdDeviation=\"10\" flood-opacity=\"0.10\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"14\" stdDeviation=\"28\" flood-opacity=\"0.16\"/></filter></defs>",
   )
   sb.write_string(
-    "<rect x=\"0\" y=\"0\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" fill=\"#F6F7F9\" pointer-events=\"none\"/>",
+    "<rect x=\"0\" y=\"0\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" fill=\"\{surface}\" pointer-events=\"none\"/>",
   )
   // SVG viewBox 自带裁剪（root rect 与 viewBox 同尺寸），不再用 clipPath 包裹：
   // WebKit 对 clip-path 组内元素的 hit-test 会整体失效，原型交互点击会穿透。

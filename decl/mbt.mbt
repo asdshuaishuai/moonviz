@@ -21,6 +21,7 @@ pub(all) struct MbtDocument {
   title : String
   revision : Int
   entry : String
+  theme : String
   blocks : Array[MbtCodeBlock]
   visual_blocks : Array[MbtCodeBlock]
 }
@@ -180,6 +181,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
   let mut title = ""
   let mut revision = 1
   let mut entry = ""
+  let mut theme = ""
   let mut body_start = 0
   if lines.length() > 0 && mbt_trim(lines[0]) == "---" {
     let mut close = -1
@@ -201,6 +203,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
       revision = 1
     }
     entry = mbt_field(front, "entry")
+    theme = mbt_field(front, "theme")
     body_start = close + 1
   }
   let blocks : Array[MbtCodeBlock] = []
@@ -266,6 +269,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
     title,
     revision,
     entry,
+    theme,
     blocks,
     visual_blocks,
   })
@@ -546,6 +550,9 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
         return Err("mbt_unknown_entry:" + entry)
       }
       project.revision = document.revision
+      if document.theme != "" {
+        project.set_theme_tokens(document.theme)
+      }
       match mbt_validate_flows(project) {
         Err(error) => Err(error)
         Ok(_) => Ok({ project, document, entry })
@@ -620,6 +627,7 @@ pub fn project_to_mbt(
       1
     },
     entry: actual_entry,
+    theme: project.active_theme,
     blocks: [],
     visual_blocks: [],
   }
@@ -658,6 +666,9 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   out.write_string("moonviz:\n")
   out.write_string("  format: visual-document\n")
   out.write_string("  revision: " + self.project.revision.to_string() + "\n")
+  if self.project.active_theme != "" {
+    out.write_string("  theme: " + self.project.active_theme + "\n")
+  }
   out.write_string("  title: " + self.document.title + "\n")
   let ids : Array[String] = []
   for id in self.project.artboards.keys() {

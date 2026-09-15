@@ -190,6 +190,10 @@ pub fn Project::define_component_state(
   // 仅存内存会在每次 load-mbt-b64 重建 Project 时静默丢失。
   let count = def.states.size().to_string()
   let markers = states_to_markers(def)
+  let cur = if def.current != "default" { ["[cur:" + def.current + "]"] } else { [] }
+  for m in cur {
+    markers.push(m)
+  }
   let _ = ab.doc.update_node(node_id, fn(n) {
     { ..n, name: rebuild_name(n.name, markers) }
   })
@@ -304,6 +308,10 @@ pub fn strip_all_markers(name : String) -> String {
     Some(i) => if i < cut { cut = i }
     None => ()
   }
+  match name.find("[cur:") {
+    Some(i) => if i < cut { cut = i }
+    None => ()
+  }
   let head = name.substring(start=0, end=cut)
   let mut end = head.length()
   while end > 0 && head.substring(start=end - 1, end=end) == " " {
@@ -332,6 +340,22 @@ pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit 
             for kv in states.iter() {
               let (sname, patch) = kv
               def.states.set(sname, patch)
+            }
+            // [cur:<name>]：重载时恢复当前激活状态
+            match n.name.find("[cur:") {
+              Some(ci) => {
+                let rest_name = n.name.substring(start=ci + 5)
+                match rest_name.find("]") {
+                  Some(e) => {
+                    let cname = rest_name.substring(start=0, end=e)
+                    if cname != "" && def.states.contains(cname) {
+                      def.current = cname
+                    }
+                  }
+                  None => ()
+                }
+              }
+              None => ()
             }
             self.node_states.set(id, def)
           }
@@ -471,8 +495,39 @@ pub fn Project::set_node_state(
   }
   def.current = next
   self.node_states.set(node_id, def)
+  // current 写回节点名标记：[cur:<name>]，随 canonical MBT 往返。
+  // 此前仅改内存，重载后永远回 default。
+  let artboard_id = self.find_node_artboard(node_id)
+  match artboard_id {
+    Some(aid) =>
+      match self.artboards.get(aid) {
+        Some(ab) => {
+          let markers = states_to_markers(def)
+          if next != "default" {
+            markers.push("[cur:" + next + "]")
+          }
+          let _ = ab.doc.update_node(node_id, fn(n) {
+            { ..n, name: rebuild_name(n.name, markers) }
+          })
+        }
+        None => ()
+      }
+    None => ()
+  }
   self.revision = self.revision + 1
   Ok("{\"ok\":true,\"node\":\"\{node_id}\",\"current\":\"\{next}\"}")
+}
+
+///|
+/// 找到节点所在的画板 id（状态表是项目级的，名字标记在画板文档里）
+fn Project::find_node_artboard(self : Project, node_id : String) -> String? {
+  for aid in self.artboards.keys() {
+    match self.artboards.get(aid) {
+      Some(ab) => if ab.doc.has(node_id) { return Some(aid) }
+      None => ()
+    }
+  }
+  None
 }
 
 ///|

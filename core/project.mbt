@@ -27,6 +27,10 @@ pub(all) struct Project {
   /// 存于节点名标记，会话内可变模型由此重建；作用于渲染前的节点变换。
   mut node_states : Map[String, ComponentStateDef]
   mut revision : Int
+  /// 当前主题名（light/dark/nord/…）：随 canonical MBT frontmatter 往返，
+  /// 决定渲染层画布底色等 tokens 派生视觉。节点 fill 已是字面量，
+  /// 由 apply_theme 的角色重着色负责，加载路径只恢复 tokens 不再重着色。
+  mut active_theme : String
 }
 
 ///|
@@ -39,6 +43,7 @@ pub fn Project::new() -> Project {
     user_components: Map::new(),
     node_states: Map::new(),
     revision: 1,
+    active_theme: "light",
   }
 }
 
@@ -57,6 +62,7 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.user_components = source.user_components
   self.node_states = source.node_states
   self.revision = source.revision
+  self.active_theme = source.active_theme
 }
 
 // ---------------------------------------------------------------------------
@@ -675,7 +681,8 @@ pub fn Project::export_svg(
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard")
-    Some(ab) => Ok(render_svg(ab.doc))
+    Some(ab) =>
+      Ok(render_svg(ab.doc, surface=self.tokens.resolve_color("surface")))
   }
 }
 

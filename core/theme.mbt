@@ -345,10 +345,96 @@ pub fn Project::apply_theme(
   match found {
     Some(theme) => {
       self.tokens = theme.tokens
+      self.active_theme = theme_name
+      let changed = self.recolor_with(theme.tokens)
       let is_dark = if theme.is_dark { "true" } else { "false" }
-      Ok("{\"ok\":true,\"theme\":\"\{theme_name}\",\"is_dark\":\{is_dark}}")
+      Ok(
+        "{\"ok\":true,\"theme\":\"\{theme_name}\",\"is_dark\":\{is_dark},\"recolored\":\{changed}}",
+      )
     }
     None => Err("unknown_theme: " + theme_name)
+  }
+}
+
+///|
+/// 角色重着色：模板/画布把令牌值写成字面量（fill="#4B6BFB"），仅换
+/// tokens 表对已落盘的颜色无效。按默认调色板建立「字面量 → 角色」反查表，
+/// 把匹配的 fill/text_color 重写为新主题的角色值——变更写回 .mbt.md，
+/// 保持唯一事实源语义。
+fn Project::recolor_with(self : Project, target : DesignTokens) -> Int {
+  // 字面量 → 角色：以「全部内置主题 ∪ 默认」的调色板并集反查。
+  // 操作路径每条命令都从 canonical MBT 重建 Project（tokens 恒为默认），
+  // 仅按当前/默认反查会让「nord → light」无从映射——并集保证任一主题的
+  // 字面量都能反查到角色，主题切换无状态可逆。
+  let literal_to_role : Map[String, String] = Map::new()
+  let palettes : Array[DesignTokens] = [DesignTokens::default()]
+  for theme in builtin_themes().iter() {
+    palettes.push(theme.tokens)
+  }
+  for palette in palettes {
+    for role in palette.colors.keys() {
+      match palette.colors.get(role) {
+        Some(v) => literal_to_role.set(v, role)
+        None => ()
+      }
+    }
+  }
+  let mut changed = 0
+  for ab_id in self.artboards.keys() {
+    let ab = match self.artboards.get(ab_id) {
+      Some(a) => a
+      None => continue
+    }
+    for nid in ab.doc.nodes.keys() {
+      let _ = ab.doc.update_node(nid, fn(n) {
+        let mut node = n
+        match literal_to_role.get(n.style.fill) {
+          Some(role) =>
+            match target.colors.get(role) {
+              Some(v) => {
+                if v != n.style.fill {
+                  changed = changed + 1
+                }
+                node = { ..node, style: { ..node.style, fill: v } }
+              }
+              None => ()
+            }
+          None => ()
+        }
+        match literal_to_role.get(n.style.text_color) {
+          Some(role) =>
+            match target.colors.get(role) {
+              Some(v) => {
+                if v != n.style.text_color {
+                  changed = changed + 1
+                }
+                node = { ..node, style: { ..node.style, text_color: v } }
+              }
+              None => ()
+            }
+          None => ()
+        }
+        node
+      })
+    }
+  }
+  if changed > 0 {
+    self.revision = self.revision + 1
+  }
+  changed
+}
+
+///|
+/// 加载路径恢复主题：只切换 tokens 与 active_theme，不做角色重着色——
+/// canonical MBT 里的节点颜色已是主题字面量，重着色属于 apply_theme 的
+/// 职责，重复执行会把已是目标色的节点原样重写（幂等但徒增 revision）。
+pub fn Project::set_theme_tokens(self : Project, theme_name : String) -> Unit {
+  for theme in builtin_themes().iter() {
+    if theme.name == theme_name {
+      self.tokens = theme.tokens
+      self.active_theme = theme.name
+      return
+    }
   }
 }
 
