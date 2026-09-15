@@ -29,10 +29,11 @@ main{display:grid;grid-template-columns:minmax(360px,44%) 1fr;height:calc(100vh 
 .bar label{font-size:11px;color:var(--tx3)}
 textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;background:transparent;font:12px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;white-space:pre;overflow:auto}
 #ops{height:110px;border-top:1px solid var(--line);font-size:12px}
-.canvas{flex:1;overflow:auto;padding:18px;display:flex;gap:18px;align-items:flex-start;background:
-  repeating-conic-gradient(var(--bg) 0% 25%, var(--panel) 0% 50%) 50%/24px 24px}
-.canvas .shot{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.10);border-radius:4px;flex:0 0 auto}
-.canvas .shot svg{display:block;border-radius:4px}
+.canvas{flex:1;overflow:auto;padding:18px;display:flex;gap:18px;align-items:flex-start;align-content:flex-start;flex-wrap:wrap;background:var(--bg)}
+.canvas .shot{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);border-radius:6px;flex:0 0 auto;overflow:hidden;border:1px solid var(--line)}
+.canvas .shot.on{border-color:var(--acc)}
+.canvas .shot svg{display:block;max-height:min(72vh,760px);width:auto;max-width:min(60vw,560px);height:auto}
+.shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line);background:var(--panel)}
 .shot h4{margin:0;padding:6px 10px;font-size:11px;color:var(--tx2);border-bottom:1px solid var(--line)}
 .status{padding:5px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--tx3);display:flex;gap:14px;align-items:center}
 .status .pill{padding:1px 8px;border-radius:99px;font-weight:600}
@@ -45,6 +46,15 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 .hide{display:none!important}
 #oplog{max-height:130px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
 #oplog .e{color:var(--err)}
+.ops-help{border-bottom:1px solid var(--line);padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.ops-quick{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ops-quick button,.chips button{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--tx2);cursor:pointer}
+.ops-quick button:hover,.chips button:hover{border-color:var(--acc);color:var(--acc)}
+.ops-ids{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap}
+.lbl{font-size:10px;color:var(--tx3);font-weight:700;align-self:center}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips .ab{background:rgba(75,107,251,.10);color:var(--acc);font-weight:700}
+#oplog .ok{color:var(--ok)}
 .nosupport{padding:40px;text-align:center;color:var(--err);font-size:14px}
 </style>
 </head>
@@ -71,7 +81,18 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
     </div>
     <textarea id="src" spellcheck="false"></textarea>
     <div id="ops-wrap" class="hide" style="display:flex;flex-direction:column;flex:1;min-height:0">
-      <textarea id="ops" spellcheck="false" placeholder="输入一条操作并回车，例如：&#10;update pg btn fill=#FF7A45&#10;flow pg home btn&#10;state pg btn pressed fill=#1E3FA8"></textarea>
+      <div class="ops-help">
+        <div class="ops-quick">
+          <span class="lbl">快捷</span>
+          <button data-op="recolor">换主色</button>
+          <button data-op="rename">改标题</button>
+          <button data-op="flow">加导航</button>
+          <button data-op="hide">隐藏首个节点</button>
+          <button data-op="responsive">响应式变体</button>
+        </div>
+        <div class="ops-ids"><span class="lbl">画板/节点（点击插入）</span><div id="idchips" class="chips"></div></div>
+      </div>
+      <textarea id="ops" spellcheck="false" placeholder="操作语法与 CLI / Studio / MCP 完全一致，例如：&#10;update <画板> <节点> fill=#FF7A45&#10;上方「画板/节点」芯片给出当前文档可用的真实 id"></textarea>
       <div id="oplog"></div>
     </div>
   </section>
@@ -203,6 +224,56 @@ function showTab(w){
 function artboards(){const r=lastRender();return (r&&r.artboards)||[];}
 let lastResult=null;
 function lastRender(){return lastResult;}
+/// 操作台辅助：真实 id 芯片 + 快捷命令
+function refreshIdChips(abs){
+  const box=$('idchips');if(!box)return;
+  box.innerHTML='';
+  if(!abs.length){box.innerHTML='<span style="font-size:11px;color:var(--tx3)">（空文档 — 先从上方选模板）</span>';return;}
+  abs.forEach(a=>{
+    const b=document.createElement('button');
+    b.className='ab';b.textContent=a.id;b.title='画板';
+    b.onclick=()=>insertToken(a.id);
+    box.appendChild(b);
+    (a.nodes||[]).slice(0,14).forEach(n=>{
+      if(!n.id)return;
+      const nb=document.createElement('button');
+      nb.textContent=n.id;nb.title=(n.text||n.id).slice(0,24);
+      nb.onclick=()=>insertToken(n.id);
+      box.appendChild(nb);
+    });
+  });
+}
+function insertToken(t){
+  const el=$('ops');
+  const cur=el.value;
+  el.value=cur?cur.replace(/\s+$/,'')+' '+t+' ':t+' ';
+  el.focus();
+}
+function firstAb(){
+  const a=artboards();if(!a.length)return null;
+  return a.find(x=>(x.nodes||[]).length>0)||a[0];
+}
+function firstNode(ab){const ns=(ab&&ab.nodes)||[];return ns.length?ns[0]:null;}
+function quickCmd(kind){
+  const ab=firstAb();if(!ab){setStatus(false,'先载入模板或写入源码');return;}
+  const n=firstNode(ab);
+  const abid=ab.id,nid=n?n.id:'';
+  const cmds={
+    recolor:n?`update ${abid} ${nid} fill=#FF7A45`:null,
+    rename:n?`update ${abid} ${nid} text=Hello MoonViz`:null,
+    flow:n?`flow ${abid} ${abid} ${nid}`:null,
+    hide:n?`update ${abid} ${nid} visible=false`:null,
+    responsive:`responsive ${abid}`,
+  };
+  const cmd=cmds[kind];
+  if(!cmd){setStatus(false,'当前画板没有可操作节点');return;}
+  $('ops').value=cmd;
+  applyOp();
+}
+document.querySelectorAll('.ops-quick button[data-op]').forEach(b=>{
+  b.addEventListener('click',()=>quickCmd(b.dataset.op));
+});
+
 function downloadSvg(){
   const abs=artboards();if(!abs.length){toastMsg('无可导出的画板');return;}
   const a=abs[Math.min(artIndex,abs.length-1)];
@@ -221,10 +292,11 @@ function render(){
     const abs=r.artboards||[];
     artIndex=Math.min(artIndex,Math.max(0,abs.length-1));
     const c=$('canvas');c.innerHTML='';
+    refreshIdChips(abs);
     abs.forEach((a,i)=>{
       const d=document.createElement('div');d.className='shot';
       d.innerHTML=`<h4>${a.id} · ${a.width}×${a.height}${i===artIndex?' · 当前':''}</h4>${a.svg}`;
-      d.style.outline=i===artIndex?'2px solid var(--acc)':'none';
+      d.className='shot'+(i===artIndex?' on':'');
       d.onclick=()=>{artIndex=i;render();};
       c.appendChild(d);
     });
@@ -248,7 +320,10 @@ function applyOp(){
       mbt=r.mbt;$('src').value=mbt;artIndex=0;render();
       $('ops').value='';
     }else{
-      setStatus(false,r.error||'操作被拒绝');
+      const e=r.error||'操作被拒绝';
+      const hint=(e.includes('unknown_artboard')||e.includes('unknown_node'))
+        ?' — 请用上方芯片里的真实 id（画板/节点名以当前文档为准）':'';
+      setStatus(false,e+hint);
     }
   }catch(e){setStatus(false,String(e.message||e));}
 }
@@ -268,10 +343,17 @@ async function loadTemplates(){
 $('tpl').addEventListener('change',e=>{
   const id=e.target.value;if(!id)return;
   try{
-    const base=mbt.trim()?mbt:MINIMAL;
-    const r=engine.apply_agent_op(base, `template ${id} demo`);
-    if(r.ok===true&&r.mbt){mbt=r.mbt;$('src').value=mbt;artIndex=0;render();setStatus(true,'模板已载入：'+id);}
-    else setStatus(false,r.error||'模板载入失败');
+    let base=mbt.trim()?mbt:MINIMAL;
+    let r=engine.apply_agent_op(base, `template ${id} demo`);
+    if(r.ok!==true||!r.mbt){setStatus(false,r.error||'模板载入失败');e.target.value='';return;}
+    let doc=r.mbt;
+    // 存根起步时清掉空存根画板，避免预览/芯片里残留无节点的占位画板
+    const abs=(r.artboards||[]).filter(a=>(a.nodes||[]).length===0).map(a=>a.id);
+    for(const dead of abs){
+      const r2=engine.apply_agent_op(doc, `delete-artboard ${dead}`);
+      if(r2.ok===true&&r2.mbt)doc=r2.mbt;
+    }
+    mbt=doc;$('src').value=mbt;artIndex=0;render();setStatus(true,'模板已载入：'+id);
   }catch(err){setStatus(false,String(err.message||err));}
   e.target.value='';
 });

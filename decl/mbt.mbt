@@ -659,12 +659,19 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   out.write_string("  format: visual-document\n")
   out.write_string("  revision: " + self.project.revision.to_string() + "\n")
   out.write_string("  title: " + self.document.title + "\n")
-  out.write_string("  entry: " + self.entry + "\n")
-  out.write_string("  artboards:\n")
   let ids : Array[String] = []
   for id in self.project.artboards.keys() {
     ids.push(id)
   }
+  // entry 画板可能已被 delete-artboard 移除：序列化悬空 entry 会让下一次
+  // load 直接 mbt_unknown_entry，文档就此打不开。失效时重定向到首个剩余画板。
+  let entry = if self.project.artboards.contains(self.entry) {
+    self.entry
+  } else {
+    ids[0]
+  }
+  out.write_string("  entry: " + entry + "\n")
+  out.write_string("  artboards:\n")
   mbt_yaml_list(out, ids, "    ")
   if self.project.flows.length() > 0 {
     out.write_string("  flows:\n")
