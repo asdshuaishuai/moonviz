@@ -72,12 +72,14 @@ test "Agent 工作流：发现组件 → 创建画板 → 放置组件 → 查�
   assert_true(abl.contains("\"login\""))
   assert_true(abl.contains("\"nodes\":5"))
 
-  // 8) Agent 工具清单
+  // 8) Agent 工具清单（46 工具全量字典，MCP tools/list 同源）
   let tools = list_tools_json()
   assert_true(tools.contains("list_components"))
   assert_true(tools.contains("place_component"))
   assert_true(tools.contains("lint_design"))
-  assert_true(tools.contains("suggest_fix"))
+  assert_true(tools.contains("set_token"))
+  assert_true(tools.contains("export_html"))
+  assert_true(tools.contains("inputSchema"))
 }
 
 ///|

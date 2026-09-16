@@ -36,6 +36,10 @@ Structural:
 `align <ab> <mode> <n1> <n2> ...` · `resize-canvas <ab> <w> <h>` ·
 `responsive <ab>` · `restyle <ab> <component_id> k=v ...`
 
+Images: `place <ab> image <id>` then `update <ab> <id> text=<https://...|data:image/...> radius=<n>` —
+a non-empty URL renders a real `<image>` (rounded clip, cover-fit); empty text falls back to the
+placeholder glyph. The URL lives in the node's `text` field and round-trips through canonical MBT.
+
 Navigation / theme / tokens / debt:
 `flow <from_ab> <to_ab> <node>` (tap navigation edge) ·
 `theme <name>` (`light dark high_contrast sepia nord sunset`) ·
