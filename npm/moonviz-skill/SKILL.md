@@ -25,6 +25,10 @@ Prebuilt CLI/MCP binaries (no toolchain needed) are published per platform by
 
 ### Operation grammar (mutating ops — Agent and Human share them)
 
+Machine-readable source of truth: `list-ops` (CLI) / `list_ops` (MCP) emit the
+complete op surface as JSON (op / usage / category / gates / description) —
+`moonviz-ops.json` on Pages is generated from it. Keep this block in lockstep.
+
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
 `place <ab> <component> <id> [variant|-] [x] [y] [k=v ...]` ·
@@ -117,9 +121,12 @@ Add to your MCP config:
 }
 ```
 
-The MCP dispatch (`mcp/main.mbt`) mirrors the CLI op surface under
-snake_case names. Do not cite a hardcoded tool count — enumerate from the
-dispatch table:
+The tool registry lives in `core/agent_api.mbt` (single source of truth)
+and is emitted by the CLI's `list-tools` as valid JSON in MCP `tools/list`
+form: `name` / `description` / `inputSchema{properties,required}`. Both the
+MCP server and the CLI consume it directly. Enumerate the surface from
+`list-tools` (the docs site CI also deploys it as `moonviz-tools.json`);
+do not cite a hardcoded tool count:
 
 - **Project/template**: `list_templates`, `list_components`, `list_tokens`,
   `list_themes`, `list_artboards`, `apply_template`, `place_component`
@@ -139,13 +146,9 @@ dispatch table:
 
 `ddp_view` is read-only metadata for integrations; it exposes no mutation path.
 
-> **Known issue — `list-tools` is not yet a reliable registry.** The CLI's
-> `list-tools` currently dumps only a subset of the dispatch table, and its
-> `params` field embeds unescaped nested JSON, so the emitted line is not
-> valid JSON. Until fixed, treat `mcp/main.mbt`'s dispatch as the source of
-> truth for enumeration. Once `list-tools` emits the full surface as valid
-> JSON, it becomes the machine-readable tool registry and this note (along
-> with any hand-maintained tool lists) should be deleted.
+`list-tools` is the machine-readable tool registry (resolved: it
+previously dumped a subset with unescaped nested JSON — fixed in the
+`core/agent_api.mbt` registry rebuild).
 
 Argument passing mirrors the CLI: list-ish arguments are comma-separated
 (`nodes="a,b"`), property arguments are space-separated `k=v`

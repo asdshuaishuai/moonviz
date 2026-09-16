@@ -216,6 +216,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     }
     "list-tools" => @core.list_tools_json()
+    "list-ops" => @core.list_ops_json()
     "list-tokens" => p.tokens.to_json()
     "list-themes" => {
       let themes = @core.builtin_themes()

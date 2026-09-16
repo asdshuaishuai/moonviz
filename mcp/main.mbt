@@ -497,6 +497,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
     "ddp_view" =>
       "{\"ok\":true,\"read_only\":true,\"mutations\":false,\"codec\":\"engine\"}"
     "export_artifact" => p.export_artifact(agent_id="mcp")
+    "list_ops" => @core.list_ops_json()
     "generate_spec" => {
       if artboard == "" {
         return err_json("missing artboard")

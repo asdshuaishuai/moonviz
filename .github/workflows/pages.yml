@@ -38,6 +38,7 @@ jobs:
           cp _build/wasm-gc/release/build/wasm/wasm.wasm site/assets/moonviz.wasm
           # 工具能力字典：与线上 wasm 同源生成（core/agent_api.mbt 单一事实源）
           printf 'list-tools\nexit\n' | _build/native/release/build/cli/cli.exe | sed -n 2p > site/assets/moonviz-tools.json
+          printf 'list-ops\nexit\n' | _build/native/release/build/cli/cli.exe | sed -n 2p > site/assets/moonviz-ops.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -25,6 +25,10 @@ Prebuilt CLI/MCP binaries (no toolchain needed) are published per platform by
 
 ### Operation grammar (mutating ops — Agent and Human share them)
 
+Machine-readable source of truth: `list-ops` (CLI) / `list_ops` (MCP) emit the
+complete op surface as JSON (op / usage / category / gates / description) —
+`moonviz-ops.json` on Pages is generated from it. Keep this block in lockstep.
+
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
 `place <ab> <component> <id> [variant|-] [x] [y] [k=v ...]` ·

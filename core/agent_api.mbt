@@ -106,6 +106,7 @@ pub fn list_tools() -> Array[AgentTool] {
   add("export_html", "Export the whole project as a self-contained interactive HTML prototype (node-level flows, state CSS, nav stack, toast).", [])
   add("export_svg", "Export one artboard as SVG (themed surface/outline).", [s("artboard", "artboard id")])
   add("ddp_view", "Report DDP codec status (read-only view).", [])
+  add("list_ops", "Machine-readable CLI op surface: all 25 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).", [])
   tools
 }
 
@@ -133,6 +134,212 @@ pub fn list_tools_json() -> String {
     let required_j = required.join(",")
     parts.push(
       "{\"name\":\"\{t.name}\",\"description\":\"\{json_escape(t.description)}\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\{props_j}},\"required\":[\{required_j}]}}",
+    )
+  }
+  let joined = parts.join(",")
+  "[\{joined}]"
+}
+
+// ---------------------------------------------------------------------------
+// CLI op 面字典（list-ops）
+// ---------------------------------------------------------------------------
+
+///|
+/// 单条 mutating op：名称 / 用法（与 ops.mbt 分发器的
+/// `mbt_operation_usage:` 逐字一致）/ 分类 / 说明。
+pub(all) struct OpEntry {
+  op : String
+  usage : String
+  category : String
+  description : String
+}
+
+///|
+/// CLI op 面注册表：Agent 与 Human 双路线共享的全部 mutating 操作。
+///
+/// ⚠️ 与 core/ops.mbt 的 apply_operation 分发器一一对应——新增 op 时
+/// 三处同步：分发器分支、本注册表、SKILL.md 语法块。drift-guard 测试
+/// （ops_registry_wbtest.mbt）会对每条注册 op 实际打一遍分发器，usage
+/// 不一致或漏注册都会红。
+pub fn op_entries() -> Array[OpEntry] {
+  let ops : Array[OpEntry] = []
+  let add = fn(
+    op : String,
+    usage : String,
+    category : String,
+    description : String,
+  ) {
+    ops.push({ op, usage, category, description })
+  }
+  // ---- 结构 ----
+  add(
+    "create",
+    "create <name> [width] [height]",
+    "structural",
+    "Create a blank artboard.",
+  )
+  add(
+    "template",
+    "template <template> <name> [width] [height]",
+    "structural",
+    "Instantiate a page template as a new artboard (id = template_id).",
+  )
+  add(
+    "place",
+    "place <artboard> <component> <id> [variant] [x] [y]",
+    "structural",
+    "Place a component instance (user-component params as trailing k=v).",
+  )
+  add(
+    "duplicate",
+    "duplicate <artboard> <new_name>",
+    "structural",
+    "Duplicate an artboard.",
+  )
+  add(
+    "delete-artboard",
+    "delete-artboard <artboard>",
+    "structural",
+    "Delete an artboard and its flows.",
+  )
+  add(
+    "update",
+    "update <artboard> <node> k=v",
+    "structural",
+    "Edit node properties via k=v pairs (w h text fill text_color stroke radius opacity font_size ...). Image src lives in text=<url>.",
+  )
+  add(
+    "move",
+    "move <artboard> <node> <x> <y>",
+    "structural",
+    "Move a node to absolute x/y.",
+  )
+  add(
+    "copy",
+    "copy <artboard> <node> <new_id> [dx] [dy]",
+    "structural",
+    "Copy a node to a new id with optional offset.",
+  )
+  add(
+    "delete",
+    "delete <artboard> <node>",
+    "structural",
+    "Delete a node.",
+  )
+  add(
+    "reorder",
+    "reorder <artboard> <node> front|back|up|down",
+    "structural",
+    "Change z-order of a node.",
+  )
+  add(
+    "flip",
+    "flip <artboard> <node> h|v|both|none",
+    "structural",
+    "Flip a node horizontally/vertically.",
+  )
+  add(
+    "group",
+    "group <artboard> <group_id> <n1> <n2> [n3 ...]",
+    "structural",
+    "Group nodes into a frame/group.",
+  )
+  add(
+    "ungroup",
+    "ungroup <artboard> <group_id>",
+    "structural",
+    "Dissolve a group; children return to the parent.",
+  )
+  add(
+    "align",
+    "align <artboard> <mode> <n1> <n2> [n3 ...]",
+    "structural",
+    "Align >=2 nodes (left/right/top/bottom/hcenter/vcenter).",
+  )
+  add(
+    "resize-canvas",
+    "resize-canvas <artboard> <width> <height>",
+    "structural",
+    "Resize an artboard canvas.",
+  )
+  add(
+    "responsive",
+    "responsive <artboard>",
+    "structural",
+    "Generate responsive variants (_tablet/_desktop) of an artboard.",
+  )
+  add(
+    "restyle",
+    "restyle <artboard> <component_id> k=v [k=v ...]",
+    "structural",
+    "Restyle a component definition (affects its instances).",
+  )
+  // ---- 交互 ----
+  add(
+    "interact",
+    "interact <artboard> <node> <trigger> <action_spec>",
+    "interaction",
+    "Attach an interaction (writes the ⚡trigger→action name marker).",
+  )
+  add(
+    "uninteract",
+    "uninteract <artboard> <node>",
+    "interaction",
+    "Detach all interactions from a node.",
+  )
+  // ---- 组件状态 ----
+  add(
+    "state",
+    "state <artboard> <node> <state_name> k=v [k=v ...]",
+    "state",
+    "Define a state patch (fill/text_color/stroke/text/radius/font_size).",
+  )
+  add(
+    "set-state",
+    "set-state <node> <state_name> [toggle]",
+    "state",
+    "Set the current state; [cur:<name>] marker persists it in the document.",
+  )
+  // ---- 导航 / 主题 / 令牌 / 债 ----
+  add(
+    "flow",
+    "flow <from> <to> <node>",
+    "navigation",
+    "Add a tap navigation edge between artboards.",
+  )
+  add(
+    "theme",
+    "theme <name>",
+    "theme",
+    "Switch global theme: role-recolors matching literals (reversible) and persists via frontmatter `theme:`.",
+  )
+  add(
+    "token",
+    "token <name> <value>",
+    "tokens",
+    "Override a COLOR design token: recolors old-value literals, persists via frontmatter `tokens:`; setting the default value back reverts.",
+  )
+  add(
+    "fix",
+    "fix <artboard>",
+    "debt",
+    "Debt-repayment auto-fix: commits only when total violations strictly decrease; the remainder is accepted as visual debt (HumanGate fallback).",
+  )
+  ops
+}
+
+///|
+/// CLI op 面字典（list-ops / list_ops 输出）：
+/// [{"op","usage","category","description","gates":{"agent":true,"human":true}}]
+///
+/// 全部 25 条 op 在双路线共享（差别在提交门禁的校验强度：AgentGate 硬拦
+/// 结构违规，HumanGate 放行视觉债）；fix 的还债特例写进 description。
+pub fn list_ops_json() -> String {
+  let gates = "{\"agent\":true,\"human\":true}"
+  let parts : Array[String] = []
+  for e in op_entries().iter() {
+    parts.push(
+      "{\"op\":\"\{e.op}\",\"usage\":\"\{json_escape(e.usage)}\",\"category\":\"\{e.category}\",\"description\":\"\{json_escape(e.description)}\",\"gates\":\{gates}}",
     )
   }
   let joined = parts.join(",")
