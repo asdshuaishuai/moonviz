@@ -1,6 +1,6 @@
 {
   "name": "moonviz-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server launcher for the MoonViz prototype design engine. Ships a prebuilt native binary per platform (zero compile, instant start); falls back to `moon run` when no binary matches.",
   "type": "module",
   "bin": {
@@ -9,7 +9,8 @@
   "files": [
     "bin.mjs",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "engines": {
     "node": ">=18"

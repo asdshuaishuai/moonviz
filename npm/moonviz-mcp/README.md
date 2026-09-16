@@ -1,12 +1,14 @@
 # moonviz-mcp
 
-[MoonViz](https://github.com/asdshuaishuai/moonviz) 引擎的 MCP（Model Context Protocol）服务器启动器。
+MCP (Model Context Protocol) server launcher for the [MoonViz](https://github.com/asdshuaishuai/moonviz) engine.
 
-MoonViz 是纯 MoonBit 实现的原型设计引擎：`.mbt.md` 单一事实源、human/Agent 双路线编辑、每次预览从源重建。本包把引擎的 MCP server 以**平台预编译二进制**分发——`npx` 即起，零编译、零工具链。
+> 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
 
-## 使用
+MoonViz is a prototype design engine written entirely in MoonBit: one `.mbt.md` file as the single source of truth, human/Agent dual-route editing, and every preview rebuilt from source. This package ships the engine's MCP server as a **prebuilt platform binary** — `npx` to start, zero compile, zero toolchain.
 
-任意 MCP 客户端（Claude Desktop / ZCode / Cursor / 5ire …）配置：
+## Usage
+
+Point any MCP client (Claude Desktop / ZCode / Cursor / 5ire …) at it:
 
 ```json
 {
@@ -19,7 +21,7 @@ MoonViz 是纯 MoonBit 实现的原型设计引擎：`.mbt.md` 单一事实源�
 }
 ```
 
-需要引擎目录的工具（`read_mbt` / `render_mbt` / `apply_*` 等）通过 `MOONVIZ_DIR` 指向你的 moonviz 仓库 clone：
+Tools that need the engine directory (`read_mbt` / `render_mbt` / `apply_*` …) resolve the repo via `MOONVIZ_DIR`:
 
 ```json
 {
@@ -33,34 +35,37 @@ MoonViz 是纯 MoonBit 实现的原型设计引擎：`.mbt.md` 单一事实源�
 }
 ```
 
-## 工作方式
+## How it works
 
-1. 按 `os-arch` 解析可选依赖平台包（`moonviz-bin-darwin-arm64` / `-darwin-x64` / `-linux-x64` / `-linux-arm64`，npm 自动只装匹配当前平台的那一个），直接以 stdio 运行内嵌二进制——启动为毫秒级。
-2. 当前平台无预编译包时回退：`moon run --target native mcp`（需要 [MoonBit 工具链](https://docs.moonbitlang.com/) + `MOONVIZ_DIR` 指向引擎仓库）。
+1. Resolves the optional platform package by `os-arch` (`moonviz-bin-darwin-arm64` / `-linux-x64` / `-linux-arm64` / `-win32-x64`; npm installs only the one matching your platform) and runs the embedded binary over stdio — millisecond startup.
+2. Falls back to `moon run --target native mcp` when no prebuilt binary matches your platform (requires the [MoonBit toolchain](https://docs.moonbitlang.com/) + `MOONVIZ_DIR` pointing at the engine repo).
 
-## 工具一览（节选）
+## Tools (excerpt)
 
-| 工具 | 说明 |
+| Tool | Description |
 |---|---|
-| `initialize` | 初始化项目会话 |
-| `read_mbt` / `render_mbt` | 源侧读写入口：读取 canonical 源码 / 从源渲染全部画板 |
-| `list_templates` / `list_components` / `list_themes` / `list_tokens` / `list_artboards` | 枚举模板（8 页面）/ 组件（8×22 变体）/ 主题 / token / 画板 |
-| `apply_template` / `apply_theme` | 实例化模板 / 切换主题 |
-| `lint_design` / `auto_fix` | 设计 Lint 与自动修复 |
-| `critique` / `infer_page_type` / `infer_missing` | 设计批评与推断 |
-| `extract_design_system` / `generate_spec` / `generate_responsive` | 设计系统反提取 / 移交标注 / 响应式变体 |
-| `export_svg` / `export_artifact` / `benchmark` | 导出与性能基准 |
-| `ddp_view` | DDP 容器只读元数据 |
+| `read_mbt` / `render_mbt` | Source-side read/write: read canonical source / render all artboards from source |
+| `list_templates` / `list_components` / `list_themes` / `list_tokens` / `list_artboards` | Enumerate templates (8 pages) / components (8×22 variants) / themes / tokens / artboards |
+| `apply_template` / `apply_theme` / `set_token` | Instantiate a template / switch theme / override a design token |
+| `place_component` / `update_node` / `move_node` / `group_nodes` / `align_nodes` | Structural editing |
+| `interact` / `define_state` / `set_state` | Interactions (⚡trigger→action) and component state variants |
+| `lint_design` / `auto_fix` | Design lint and auto-fix |
+| `critique` / `infer_page_type` / `infer_missing` | Design critique and inference |
+| `extract_design_system` / `generate_spec` / `generate_responsive` | Design-system extraction / handoff spec / responsive variants |
+| `export_svg` / `export_html` / `export_artifact` / `benchmark` | Exports and performance benchmark |
+| `ddp_view` | Read-only DDP container metadata |
 
-## 从源码构建二进制
+46 tools total, each with a full JSON-Schema input description — see `tools/list` or the [tools dictionary](https://asdshuaishuai.github.io/moonviz/assets/moonviz-tools.json).
+
+## Building the binaries from source
 
 ```bash
 git clone https://github.com/asdshuaishuai/moonviz && cd moonviz
 moon build --release --target native mcp
-# → _build/native/release/build/mcp/mcp.exe（自包含，仅依赖 libc）
+# → _build/native/release/build/mcp/mcp.exe (self-contained, libc only)
 ```
 
-平台包由仓库 `.github/workflows/binaries.yml` CI 矩阵构建。
+Platform packages are built by the repo's `.github/workflows/binaries.yml` CI matrix.
 
 ## License
 

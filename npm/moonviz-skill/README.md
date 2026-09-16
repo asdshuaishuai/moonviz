@@ -1,11 +1,13 @@
 # moonviz-skill
 
-[MoonViz](https://github.com/asdshuaishuai/moonviz) 引擎的 Agent skill 文档：操作语法（Agent/Human 双门禁共用）、`.mbt.md` 唯一事实源工作流、CLI/MCP 用法。
+Agent skill document for the [MoonViz](https://github.com/asdshuaishuai/moonviz) engine: the operation grammar (shared by the Agent/Human dual gates), the `.mbt.md` single-source-of-truth workflow, and CLI/MCP usage.
 
-安装后把包内 `SKILL.md` 提供给你的编码 agent（Claude Code skill / 任意 agent 的技能文档），或直接阅读 `node_modules/moonviz-skill/SKILL.md`。
+> 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
 
-配套包：
+After installing, hand the bundled `SKILL.md` to your coding agent (Claude Code skill / any agent's skill document), or simply read `node_modules/moonviz-skill/SKILL.md`.
 
-- `moonviz-mcp` — MCP server（预编译二进制，`npx moonviz-mcp`）
-- `moonviz-engine-sdk` — Node.js 集成 SDK
-- `moonviz-engine-wasm` — 浏览器/Node WASM 引擎
+Companion packages:
+
+- `moonviz-mcp` — MCP server (prebuilt binary, `npx moonviz-mcp`)
+- `moonviz-engine-sdk` — Node.js integration SDK
+- `moonviz-engine-wasm` — WASM engine for browser/Node
