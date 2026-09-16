@@ -29,12 +29,15 @@ jobs:
       # wasm-gc 目标对工具链版本不敏感，latest 即可。
       - name: Install MoonBit toolchain
         run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-      - name: Build wasm engine
+      - name: Build wasm engine + tools dictionary
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --target wasm-gc --release
+          moon build --release --target native cli
           mkdir -p site/assets
           cp _build/wasm-gc/release/build/wasm/wasm.wasm site/assets/moonviz.wasm
+          # 工具能力字典：与线上 wasm 同源生成（core/agent_api.mbt 单一事实源）
+          printf 'list-tools\nexit\n' | _build/native/release/build/cli/cli.exe | sed -n 2p > site/assets/moonviz-tools.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
