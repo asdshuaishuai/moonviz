@@ -8,8 +8,8 @@ on:
 
 env:
   MOONVIZ_VERSION: "0.1.0"
-  # 工具链版本锁定：升级必须走显式 PR 并全量跑绿 moon test + 冒烟。
-  MOON_VERSION: "0.1.20260209"
+  # 不锁定工具链：历史锁定版目录会从下载 CDN 下架（403），latest 与
+  # pages.yml 一致；wasm-gc/native 对小版本不敏感，产物以冒烟测试兜底。
 
 jobs:
   build:
@@ -33,9 +33,9 @@ jobs:
             runner: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install MoonBit toolchain (pinned, unix)
+      - name: Install MoonBit toolchain (latest, unix)
         if: runner.os != 'Windows'
-        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOON_VERSION"
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
       - name: Install MoonBit toolchain (Windows)
         if: runner.os == 'Windows'
         shell: powershell

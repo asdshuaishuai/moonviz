@@ -1,0 +1,19 @@
+{
+  "name": "moonviz-skill",
+  "version": "0.1.0",
+  "description": "Agent skill document for the MoonViz prototype design engine: operation grammar, dual-gate semantics, CLI/MCP usage, .mbt.md fact-source workflow. Install and point your coding agent at SKILL.md.",
+  "type": "module",
+  "files": ["SKILL.md", "README.md", "LICENSE"],
+  "scripts": {
+    "prepublishOnly": "cp ../../SKILL.md SKILL.md && test -s SKILL.md"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asdshuaishuai/moonviz.git",
+    "directory": "npm/moonviz-skill"
+  },
+  "homepage": "https://asdshuaishuai.github.io/moonviz/",
+  "bugs": "https://github.com/asdshuaishuai/moonviz/issues",
+  "keywords": ["moonviz", "skill", "agent", "ai-agent", "moonbit", "prototype", "design-engine", "mcp", "mbt"],
+  "license": "MIT"
+}
