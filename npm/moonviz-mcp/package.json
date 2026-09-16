@@ -4,7 +4,7 @@
   "description": "MCP server launcher for the MoonViz prototype design engine. Ships a prebuilt native binary per platform (zero compile, instant start); falls back to `moon run` when no binary matches.",
   "type": "module",
   "bin": {
-    "moonviz-mcp": "./bin.mjs"
+    "moonviz-mcp": "bin.mjs"
   },
   "files": [
     "bin.mjs",
