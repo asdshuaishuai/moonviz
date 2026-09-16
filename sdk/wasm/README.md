@@ -1,5 +1,7 @@
 # moonviz-engine-wasm
 
+> 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
+
 The [MoonViz](https://github.com/asdshuaishuai/moonviz) prototype design engine, compiled to **WebAssembly GC**. Render and validate `.mbt.md` visual documents entirely in the browser or in Node — no MoonBit toolchain, no subprocess, no server.
 
 The engine treats one MoonBit literate source file — **`.mbt.md`** — as the single source of truth of a design project. This package embeds a prebuilt `wasm-gc` artifact (≈90 KB) and exposes its render/validate pipeline with plain-string ergonomics via [JS String Builtins](https://github.com/WebAssembly/js-string-builtin).

@@ -1,5 +1,7 @@
 # moonviz-engine-sdk
 
+> 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
+
 Node.js integration SDK for the [MoonViz](https://github.com/asdshuaishuai/moonviz) prototype design engine (pure [MoonBit](https://www.moonbitlang.com/)).
 
 MoonViz treats one MoonBit literate source file — **`.mbt.md`** — as the single source of truth of a design project. Human canvas edits and Agent edits both commit back to that same source; every visual preview is rebuilt from it. This SDK is a **pure transport / orchestration layer**: it spawns the engine CLI, encodes commands, and parses newline-framed JSON. It never caches and never becomes a second source of truth.
@@ -15,7 +17,7 @@ npm install moonviz-engine-sdk
 **Recommended (zero toolchain):** install the prebuilt platform binary alongside the SDK. The engine ships as a self-contained native executable (links only libc — no MoonBit toolchain, no engine sources):
 
 ```bash
-npm install moonviz-engine-sdk moonviz-bin-darwin-arm64   # or -linux-x64 / -linux-arm64 / -darwin-x64
+npm install moonviz-engine-sdk moonviz-bin-darwin-arm64   # or -linux-x64 / -linux-arm64
 ```
 
 The SDK auto-discovers the platform package (or honor `MOONVIZ_CLI_BIN=/path/to/moonviz-cli`). In this mode `new MoonViz()` works with no other setup.

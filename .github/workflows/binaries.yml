@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  MOONVIZ_VERSION: "0.1.0"
+  MOONVIZ_VERSION: "0.1.1"
   # 不锁定工具链：历史锁定版目录会从下载 CDN 下架（403），latest 与
   # pages.yml 一致；wasm-gc/native 对小版本不敏感，产物以冒烟测试兜底。
 
@@ -89,12 +89,13 @@ jobs:
             "type": "module",
             "os": ["${{ startsWith(matrix.platform, 'darwin') && 'darwin' || 'linux' }}"],
             "cpu": ["${{ endsWith(matrix.platform, 'arm64') && 'arm64' || 'x64' }}"],
-            "files": ["bin", "README.md", "LICENSE"],
+            "files": ["bin", "README.md", "README.zh-CN.md", "LICENSE"],
             "license": "MIT",
             "repository": { "type": "git", "url": "git+https://github.com/asdshuaishuai/moonviz.git", "directory": "npm/moonviz-bin-${{ matrix.platform }}" }
           }
           EOF
           sed "s/darwin-arm64/${{ matrix.platform }}/" npm/moonviz-bin-darwin-arm64/README.md > "$PKG/README.md"
+          sed "s/darwin-arm64/${{ matrix.platform }}/" npm/moonviz-bin-darwin-arm64/README.zh-CN.md > "$PKG/README.zh-CN.md"
           npm pack "./$PKG"
       - name: Stage npm platform package (Windows)
         if: runner.os == 'Windows'
@@ -113,7 +114,7 @@ jobs:
             "type": "module",
             "os": ["win32"],
             "cpu": ["x64"],
-            "files": ["bin", "README.md", "LICENSE"],
+            "files": ["bin", "README.md", "README.zh-CN.md", "LICENSE"],
             "license": "MIT",
             "repository": { "type": "git", "url": "git+https://github.com/asdshuaishuai/moonviz.git", "directory": "npm/moonviz-bin-${{ matrix.platform }}" }
           }
@@ -121,6 +122,9 @@ jobs:
           Get-Content npm/moonviz-bin-darwin-arm64/README.md |
             ForEach-Object { $_ -replace 'darwin-arm64', '${{ matrix.platform }}' } |
             Set-Content "$pkg/README.md"
+          Get-Content npm/moonviz-bin-darwin-arm64/README.zh-CN.md |
+            ForEach-Object { $_ -replace 'darwin-arm64', '${{ matrix.platform }}' } |
+            Set-Content "$pkg/README.zh-CN.md"
           npm pack "./$pkg"
       - uses: actions/upload-artifact@v4
         with:
