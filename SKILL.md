@@ -23,7 +23,7 @@ Prebuilt CLI/MCP binaries (no toolchain needed) are published per platform by
 `.github/workflows/binaries.yml` as `moonviz-bin-<platform>` (`bin/moonviz-cli`,
 `bin/moonviz-mcp`).
 
-### Operation grammar (Agent and Human share it)
+### Operation grammar (mutating ops — Agent and Human share them)
 
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
@@ -35,6 +35,16 @@ Structural:
 `group <ab> <group_id> <n1> <n2> ...` · `ungroup <ab> <group_id>` ·
 `align <ab> <mode> <n1> <n2> ...` · `resize-canvas <ab> <w> <h>` ·
 `responsive <ab>` · `restyle <ab> <component_id> k=v ...`
+
+Navigation / theme / tokens / debt:
+`flow <from_ab> <to_ab> <node>` (tap navigation edge) ·
+`theme <name>` (`light dark high_contrast sepia nord sunset`) ·
+`token <name> <value>` (COLOR tokens ONLY — `primary`, `on_primary`,
+`secondary`, `surface`, `background`, `error`, `text_primary`, ...; full set
+via `list-tokens`. Spacing/radii/typography names return `unknown_token`.
+An override recolors immediately, persists in the document's frontmatter
+`tokens:` section, and setting the default value back removes it) ·
+`fix <ab>` (commits only when violations strictly decrease)
 
 Node properties (`update <ab> <node> k=v ...`):
 `w h text fill text_color stroke stroke_width radius opacity font_size weight
@@ -50,11 +60,12 @@ layout gap justify padding width_mode height_mode x_mode y_mode name`
 - `x_mode`/`y_mode` `center|start`; `x=@decl.center`, `x=@decl.end(24)`
 - `name` renames a node (its carrier for interaction markers)
 
-Interaction and state:
+Interaction and state (mutating):
 `interact <ab> <node> <trigger> <action_spec>` ·
-`uninteract <ab> <node>` · `interactions <ab>` ·
-`state <ab> <node> <state_name> k=v ...` · `states <ab>` ·
-`set-state <node> <state_name> [toggle]` · `constrain <ab> <intent_text>`
+`uninteract <ab> <node>` ·
+`state <ab> <node> <state_name> k=v ...` ·
+`set-state <node> <state_name> [toggle]` — define the state via `state`
+BEFORE `set-state` can target it (otherwise `no_states`)
 
 - triggers: `tap long_press swipe_left swipe_right swipe_up swipe_down
   scroll_end key_enter focus blur`
@@ -65,6 +76,26 @@ Interaction and state:
   tap resolution is flow → marker → `NodeUpdated`
 - component states persist as `[state:name:k=v,...]` markers and apply as a
   render-time transform when activated
+
+### Read-only ops (inspection — NOT accepted by the apply-op gates)
+
+Both `apply-human-mbt-op-b64` and `apply-agent-mbt-op-b64` reject every op
+below with `mbt_operation_unsupported`. Run them after `load-mbt-b64`:
+
+`list` · `flows` · `list-templates` · `list-components` · `list-tools` ·
+`list-tokens` · `list-themes` · `benchmark` ·
+`lint <ab>` · `critique <ab>` · `query <ab>` · `infer <ab>` · `spec <ab>` ·
+`missing <ab>` · `doc-json <ab>` · `states <ab>` · `interactions <ab>` ·
+`export-svg <ab>` · `export-html <ab>` (self-contained interactive HTML
+prototype: node-level tap bindings + component states as CSS variants) ·
+`tap <ab> <x> <y>` (simulate a tap, returns state changes)
+
+### CLI-pipeline-only (NOT reachable through either apply gate)
+
+`constrain <ab> <intent_text>` — both apply gates return
+`mbt_operation_unsupported`; it only runs on the load/session pipeline.
+To rename a node through the gates, use `update <ab> <node> name=<id>`
+(there is no standalone `name` op on the gated surface).
 
 ## MCP Server
 
@@ -82,7 +113,9 @@ Add to your MCP config:
 }
 ```
 
-44 tools are exposed, covering the same surface as the CLI grammar:
+The MCP dispatch (`mcp/main.mbt`) mirrors the CLI op surface under
+snake_case names. Do not cite a hardcoded tool count — enumerate from the
+dispatch table:
 
 - **Project/template**: `list_templates`, `list_components`, `list_tokens`,
   `list_themes`, `list_artboards`, `apply_template`, `place_component`
@@ -95,11 +128,20 @@ Add to your MCP config:
   `read_mbt`, `render_mbt`, `export_svg`, `generate_spec`,
   `infer_page_type`, `infer_missing`, `suggest_alignment`,
   `extract_design_system`, `benchmark`, `export_artifact`
+- **Theme/tokens/export**: `apply_theme`, `set_token`, `export_html`
 - **User components**: `component_compile`, `component_describe`,
   `component_export`, `component_import`, `component_delete`,
   `library_snapshot`, `library_restore`
 
 `ddp_view` is read-only metadata for integrations; it exposes no mutation path.
+
+> **Known issue — `list-tools` is not yet a reliable registry.** The CLI's
+> `list-tools` currently dumps only a subset of the dispatch table, and its
+> `params` field embeds unescaped nested JSON, so the emitted line is not
+> valid JSON. Until fixed, treat `mcp/main.mbt`'s dispatch as the source of
+> truth for enumeration. Once `list-tools` emits the full surface as valid
+> JSON, it becomes the machine-readable tool registry and this note (along
+> with any hand-maintained tool lists) should be deleted.
 
 Argument passing mirrors the CLI: list-ish arguments are comma-separated
 (`nodes="a,b"`), property arguments are space-separated `k=v`
