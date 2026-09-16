@@ -27,7 +27,9 @@ jobs:
             runner: ubuntu-24.04
           - platform: linux-arm64
             runner: ubuntu-24.04-arm
-          - platform: windows-x64
+          # 命名遵循 process.platform-process.arch（Windows 上是 win32）：
+          # moonviz-mcp/bin.mjs 按该约定解析 moonviz-bin-<platform> 包
+          - platform: win32-x64
             runner: windows-latest
     steps:
       - uses: actions/checkout@v4

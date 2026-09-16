@@ -10,7 +10,8 @@
     "moonviz-bin-darwin-arm64": "0.1.0",
     "moonviz-bin-darwin-x64": "0.1.0",
     "moonviz-bin-linux-x64": "0.1.0",
-    "moonviz-bin-linux-arm64": "0.1.0"
+    "moonviz-bin-linux-arm64": "0.1.0",
+    "moonviz-bin-win32-x64": "0.1.0"
   },
   "scripts": {
     "test": "node test/selftest.mjs"
