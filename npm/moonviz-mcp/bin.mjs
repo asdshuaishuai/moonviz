@@ -67,7 +67,9 @@ if (binary) {
     fail([
       `当前平台（${platform}）没有预编译二进制包，且回退条件不满足。`,
       '两种解决方式：',
-      '  1. 安装对应平台包：npm i -g moonviz-bin-' + platform + '（若已发布）',
+      '  1. 安装对应平台包：npm i -g moonviz-bin-' + platform + '（若已发布）；\n' +
+      '     Windows 平台请直接从 GitHub Releases 下载：\n' +
+      '     https://github.com/asdshuaishuai/moonviz/releases（moonviz-bin-win32-x64）',
       '  2. 回退模式需要：moon 工具链（https://docs.moonbitlang.com/）+ 设置 MOONVIZ_DIR 指向 moonviz 引擎仓库',
       `     当前检测：moon=${moon ? '✓' : '✗'}  MOONVIZ_DIR=${dir ? '✓' : '✗'}`,
     ].join('\n'));
