@@ -184,9 +184,14 @@ A `.ddp` file is the authenticated encrypted representation of one complete `.mb
 
 The Tauri shell and browser server transport opaque DDP bytes through the authenticated codec. The engine then decrypts, validates, and renders the MBT source. Import is atomic: a bad password, damaged bytes, invalid MBT, unknown visual entry, invalid flow, or predicate failure leaves the current project unchanged.
 
-## Read-only ddpView
+## Read-only ddpView (removed)
 
-`moonviz-demo-tauri/ddpView.html` is a read-only viewer. It can select a `.ddp`, decrypt it through the server's DDP codec, send the resulting MBT to MoonViz for validation/rendering, and display the derived SVG/source diagnostics. It has no edit, operation, save, or export controls; it cannot write the source or alter a DDP.
+`ddpView.html` was a read-only browser viewer (select a `.ddp`, decrypt via
+the server's DDP codec, render via MoonViz, show diagnostics; no edit/save
+controls). It lived in the demo repo, since renamed `deepdesign-studio`, and
+was removed there along with the browser-mode server during a dead-code
+purge. The design intent is preserved here for reference in case a viewer
+returns.
 
 ## Architecture
 
