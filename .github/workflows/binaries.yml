@@ -22,7 +22,8 @@ jobs:
           - platform: darwin-arm64
             runner: macos-14
           - platform: darwin-x64
-            runner: macos-13
+            # macos-13 已进入退役排水（排队 15min 无 runner），末代 Intel 镜像
+            runner: macos-15-intel
           - platform: linux-x64
             runner: ubuntu-24.04
           - platform: linux-arm64
