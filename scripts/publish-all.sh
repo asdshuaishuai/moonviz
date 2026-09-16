@@ -21,7 +21,7 @@ cd "$ROOT"
 # 强制走 npmjs 官方源；日常安装不受影响（全局镜像配置不改动）。
 export npm_config_registry="https://registry.npmjs.org"
 
-echo "==> 检查 npm 登录态（registry: $npm_config_registry）"
+echo "==> 检查 npm 登录态（registry: ${npm_config_registry}）"
 if ! npm whoami >/dev/null 2>&1; then
   echo "未登录。请先执行:" >&2
   echo "  npm login --registry=https://registry.npmjs.org" >&2
@@ -30,7 +30,7 @@ if ! npm whoami >/dev/null 2>&1; then
 fi
 echo "    已登录: $(npm whoami)"
 
-echo "==> 准备平台二进制 tarball（CI run $RUN_ID）"
+echo "==> 准备平台二进制 tarball（CI run ${RUN_ID}）"
 if ls "$TGZ_DIR"/*/*.tgz >/dev/null 2>&1; then
   echo "    使用已有: $TGZ_DIR"
 else
@@ -71,7 +71,8 @@ done
 # 2) 本地包（engine-sdk / engine-wasm / skill / mcp wrapper）
 for dir in sdk/node sdk/wasm npm/moonviz-skill npm/moonviz-mcp; do
   name="$(basename "$dir")"
-  publish_one "$name" "$dir" && done_list+=("$name") || fails=$((fails+1))
+  # 必须用绝对/./ 路径：裸 owner/repo 形式会被 npm 解析成 GitHub 简写
+  publish_one "$name" "$ROOT/$dir" && done_list+=("$name") || fails=$((fails+1))
 done
 
 echo ""
