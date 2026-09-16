@@ -1,78 +1,84 @@
-# MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+# MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
-**`.mbt.md` 是唯一事实源，MoonBit 是统一计算内核。Agent 通过工具 API 发现组件、放置元素、检查质量、修复违规——全部走结构化文本协议。本仓库 100% MoonBit，零手写 JS/Node。**
+> 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
+
+**`.mbt.md` is the single source of truth, MoonBit is the unified compute kernel. Agents discover components, place elements, check quality, and fix violations through a tool API — all over a structured text protocol. This repository is 100% MoonBit with zero hand-written JS/Node.**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Agent (任意 LLM)                                            │
-│  发现组件 → 创建画板 → 放置元素 → lint → 修复 → 导出         │
+│  Agent (any LLM)                                             │
+│  discover components → create artboard → place → lint →      │
+│  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (11 tools, JSON in/out)
+               │ Agent Tools API (47 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
-│  引擎 core/ + decl/（纯 MoonBit 库）                          │
+│  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
-│  │ 16色/7距/  │ │ 8组件×22   │ │ 多画板/流  │ │ lint/diff │ │
-│  │ 6角/8字号  │ │ 变体       │ │ /令牌/组件 │ │ /suggest  │ │
+│  │ 16 colors/  │ │ 8 comps ×  │ │ multi-    │ │ lint/diff │ │
+│  │ 7 spacing/  │ │ 22 variants│ │ boards/   │ │ /suggest  │ │
+│  │ 6 radii/    │ │            │ │ flows/    │ │           │ │
+│  │ 8 font sizes│ │            │ │ tokens    │ │           │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
-│  │ Scene Graph │ │ 布局求解    │ │ 不崩谓词   │ │ 声明往返   │ │
-│  │ 节点树      │ │ Fixed/Fill │ │ P0–P4     │ │ .mbt.md   │ │
+│  │ Scene Graph │ │ Layout     │ │ Non-crash │ │ Decl      │ │
+│  │ node tree   │ │ solver     │ │ preds     │ │ round-trip│ │
+│  │             │ │ Fixed/Fill │ │ P0–P4     │ │ .mbt.md   │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐               │
-│  │ SVG 输出    │ │ PNG 像素   │ │ 终端画布   │               │
-│  │            │ │ DEFLATE+AA │ │ ANSI 真彩 │               │
+│  │ SVG output  │ │ PNG pixels │ │ Terminal  │               │
+│  │             │ │ DEFLATE+AA │ │ canvas    │               │
 │  └────────────┘ └────────────┘ └───────────┘               │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ .mbt.md 事实源
+               │ .mbt.md fact source
 ┌──────────────▼────────┴─────────────────────────────────────┐
-│  decl/login.mbt.md 等（随 moon check/test 编译执行）           │
+│  decl/login.mbt.md etc. (compiled & executed by moon check/test) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent 工具清单（70+ 个）
+## Agent Tool List (47 tools)
 
-| 工具 | 语义 |
+| Tool | Semantics |
 | :--- | :--- |
-| `list_components` | 列出所有可用 UI 组件（含变体/描述/分类） |
-| `list_tokens` | 列出设计令牌（颜色/间距/圆角/字号） |
-| `create_artboard` | 创建新画板（name, width, height） |
-| `list_artboards` | 列出项目中的所有画板及元数据 |
-| `place_component` | 在画板上放置组件实例 |
-| `query_nodes` | 按类型/组件/文字内容查询节点 |
-| `lint_design` | 设计质量检查（对比度/触控/间距/一致性） |
-| `get_violations` | 获取不崩谓词违规列表 |
-| `suggest_fix` | 针对违规给出可执行修复补丁 |
-| `export_svg` | 导出画板为引擎派生 SVG |
-| `read_mbt` | 读取并校验完整 `.mbt.md` 源码 |
-| `render_mbt` | 从 `.mbt.md` 重新解析并渲染 |
-| `ddp_view` | 只读 DDP 查看与渲染契约 |
-| `export_react` | React TSX 组件桩（仅代码生成，不是事实源） |
-| `apply_template` | 从模板生成完整画板（一句话→整页面） |
-| `fork_variants` | 分叉设计变体（A/B 测试并行探索） |
-| `score_variants` | 对所有变体评分（违规/lint/对齐/丰富度） |
-| `merge_variant` | 合并最优变体回主分支 |
-| `auto_arrange` | 垂直等间距自动排列 |
-| `snap_to_grid` | 吸附到 N px 网格 |
-| `center_in_parent` | 父容器居中 |
-| `suggest_alignment` | 检测近似对齐并建议吸附 |
+| `list_components` | List all available UI components (with variants/descriptions/categories) |
+| `list_tokens` | List design tokens (colors/spacings/radii/font sizes) |
+| `create_artboard` | Create a new artboard (name, width, height) |
+| `list_artboards` | List all artboards in the project with metadata |
+| `place_component` | Place a component instance on an artboard |
+| `query_nodes` | Query nodes by kind/component/text content |
+| `lint_design` | Design quality checks (contrast/touch/spacing/consistency) |
+| `get_violations` | Get the non-crash predicate violation list |
+| `suggest_fix` | Actionable fix patches for violations |
+| `export_svg` | Export an artboard as engine-derived SVG |
+| `read_mbt` | Read and validate a complete `.mbt.md` source |
+| `render_mbt` | Re-parse and render from `.mbt.md` |
+| `ddp_view` | Read-only DDP view and render contract |
+| `export_react` | React TSX component stubs (code generation only, not a fact source) |
+| `apply_template` | Generate a complete artboard from a template (one sentence → full page) |
+| `fork_variants` | Fork design variants (parallel A/B exploration) |
+| `score_variants` | Score all variants (violations/lint/alignment/richness) |
+| `merge_variant` | Merge the best variant back into the main branch |
+| `auto_arrange` | Vertical equal-spacing auto-arrange |
+| `snap_to_grid` | Snap to an N px grid |
+| `center_in_parent` | Center within parent |
+| `suggest_alignment` | Detect near-alignments and suggest snapping |
 
-## 内置页面模板（8 个完整页面）
+## Built-in Page Templates (8 complete pages)
 
-| 模板 | 内容 |
+| Template | Contents |
 |:---|:---|
-| `login` | Logo + 标题 + 邮箱 + 密码 + 登录按钮 + 注册链接 |
-| `signup` | 标题 + 姓名 + 邮箱 + 密码 × 2 + 注册按钮 |
-| `dashboard` | App Bar + 统计卡片 2×2 + 图表 + 活动列表 |
-| `profile` | 头像 + 姓名 + 简介 + 统计 + 操作 + 内容列表 |
-| `settings` | 4 分组（通知/隐私/外观/关于）+ 退出按钮 |
-| `list_detail` | 列表页 + 详情页 |
-| `onboarding` | 三页引导 |
-| `empty_state` | 插图 + 文案 + CTA 按钮 |
+| `login` | Logo + title + email + password + sign-in button + sign-up link |
+| `signup` | Title + name + email + password × 2 + sign-up button |
+| `dashboard` | App bar + stat cards 2×2 + chart + activity list |
+| `profile` | Avatar + name + bio + stats + actions + content list |
+| `settings` | 4 groups (notifications/privacy/appearance/about) + sign-out button |
+| `list_detail` | List page + detail page |
+| `onboarding` | Three-page onboarding |
+| `empty_state` | Illustration + copy + CTA button |
 
-## 内置组件库（8 组件 × 22 变体）
+## Built-in Component Library (8 components × 22 variants)
 
-| 组件 | 分类 | 变体 |
+| Component | Category | Variants |
 | :--- | :--- | :--- |
 | `button` | actions | primary / secondary / danger |
 | `text_input` | inputs | default / filled |
@@ -83,130 +89,130 @@
 | `body_text` | display | body / caption |
 | `badge` | display | primary / success |
 
-## 设计 Lint
+## Design Lint
 
-| 规则 | 严重级 | 检查 |
+| Rule | Severity | Checks |
 | :--- | :--- | :--- |
-| `contrast` | error | 文字对比度 ≥ WCAG AA 4.5:1 |
-| `touch_target` | warning | 交互元素 ≥ 44×44 |
-| `spacing` | info | 容器内间距 ≥ 8 |
-| `empty_container` | warning | Frame 无子元素 |
+| `contrast` | error | Text contrast ≥ WCAG AA 4.5:1 |
+| `touch_target` | warning | Interactive elements ≥ 44×44 |
+| `spacing` | info | Padding inside containers ≥ 8 |
+| `empty_container` | warning | Frame with no children |
 
-## 快速开始
+## Quick Start
 
-### 环境搭建
+### Environment Setup
 
 ```bash
-# 1. 安装 MoonBit 工具链（需要 moon ≥ 最新稳定版）
+# 1. Install the MoonBit toolchain (moon ≥ latest stable)
 curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-moon version    # 验证：~/.moon/bin/moon 已在 PATH
+moon version    # Verify: ~/.moon/bin/moon is on PATH
 
-# 2. clone 引擎仓库
+# 2. Clone the engine repository
 git clone https://github.com/asdshuaishuai/moonviz && cd moonviz
 
-# 3.（可选，DDP 加密分发需要）构建 Rust 编解码器
+# 3. (Optional, for DDP encrypted distribution) Build the Rust codec
 cd ddp && cargo build --release && cd ..
-#    产物 ddp/target/release/ddp_codec（stdin JSON → stdout JSON）
-#    可用 MOONVIZ_DDP_HELPER 指定路径；SDK 会自动在 ddp/target/{debug,release} 下查找
+#    Produces ddp/target/release/ddp_codec (stdin JSON → stdout JSON)
+#    Override the path with MOONVIZ_DDP_HELPER; the SDK searches ddp/target/{debug,release} automatically
 
-# 4. 全量测试（142 项）
+# 4. Full test suite (174 tests)
 moon test
 ```
 
-### 首次运行
+### First Run
 
 ```bash
-# A. 有状态 CLI 会话：stdin 逐行命令 → stdout 逐行 JSON
+# A. Stateful CLI session: one command per stdin line → one JSON per stdout line
 moon run --target native cli
-template login t_login 390 844     # 从模板建画板
-update t_login welcome_title text="欢迎回来"
-flow t_login t_home login_btn      # 登录按钮 → 跳转主页
-export-mbt-human                    # HumanGate 校验 + 返回 canonical .mbt.md
+template login t_login 390 844     # Create an artboard from a template
+update t_login welcome_title text="Welcome back"
+flow t_login t_home login_btn      # Sign-in button → navigate to home
+export-mbt-human                    # HumanGate validation + returns canonical .mbt.md
 exit
 
-# B. 无会话单发：渲染 / 校验（base64 承载多行 MBT 源码）
+# B. Stateless one-shot: render / validate (base64 carries multi-line MBT source)
 moon run --target native cli <<< "render-mbt-b64 $(base64 <<< "$MBT")"
 
-# C. MCP Server（stdio JSON-RPC，接入任意 MCP 客户端）
+# C. MCP Server (stdio JSON-RPC, plugs into any MCP client)
 moon run --target native mcp
 
-# D. 预编译二进制（无需工具链，毫秒级启动）
+# D. Prebuilt binaries (no toolchain, millisecond startup)
 moon build --release --target native mcp
-_build/native/release/build/mcp/mcp.exe   # 自包含可执行（仅链接 libc）
+_build/native/release/build/mcp/mcp.exe   # Self-contained executable (links libc only)
 
-# E. 交互式画布 / 脚本演示
-moon run --target native playground       # 交互式（png 命令出 PNG）
-moon run playground                       # 脚本演示
+# E. Interactive canvas / scripted demo
+moon run --target native playground       # Interactive (`png` command emits a PNG)
+moon run playground                       # Scripted demo
 ```
 
-## 目录导览
+## Repository Tour
 
 ```
 moonviz/
 ├── core/
-│   ├── node.mbt       节点树（Scene Graph）
-│   ├── layout.mbt     布局求解器
-│   ├── predicates.mbt 不崩谓词 P0–P4
-│   ├── policy.mbt     双路线策略（人类软/Agent 硬）
-│   ├── patch.mbt      事务式补丁
-│   ├── tokens.mbt     设计令牌（Material 3 风格）
-│   ├── component.mbt  组件系统（8 组件×22 变体）
-│   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（15 工具）
-│   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
-│   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
-│   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）
-│   ├── variants.mbt   变体探索（fork/评分/合并）
-│   ├── interaction.mbt 交互原型（Trigger/Action/Transition/导航栈）
-│   ├── artifact.mbt   Agent 中间产物（.moonviz 跨 Agent 交接）
-│   ├── runtime.mbt    嵌入式运行时 SDK（事件/渲染计划/热重载/输入）
-│   ├── intelligence.mbt 设计智能（页面类型推断/缺失检测/建议/评分）
-│   ├── lineage.mbt    血缘追踪（令牌/组件使用 + 变更影响分析 + 设计系统审计）
-│   ├── prototest.mbt  原型测试（断言式验证导航/输入/渲染/违规）
-│   ├── reasoning.mbt  布局推理（自然语言约束→StackLayout/对齐/缩放）
-│   ├── responsive.mbt 响应式断点（手机/平板/桌面自动适配）
-│   ├── collab.mbt     多Agent协作（操作变换OT/冲突检测/三方合并）
-│   ├── history.mbt    设计版本控制（时间旅行/分支/变更回放/undo-redo）
-│   ├── critique.mbt   AI设计批评（8项设计原则自动评审）
-│   ├── annotate.mbt   设计标注（自动生成Spec文档/CSS变量/间距颜色字体标注）
-│   ├── animation.mbt  属性动画（关键帧/缓动函数/时间线编排/CSS导出）
-│   ├── extract.mbt    设计系统反向提取（从现有设计推推断牌+组件模式）
-│   ├── theme.mbt      主题系统（6预定义主题/自动暗色/令牌级切换/注册表）
-│   ├── slots.mbt      组件插槽系统（6组合式组件/嵌套内容分发/递归组合）
-│   ├── benchmark.mbt  性能基准引擎（节点统计/复杂度分析/反模式检测/优化建议）
-│   ├── diff.mbt       语义 diff（added/moved/resized/restyled）
-│   ├── export.mbt     HTML 原型 + React TSX 导出
-│   ├── svg.mbt        SVG 渲染
-│   └── agent_test.mbt Agent 工作流端到端测试
-├── decl/              声明 DSL + .mbt.md 往返
-├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
-├── mcp/               MCP Server（stdio JSON-RPC，工具面同 CLI）
-├── wasm/              WASM-GC 边界（render_mbt / validate_mbt，JS String Builtins 直通）
-├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
-├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
-├── sdk/wasm/          WASM SDK「moonviz-engine-wasm」：进程内渲染/校验，零工具链（Node ≥22 / 现代浏览器）
-├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-bin-<platform>（预编译平台包）
-├── playground/        终端画布 + PNG 渲染 + REPL
-├── site/              官网（GitHub Pages：asdshuaishuai.github.io/moonviz/）
-├── scripts/           publish-npm.sh 等发布脚本
-└── docs/              设计文档 01–09
+│   ├── node.mbt       Node tree (scene graph)
+│   ├── layout.mbt     Layout solver
+│   ├── predicates.mbt Non-crash predicates P0–P4
+│   ├── policy.mbt     Dual-route policy (human soft / agent hard)
+│   ├── patch.mbt      Transactional patches
+│   ├── tokens.mbt     Design tokens (Material 3 style)
+│   ├── component.mbt  Component system (8 components × 22 variants)
+│   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
+│   ├── agent_api.mbt  Agent tool API (47 tools + list-ops op dictionary)
+│   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
+│   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
+│   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)
+│   ├── variants.mbt   Variant exploration (fork/score/merge)
+│   ├── interaction.mbt Interactive prototypes (Trigger/Action/Transition/nav stack)
+│   ├── artifact.mbt   Agent intermediate artifacts (.moonviz cross-agent handoff)
+│   ├── runtime.mbt    Embedded runtime SDK (events/render plan/hot reload/input)
+│   ├── intelligence.mbt Design intelligence (page-type inference/missing detection/suggestions/scoring)
+│   ├── lineage.mbt    Lineage tracking (token/component usage + change impact + design-system audit)
+│   ├── prototest.mbt  Prototype testing (assertion-based verification of navigation/input/render/violations)
+│   ├── reasoning.mbt  Layout reasoning (natural-language constraints → StackLayout/alignment/scaling)
+│   ├── responsive.mbt Responsive breakpoints (phone/tablet/desktop auto-adaptation)
+│   ├── collab.mbt     Multi-agent collaboration (operational transform/conflict detection/three-way merge)
+│   ├── history.mbt    Design version control (time travel/branching/change replay/undo-redo)
+│   ├── critique.mbt   AI design critique (automatic review against 8 design principles)
+│   ├── annotate.mbt   Design annotation (auto-generated spec docs/CSS variables/spacing-color-type annotations)
+│   ├── animation.mbt  Property animation (keyframes/easing/timeline choreography/CSS export)
+│   ├── extract.mbt    Design-system reverse extraction (infer tokens + component patterns from existing designs)
+│   ├── theme.mbt      Theme system (6 predefined themes/auto dark/token-level switching/registry)
+│   ├── slots.mbt      Component slot system (6 composable components/nested content distribution/recursive composition)
+│   ├── benchmark.mbt  Performance benchmark engine (node stats/complexity analysis/anti-pattern detection/optimization advice)
+│   ├── diff.mbt       Semantic diff (added/moved/resized/restyled)
+│   ├── export.mbt     HTML prototype + React TSX export
+│   ├── svg.mbt        SVG rendering
+│   └── agent_test.mbt Agent workflow end-to-end tests
+├── decl/              Declaration DSL + .mbt.md round-trip
+├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
+├── mcp/               MCP Server (stdio JSON-RPC; tool surface mirrors the CLI)
+├── wasm/              WASM-GC boundary (render_mbt / validate_mbt, JS String Builtins passthrough)
+├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
+├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
+├── sdk/wasm/          WASM SDK "moonviz-engine-wasm": in-process render/validate, zero toolchain (Node ≥22 / modern browsers)
+├── npm/               npm distribution: moonviz-mcp (launcher) + moonviz-bin-<platform> (prebuilt platform packages)
+├── playground/        Terminal canvas + PNG rendering + REPL
+├── site/              Website (GitHub Pages: asdshuaishuai.github.io/moonviz/)
+├── scripts/           publish-npm.sh and other release scripts
+└── docs/              Design documents 01–10
 ```
 
-## 交互原型系统
+## Interactive Prototype System
 
-原型不是静态图——MoonViz 有完整的交互运行时：
+Prototypes are not static pictures — MoonViz has a complete interaction runtime:
 
-| 概念 | 说明 |
+| Concept | Description |
 |:---|:---|
 | **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
 | **Action** | navigate_to / back / toggle_state / set_text / submit_form / show_toast |
 | **Transition** | push / pop / modal / sheet / fade |
-| **ComponentState** | 组件多态（default / pressed / disabled / loading） |
-| **NavigationState** | 导航栈（push / pop / back） |
+| **ComponentState** | Component polymorphism (default / pressed / disabled / loading) |
+| **NavigationState** | Navigation stack (push / pop / back) |
 
-## Agent 中间产物（.moonviz）
+## Agent Intermediate Artifacts (.moonviz)
 
-Agent A 设计完 → 导出 `.moonviz` JSON 文件 → Agent B 读取继续工作。
+Agent A finishes a design → exports a `.moonviz` JSON file → Agent B reads it and continues.
 
 ```json
 {
@@ -218,161 +224,160 @@ Agent A 设计完 → 导出 `.moonviz` JSON 文件 → Agent B 读取继续工�
 }
 ```
 
-## 嵌入式运行时 SDK
+## Embedded Runtime SDK
 
-其他项目嵌入 MoonViz 的方式：
+How other projects embed MoonViz:
 
 ```moonbit
 let rt = MoonVizRT::create(project, initial_artboard="login")?
 rt.set_input("email", "user@test.com")
-let changes = rt.handle_event(TapEvent(160.0, 422.0))  // → 导航到 home
-let plan = rt.render_plan()                               // → RenderPlan（后端无关显示列表）
-rt.hot_reload(new_decl)                                   // → 热重载（保留导航栈和输入值）
+let changes = rt.handle_event(TapEvent(160.0, 422.0))  // → navigate to home
+let plan = rt.render_plan()                               // → RenderPlan (backend-agnostic display list)
+rt.hot_reload(new_decl)                                   // → hot reload (keeps nav stack and input values)
 ```
 
-RenderPlan 是**后端无关的显示列表**（CmdRect / CmdText / CmdLine / CmdClip），
-任何渲染后端（Canvas / Skia / SVG / 终端 / OpenGL）都能消费。
+The RenderPlan is a **backend-agnostic display list** (CmdRect / CmdText / CmdLine / CmdClip) that any rendering backend (Canvas / Skia / SVG / terminal / OpenGL) can consume.
 
-## 设计智能
+## Design Intelligence
 
-引擎不只是执行设计——它**理解**设计：
+The engine does not just execute designs — it **understands** them:
 
-| 能力 | 说明 |
+| Capability | Description |
 |:---|:---|
-| `infer_page_type` | 从节点结构推断页面类型（auth/dashboard/list/profile/settings...） |
-| `infer_missing` | 基于页面类型推断缺失元素（"登录页缺忘记密码链接"） |
-| `suggest_improvements` | 基于设计原则建议改进（层次/间距/一致性/密度） |
-| `design_quality_score` | 综合评分 A-D（层次/一致性/稳定性/丰富度） |
+| `infer_page_type` | Infer page type from node structure (auth/dashboard/list/profile/settings…) |
+| `infer_missing` | Infer missing elements from page type ("login page is missing a forgot-password link") |
+| `suggest_improvements` | Suggest improvements based on design principles (hierarchy/spacing/consistency/density) |
+| `design_quality_score` | Composite grade A–D (hierarchy/consistency/stability/richness) |
 
-## 血缘追踪
+## Lineage Tracking
 
-改了一个令牌，哪些节点会受影响？
+You changed one token — which nodes are affected?
 
-| 能力 | 说明 |
+| Capability | Description |
 |:---|:---|
-| `token_lineage("primary")` | 所有使用 primary 色的节点（含画板+字段） |
-| `component_lineage("button")` | 所有 button 实例的位置和尺寸 |
-| `impact_analysis(patch)` | 预览补丁影响（颜色对比度/尺寸溢出/位置） |
-| `audit_design_system` | 审计硬编码颜色 → 建议替换为最近令牌 |
+| `token_lineage("primary")` | Every node using the primary color (with artboard + field) |
+| `component_lineage("button")` | Location and size of every button instance |
+| `impact_analysis(patch)` | Preview a patch's impact (color contrast/size overflow/position) |
+| `audit_design_system` | Audit hardcoded colors → suggest nearest-token replacements |
 
-## 原型测试
+## Prototype Testing
 
-原型不只是"看起来对"——它是**可测试的**：
+A prototype is not just "looks right" — it is **testable**:
 
 ```moonbit
 let pt = ProtoTest::create(project, initial="login")?
-pt.tap_and_expect_navigate(160, 422, "home")  // 点击登录→到首页
-pt.back_and_expect("login")                    // 返回→回到登录
-pt.set_input_and_expect("email", "a@b.com")    // 输入值正确存储
-pt.expect_no_violations()                      // 无布局违规
-pt.expect_renderable()                         // 渲染计划非空
+pt.tap_and_expect_navigate(160, 422, "home")  // tap sign-in → home
+pt.back_and_expect("login")                    // back → login
+pt.set_input_and_expect("email", "a@b.com")    // input value stored correctly
+pt.expect_no_violations()                      // no layout violations
+pt.expect_renderable()                         // render plan non-empty
 pt.result() // → {"status":"PASS","passed":5,"failed":0}
 ```
 
-## 布局推理引擎
+## Layout Reasoning Engine
 
-Agent 说"居中对齐按钮"，引擎推断参数并执行——不需要 Agent 知道 StackLayout 的 API：
+The agent says "center the buttons", the engine infers parameters and executes — no StackLayout API knowledge required:
 
 ```moonbit
-p.apply_constraint("居中对齐", artboard="login")       // → center_in_parent
-p.apply_constraint("垂直排列", artboard="login")       // → StackLayout(Vertical)
-p.apply_constraint("等宽", artboard="login")          // → 所有 width = Fill
-p.apply_constraint("间距 16", artboard="login")       // → gap = 16
-p.apply_constraint("放大 1.5", artboard="login")      // → 全部尺寸 × 1.5
-p.apply_constraint("网格 8", artboard="login")        // → snap_to_grid(8)
+p.apply_constraint("center align", artboard="login")   // → center_in_parent
+p.apply_constraint("vertical stack", artboard="login") // → StackLayout(Vertical)
+p.apply_constraint("equal widths", artboard="login")   // → all width = Fill
+p.apply_constraint("spacing 16", artboard="login")     // → gap = 16
+p.apply_constraint("scale 1.5x", artboard="login")     // → all sizes × 1.5
+p.apply_constraint("grid 8", artboard="login")         // → snap_to_grid(8)
 ```
 
-支持中英文共 12 种布局意图，数字自动提取（"间距 16px" → gap=16.0）。
+12 layout intents in Chinese and English; numbers auto-extracted ("间距 16px" → gap=16.0).
 
-## 响应式断点
+## Responsive Breakpoints
 
-同一设计自动适配手机/平板/桌面三种尺寸：
+One design adapts automatically to phone/tablet/desktop:
 
 ```moonbit
 p.generate_responsive(artboard="login")
-// → 自动创建 login_tablet (768×1024) + login_desktop (1200×800)
-//   布局自动适配：手机垂直→平板加宽→桌面水平多列
+// → creates login_tablet (768×1024) + login_desktop (1200×800)
+//   layout auto-adapts: phone vertical → tablet widened → desktop horizontal multi-column
 
 p.preview_breakpoint(artboard="login", breakpoint="tablet")
-// → 预览平板效果
+// → preview the tablet variant
 
 p.list_breakpoint_variants(artboard="login")
 // → [{"breakpoint":"mobile","width":390}, {"breakpoint":"tablet","width":768}, ...]
 ```
 
-| 断点 | 尺寸 | 适配策略 |
+| Breakpoint | Size | Adaptation strategy |
 |:---|:---|:---|
-| mobile | 390×844 | 垂直单列，紧凑间距 |
-| tablet | 768×1024 | 垂直保持，卡片加宽×1.2，间距 16 |
-| desktop | 1200×800 | 切换水平多列，间距 24，边距 48 |
+| mobile | 390×844 | Vertical single column, compact spacing |
+| tablet | 768×1024 | Vertical kept, cards widened ×1.2, spacing 16 |
+| desktop | 1200×800 | Horizontal multi-column, spacing 24, margins 48 |
 
-## 多 Agent 协作
+## Multi-Agent Collaboration
 
-AI 时代的核心场景：**多个 Agent 同时在一个原型上工作**。
+The core scenario of the AI era: **multiple agents working on one prototype at the same time**.
 
 ```moonbit
 let cm = CollabManager::new(base_revision=1)
-let agent_a = cm.join("designer_bot")     // Agent A：设计登录页
-let agent_b = cm.join("ux_optimizer")     // Agent B：优化布局
+let agent_a = cm.join("designer_bot")     // Agent A: design the login page
+let agent_b = cm.join("ux_optimizer")     // Agent B: optimize layout
 
 agent_a.add_op(OpSetFill("login_btn", "#4B6BFB", "#FF0000"))
 agent_b.add_op(OpSetPosition("login_btn", 24.0, 100.0, 400.0, 450.0))
 
-let conflicts = cm.total_conflicts()  // → 0（不同字段，可并行）
+let conflicts = cm.total_conflicts()  // → 0 (different fields, parallel is safe)
 
-// 如果冲突：
-agent_b.add_op(OpSetFill("login_btn", "#4B6BFB", "#00FF00"))  // 同字段不同值
-cm.total_conflicts()  // → 1（需要解决）
+// If there is a conflict:
+agent_b.add_op(OpSetFill("login_btn", "#4B6BFB", "#00FF00"))  // same field, different value
+cm.total_conflicts()  // → 1 (needs resolution)
 cm.status()           // → "Conflicts: 1 ⚠"
 ```
 
-**冲突判定规则**：
+**Conflict rules**:
 
-| 情况 | 结果 |
+| Case | Result |
 |:---|:---|
-| 不同节点 | ✅ 不冲突 |
-| 同节点不同字段 | ✅ 不冲突（可并行） |
-| 同节点同字段，值相同 | ✅ 幂等，自动解决 |
-| 同节点同字段，值不同 | ⚠️ 冲突，需手动选择 |
-| 一方删除 + 另一方修改 | ⚠️ 冲突，建议保留修改方 |
-| 双方都删除 | ✅ 幂等 |
+| Different nodes | ✅ No conflict |
+| Same node, different fields | ✅ No conflict (parallel is safe) |
+| Same node, same field, same value | ✅ Idempotent, auto-resolved |
+| Same node, same field, different values | ⚠️ Conflict, manual choice required |
+| One deletes + the other edits | ⚠️ Conflict, keeping the edit suggested |
+| Both delete | ✅ Idempotent |
 
-**操作变换（OT）**：同时插入同位置时，按时间戳排序确定先后。
+**Operational transform (OT)**: simultaneous inserts at the same position are ordered by timestamp.
 
-## 设计版本控制
+## Design Version Control
 
-每次修改产生一个 commit，Agent 可以时间旅行、分叉分支、回放变更：
+Every change produces a commit; agents can time-travel, branch, and replay changes:
 
 ```moonbit
 let h = DesignHistory::new(doc)
-h.commit("agent_a", "改按钮颜色", ops, doc)   // rev 1
-h.commit("agent_b", "增大间距", ops2, doc)     // rev 2
+h.commit("agent_a", "change button color", ops, doc)   // rev 1
+h.commit("agent_b", "increase spacing", ops2, doc)     // rev 2
 
-h.log()          // → "→ rev2 [agent_b] 增大间距
-  rev1 [agent_a] 改按钮颜色
+h.log()          // → "→ rev2 [agent_b] increase spacing
+  rev1 [agent_a] change button color
 ..."
-h.checkout(1)    // → 时间旅行到 rev1 的文档快照
-h.undo()         // → 回到 rev1
-h.redo()         // → 恢复到 rev2
-h.replay(0, 2)   // → 回放所有操作
-h.branch(1, "experiment") // → 从 rev1 分叉新分支
-h.diff(0, 2)     // → 两个版本间的语义差异
+h.checkout(1)    // → time-travel to rev1's document snapshot
+h.undo()         // → back to rev1
+h.redo()         // → forward to rev2
+h.replay(0, 2)   // → replay all operations
+h.branch(1, "experiment") // → branch from rev1
+h.diff(0, 2)     // → semantic diff between two revisions
 ```
 
-## AI 设计批评引擎
+## AI Design Critique Engine
 
-引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 8 项设计原则给出整体评价：
+The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 8 design principles:
 
-| 原则 | 检查什么 |
+| Principle | What is checked |
 |:---|:---|
-| 视觉层次 | 字号种类是否 ≥ 3（有明确的大小对比） |
-| 亲密性 | 相关元素间距是否 ≥ 8px（格式塔原理） |
-| 对齐 | 节点是否对齐到网格 |
-| 一致性 | 颜色是否使用设计令牌 |
-| 留白 | 密度是否合理（不过密不过稀） |
-| 平衡 | 左右视觉重量是否均衡 |
-| 焦点 | 是否有明确的主 CTA（primary 按钮） |
-| 节奏 | 间距值是否统一到标准令牌 |
+| Visual hierarchy | ≥ 3 font sizes (clear size contrast) |
+| Proximity | Spacing between related elements ≥ 8px (Gestalt) |
+| Alignment | Nodes snap to the grid |
+| Consistency | Colors come from design tokens |
+| Whitespace | Reasonable density (not cramped, not sparse) |
+| Balance | Left/right visual weight is balanced |
+| Focus | A clear primary CTA exists (primary button) |
+| Rhythm | Spacing values unify to standard tokens |
 
 ```moonbit
 p.critique(artboard="login")
@@ -384,42 +389,42 @@ p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
 ```
 
-## 设计标注（Developer Handoff）
+## Design Annotation (Developer Handoff)
 
-从原型自动生成开发者交接规范——Figma Dev Mode 的等价物：
+Auto-generate a developer handoff spec from the prototype — the equivalent of Figma Dev Mode:
 
 ```moonbit
 p.generate_spec(artboard="login")
-// → Markdown 文档包含：
-//   ## Components（组件清单+变体+尺寸）
-//   ## Colors（颜色+语义令牌映射）
-//   ## Typography（字号+令牌）
-//   ## Spacing（精确坐标）
-//   ## Layout（flex-direction/gap/padding）
-//   ## CSS Custom Properties（--color-* / --spacing-*）
+// → Markdown document containing:
+//   ## Components (component list + variants + sizes)
+//   ## Colors (colors + semantic token mapping)
+//   ## Typography (font sizes + tokens)
+//   ## Spacing (exact coordinates)
+//   ## Layout (flex-direction/gap/padding)
+//   ## CSS Custom Properties (--color-* / --spacing-*)
 ```
 
-## 属性动画系统
+## Property Animation System
 
-原型需要动效——属性插值 / 缓动函数 / 时间线编排：
+Prototypes need motion — property interpolation / easing functions / timeline choreography:
 
 ```moonbit
 let tl = Timeline::new()
-tl.add(fade_in_animation("title"))         // 淡入
-tl.add(slide_in_right("card"))             // 右滑入
-tl.add(press_animation("submit_btn"))      // 按压弹性
-tl.add_sequence([modal_present("modal"), shake_animation("error")]) // 顺序编排
+tl.add(fade_in_animation("title"))         // fade in
+tl.add(slide_in_right("card"))             // slide in from right
+tl.add(press_animation("submit_btn"))      // press bounce
+tl.add_sequence([modal_present("modal"), shake_animation("error")]) // sequential
 
-tl.to_css() // → 生成完整 CSS @keyframes + animation
+tl.to_css() // → generates complete CSS @keyframes + animation
 ```
 
-**6 种缓动函数**：Linear / EaseIn / EaseOut / EaseInOut / Spring / Bounce
-**6 种动画预设**：press / fade_in / slide_in_right / modal_present / shake / pop
-**编排模式**：并行（add）/ 顺序（add_sequence）/ 延迟
+**6 easing functions**: Linear / EaseIn / EaseOut / EaseInOut / Spring / Bounce
+**6 animation presets**: press / fade_in / slide_in_right / modal_present / shake / pop
+**Choreography**: parallel (`add`) / sequential (`add_sequence`) / delayed
 
-## 设计系统反向提取
+## Design-System Reverse Extraction
 
-Agent 拿到已有原型，引擎自动**反推**出设计系统：
+Hand the engine an existing prototype and it **infers** the design system:
 
 ```moonbit
 let ds = p.extract_design_system(artboard="dashboard")
@@ -437,73 +442,73 @@ ds.summary()
 //       card (4 instances), button (2 instances), heading (3 instances)
 ```
 
-**推断逻辑**：
-- 颜色：按使用频率排序 → 亮度/饱和度分析 → 推断语义名（primary/surface/error）
-- 间距：识别 gap/padding → 匹配标准令牌名（xs/sm/md/lg/xl）
-- 字号：匹配标准阶（display/h1-h4/body/caption/overline）
-- 组件：相同 (kind, fill, radius) 的节点 ≥2 个 → 推断为同一组件模式
+**Inference logic**:
+- Colors: sorted by usage frequency → brightness/saturation analysis → semantic name inferred (primary/surface/error)
+- Spacing: gap/padding identified → matched to standard token names (xs/sm/md/lg/xl)
+- Font sizes: matched to the standard scale (display/h1-h4/body/caption/overline)
+- Components: ≥2 nodes with identical (kind, fill, radius) → inferred as one component pattern
 
-**提取→再利用闭环**：Agent 从设计 A 提取设计系统 → 用这套令牌和组件创建设计 B → 视觉一致性自动保证。
+**Extract → reuse loop**: Agent extracts a design system from design A → creates design B with those tokens and components → visual consistency is automatic.
 
-## 主题系统
+## Theme System
 
-一键切换深色/浅色/自定义主题——**所有引用令牌的节点自动更新**：
+One-click dark/light/custom theme switching — **every node referencing tokens updates automatically**:
 
 ```moonbit
-p.apply_theme("dark")         // → surface 变 #1A1C1E，text 变 #E0E0E0
-p.apply_theme("nord")         // → 极地配色
-p.apply_theme("high_contrast") // → WCAG AAA 高对比度
+p.apply_theme("dark")         // → surface becomes #1A1C1E, text #E0E0E0
+p.apply_theme("nord")         // → Nordic palette
+p.apply_theme("high_contrast") // → WCAG AAA high contrast
 
-p.set_token("primary", "#FF5722")  // 单令牌修改，全局生效
-p.preview_themes("btn")            // 预览各主题下按钮的颜色
+p.set_token("primary", "#FF5722")  // single-token change, global effect
+p.preview_themes("btn")            // preview the button under each theme
 
-p.enable_auto_dark()          // 从当前主题自动推导暗色版本
+p.enable_auto_dark()          // derive a dark variant from the current theme
 ```
 
-**6 种预定义主题**：
+**6 predefined themes**:
 
-| 主题 | 风格 | primary | surface |
+| Theme | Style | primary | surface |
 |:---|:---|:---|:---|
-| light | 浅色（默认） | #4B6BFB | #FFFFFF |
-| dark | 深色 | #A5B4FC | #1A1C1E |
-| high_contrast | 高对比度 | #0000EE | #FFFFFF |
-| sepia | 复古棕 | #8D6E63 | #FAF6F0 |
-| nord | 极地 | #88C0D0 | #3B4252 |
-| sunset | 落日暖 | #FF7043 | #FFF8E1 |
+| light | Light (default) | #4B6BFB | #FFFFFF |
+| dark | Dark | #A5B4FC | #1A1C1E |
+| high_contrast | High contrast | #0000EE | #FFFFFF |
+| sepia | Sepia | #8D6E63 | #FAF6F0 |
+| nord | Nordic | #88C0D0 | #3B4252 |
+| sunset | Warm sunset | #FF7043 | #FFF8E1 |
 
-**自动暗色推导**：`Theme::auto_dark(light)` → 反转亮度，保留色相 → 自动生成暗色版本。
+**Auto dark**: `Theme::auto_dark(light)` → invert luminance, keep hue → a dark variant is generated automatically.
 
-## 组件插槽系统
+## Component Slot System
 
-像 React/Vue 的 children/slots 一样，Agent 把内容放进组件的指定槽位：
+Like React/Vue children/slots — the agent places content into designated component slots:
 
 ```moonbit
 p.place_slotted(artboard="page", component_id="modal", instance_id="dialog")
 p.fill_slot(artboard="page", instance_id="dialog", slot_name="title", content="Confirm")
 p.fill_slot(artboard="page", instance_id="dialog", slot_name="content", content="Are you sure?")
 p.fill_slot_with_component(artboard="page", instance_id="dialog",
-  slot_name="actions", child_component="button", child_id="ok_btn")  // 递归组合
+  slot_name="actions", child_component="button", child_id="ok_btn")  // recursive composition
 ```
 
-**6 种组合式组件**：
+**6 composable components**:
 
-| 组件 | 槽位 | 布局 |
+| Component | Slots | Layout |
 |:---|:---|:---|
-| `card` | header / content / footer | 垂直，gap=8，padding=16 |
-| `list` | header / item_1..3 | 垂直，gap=4 |
-| `form_field` | label / input / error | 垂直，gap=4 |
-| `modal` | title / content / actions | 垂直，gap=16，padding=24 |
-| `app_bar` | leading / title / trailing | 水平，gap=12 |
-| `tab_bar` | tab_1..4 | 水平，gap=0 |
+| `card` | header / content / footer | vertical, gap=8, padding=16 |
+| `list` | header / item_1..3 | vertical, gap=4 |
+| `form_field` | label / input / error | vertical, gap=4 |
+| `modal` | title / content / actions | vertical, gap=16, padding=24 |
+| `app_bar` | leading / title / trailing | horizontal, gap=12 |
+| `tab_bar` | tab_1..4 | horizontal, gap=0 |
 
-**关键能力**：
-- **默认内容**：槽位为空时自动填入默认值（Card header → "Title"）
-- **递归组合**：`fill_slot_with_component` 把 Button 放进 Modal 的 actions 槽
-- **槽位查看**：`list_slots` 返回所有槽位及其当前内容
+**Key capabilities**:
+- **Default content**: empty slots auto-fill defaults (Card header → "Title")
+- **Recursive composition**: `fill_slot_with_component` puts a Button into the Modal's actions slot
+- **Slot inspection**: `list_slots` returns every slot and its current content
 
-## 性能基准引擎
+## Performance Benchmark Engine
 
-Agent 生成设计后，引擎分析"这个设计跑得动吗"：
+After the agent produces a design, the engine answers "will this design run well":
 
 ```moonbit
 let bench = p.benchmark_artboard(artboard="dashboard")
@@ -518,52 +523,52 @@ proj.report()
 //   [login] 10 nodes, depth 2, 3 Fill, 1 Hug, score 90/100
 
 p.suggest_optimizations(artboard="dashboard")
-// → {"optimizations":1,"detail":[{"type":"reduce_fill","description":"8 个 Fill，固定尺寸可减少求解"}]}
+// → {"optimizations":1,"detail":[{"type":"reduce_fill","description":"8 Fills; fixed sizes would reduce solve work"}]}
 ```
 
-**基准指标**：
+**Benchmark metrics**:
 
-| 指标 | 含义 | 反模式阈值 |
+| Metric | Meaning | Anti-pattern threshold |
 |:---|:---|:---|
-| node_count | 节点总数 | > 100 |
-| max_depth | 树最大深度 | > 8 |
-| fill_node_count | Fill 节点数（布局求解开销） | > 30 |
-| hug_node_count | Hug 节点数（最高开销） | > 20 |
-| avg_children | 平均子节点数 | > 15 |
-| layout_complexity | 布局求解操作计数 | - |
-| svg_bytes | SVG 渲染输出字节数 | - |
-| memory_estimate | 内存估算（节点数×200 + 文本×2） | - |
+| node_count | Total nodes | > 100 |
+| max_depth | Max tree depth | > 8 |
+| fill_node_count | Fill nodes (layout solve cost) | > 30 |
+| hug_node_count | Hug nodes (highest cost) | > 20 |
+| avg_children | Average children per node | > 15 |
+| layout_complexity | Layout solve operation count | - |
+| svg_bytes | SVG render output bytes | - |
+| memory_estimate | Memory estimate (nodes×200 + text×2) | - |
 
-**评分体系**（0-100）：节点数(30) + 深度(25) + Fill(25) + Hug(20) → A/B/C/D
+**Scoring** (0–100): node count(30) + depth(25) + Fill(25) + Hug(20) → A/B/C/D
 
-## 双 Gate 与视觉债
+## Dual Gates and Visual Debt
 
-两条编辑路线对同一组不崩谓词（P0–P4）采用不同合并门槛（`core/policy.mbt`）：
+The two editing routes apply different merge thresholds to the same set of non-crash predicates (P0–P4) (`core/policy.mbt`):
 
-| | HumanGate（`export-mbt-human` / `apply-human-mbt-op-b64`） | AgentGate（`export-mbt-agent` / `apply-agent-mbt-op-b64` / `render-mbt-b64`） |
+| | HumanGate (`export-mbt-human` / `apply-human-mbt-op-b64`) | AgentGate (`export-mbt-agent` / `apply-agent-mbt-op-b64` / `render-mbt-b64`) |
 |---|---|---|
-| 结构谓词（节点丢失/画板空/流断裂） | **硬阻断**——补丁整体拒绝 | **硬阻断** |
-| 视觉谓词（溢出/重叠/对比度） | 软提示——允许合并，违规记为**视觉债（debt）** | **硬阻断**——任何违规整体拒绝 |
-| 典型形态 | 画布拖拽的中间态可以带债保存 | 程序化修改必须一次到位 |
+| Structural predicates (lost nodes/empty artboard/broken flows) | **Hard block** — the patch is rejected as a whole | **Hard block** |
+| Visual predicates (overflow/overlap/contrast) | Soft warning — merge allowed, violations recorded as **visual debt** | **Hard block** — any violation rejects the whole patch |
+| Typical shape | Mid-drag canvas states can be saved with debt | Programmatic edits must be right in one shot |
 
-- **debt 不是错误**：人类路线导出结果中 `debt` 字段携带当前视觉债清单，Studio 侧以角标提示，后续操作或 `auto_fix` 可清偿。
-- **Agent 的责任边界**：Agent 路线零容忍——引擎以 Reject 返回阻断性违规清单（画板 + 谓词名 + 详情），Agent 修正后重放补丁；这保证了 Agent 写入永远不劣化文档质量。
-- **渲染即验收**：`render-mbt-b64` 按 AgentGate 级标准从源完整重建，任何路线的产物都要过同一道渲染验收。
+- **Debt is not an error**: the human route's export carries the current visual debt list in the `debt` field; Studio surfaces it as a badge, and later edits or `auto_fix` can repay it.
+- **The agent's responsibility boundary**: zero tolerance on the agent route — the engine returns a Reject with the blocking violation list (artboard + predicate name + details), and the agent fixes and replays the patch; this guarantees agent writes never degrade document quality.
+- **Render is acceptance**: `render-mbt-b64` fully rebuilds from source at AgentGate level — products of both routes pass the same render acceptance.
 
-## 集成方式总览
+## Integration Overview
 
-六条集成路线，同一份 `.mbt.md` 事实源，同一套双 Gate：
+Six integration routes, the same `.mbt.md` fact source, the same dual gates:
 
-| 路线 | 形态 | 适用 |
+| Route | Shape | Fits |
 |---|---|---|
-| **CLI 行协议** | `moon run --target native cli`（换行分帧 JSON，一个进程 = 一个有状态 Project 会话） | 脚本、CI、手动驱动 |
-| **MCP** | `npx -y moonviz-mcp`（平台预编译二进制，stdio JSON-RPC）或 `moon run --target native mcp` | Claude Desktop / ZCode / Cursor 等 MCP 客户端 |
-| **Node SDK** | npm `moonviz-engine-sdk`（spawn CLI：会话/Project 构建器/双 Gate 操作/DDP 桥） | Node 宿主的后端/工具链 |
-| **WASM SDK** | npm `moonviz-engine-wasm`（wasm-gc 产物进程内渲染/校验，JS String 直通） | 浏览器、Edge Function、Node ≥22 零依赖渲染 |
-| **SKILL** | 仓库根 `SKILL.md`（Agent 操作规范：事实源纪律/双 Gate 语义/红线） | 任意 coding agent 技能挂载 |
-| **DDP 容器** | Rust `ddp_codec`（DDP1 加密 / DDP2 免密） | 设计文档加密分发、只读查看器 |
+| **CLI line protocol** | `moon run --target native cli` (newline-framed JSON; one process = one stateful Project session) | Scripts, CI, manual driving |
+| **MCP** | `npx -y moonviz-mcp` (prebuilt platform binary, stdio JSON-RPC) or `moon run --target native mcp` | Claude Desktop / ZCode / Cursor and other MCP clients |
+| **Node SDK** | npm `moonviz-engine-sdk` (spawns the CLI: sessions/Project builder/dual-gate ops/DDP bridge) | Node-hosted backends/toolchains |
+| **WASM SDK** | npm `moonviz-engine-wasm` (wasm-gc in-process render/validate, JS String passthrough) | Browsers, Edge Functions, dependency-free rendering on Node ≥22 |
+| **SKILL** | Repo-root `SKILL.md` (agent operation spec: fact-source discipline/dual-gate semantics/red lines) | Any coding agent's skill mount |
+| **DDP container** | Rust `ddp_codec` (DDP1 encrypted / DDP2 keyless) | Encrypted design distribution, read-only viewers |
 
-MCP 客户端配置（npx 预编译路线）：
+MCP client configuration (npx prebuilt route):
 
 ```json
 {
@@ -577,60 +582,62 @@ MCP 客户端配置（npx 预编译路线）：
 }
 ```
 
-环境变量速查：`MOONVIZ_DIR`（引擎根，须含 `cli/moon.pkg`）· `MOONVIZ_MOON`/`MOON`（moon 可执行目录）· `MOONVIZ_DDP_HELPER`（ddp_codec 完整路径）· `MOONVIZ_CLI_BIN`（预编译 CLI 二进制，优先于 moon run）。
+Environment variable cheat sheet: `MOONVIZ_DIR` (engine root, must contain `cli/moon.pkg`) · `MOONVIZ_MOON`/`MOON` (moon executable directory) · `MOONVIZ_DDP_HELPER` (full path to ddp_codec) · `MOONVIZ_CLI_BIN` (prebuilt CLI binary, takes precedence over `moon run`).
 
-## 技术栈与二进制分发
+## Tech Stack and Binary Distribution
 
-### 绘制方案一句话
+### The rendering pipeline in one sentence
 
-一份 `.mbt.md` → 声明解析（literate 块扫描）→ 场景图（节点树 + Fixed/Fill/Hug 尺寸规格）→ **两遍法布局求解**（先尺寸后位置，失败≠崩溃）→ P0–P4 不崩谓词 + 双 Gate 验收 → 三个纯 MoonBit 渲染后端任意消费：**SVG**（矢量主路径：系统字体栈 + elevation 阴影令牌 + 渐变 paint）、**PNG**（自研软光栅：2x 超采样抗锯齿 + 圆角扫描 + 5×7 位图字体 + 纯 MoonBit DEFLATE，产物小 5–20 倍）、**终端 ANSI 真彩画布**（Camera 平移缩放 + pick 拖拽）。任意宿主后端（Canvas/Skia/OpenGL）经后端无关的 **RenderPlan 显示列表**接入。完整管线见 [docs/10-render-pipeline.md](docs/10-render-pipeline.md)。
+One `.mbt.md` → declaration parsing (literate block scanning) → scene graph (node tree + Fixed/Fill/Hug size specs) → **two-pass layout solve** (sizes first, positions second; failure ≠ crash) → P0–P4 non-crash predicates + dual-gate acceptance → three pure-MoonBit render backends: **SVG** (the vector main path: system font stack + elevation shadow tokens + gradient paints), **PNG** (a homegrown software rasterizer: 2x supersampled AA + rounded-corner scanning + a 5×7 bitmap font + pure-MoonBit DEFLATE, 5–20× smaller output), and a **terminal ANSI true-color canvas** (camera pan/zoom + pick & drag). Any host backend (Canvas/Skia/OpenGL) integrates through the backend-agnostic **RenderPlan display list**. The full pipeline is documented in [docs/10-render-pipeline.md](docs/10-render-pipeline.md).
 
-### 技术栈构成
+### Stack composition
 
-| 层 | 技术 | 外部依赖 |
+| Layer | Technology | External dependencies |
 |---|---|---|
-| 引擎内核 + 三渲染后端 + CLI/MCP | **100% MoonBit** | 仅 `moonbitlang/core` 标准库 |
-| WASM 边界 | MoonBit → wasm-gc | 无（JS String Builtins） |
-| DDP 编解码 | Rust（独立进程 ddp_codec） | argon2 / chacha20poly1305 / zstd |
-| npm 启动器 / Node SDK | 极薄 JS | 零依赖 |
+| Engine kernel + three render backends + CLI/MCP | **100% MoonBit** | `moonbitlang/core` standard library only |
+| WASM boundary | MoonBit → wasm-gc | none (JS String Builtins) |
+| DDP codec | Rust (standalone ddp_codec process) | argon2 / chacha20poly1305 / zstd |
+| npm launcher / Node SDK | very thin JS | zero dependencies |
 
-### 二进制分发：moon 只在编译时存在
+### Binary distribution: moon exists only at compile time
 
-`moon build --release --target native` 产出**自包含二进制**（CLI 1.26MB / MCP 1.10MB，`otool -L` 验证仅链系统 libc），复制到无 moon、无源码的机器直接可用。分发矩阵：
+`moon build --release --target native` produces **self-contained binaries** (CLI 1.26MB / MCP 1.10MB; `otool -L` verifies they link only the system libc). Copy them to a machine without moon or sources and they just work. Distribution matrix:
 
-| 消费者 | 依赖 moon？ | 依赖引擎源码？ |
+| Consumer | Needs moon? | Needs engine sources? |
 |---|---|---|
-| `npx moonviz-mcp`（MCP 客户端） | ✗ | ✗（源侧工具另配 MOONVIZ_DIR） |
-| Node SDK + `moonviz-bin-<platform>` | ✗（自动发现预编译 CLI） | ✗ |
-| 浏览器 / Edge（moonviz-engine-wasm） | ✗ | ✗ |
-| 引擎开发者 | ✓ | ✓ |
+| `npx moonviz-mcp` (MCP clients) | ✗ | ✗ (source-side tools set MOONVIZ_DIR) |
+| Node SDK + `moonviz-bin-<platform>` | ✗ (auto-discovers the prebuilt CLI) | ✗ |
+| Browsers / Edge (moonviz-engine-wasm) | ✗ | ✗ |
+| Engine developers | ✓ | ✓ |
 
-### MoonBit 工具链风险管理
+Binary archives are also published on GitHub Releases (`engine-v*` tags), so distribution does not depend on npm alone.
 
-MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分四层：
+### MoonBit toolchain risk management
 
-1. **产物冻结**（根本手段）：预编译二进制与 WASM 一经发布即快照——工具链后续破坏性变更不影响任何已分发产物，语言不确定性被隔离在构建时。
-2. **构建 pin**：CI（`binaries.yml`）安装**固定版本** moon（`MOON_VERSION` env，当前 0.1.20260209）；升级工具链必须走显式 PR，配套 142 项测试 + CLI/MCP 冒烟挡板。
-3. **协议稳定**：`SolvedLayout` / `GateDecision` / `RenderPlan` 等对外协议刻意稳定（求解器预留 Cassowary 替换接口），不随语言版本漂移。
-4. **组件隔离兜底**：DDP 已示范非 MoonBit 组件独立进程化路线，极端情况下任何组件可按此模式替换而不动 `.mbt.md` 事实源格式。
+MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of mitigation:
 
-## 架构红线
+1. **Artifact freezing** (the fundamental measure): prebuilt binaries and WASM are snapshotted once released — later breaking toolchain changes cannot affect any distributed artifact; language uncertainty is isolated at build time.
+2. **Build toolchain**: CI (`binaries.yml`) installs the **latest** moon (pinned versions have been pulled from the download CDN); toolchain upgrades are exercised by the full test suite + CLI/MCP smoke gates on every build.
+3. **Protocol stability**: external protocols such as `SolvedLayout` / `GateDecision` / `RenderPlan` are deliberately stable (the solver reserves a Cassowary swap interface) and do not drift with language versions.
+4. **Component isolation as backstop**: DDP already demonstrates the standalone-process route for non-MoonBit components; in the extreme, any component can be replaced that way without touching the `.mbt.md` fact-source format.
 
-- **引擎不依赖任何客户端**：core/decl 是纯库
-- **Agent 对引擎零依赖**：通过 JSON 文本协议交互
-- **100% MoonBit**：零手写 JS/Node/前端代码
+## Architecture Red Lines
 
-## 文档索引
+- **The engine depends on no client**: core/decl are pure libraries
+- **Agents have zero dependency on the engine internals**: interaction happens over the JSON text protocol
+- **100% MoonBit**: zero hand-written JS/Node/frontend code
 
-- 官网与完整使用文档：https://asdshuaishuai.github.io/moonviz/ （使用说明 / CLI / Node SDK / WASM / MCP / SKILL / DDP）
+## Documentation Index
 
-1. [01-architecture.md](docs/01-architecture.md) — 分层架构
-2. [02-mbtmd-format.md](docs/02-mbtmd-format.md) — `.mbt.md` 规范与声明 DSL
-3. [03-scene-graph.md](docs/03-scene-graph.md) — 视觉文档模型
-4. [04-layout-and-predicates.md](docs/04-layout-and-predicates.md) — 布局引擎与不崩谓词
-5. [05-sync-pipeline.md](docs/05-sync-pipeline.md) — 双向增量同步管道
-6. [06-render.md](docs/06-render.md) — 渲染后端
-7. [07-agent-loop.md](docs/07-agent-loop.md) — Agent 工作流与错误修复循环
-8. [08-roadmap-risks.md](docs/08-roadmap-risks.md) — 实现路径与风险
-9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit 绘制引擎生态调研
-10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **绘制方案与渲染管线完整技术说明**（声明解析 → 布局 → 谓词 → SVG/PNG/终端三后端 + 技术栈 + 二进制分发与工具链风险）
+- Website and full usage docs: https://asdshuaishuai.github.io/moonviz/ (usage / CLI / Node SDK / WASM / MCP / SKILL / DDP)
+
+1. [01-architecture.md](docs/01-architecture.md) — Layered architecture
+2. [02-mbtmd-format.md](docs/02-mbtmd-format.md) — The `.mbt.md` spec and the declaration DSL
+3. [03-scene-graph.md](docs/03-scene-graph.md) — The visual document model
+4. [04-layout-and-predicates.md](docs/04-layout-and-predicates.md) — Layout engine and non-crash predicates
+5. [05-sync-pipeline.md](docs/05-sync-pipeline.md) — Bidirectional incremental sync pipeline
+6. [06-render.md](docs/06-render.md) — Render backends
+7. [07-agent-loop.md](docs/07-agent-loop.md) — Agent workflow and error-fix loop
+8. [08-roadmap-risks.md](docs/08-roadmap-risks.md) — Implementation path and risks
+9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit rendering ecosystem survey
+10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **Complete technical notes on the rendering scheme and pipeline** (declaration parsing → layout → predicates → SVG/PNG/terminal backends + tech stack + binary distribution and toolchain risk)
