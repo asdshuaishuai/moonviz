@@ -17,9 +17,15 @@ TGZ_DIR="${MOONVIZ_TGZ_DIR:-/tmp/mv-tgz}"
 
 cd "$ROOT"
 
-echo "==> 检查 npm 登录态"
+# 本机默认源可能是 npmmirror（镜像不可发布）：本脚本内全部 npm 命令
+# 强制走 npmjs 官方源；日常安装不受影响（全局镜像配置不改动）。
+export npm_config_registry="https://registry.npmjs.org"
+
+echo "==> 检查 npm 登录态（registry: $npm_config_registry）"
 if ! npm whoami >/dev/null 2>&1; then
-  echo "未登录。请先执行: npm login   （浏览器验证后再重跑本脚本）" >&2
+  echo "未登录。请先执行:" >&2
+  echo "  npm login --registry=https://registry.npmjs.org" >&2
+  echo "（浏览器验证后再重跑本脚本）" >&2
   exit 1
 fi
 echo "    已登录: $(npm whoami)"
