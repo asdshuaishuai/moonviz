@@ -3,12 +3,19 @@
   "version": "0.1.0",
   "description": "MCP server launcher for the MoonViz prototype design engine. Ships a prebuilt native binary per platform (zero compile, instant start); falls back to `moon run` when no binary matches.",
   "type": "module",
-  "bin": { "moonviz-mcp": "./bin.mjs" },
-  "files": ["bin.mjs", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
+  "bin": {
+    "moonviz-mcp": "./bin.mjs"
+  },
+  "files": [
+    "bin.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "optionalDependencies": {
     "moonviz-bin-darwin-arm64": "0.1.0",
-    "moonviz-bin-darwin-x64": "0.1.0",
     "moonviz-bin-linux-x64": "0.1.0",
     "moonviz-bin-linux-arm64": "0.1.0",
     "moonviz-bin-win32-x64": "0.1.0"
@@ -23,6 +30,14 @@
   },
   "homepage": "https://asdshuaishuai.github.io/moonviz/docs.html#mcp",
   "bugs": "https://github.com/asdshuaishuai/moonviz/issues",
-  "keywords": ["moonviz", "mcp", "model-context-protocol", "prototype", "design", "ai-agent", "moonbit"],
+  "keywords": [
+    "moonviz",
+    "mcp",
+    "model-context-protocol",
+    "prototype",
+    "design",
+    "ai-agent",
+    "moonbit"
+  ],
   "license": "MIT"
 }
