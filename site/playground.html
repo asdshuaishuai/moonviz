@@ -255,10 +255,10 @@ header .themes{margin-left:8px}
 .gram-cat .g{font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx2);padding:3px 7px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gram-cat .g:hover{background:rgba(75,107,251,.08);color:var(--acc)}
 .gram-cat .g::before{content:'▸ ';color:var(--tx3)}
-#palette{display:flex;flex-direction:column;min-height:120px;max-height:38%;border-bottom:1px solid var(--line)}
-#comp-search{margin:8px 10px 6px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--tx);font-size:12px;outline:none}
+#palette{display:flex;flex-direction:column;flex:1;min-height:0;border-bottom:1px solid var(--line)}
+#comp-search{flex:0 0 auto;margin:8px 10px 6px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--tx);font-size:12px;outline:none}
 #comp-search:focus{border-color:var(--acc)}
-#comp-list{overflow:auto;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
+#comp-list{flex:1;overflow:auto;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
 .comp-cat{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.05em;margin-top:2px}
 .comp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .comp-card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:5px 7px;cursor:grab;transition:border-color .12s,transform .12s;user-select:none;min-width:0}
