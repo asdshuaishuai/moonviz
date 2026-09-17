@@ -111,8 +111,8 @@ select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 option{background:var(--panel);color:var(--tx)}
 main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(100vh - 50px)}
 /* 原型模式：单栏全宽舞台（Axure 玩家形态） */
-body.mode-proto main{grid-template-columns:1fr}
-@media (max-width:1080px){body.mode-proto main{grid-template-columns:1fr}}
+body.mode-preview main{grid-template-columns:1fr}
+@media (max-width:1080px){body.mode-preview main{grid-template-columns:1fr}}
 @media (max-width:1080px){main{grid-template-columns:minmax(300px,42%) 1fr}}
 .editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0;background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .canvaswrap{display:flex;flex-direction:column;min-width:0;position:relative}
@@ -189,16 +189,23 @@ button,.bpSw button,.themes button{transition:all .15s ease}
 .shot.themed .dframe{animation:themeflash .75s ease}
 @keyframes themeflash{0%{filter:brightness(1.35) saturate(1.55)}55%{filter:brightness(1.07)}100%{filter:none}}
 /* ── 缩放控制条 ── */
-/* ── 双模式：原型（默认，给人看的 Axure 式玩家）/ 源码（二级，编辑与 Agent 门槛）── */
-body.mode-proto .editor,body.mode-proto .inspector,body.mode-proto #canvas,
-body.mode-proto #playbar,body.mode-proto #undobtn,body.mode-proto #playBtn,
-body.mode-proto #retryBtn{display:none}
-body.mode-src #protobar,body.mode-src #stage{display:none}
+/* ── 双模式：设计（默认工作台，墨刀/Axure 式）/ 预览（原型玩家） ── */
+body.mode-preview .editor,body.mode-preview .inspector,body.mode-preview #canvas,
+body.mode-preview #playbar,body.mode-preview #undobtn,body.mode-preview #retryBtn{display:none}
+body.mode-design #protobar,body.mode-design #stage{display:none}
+body.mode-design #playBtn{display:none}
 #modesw{display:flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:99px;margin-left:12px}
 #modesw button{border:none;background:transparent;color:var(--tx2);padding:3px 14px;border-radius:99px;cursor:pointer;font-size:12px}
 #modesw button.on{background:var(--acc);color:#fff}
 header select#tpl{max-width:180px;font-size:12px;padding:3px 8px;margin-left:10px}
 header .themes{margin-left:8px}
+#pages-bar{display:flex;gap:6px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+#pages-pills{display:flex;gap:4px;flex-wrap:wrap}
+#pages-pills button{font-size:11px;padding:2px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--tx2);cursor:pointer}
+#pages-pills button.on{border-color:var(--acc);color:var(--acc);font-weight:700}
+#pages-bar>button{font-size:12px;padding:2px 8px}
+.tabpane{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto}
+#comp-wrap{overflow:auto}
 #protobar{position:relative;z-index:2;display:flex;gap:8px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 #proto-back{font-size:12px;padding:3px 14px}
 #proto-back:disabled{opacity:.4;cursor:default}
@@ -208,7 +215,17 @@ header .themes{margin-left:8px}
 #stage{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1}
 #stage .shot{max-height:none}
 .stage-empty{color:var(--tx3);font-size:13px}
-#zoombar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:2px;padding:3px;border-radius:99px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+/* 交互面板 */
+#interact{padding:6px 10px;display:flex;flex-direction:column;gap:6px;overflow:auto}
+.irow{display:flex;gap:6px;align-items:center;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+.irow .itrig{background:var(--acc);color:#fff;border-radius:99px;padding:1px 8px;font-size:10px;flex:0 0 auto}
+.irow .iact{flex:1;color:var(--tx2);font-family:ui-monospace,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.irow button{padding:1px 6px;font-size:10px}
+.iform{border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.iform .prow{display:flex;gap:6px;align-items:center;margin:0}
+.iform .prow label{flex:0 0 auto}
+.iform select,.iform input{flex:1;min-width:0;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--tx)}
+#zoombar{position:absolute;#zoombar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:2px;padding:3px;border-radius:99px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
 #zoombar button{width:32px;height:26px;border:none;background:transparent;color:var(--tx2);border-radius:99px;cursor:pointer;font-size:14px;line-height:1;padding:0}
 #zoombar #zoomv{width:54px;font-size:11px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
 #zoombar button:hover{background:var(--acc);color:#fff}
@@ -243,13 +260,13 @@ header .themes{margin-left:8px}
 #comp-search:focus{border-color:var(--acc)}
 #comp-list{overflow:auto;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
 .comp-cat{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.05em;margin-top:2px}
-.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.comp-card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:6px 8px;cursor:grab;transition:border-color .12s,transform .12s;user-select:none}
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:5px}
+.comp-card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:5px 7px;cursor:grab;transition:border-color .12s,transform .12s;user-select:none;min-width:0}
 .comp-card:hover{border-color:var(--acc);transform:translateY(-1px)}
 .comp-card:active{cursor:grabbing}
 .comp-card .cname{font-size:11.5px;font-weight:700;color:var(--tx)}
-.comp-card .cvars{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
-.comp-card .cvars i{font-style:normal;font-size:9.5px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--tx3);cursor:pointer}
+.comp-card .cvars{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+.comp-card .cvars i{font-style:normal;font-size:9px;padding:0 5px;line-height:15px;border-radius:99px;border:1px solid var(--line);color:var(--tx3);cursor:pointer;white-space:nowrap}
 .comp-card .cvars i.on{border-color:var(--acc);color:var(--acc);font-weight:700}
 .comp-card .drop-w{font-size:9.5px;color:var(--tx3);margin-top:3px}
 .insp-hd{padding:8px 12px;font-size:11px;font-weight:700;color:var(--tx3);border-bottom:1px solid var(--line);letter-spacing:.04em}
@@ -300,14 +317,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 #undobtn{display:none}
 </style>
 </head>
-<body class="mode-proto">
+<body class="mode-design">
 <header>
   <span id="branddot"></span>
   <h1>MoonViz Playground</h1>
   <span class="ver" id="ver"></span>
   <div id="modesw" title="原型给人看，源码给人和 Agent 看">
-    <button data-m="proto" class="on">原型</button>
-    <button data-m="src">源码</button>
+    <button data-m="design" class="on">设计</button>
+    <button data-m="preview">预览</button>
   </div>
   <select id="tpl" title="从模板新建画板（追加到当前文档）"><option value="">📐 从模板新建…</option></select>
   <span class="themes" id="themes" title="主题系统：一键切换全局设计令牌"></span>
@@ -317,11 +334,26 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 </header>
 <main>
   <section class="editor">
+    <div id="pages-bar">
+      <span class="lbl">画板</span>
+      <div id="pages-pills"></div>
+      <button onclick="addBlankPage()" title="新建空白画板">＋空白页</button>
+      <button onclick="delCurArtboard()" title="删除当前画板">🗑</button>
+    </div>
     <div class="tabbar">
-      <button id="tab-src" class="on" onclick="showTab('src')">源码</button>
+      <button id="tab-comp" class="on" onclick="showTab('comp')">🧩 组件库</button>
+      <button id="tab-src" onclick="showTab('src')">源码</button>
       <button id="tab-ops" onclick="showTab('ops')">操作台 · AgentGate</button>
       <button id="tab-gram" onclick="showTab('gram')">📖 语法</button>
     </div>
+    <div id="comp-wrap" class="tabpane">
+      <div class="insp-hd" style="border-bottom:none;padding-bottom:0">拖到右侧画布放置 <span class="lbl" id="comp-count"></span></div>
+      <div id="palette">
+        <input id="comp-search" type="search" placeholder="搜索组件…（回车清空）">
+        <div id="comp-list"></div>
+      </div>
+    </div>
+    <div id="src-wrap" class="tabpane hide">
     <div class="bar" id="src-bar">
       <button onclick="applySource()" id="render-btn">渲染</button>
       <button onclick="validate()">校验</button>
@@ -331,6 +363,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
       <pre id="hl" aria-hidden="true"><code id="hlc"></code></pre>
       <textarea id="src" spellcheck="false"></textarea>
     </div>
+    </div><!-- /src-wrap -->
     <div id="ops-wrap" class="hide" style="display:flex;flex-direction:column;flex:1;min-height:0">
       <div class="ops-help">
         <div class="ops-quick">
@@ -375,15 +408,12 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
     <div id="selbox"><svg><rect x="0.75" y="0.75" width="100%" height="100%" rx="4"/></svg><span id="seltag"></span></div>
   </section>
   <section class="inspector">
-    <div class="insp-hd">组件库 · 拖到画布 <span class="lbl" id="comp-count"></span></div>
-    <div id="palette">
-      <input id="comp-search" type="search" placeholder="搜索组件…（回车清空）">
-      <div id="comp-list"></div>
-    </div>
     <div class="insp-hd">图层 · 当前画板</div>
     <div id="layers"></div>
     <div class="insp-hd">属性 · HumanGate</div>
     <div id="props"><div class="empty-insp">在画布中点击元素选中<br>拖拽移动 · 右侧改属性<br>Del 删除 · ⌘Z 撤销</div></div>
+    <div class="insp-hd">交互 · 选中节点</div>
+    <div id="interact"><div class="empty-insp">选中节点后，为它添加<br>点击跳转 / Toast / 切换状态</div></div>
   </section>
 </main>
 <div class="status">
@@ -398,7 +428,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 <script type="module">
 const $=id=>document.getElementById(id);
 let engine=null, mbt='', artIndex=0, lastResult=null;
-let mode='proto';            // 'proto'=给人看的原型玩家（默认）；'src'=源码二级视图
+let mode='design';           // 'design'=设计工作台（默认，墨刀/Axure 式）；'preview'=预览玩家
 let selNode=null;            // 当前选中节点 id（属于当前画板）
 let history=[];              // mbt 快照栈（撤销）
 const HISTORY_MAX=50;
@@ -608,13 +638,10 @@ function logOp(op,res){
   $('oplog').prepend(row);
 }
 function showTab(w){
-  ['src','ops','gram'].forEach(t=>{
+  ['comp','src','ops','gram'].forEach(t=>{
     $('tab-'+t).classList.toggle('on',t===w);
+    $(t+'-wrap').classList.toggle('hide',t!==w);
   });
-  $('src').classList.toggle('hide',w!=='src');
-  $('src-bar').classList.toggle('hide',w!=='src');
-  $('ops-wrap').classList.toggle('hide',w!=='ops');
-  $('gram-wrap').classList.toggle('hide',w!=='gram');
   if(w==='src')$('src').focus();
   if(w==='ops')$('ops').focus();
 }
@@ -635,7 +662,7 @@ function render(){
     const abs=r.artboards||[];
     if(artIndex>=abs.length)artIndex=0;
     if(selNode&&!nodeOf(selNode))selNode=null;
-    if(mode==='proto'){
+    if(mode==='preview'){
       renderStage();
       if(abs.length)setStatus(true,`原型 · ${abs[artIndex].id}${r.revision!==undefined?' · rev '+r.revision:''}${r.debt?' · 债 '+r.debt:''}`);
       else setStatus(null,'空文档 — 从模板新建一个画板');
@@ -659,7 +686,7 @@ function render(){
     });
     applyZoom();
     if(!abs.length){c.innerHTML='';setStatus(null,'空文档 — 从模板新建或在源码里写内容');}
-    refreshIdChips(abs);renderLayers();renderProps();placeSelbox();
+    refreshIdChips(abs);renderLayers();renderProps();renderInteract();renderPages();placeSelbox();
     if(abs.length){
       const rev=r.revision!==undefined?`rev ${r.revision}`:'';
       const debt=r.debt?` · 视觉债 ${r.debt}`:'';
@@ -679,7 +706,7 @@ function applyZoom(){
 }
 function zoomBy(d){zoom=Math.min(2,Math.max(.35,zoom+d));applyZoom();}
 function zoomFit(){
-  const ab=curAb(),c=mode==='proto'?$('stage'):$('canvas');if(!ab||!c||!c.clientWidth)return;
+  const ab=curAb(),c=mode==='preview'?$('stage'):$('canvas');if(!ab||!c||!c.clientWidth)return;
   zoom=Math.max(.35,Math.min((c.clientWidth-110)/ab.width,(c.clientHeight-110)/ab.height,1.5));
   applyZoom();
 }
@@ -709,10 +736,10 @@ function humanOp(op,silentOk){
   }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
 }
 
-function select(id){selNode=id;renderLayers();renderProps();placeSelbox();}
+function select(id){selNode=id;renderLayers();renderProps();renderInteract();placeSelbox();}
 function placeSelbox(){
   const box=$('selbox'),tag=$('seltag');
-  if(mode==='proto'){box.style.display='none';return;}
+  if(mode!=='design'){box.style.display='none';return;}
   const svg=activeSvg();
   if(!selNode||!svg){box.style.display='none';return;}
   const g=svg.querySelector(`g[id="n_${selNode}"]`);
@@ -732,7 +759,7 @@ function placeSelbox(){
 /* 拖拽：SVG 坐标换算 + ghost 位移 + 释放提交 HumanGate move */
 let drag=null;
 $('canvas').addEventListener('mousedown',e=>{
-  if(mode!=='src'||playing)return; // 原型模式纯观看：点击走 playTap；编辑仅限源码模式
+  if(mode!=='design'||playing)return; // 预览模式纯观看：点击走 playTap
   const g=e.target.closest&&e.target.closest('g[id^="n_"]');
   if(!g)return;
   const svg=g.ownerSVGElement;
@@ -915,12 +942,12 @@ function uniqueInstanceId(base){
 function bindCanvasDrop(){
   const c=$('canvas');
   c.addEventListener('dragover',ev=>{
-    if(mode!=='src')return;
+    if(mode!=='design')return;
     const shot=ev.target.closest&&ev.target.closest('.shot');
     if(shot){ev.preventDefault();ev.dataTransfer.dropEffect='copy';}
   });
   c.addEventListener('drop',ev=>{
-    if(mode!=='src')return;
+    if(mode!=='design')return;
     const shot=ev.target.closest&&ev.target.closest('.shot');
     if(!shot)return;
     const raw=ev.dataTransfer.getData('text/moonviz-comp');
@@ -946,6 +973,84 @@ function bindCanvasDrop(){
 bindCanvasDrop();
 $('comp-search').addEventListener('input',e=>renderPalette(e.target.value));
 $('comp-search').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.value='';renderPalette('');}});
+/* ---------- 页面管理（Axure Pages 面板） ---------- */
+function renderPages(){
+  const bar=$('pages-pills');if(!bar)return;
+  bar.innerHTML=artboards().map((a,i)=>`<button data-i="${i}" class="${i===artIndex?'on':''}" onclick="switchPage(${i})" title="${a.width}×${a.height}">${a.id}</button>`).join('');
+}
+function switchPage(i){artIndex=i;selNode=null;render();}
+function addBlankPage(){
+  const used=new Set(artboards().map(a=>a.id));
+  let i=artboards().length+1,name='page_'+i;
+  while(used.has(name)){i++;name='page_'+i;}
+  if(humanOp(`create ${name} 390 844`,true)){
+    artIndex=artboards().findIndex(a=>a.id===name);
+    selNode=null;
+    render();setStatus(true,'✓ 空白画板 '+name+'（从组件库拖入内容）');
+  }
+}
+function delCurArtboard(){
+  const ab=curAb();if(!ab)return;
+  if(artboards().length<2){setStatus(false,'至少保留一个画板');return;}
+  if(!confirm('删除画板 '+ab.id+'？（相关导航流一并删除）'))return;
+  if(humanOp(`delete-artboard ${ab.id}`,true)){artIndex=0;selNode=null;render();}
+}
+/* ---------- 交互面板（Axure Interactions：选中节点 → 加点击行为） ---------- */
+function renderInteract(){
+  const box=$('interact');if(!box)return;
+  const ab=curAb();
+  if(!selNode||!ab){box.innerHTML='<div class="empty-insp">选中节点后，为它添加<br>点击跳转 / Toast / 切换状态</div>';return;}
+  const items=[];
+  const n=(ab.nodes||[]).find(x=>x.id===selNode);
+  if(n&&n.name){const mk=parseMarker(n.name);if(mk)items.push({trigger:mk.trigger,action:mk.action});}
+  box.innerHTML=`
+    <div class="ilist">${items.map(it=>`<div class="irow"><span class="itrig">${it.trigger}</span><span class="iact" title="${it.action}">${it.action}</span><button onclick="uninteractSel()" class="danger" title="移除（flow 边不可在此删除）">✕</button></div>`).join('')||'<div class="empty-insp" style="padding:2px 0">暂无交互</div>'}</div>
+    <div class="iform">
+      <div class="prow"><label>触发</label><select id="ix-trig">${['tap','long_press','swipe_left','swipe_right','swipe_up','swipe_down','keyboard_enter','focus','blur'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="prow"><label>动作</label><select id="ix-kind" onchange="intKindChanged()">
+        <option value="navigate_to">跳转到画板…</option>
+        <option value="back">返回上一页</option>
+        <option value="show_toast">Toast 提示…</option>
+        <option value="toggle_state">切换状态…</option>
+        <option value="set_text">设置文字…</option>
+      </select></div>
+      <div class="prow"><label>参数</label><span id="ix-param" style="flex:1;display:flex;gap:4px;min-width:0"></span></div>
+      <div class="pbtns" style="margin:2px 0 0"><button onclick="intApply()">＋ 应用交互</button></div>
+    </div>`;
+  intKindChanged();
+}
+function intKindChanged(){
+  const kind=$('ix-kind')?$('ix-kind').value:'navigate_to';
+  const box=$('ix-param');if(!box)return;
+  const ab=curAb();
+  if(kind==='navigate_to'){
+    box.innerHTML=`<select id="ix-p1">${artboards().map(a=>`<option>${a.id}</option>`).join('')}</select>`;
+  }else if(kind==='show_toast'){
+    box.innerHTML='<input id="ix-p1" type="text" placeholder="提示文案，如：已加入购物车">';
+  }else if(kind==='toggle_state'){
+    box.innerHTML=`<select id="ix-p1">${(ab&&ab.nodes||[]).map(n=>`<option ${n.id===selNode?'selected':''}>${n.id}</option>`).join('')}</select>`;
+  }else if(kind==='set_text'){
+    box.innerHTML=`<select id="ix-p1">${(ab&&ab.nodes||[]).map(n=>`<option ${n.id===selNode?'selected':''}>${n.id}</option>`).join('')}</select><input id="ix-p2" type="text" placeholder="新文字">`;
+  }else box.innerHTML='<span class="lbl">无参数</span>';
+}
+function intApply(){
+  const ab=curAb();if(!ab||!selNode){setStatus(false,'先在画布选中一个节点');return;}
+  const trig=$('ix-trig').value,kind=$('ix-kind').value;
+  let spec='';
+  if(kind==='navigate_to')spec='navigate_to:'+$('ix-p1').value;
+  else if(kind==='back')spec='back';
+  else if(kind==='show_toast')spec='show_toast:"'+($('ix-p1').value||'提示')+'"';
+  else if(kind==='toggle_state')spec='toggle_state:'+($('ix-p1').value||selNode);
+  else if(kind==='set_text')spec='set_text:'+($('ix-p1').value||selNode)+':"'+($('ix-p2')?$('ix-p2').value:'')+'"';
+  if(humanOp(`interact ${ab.id} ${selNode} ${trig} ${spec}`,true)){
+    renderInteract();
+    setStatus(true,`✓ 交互已绑定：⚡${trig} → ${spec}（预览模式即可体验）`);
+  }
+}
+function uninteractSel(){
+  const ab=curAb();
+  if(ab&&selNode&&humanOp(`uninteract ${ab.id} ${selNode}`,true))renderInteract();
+}
 function refreshIdChips(abs){
   const box=$('idchips');if(!box)return;
   box.innerHTML='';
@@ -1132,7 +1237,7 @@ function setMode(m){
   document.querySelectorAll('#modesw button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   if(!artboards().length){render();return;}
   artIndex=Math.max(0,Math.min(artIndex,artboards().length-1));
-  if(mode==='proto'){
+  if(mode==='preview'){
     navStack=[curAb()?curAb().id:artboards()[0].id];
     if(selNode)select(null);
   }
@@ -1243,7 +1348,7 @@ function execAction(spec){
 }
 /* 播放模式下画布点击走 playTap 而非选中 */
 document.addEventListener('keydown',e=>{
-  if(!playing&&mode!=='proto')return;
+  if(mode!=='preview')return;
   if(e.key==='Escape'){
     e.preventDefault();
     if(navStack.length>1)execAction('back');else if(playing)exitPlay();
@@ -1352,8 +1457,9 @@ async function boot(){
     mbt=EXAMPLE;setSrc(mbt);
     await loadTemplates();
     await initPalette();
+    showTab('comp');
     render();
-    setStatus(null,mode==='proto'?'就绪 — 原型模式：点击元素触发交互，「源码」进入编辑':'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
+    setStatus(null,mode==='preview'?'就绪 — 预览模式：点击元素触发交互':'就绪 — 从组件库拖组件到画布，选中后加交互；「源码」查看它生成的 .mbt.md');
     $('bootlayer').classList.add('off');
   }catch(e){
     const m=String(e.message||e);
@@ -1368,6 +1474,8 @@ window.showTab=showTab;window.applySource=applySource;window.validate=validate;
 window.downloadSvg=downloadSvg;window.undo=undo;
 window.togglePlay=togglePlay;window.retryHuman=retryHuman;window.fixDebt=fixDebt;
 window.zoomBy=zoomBy;window.zoomFit=zoomFit;window.setMode=setMode;
+window.switchPage=switchPage;window.addBlankPage=addBlankPage;window.delCurArtboard=delCurArtboard;
+window.intKindChanged=intKindChanged;window.intApply=intApply;window.uninteractSel=uninteractSel;
 boot();
 </script>
 </body>
