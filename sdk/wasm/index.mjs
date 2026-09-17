@@ -80,6 +80,14 @@ export async function createEngine(source) {
     },
 
     /**
+     * 预设组件库清单（8 组件 × 22 变体）。
+     * @returns {Array<{id:string,kind:string,category:string,variants:string[]}>}
+     */
+    listComponents() {
+      return JSON.parse(exports.list_components());
+    },
+
+    /**
      * 导出可交互 HTML 原型（单文件自包含）：节点级 flow/⚡ 词汇表绑定、
      * 组件状态 CSS 变体、导航栈与 toast。
      * @param {string} mbt 完整 .mbt.md 源码

@@ -69,6 +69,12 @@ pub fn export_html(mbt : String) -> String {
 }
 
 ///|
+/// 预设组件库清单（playground 组件面板）：8 组件 × 22 变体。
+pub fn list_components() -> String {
+  @core.list_components_json(@core.builtin_components())
+}
+
+///|
 /// 模板清单（playground 模板选择器）。
 pub fn list_templates() -> String {
   @core.list_templates_json()

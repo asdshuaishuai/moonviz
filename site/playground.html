@@ -238,6 +238,20 @@ header .themes{margin-left:8px}
 .gram-cat .g{font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx2);padding:3px 7px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gram-cat .g:hover{background:rgba(75,107,251,.08);color:var(--acc)}
 .gram-cat .g::before{content:'▸ ';color:var(--tx3)}
+#palette{display:flex;flex-direction:column;min-height:120px;max-height:38%;border-bottom:1px solid var(--line)}
+#comp-search{margin:8px 10px 6px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--tx);font-size:12px;outline:none}
+#comp-search:focus{border-color:var(--acc)}
+#comp-list{overflow:auto;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
+.comp-cat{font-size:10px;color:var(--tx3);font-weight:700;letter-spacing:.05em;margin-top:2px}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.comp-card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:6px 8px;cursor:grab;transition:border-color .12s,transform .12s;user-select:none}
+.comp-card:hover{border-color:var(--acc);transform:translateY(-1px)}
+.comp-card:active{cursor:grabbing}
+.comp-card .cname{font-size:11.5px;font-weight:700;color:var(--tx)}
+.comp-card .cvars{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.comp-card .cvars i{font-style:normal;font-size:9.5px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--tx3);cursor:pointer}
+.comp-card .cvars i.on{border-color:var(--acc);color:var(--acc);font-weight:700}
+.comp-card .drop-w{font-size:9.5px;color:var(--tx3);margin-top:3px}
 .insp-hd{padding:8px 12px;font-size:11px;font-weight:700;color:var(--tx3);border-bottom:1px solid var(--line);letter-spacing:.04em}
 #layers{flex:0 0 auto;max-height:34%;overflow:auto;padding:4px 6px;border-bottom:1px solid var(--line)}
 .lay{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:11.5px;color:var(--tx2);cursor:pointer;white-space:nowrap;overflow:hidden}
@@ -361,6 +375,11 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
     <div id="selbox"><svg><rect x="0.75" y="0.75" width="100%" height="100%" rx="4"/></svg><span id="seltag"></span></div>
   </section>
   <section class="inspector">
+    <div class="insp-hd">组件库 · 拖到画布 <span class="lbl" id="comp-count"></span></div>
+    <div id="palette">
+      <input id="comp-search" type="search" placeholder="搜索组件…（回车清空）">
+      <div id="comp-list"></div>
+    </div>
     <div class="insp-hd">图层 · 当前画板</div>
     <div id="layers"></div>
     <div class="insp-hd">属性 · HumanGate</div>
@@ -625,6 +644,7 @@ function render(){
     const c=$('canvas');c.innerHTML='';
     abs.forEach((a,i)=>{
       const d=document.createElement('div');d.className='shot enter'+(i===artIndex?' on':'');
+      d.dataset.abid=a.id;
       d.style.animationDelay=(i*70)+'ms';
       d.addEventListener('animationend',()=>d.classList.remove('enter'),{once:true});
       const phone=a.width>=320&&a.height>=560&&(a.height/a.width)>=1.35;
@@ -845,6 +865,87 @@ function quickCmd(kind){
   $('ops').value=cmd;applyOp();
 }
 document.querySelectorAll('.ops-quick button[data-op]').forEach(b=>b.addEventListener('click',()=>quickCmd(b.dataset.op)));
+/* ---------- 组件库面板：预设组件拖放到画布（HumanGate place） ---------- */
+let COMPONENTS=[],compVariant={},compSeq={};
+async function initPalette(){
+  if(!engine)return;
+  try{
+    COMPONENTS=engine.list_components();
+    COMPONENTS.forEach(c=>compVariant[c.id]=c.variants[0]);
+    $('comp-count').textContent='（'+COMPONENTS.length+' 个预设）';
+    renderPalette('');
+  }catch(e){$('comp-list').innerHTML='<span class="lbl">组件清单加载失败：'+String(e.message||e)+'</span>';console.warn('initPalette',e);}
+}
+function renderPalette(q){
+  q=(q||'').toLowerCase();
+  const cats={};
+  COMPONENTS.forEach(c=>{
+    if(q&&!(c.id.includes(q)||c.category.includes(q)||c.variants.some(v=>v.includes(q))))return;
+    (cats[c.category]=cats[c.category]||[]).push(c);
+  });
+  const list=$('comp-list');list.innerHTML='';
+  Object.keys(cats).sort().forEach(cat=>{
+    const h=document.createElement('div');h.className='comp-cat';h.textContent=cat.toUpperCase();list.appendChild(h);
+    const grid=document.createElement('div');grid.className='comp-grid';list.appendChild(grid);
+    cats[cat].forEach(c=>{
+      const card=document.createElement('div');card.className='comp-card';card.dataset.id=c.id;
+      card.draggable=true;card.title='拖到画布放置（默认尺寸 '+c.default_size[0]+'×'+c.default_size[1]+'）';
+      card.innerHTML='<div class="cname">'+c.id+'</div><div class="cvars">'+
+        c.variants.map(v=>'<i data-v="'+v+'" class="'+(compVariant[c.id]===v?'on':'')+'">'+v+'</i>').join('')+
+        '</div><div class="drop-w">'+c.default_size[0]+'×'+c.default_size[1]+'</div>';
+      card.querySelectorAll('.cvars i').forEach(ch=>ch.onclick=ev=>{
+        ev.stopPropagation();compVariant[c.id]=ch.dataset.v;
+        card.querySelectorAll('.cvars i').forEach(x=>x.classList.toggle('on',x===ch));
+      });
+      card.addEventListener('dragstart',ev=>{
+        ev.dataTransfer.setData('text/moonviz-comp',JSON.stringify({id:c.id,variant:compVariant[c.id],w:c.default_size[0],h:c.default_size[1]}));
+        ev.dataTransfer.effectAllowed='copy';
+      });
+      grid.appendChild(card);
+    });
+  });
+  if(!list.children.length)list.innerHTML='<span class="lbl">无匹配组件</span>';
+}
+function uniqueInstanceId(base){
+  const used=new Set();artboards().forEach(a=>(a.nodes||[]).forEach(n=>used.add(n.id)));
+  if(!used.has(base))return base;
+  let i=2;while(used.has(base+'_'+i))i++;
+  return base+'_'+i;
+}
+function bindCanvasDrop(){
+  const c=$('canvas');
+  c.addEventListener('dragover',ev=>{
+    if(mode!=='src')return;
+    const shot=ev.target.closest&&ev.target.closest('.shot');
+    if(shot){ev.preventDefault();ev.dataTransfer.dropEffect='copy';}
+  });
+  c.addEventListener('drop',ev=>{
+    if(mode!=='src')return;
+    const shot=ev.target.closest&&ev.target.closest('.shot');
+    if(!shot)return;
+    const raw=ev.dataTransfer.getData('text/moonviz-comp');
+    if(!raw)return;
+    ev.preventDefault();
+    const spec=JSON.parse(raw);
+    const svg=shot.querySelector('svg');
+    if(!svg)return;
+    // 屏幕坐标 → SVG 坐标（与拖拽移动同一换算）
+    const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;
+    const loc=pt.matrixTransform(svg.getScreenCTM().inverse());
+    const ab=artboards().find(a=>a.id===shot.dataset.abid);if(!ab)return;
+    // 以组件默认尺寸为中心落点，并夹到画板内
+    const x=Math.max(0,Math.min(ab.width-spec.w/2,Math.round(loc.x-spec.w/2)));
+    const y=Math.max(0,Math.min(ab.height-spec.h/2,Math.round(loc.y-spec.h/2)));
+    const iid=uniqueInstanceId(spec.id);
+    const variant=spec.variant?' '+spec.variant:' -';
+    humanOp(`place ${ab.id} ${spec.id} ${iid}${variant} ${x} ${y}`,true);
+    select(iid);
+    setStatus(true,`✓ 已放置 ${spec.id} → ${ab.id}(${x},${y})${spec.variant?' · '+spec.variant:''}`);
+  });
+}
+bindCanvasDrop();
+$('comp-search').addEventListener('input',e=>renderPalette(e.target.value));
+$('comp-search').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.value='';renderPalette('');}});
 function refreshIdChips(abs){
   const box=$('idchips');if(!box)return;
   box.innerHTML='';
@@ -1228,7 +1329,8 @@ async function boot(){
     $('bootlayer').classList.add('off');document.body.innerHTML='<div class="nosupport">此浏览器不支持 WebAssembly。</div>';return;
   }
   try{
-    const res=await fetch('assets/moonviz.wasm');
+    // no-cache：协商缓存——wasm 更新后浏览器拿 200，未变则 304，避免旧引擎
+    const res=await fetch('assets/moonviz.wasm',{cache:'no-cache'});
     if(!res.ok)throw new Error('moonviz.wasm 加载失败（HTTP '+res.status+'）');
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
@@ -1240,6 +1342,8 @@ async function boot(){
       apply_agent_op:(s,o)=>JSON.parse(exports.apply_agent_op(s,o)),
       apply_human_op:(s,o)=>JSON.parse(exports.apply_human_op(s,o)),
       list_templates:()=>exports.list_templates(),
+      list_components:()=>JSON.parse(exports.list_components()),
+      export_html:s=>JSON.parse(exports.export_html(s)),
     };
     const v=engine.version();
     $('ver').textContent='engine '+v.engine+' v'+v.version+' · wasm-gc · 全程本地运行';
@@ -1247,6 +1351,7 @@ async function boot(){
     $('render-btn').textContent='渲染 '+(isMac?'⌘↵':'Ctrl↵');
     mbt=EXAMPLE;setSrc(mbt);
     await loadTemplates();
+    await initPalette();
     render();
     setStatus(null,mode==='proto'?'就绪 — 原型模式：点击元素触发交互，「源码」进入编辑':'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
     $('bootlayer').classList.add('off');

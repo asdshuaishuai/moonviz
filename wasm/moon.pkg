@@ -12,6 +12,7 @@ options(
         "apply_agent_op",
         "apply_human_op",
         "list_templates",
+        "list_components",
         "export_html",
         "version_info",
       ],

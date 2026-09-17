@@ -432,7 +432,7 @@ pub fn list_components_json(defs : Map[String, ComponentDef]) -> String {
         }
         let vj = jstr(vs)
         parts.push(
-          "{\"id\":\"\{def.id}\",\"kind\":\"\{def.kind}\",\"category\":\"\{def.category}\",\"variants\":[\{vj}]}",
+          "{\"id\":\"\{def.id}\",\"kind\":\"\{def.kind}\",\"category\":\"\{def.category}\",\"variants\":[\{vj}],\"default_size\":[\{def.default_size.0.to_string()},\{def.default_size.1.to_string()}]}",
         )
       }
       None => ()
