@@ -110,6 +110,9 @@ select{border:1px solid var(--line);background:var(--panel);color:var(--tx);bord
 select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 option{background:var(--panel);color:var(--tx)}
 main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(100vh - 50px)}
+/* 原型模式：单栏全宽舞台（Axure 玩家形态） */
+body.mode-proto main{grid-template-columns:1fr}
+@media (max-width:1080px){body.mode-proto main{grid-template-columns:1fr}}
 @media (max-width:1080px){main{grid-template-columns:minmax(300px,42%) 1fr}}
 .editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0;background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .canvaswrap{display:flex;flex-direction:column;min-width:0;position:relative}
@@ -186,6 +189,25 @@ button,.bpSw button,.themes button{transition:all .15s ease}
 .shot.themed .dframe{animation:themeflash .75s ease}
 @keyframes themeflash{0%{filter:brightness(1.35) saturate(1.55)}55%{filter:brightness(1.07)}100%{filter:none}}
 /* ── 缩放控制条 ── */
+/* ── 双模式：原型（默认，给人看的 Axure 式玩家）/ 源码（二级，编辑与 Agent 门槛）── */
+body.mode-proto .editor,body.mode-proto .inspector,body.mode-proto #canvas,
+body.mode-proto #playbar,body.mode-proto #undobtn,body.mode-proto #playBtn,
+body.mode-proto #retryBtn{display:none}
+body.mode-src #protobar,body.mode-src #stage{display:none}
+#modesw{display:flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:99px;margin-left:12px}
+#modesw button{border:none;background:transparent;color:var(--tx2);padding:3px 14px;border-radius:99px;cursor:pointer;font-size:12px}
+#modesw button.on{background:var(--acc);color:#fff}
+header select#tpl{max-width:180px;font-size:12px;padding:3px 8px;margin-left:10px}
+header .themes{margin-left:8px}
+#protobar{position:relative;z-index:2;display:flex;gap:8px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#proto-back{font-size:12px;padding:3px 14px}
+#proto-back:disabled{opacity:.4;cursor:default}
+#ab-pills{display:flex;gap:4px;flex-wrap:wrap}
+#ab-pills button{font-size:11px;padding:3px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--tx2);cursor:pointer}
+#ab-pills button.on{border-color:var(--acc);color:var(--acc);font-weight:700}
+#stage{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1}
+#stage .shot{max-height:none}
+.stage-empty{color:var(--tx3);font-size:13px}
 #zoombar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:flex;gap:2px;padding:3px;border-radius:99px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
 #zoombar button{width:32px;height:26px;border:none;background:transparent;color:var(--tx2);border-radius:99px;cursor:pointer;font-size:14px;line-height:1;padding:0}
 #zoombar #zoomv{width:54px;font-size:11px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
@@ -264,11 +286,17 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 #undobtn{display:none}
 </style>
 </head>
-<body>
+<body class="mode-proto">
 <header>
   <span id="branddot"></span>
   <h1>MoonViz Playground</h1>
   <span class="ver" id="ver"></span>
+  <div id="modesw" title="原型给人看，源码给人和 Agent 看">
+    <button data-m="proto" class="on">原型</button>
+    <button data-m="src">源码</button>
+  </div>
+  <select id="tpl" title="从模板新建画板（追加到当前文档）"><option value="">📐 从模板新建…</option></select>
+  <span class="themes" id="themes" title="主题系统：一键切换全局设计令牌"></span>
   <span class="spacer"></span>
   <a href="index.html">首页</a><a href="docs.html">文档</a>
   <a href="https://github.com/asdshuaishuai/moonviz">GitHub</a>
@@ -281,11 +309,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
       <button id="tab-gram" onclick="showTab('gram')">📖 语法</button>
     </div>
     <div class="bar" id="src-bar">
-      <select id="tpl" title="从模板新建画板（追加到当前文档）"><option value="">📐 从模板新建…</option></select>
-      <span style="flex:1"></span>
       <button onclick="applySource()" id="render-btn">渲染</button>
       <button onclick="validate()">校验</button>
-      <span class="themes" id="themes" title="主题系统：一键切换全局设计令牌"></span>
+      <span style="flex:1"></span>
     </div>
     <div class="edwrap">
       <pre id="hl" aria-hidden="true"><code id="hlc"></code></pre>
@@ -318,6 +344,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
       <span id="navcrumb" style="font-size:11px;color:var(--tx2)"></span>
       <button onclick="exitPlay()" style="padding:2px 12px">✕ 退出</button>
     </div>
+    <div id="protobar">
+      <button id="proto-back" onclick="execAction('back')" title="返回上一层（Esc）">⟵ 返回</button>
+      <div id="ab-pills" title="画板切换（Axure 页面面板的等价物）"></div>
+      <span style="flex:1"></span>
+      <span id="navcrumb" style="font-size:11px;color:var(--tx2)"></span>
+    </div>
+    <div id="stage"><p class="stage-empty">引擎启动中…</p></div>
     <div class="canvas" id="canvas"></div>
     <div id="zoombar">
       <button onclick="zoomBy(-.15)" title="缩小">−</button>
@@ -346,6 +379,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 <script type="module">
 const $=id=>document.getElementById(id);
 let engine=null, mbt='', artIndex=0, lastResult=null;
+let mode='proto';            // 'proto'=给人看的原型玩家（默认）；'src'=源码二级视图
 let selNode=null;            // 当前选中节点 id（属于当前画板）
 let history=[];              // mbt 快照栈（撤销）
 const HISTORY_MAX=50;
@@ -582,6 +616,12 @@ function render(){
     const abs=r.artboards||[];
     if(artIndex>=abs.length)artIndex=0;
     if(selNode&&!nodeOf(selNode))selNode=null;
+    if(mode==='proto'){
+      renderStage();
+      if(abs.length)setStatus(true,`原型 · ${abs[artIndex].id}${r.revision!==undefined?' · rev '+r.revision:''}${r.debt?' · 债 '+r.debt:''}`);
+      else setStatus(null,'空文档 — 从模板新建一个画板');
+      return;
+    }
     const c=$('canvas');c.innerHTML='';
     abs.forEach((a,i)=>{
       const d=document.createElement('div');d.className='shot enter'+(i===artIndex?' on':'');
@@ -610,7 +650,7 @@ function render(){
 /* ---------- 画布缩放：按 SVG 原始宽高 × zoom 设定 style 尺寸（布局级缩放，拖拽/选区几何天然正确） ---------- */
 let zoom=1;
 function applyZoom(){
-  document.querySelectorAll('#canvas .shot svg').forEach(s=>{
+  document.querySelectorAll('#canvas .shot svg,#stage .shot svg').forEach(s=>{
     const w=parseFloat(s.getAttribute('width'))||390,h=parseFloat(s.getAttribute('height'))||844;
     s.style.width=(w*zoom).toFixed(1)+'px';s.style.height=(h*zoom).toFixed(1)+'px';
   });
@@ -619,7 +659,7 @@ function applyZoom(){
 }
 function zoomBy(d){zoom=Math.min(2,Math.max(.35,zoom+d));applyZoom();}
 function zoomFit(){
-  const ab=curAb(),c=$('canvas');if(!ab||!c||!c.clientWidth)return;
+  const ab=curAb(),c=mode==='proto'?$('stage'):$('canvas');if(!ab||!c||!c.clientWidth)return;
   zoom=Math.max(.35,Math.min((c.clientWidth-110)/ab.width,(c.clientHeight-110)/ab.height,1.5));
   applyZoom();
 }
@@ -652,6 +692,7 @@ function humanOp(op,silentOk){
 function select(id){selNode=id;renderLayers();renderProps();placeSelbox();}
 function placeSelbox(){
   const box=$('selbox'),tag=$('seltag');
+  if(mode==='proto'){box.style.display='none';return;}
   const svg=activeSvg();
   if(!selNode||!svg){box.style.display='none';return;}
   const g=svg.querySelector(`g[id="n_${selNode}"]`);
@@ -671,7 +712,7 @@ function placeSelbox(){
 /* 拖拽：SVG 坐标换算 + ghost 位移 + 释放提交 HumanGate move */
 let drag=null;
 $('canvas').addEventListener('mousedown',e=>{
-  if(playing)return; // 演示模式下画布只响应 tap
+  if(mode!=='src'||playing)return; // 原型模式纯观看：点击走 playTap；编辑仅限源码模式
   const g=e.target.closest&&e.target.closest('g[id^="n_"]');
   if(!g)return;
   const svg=g.ownerSVGElement;
@@ -984,6 +1025,46 @@ function retryHuman(){
   }catch(e){history.pop();setStatus(false,String(e.message||e));}
 }
 
+/* ---------- 原型模式：Axure/墨刀式玩家（交互常驻，源码是二级视图） ---------- */
+function setMode(m){
+  mode=m;document.body.className='mode-'+m;
+  document.querySelectorAll('#modesw button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  if(!artboards().length){render();return;}
+  artIndex=Math.max(0,Math.min(artIndex,artboards().length-1));
+  if(mode==='proto'){
+    navStack=[curAb()?curAb().id:artboards()[0].id];
+    if(selNode)select(null);
+  }
+  render();
+}
+function renderStage(){
+  const st=$('stage');st.innerHTML='';
+  const abs=artboards();
+  if(!abs.length){st.innerHTML='<p class="stage-empty">空文档 — 在源码模式或用上方「从模板新建」开始</p>';updatePills();return;}
+  const a=abs[Math.min(artIndex,abs.length-1)]||abs[0];
+  const d=document.createElement('div');d.className='shot dev on';
+  const phone=a.width>=320&&a.height>=560&&(a.height/a.width)>=1.35;
+  const browser=a.width>=560&&(a.width/a.height)>=1.15;
+  d.innerHTML=`<div class="dframe ${phone?'dphone':browser?'dbrowser':''}">${
+    phone?'<span class="island"></span>':
+    browser?`<span class="chrome"><i></i><i></i><i></i><em>${a.id}</em></span>`:''
+  }${a.svg}</div><button class="tag">${a.id} · ${a.width}×${a.height}</button>`;
+  st.appendChild(d);
+  // Axure 式：画板上任何元素可点，绑定来自引擎 flows + ⚡标记
+  d.querySelectorAll('g[id^="n_"]').forEach(g=>{
+    g.addEventListener('click',ev=>{ev.stopPropagation();playTap(g.id.slice(2));});
+  });
+  applyZoom();updatePills();
+}
+function updatePills(){
+  const bar=$('ab-pills');if(!bar)return;
+  bar.innerHTML=artboards().map((a,i)=>`<button data-i="${i}" class="${i===artIndex?'on':''}">${a.id}</button>`).join('');
+  bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    artIndex=+b.dataset.i;navStack=[artboards()[artIndex].id];render();
+  });
+  const back=$('proto-back');if(back)back.disabled=navStack.length<2;
+}
+
 /* ---------- 播放模式：交互运行时（引擎的 flows + 标记交互）---------- */
 let playing=false,navStack=[];
 function togglePlay(){playing?exitPlay():enterPlay();}
@@ -1061,10 +1142,10 @@ function execAction(spec){
 }
 /* 播放模式下画布点击走 playTap 而非选中 */
 document.addEventListener('keydown',e=>{
-  if(!playing)return;
+  if(!playing&&mode!=='proto')return;
   if(e.key==='Escape'){
     e.preventDefault();
-    if(navStack.length>1)execAction('back');else exitPlay();
+    if(navStack.length>1)execAction('back');else if(playing)exitPlay();
   }
 });
 
@@ -1073,6 +1154,7 @@ const THEMES=[
   ['light','#ffffff'],['dark','#1b1d21'],['high_contrast','#000000'],
   ['sepia','#f5ecd9'],['nord','#2e3440'],['sunset','#ff9e7d'],
 ];
+document.querySelectorAll('#modesw button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 $('themes').innerHTML=THEMES.map(([n,c])=>
   '<button data-t="'+n+'" title="theme '+n+'" style="background:'+c+'"></button>').join('');
 $('themes').querySelectorAll('button').forEach(b=>b.onclick=()=>{
@@ -1166,7 +1248,7 @@ async function boot(){
     mbt=EXAMPLE;setSrc(mbt);
     await loadTemplates();
     render();
-    setStatus(null,'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
+    setStatus(null,mode==='proto'?'就绪 — 原型模式：点击元素触发交互，「源码」进入编辑':'就绪 — 点击画布元素选中，拖拽移动（HumanGate）；操作台体验 Agent 硬门槛');
     $('bootlayer').classList.add('off');
   }catch(e){
     const m=String(e.message||e);
@@ -1180,7 +1262,7 @@ async function boot(){
 window.showTab=showTab;window.applySource=applySource;window.validate=validate;
 window.downloadSvg=downloadSvg;window.undo=undo;
 window.togglePlay=togglePlay;window.retryHuman=retryHuman;window.fixDebt=fixDebt;
-window.zoomBy=zoomBy;window.zoomFit=zoomFit;
+window.zoomBy=zoomBy;window.zoomFit=zoomFit;window.setMode=setMode;
 boot();
 </script>
 </body>
