@@ -176,6 +176,15 @@ jobs:
           case "$TAG" in engine-v*) ;; *) TAG="engine-v${MOONVIZ_VERSION}";; esac
           gh release create "$TAG"             --title "MoonViz engine binaries ${TAG#engine-}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Also includes versioned wasm builds: moonviz-wasm-gc-<ver>.wasm (JS hosts) and moonviz-wasm-classic-<ver>.wasm (standard WASM MVP for wasmtime/wasmi and any spec-compliant runtime)."             --latest || true
           gh release upload "$TAG" moonviz-bin-*.tgz $(find . -name 'moonviz-wasm-*.wasm' | sed 's|^\./||') --clobber
+          # 全产物：把 npm 家族全部当前版本 tarball 也归档进来（与应用包
+          # 双渠道分发），缺包自动跳过
+          for pv in "moonviz-mcp" "moonviz-engine-sdk" "moonviz-engine-wasm" "moonviz-skill"; do
+            ver=$(curl -fsSL "https://registry.npmjs.org/$pv" | python3 -c "import sys,json;d=json.load(sys.stdin);vs=sorted(d.get('versions',{}));print(vs[-1] if vs else '')" || true)
+            [ -z "$ver" ] && continue
+            curl -fsSL -o "$pv-$ver.tgz" "https://registry.npmjs.org/$pv/-/$pv-$ver.tgz" \
+              && gh release upload "$TAG" "$pv-$ver.tgz" --clobber \
+              && echo "archived $pv-$ver" || echo "skip $pv（registry 暂缺）"
+          done
 
   publish:
     name: publish platform packages (requires NPM_TOKEN)
