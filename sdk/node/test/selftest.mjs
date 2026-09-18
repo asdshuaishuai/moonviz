@@ -38,4 +38,17 @@ const open = await DDP.decrypt(locked.bytes, 'test-password');
 assert.equal(open.mbt, mbt, 'DDP1 往返应字节一致');
 await assert.rejects(() => DDP.decrypt(locked.bytes, 'wrong'), /认证|auth/i, '错密码应认证失败');
 
-console.log('SDK selftest passed: template/update/flow/export/render/DDP1/DDP2 all OK');
+// 6) 能力对齐面：字典 / 清单 / 导出
+const tools = await engine.tools();
+assert.ok(Array.isArray(tools) && tools.length >= 47, 'tools() 应返回 47+ 工具');
+assert.ok(tools.some(t => t.name === 'list_ops' && t.inputSchema), 'tools() 应含 list_ops 且带 schema');
+const ops = await engine.ops();
+assert.ok(Array.isArray(ops) && ops.length === 25, 'ops() 应返回 25 条 op');
+const themes = await engine.listThemes();
+assert.ok(Array.isArray(themes) && themes.length === 6, 'listThemes() 应返回 6 主题');
+const tokens = await engine.listTokens();
+assert.ok(tokens && Array.isArray(tokens.colors) && tokens.colors.some(c => c.k === 'primary'), 'listTokens() 应含颜色令牌');
+const html = await engine.exportHtml(mbt);
+assert.ok(html.includes('<!DOCTYPE html>') && html.includes('MV_ACT'), 'exportHtml() 应产出可交互原型');
+
+console.log('SDK selftest passed: template/update/flow/export/render/DDP1/DDP2/tools/ops/themes/tokens/exportHtml all OK');

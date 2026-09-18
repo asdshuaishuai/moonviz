@@ -5,9 +5,9 @@ import {
 
 options(
   link: {
-    // classic wasm：无 js-string 依赖，字符串以 (ptr,len) 线性内存 ABI
-    // 暴露——wasmtime/wasmi（Rust）可直接实例化；js/wasm-gc 宿主走各自
-    // 的 link 配置。
+    // classic wasm：标准 WASM MVP（无 js-string/GC 提案依赖），跨平台
+    // 宿主中立——任何规范运行时可实例化。字符串 ABI 为线性内存对象
+    // （[4B refcnt][4B header][len×UTF-16LE]，详见提交 8a893ce 说明）。
     "wasm": {
       "export-memory-name": "memory",
       "exports": [
@@ -17,6 +17,9 @@ options(
         "apply_human_op",
         "list_templates",
         "list_components",
+        "list_themes",
+        "list_tokens",
+        "list_ops",
         "export_html",
         "version_info",
       ],
@@ -29,6 +32,9 @@ options(
         "apply_human_op",
         "list_templates",
         "list_components",
+        "list_themes",
+        "list_tokens",
+        "list_ops",
         "export_html",
         "version_info",
       ],

@@ -140,6 +140,53 @@ export class MoonViz {
     });
   }
 
+  /** 引擎工具能力字典（47 工具，含 inputSchema）——与 MCP tools/list 同源。 */
+  async tools() {
+    return this.last(['list-tools']);
+  }
+
+  /** 引擎 op 面字典（25 条 mutating op：usage/category/gates）。 */
+  async ops() {
+    return this.last(['list-ops']);
+  }
+
+  /** 模板清单（8 个完整页面模板）。 */
+  async listTemplates() {
+    return this.last(['list-templates']);
+  }
+
+  /** 预设组件清单（52 组件 × 93 变体，含默认尺寸）。 */
+  async listComponents() {
+    return this.last(['list-components']);
+  }
+
+  /** 主题清单（6 内置主题）。 */
+  async listThemes() {
+    return this.last(['list-themes']);
+  }
+
+  /** 设计令牌清单（颜色/间距/圆角/字号）。 */
+  async listTokens() {
+    return this.last(['list-tokens']);
+  }
+
+  /** 导出单画板 SVG。 */
+  async exportSvg(mbt, artboard) {
+    const r = await this.last([
+      `load-mbt-b64 ${b64(mbt)}`,
+      `export-svg ${artboard}`,
+    ]);
+    if (r && r.ok && typeof r.svg === 'string') return r.svg;
+    throw new EngineError(r && (r.error || 'export_svg failed'), r);
+  }
+
+  /** 导出自包含可交互 HTML 原型（节点级导航/状态切换/toast）。 */
+  async exportHtml(mbt) {
+    const r = await this.last([`load-mbt-b64 ${b64(mbt)}`, 'export-html']);
+    if (r && r.ok && typeof r.html === 'string') return r.html;
+    throw new EngineError(r && (r.error || 'export_html failed'), r);
+  }
+
   /** 便捷：取结果数组中最后一个 JSON 对象。 */
   async last(commands) {
     const rs = await this.run(commands);

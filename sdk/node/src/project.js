@@ -94,6 +94,38 @@ export class Project {
     if (!out?.ok) throw new Error(out?.error ?? 'export_failed');
     return out.mbt;
   }
+
+  /** 切换全局主题（角色重着色，可逆；frontmatter theme: 持久化）。 */
+  theme(name) { this.cmds.push(`theme ${name}`); return this; }
+
+  /** 覆盖单个颜色令牌（重着色旧值；frontmatter tokens: 持久化）。 */
+  token(name, value) { this.cmds.push(`token ${name} ${value}`); return this; }
+
+  /** 绑定交互：trigger × action_spec（写入 ⚡ 标记）。 */
+  interact(artboard, node, trigger, actionSpec) {
+    this.cmds.push(`interact ${artboard} ${node} ${trigger} ${actionSpec}`);
+    return this;
+  }
+
+  /** 定义组件状态补丁（fill/text_color/stroke/text/radius/font_size）。 */
+  state(artboard, node, stateName, kvs = {}) {
+    const args = Object.entries(kvs).map(([k, v]) => `${k}=${v}`).join(' ');
+    this.cmds.push(`state ${artboard} ${node} ${stateName} ${args}`.trim());
+    return this;
+  }
+
+  /** 设置组件当前状态（[cur:] 标记持久化；toggle=true 在默认态间切换）。 */
+  setState(node, stateName, toggle = false) {
+    this.cmds.push(`set-state ${node} ${stateName}${toggle ? ' toggle' : ''}`);
+    return this;
+  }
+
+  /** 导出自包含可交互 HTML 原型。 */
+  async exportHtml() {
+    const out = await this.engine.last([...this.cmds, 'export-html']);
+    if (!out?.ok) throw new Error(out?.error ?? 'export_failed');
+    return out.html;
+  }
 }
 
 /**

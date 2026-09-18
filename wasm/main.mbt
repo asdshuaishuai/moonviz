@@ -69,9 +69,36 @@ pub fn export_html(mbt : String) -> String {
 }
 
 ///|
-/// 预设组件库清单（playground 组件面板）：8 组件 × 22 变体。
+/// 预设组件库清单（playground 组件面板）：52 组件 × 93 变体。
 pub fn list_components() -> String {
   @core.list_components_json(@core.builtin_components())
+}
+
+///|
+/// 预设主题清单：name/display_name/is_dark（前端主题切换器）。
+pub fn list_themes() -> String {
+  let parts : Array[String] = []
+  for t in @core.builtin_themes().iter() {
+    let dark = if t.is_dark { "true" } else { "false" }
+    parts.push(
+      "{\"name\":\"\{t.name}\",\"display_name\":\"\{t.display_name}\",\"is_dark\":\{dark}}",
+    )
+  }
+  let joined = parts.join(",")
+  "[\{joined}]"
+}
+
+///|
+/// 默认设计令牌清单（颜色/间距/圆角/字号）。
+pub fn list_tokens() -> String {
+  @core.DesignTokens::default().to_json()
+}
+
+///|
+/// 机器可读 op 面字典：25 条 mutating op（usage/category/gates），
+/// 与 CLI list-ops / MCP list_ops 同源（core/agent_api.mbt）。
+pub fn list_ops() -> String {
+  @core.list_ops_json()
 }
 
 ///|

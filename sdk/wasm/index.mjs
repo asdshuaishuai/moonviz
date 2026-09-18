@@ -97,6 +97,21 @@ export async function createEngine(source) {
       return JSON.parse(exports.export_html(mbt));
     },
 
+    /** op 面字典（25 条 mutating op：op/usage/category/gates）。 */
+    listOps() {
+      return JSON.parse(exports.list_ops());
+    },
+
+    /** 主题清单（name/display_name/is_dark）。 */
+    listThemes() {
+      return JSON.parse(exports.list_themes());
+    },
+
+    /** 默认设计令牌清单（colors/spacing/radii/typography）。 */
+    listTokens() {
+      return JSON.parse(exports.list_tokens());
+    },
+
     /** 原始 wasm 导出（高级用法）。 */
     raw: exports,
   };
