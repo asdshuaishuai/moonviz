@@ -156,6 +156,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -165,7 +166,7 @@ jobs:
         run: |
           TAG="engine-v${MOONVIZ_VERSION}"
           gh release create "$TAG"             --title "MoonViz engine binaries v${MOONVIZ_VERSION}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Includes moonviz.wasm (classic standard build for wasmtime/wasmi and any WASM MVP runtime)."             --latest || true
-          gh release upload "$TAG" moonviz-bin-*.tgz moonviz-classic-wasm/* --clobber
+          gh release upload "$TAG" moonviz-bin-*.tgz moonviz.wasm --clobber
 
   publish:
     name: publish platform packages (requires NPM_TOKEN)
