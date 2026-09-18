@@ -41,22 +41,24 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
-      - name: Build MCP server + CLI binaries (unix)
+      # 全产物构建：native(cli+mcp) 平台相关 + 双 wasm 产物平台无关
+      # （每个平台 job 都构建 wasm，互相 --clobber 校验一致性）
+      - name: Build all artifacts (unix)
         if: runner.os != 'Windows'
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon version
           moon build --release --target native mcp
           moon build --release --target native cli
-          # classic wasm 标准产物（WASM MVP，跨平台宿主中立；wasm 后端与
-          # 构建机平台无关，linux-x64 一次构建即可）
-          if [ "${{ matrix.platform }}" = "linux-x64" ]; then
-            moon build --release --target wasm wasm
-            mkdir -p dist-classic
-            cp _build/wasm/release/build/wasm/wasm.wasm dist-classic/moonviz.wasm
-          fi
-          file _build/native/release/build/mcp/mcp.exe _build/native/release/build/cli/cli.exe
-      - name: Build MCP server + CLI binaries (Windows)
+          moon build --release --target wasm-gc wasm
+          moon build --release --target wasm wasm
+          mkdir -p dist
+          cp _build/native/release/build/mcp/mcp.exe dist/moonviz-mcp
+          cp _build/native/release/build/cli/cli.exe dist/moonviz-cli
+          cp _build/wasm-gc/release/build/wasm/wasm.wasm dist/moonviz-wasm-gc-${{ env.MOONVIZ_VERSION }}.wasm
+          cp _build/wasm/release/build/wasm/wasm.wasm   dist/moonviz-wasm-classic-${{ env.MOONVIZ_VERSION }}.wasm
+          file dist/*
+      - name: Build all artifacts (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
@@ -64,6 +66,9 @@ jobs:
           moon version
           moon build --release --target native mcp
           moon build --release --target native cli
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item _build/native/release/build/mcp/mcp.exe dist/moonviz-mcp.exe
+          Copy-Item _build/native/release/build/cli/cli.exe dist/moonviz-cli.exe
       - name: Smoke test (unix)
         if: runner.os != 'Windows'
         run: |
@@ -137,12 +142,13 @@ jobs:
         with:
           name: moonviz-bin-${{ matrix.platform }}
           path: moonviz-bin-*.tgz
-      - name: Upload classic wasm (linux-x64 only)
-        if: matrix.platform == 'linux-x64'
+      - name: Upload versioned wasm artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: moonviz-classic-wasm
-          path: dist-classic/moonviz.wasm
+          name: moonviz-wasm-${{ matrix.platform }}
+          path: |
+            dist/moonviz-wasm-gc-*.wasm
+            dist/moonviz-wasm-classic-*.wasm
 
   # GitHub Releases 渠道：tag（engine-v*）或手动触发时，把全部平台
   # tarball 归档到 Release——分发不完全依赖 npm（win32-x64 曾被 npm
@@ -168,8 +174,8 @@ jobs:
           # 回退到 MOONVIZ_VERSION 公式
           TAG="${{ github.ref_name }}"
           case "$TAG" in engine-v*) ;; *) TAG="engine-v${MOONVIZ_VERSION}";; esac
-          gh release create "$TAG"             --title "MoonViz engine binaries ${TAG#engine-}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Includes moonviz.wasm (classic standard build for wasmtime/wasmi and any WASM MVP runtime)."             --latest || true
-          gh release upload "$TAG" moonviz-bin-*.tgz moonviz.wasm --clobber
+          gh release create "$TAG"             --title "MoonViz engine binaries ${TAG#engine-}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Also includes versioned wasm builds: moonviz-wasm-gc-<ver>.wasm (JS hosts) and moonviz-wasm-classic-<ver>.wasm (standard WASM MVP for wasmtime/wasmi and any spec-compliant runtime)."             --latest || true
+          gh release upload "$TAG" moonviz-bin-*.tgz moonviz-wasm-*/moonviz-wasm-*.wasm --clobber
 
   publish:
     name: publish platform packages (requires NPM_TOKEN)
