@@ -88,7 +88,7 @@ fn handle_request(line : String) -> String {
   let id = extract_json_id(line)
   match method {
     "initialize" =>
-      "{\"jsonrpc\":\"2.0\",\"id\":\{id},\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"moonviz\",\"version\":\"0.1.0\"}}}"
+      "{\"jsonrpc\":\"2.0\",\"id\":\{id},\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"moonviz\",\"version\":\"\{@core.ENGINE_VERSION}\"}}}"
     "notifications/initialized" => ""
     "tools/list" => {
       let tools = tools_definition()

@@ -75,7 +75,7 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 fn main {
   let p = @core.Project::new()
   let mut running = true
-  println("{\"moonviz\":\"cli\",\"version\":\"0.1.0\"}")
+  println("{\"moonviz\":\"cli\",\"version\":\"\{@core.ENGINE_VERSION}\"}")
   while running {
     let line = read_line()
     // read_line 在 stdin EOF 时返回 ":exit" 哨兵；用户命令 "exit"/"quit"

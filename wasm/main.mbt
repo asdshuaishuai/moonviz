@@ -34,7 +34,7 @@ pub fn validate_mbt(mbt : String) -> String {
 
 ///|
 pub fn version_info() -> String {
-  "{\"ok\":true,\"engine\":\"moonviz\",\"version\":\"0.1.0\"}"
+  "{\"ok\":true,\"engine\":\"moonviz\",\"version\":\"\{@core.ENGINE_VERSION}\"}"
 }
 
 ///|
@@ -60,7 +60,7 @@ pub fn apply_agent_op(mbt : String, op : String) -> String {
 /// 组件状态 CSS 变体、导航栈与 toast，全部由 .mbt.md 数据驱动。
 pub fn export_html(mbt : String) -> String {
   match @decl.load_mbt_project(mbt) {
-    Err(error) => "{\"ok\":false,\"error\":\{@core.json_escape(error)}}"
+    Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
     Ok(model) => {
       let html = model.project.export_html()
       "{\"ok\":true,\"html\":\"\{@core.json_escape(html)}\"}"
@@ -134,6 +134,10 @@ pub fn apply_human_op(mbt : String, op : String) -> String {
 
 struct WasmSession {
   project : @core.Project
+  /// 存活标记：close 置 false（tombstone，槽位不复用以保句柄稳定）。
+  /// session_get 对已关槽位返回 None——宿主得到 invalid_session_handle
+  /// 而不是在空项目上误操作（issue #4A）。
+  alive : Bool
 }
 
 let sessions : @ref.Ref[Array[@ref.Ref[WasmSession]]] = Ref::new([])
@@ -149,18 +153,19 @@ pub fn session_open(mbt : String) -> Int {
     Err(_) => -1
     Ok(model) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: model.project }))
+      s.push(Ref::new({ project: model.project, alive: true }))
       s.length() - 1
     }
   }
 }
 
 ///|
-/// 关闭会话并回收槽位。
+/// 关闭会话：清空内容并置 tombstone（槽位下标不复用，句柄稳定）。
+/// 重复 close 同一句柄返回 false。
 pub fn session_close(handle : Int) -> Bool {
   let s = session_store()
-  if handle >= 0 && handle < s.length() {
-    s[handle] = Ref::new({ project: @core.Project::new() })
+  if handle >= 0 && handle < s.length() && s[handle].val.alive {
+    s[handle] = Ref::new({ project: @core.Project::new(), alive: false })
     true
   } else {
     false
@@ -168,9 +173,31 @@ pub fn session_close(handle : Int) -> Bool {
 }
 
 ///|
+/// 当前活跃（已打开且未关闭）会话数：下游测试锁定 session 泄漏用
+/// （issue #1）。
+pub fn session_count() -> Int {
+  session_store().iter().filter(fn(s) { s.val.alive }).count()
+}
+
+///|
+/// 从 project JSON 快照（session_save 输出）打开会话——save/open 回灌
+/// 闭环，跨进程持久化会话不再退化回无状态用法（issue #4B）。
+pub fn session_open_project_json(project_json : String) -> Int {
+  let p = @core.Project::new()
+  match p.from_project_json(project_json) {
+    Err(_) => -1
+    Ok(_) => {
+      let s : Array[@ref.Ref[WasmSession]] = session_store()
+      s.push(Ref::new({ project: p, alive: true }))
+      s.length() - 1
+    }
+  }
+}
+
+///|
 fn session_get(handle : Int) -> @core.Project? {
   let s = session_store()
-  if handle >= 0 && handle < s.length() {
+  if handle >= 0 && handle < s.length() && s[handle].val.alive {
     Some(s[handle].val.project)
   } else {
     None
@@ -178,12 +205,14 @@ fn session_get(handle : Int) -> @core.Project? {
 }
 
 ///|
+/// 统一信封：只读导出返回 {ok:true, data:<原生 JSON>}，与其它导出的
+/// {ok,...} 形态一致——宿主解析不再逐个特判（issue #4C）。
 fn sess_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) =>
       match f(p) {
-        Ok(json) => json
+        Ok(json) => "{\"ok\":true,\"data\":\{json}}"
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
       }
   }
@@ -195,17 +224,44 @@ fn sess_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> Str
 pub fn session_apply_agent(handle : Int, op : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
-    Some(p) =>
-      match @core.apply_operation(p, op) {
+    Some(p) => {
+      // AgentGate 与无状态 apply_agent_op 同一门：从当前文档重建 →
+      // 应用 op → commit_and_render(AgentGate) 做门检查（违规整体拒绝，
+      // 返回 mbt_gate_block 信封），成功后把提交的 canonical 文本同步
+      // 回会话槽位——绕过门检查会让 Agent 硬门槛在会话面被架空
+      // （issue #2）。
+      match @decl.project_to_mbt(p) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-        Ok(_) =>
-          match @decl.project_to_mbt(p) {
+        Ok(snapshot) =>
+          match @decl.load_mbt_project(snapshot.to_mbt()) {
             Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-            Ok(model) => "{\"ok\":true,\"mbt\":\"\{@core.json_escape(model.to_mbt())}\"}"
+            Ok(model) =>
+              match @core.apply_operation(model.project, op) {
+                Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                Ok(_) => {
+                  // 门检查（会整体拒绝违规 op）；canonical 文本以提交后的
+                  // Project 为准（op 已应用在 model.project 上）
+                  let gate_result = model.commit_and_render(@core.AgentGate)
+                  match gate_result {
+                    Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                    Ok(_) => {
+                      p.replace_with(model.project)
+                      match @decl.project_to_mbt(p) {
+                        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                        Ok(final_model) =>
+                          "{\"ok\":true,\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
+                      }
+                    }
+                  }
+                }
+              }
           }
       }
+    }
   }
 }
+
+
 
 ///|
 /// 应用一条 mutating op（HumanGate，视觉债放行）。

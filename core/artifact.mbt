@@ -38,7 +38,7 @@ pub(all) struct MoonVizArtifact {
 ///|
 pub fn MoonVizArtifact::new() -> MoonVizArtifact {
   {
-    meta_version: "0.1.0",
+    meta_version: ENGINE_VERSION,
     meta_created_by: "",
     meta_context: "",
     artboard_decls: Map::new(),

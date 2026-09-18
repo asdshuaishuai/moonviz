@@ -155,6 +155,16 @@ export async function createEngine(source) {
       return exports.session_close(handle);
     },
 
+    /** 当前活跃会话数（泄漏观测，issue #1）。 */
+    sessionCount() {
+      return exports.session_count();
+    },
+
+    /** 从 project JSON 快照打开会话（save→open 回灌，issue #4B）。 */
+    sessionOpenProjectJson(projectJson) {
+      return exports.session_open_project_json(projectJson);
+    },
+
     /** 其余 session_* 以 raw 导出直用（spec/constrain/infer/用户组件…）。 */
     raw: exports,
   };
