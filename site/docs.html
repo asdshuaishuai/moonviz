@@ -189,13 +189,15 @@ const back = await DDP.decrypt(free.bytes);         // → { mbt }</code></pre>
 <table>
 <tr><th>导出</th><th>说明</th></tr>
 <tr><td><code>MoonViz</code></td><td>引擎会话类：<code>run(cmds)</code> / <code>last(cmds)</code> / <code>render</code> / <code>validate</code> / <code>applyHumanOp</code> / <code>applyAgentOp</code> / <code>apply</code> / <code>create</code></td></tr>
-<tr><td><code>Project</code></td><td>构建器：<code>template/create/duplicate/deleteArtboard/update/move/flip/reorder/copy/flow/exportHuman</code></td></tr>
+<tr><td>能力字典 / 清单</td><td><code>tools()</code>（47 工具含 inputSchema）/ <code>ops()</code>（25 op）/ <code>listTemplates()</code> / <code>listComponents()</code> / <code>listThemes()</code> / <code>listTokens()</code> —— 与 MCP tools/list、CLI list-tools·list-ops 同源</td></tr>
+<tr><td>导出</td><td><code>exportSvg(mbt, artboard)</code> / <code>exportHtml(mbt)</code>（自包含可交互原型）</td></tr>
+<tr><td><code>Project</code></td><td>构建器：<code>template/create/duplicate/deleteArtboard/update/move/flip/reorder/copy/flow/exportHuman</code> + <code>theme/token/interact/state/setState/exportHtml</code></td></tr>
 <tr><td><code>DDP</code></td><td><code>encrypt(mbt, password, {codecPath, moonvizDir})</code> / <code>decrypt(bytes, password)</code></td></tr>
 <tr><td><code>build(engine, recipe)</code></td><td>一次性构建工厂</td></tr>
 <tr><td><code>encodeProps(props)</code></td><td>属性对象 → CLI <code>k=v</code> 片段</td></tr>
 <tr><td><code>EngineError</code></td><td>引擎 <code>{ok:false}</code> 响应异常（<code>error</code> 错误码 + <code>detail</code> 原始响应）</td></tr>
 </table>
-<p>自检：<code>cd moonviz && node sdk/node/test/selftest.mjs</code> —— 覆盖 模板 → 操作 → 交互流 → 导出 → 渲染 → DDP1/DDP2 往返全链路。</p>
+<p>自检：<code>cd moonviz && node sdk/node/test/selftest.mjs</code> —— 覆盖 模板 → 操作 → 交互流 → 导出 → 渲染 → DDP1/DDP2 往返 + 能力对齐面（tools/ops/themes/tokens/exportHtml）。</p>
 </section>
 
 <section id="wasm">
@@ -223,15 +225,19 @@ const view = engine.render(mbt);      // 同步、进程内
 // { ok, entry, flows, artboards: [{ id, width, height, svg, nodes }] }
 const check = engine.validate(mbt);
 // { ok, entry, revision, blockKinds }</code></pre>
-<h3>选型</h3>
+<h3>双产物选型</h3>
 <table>
-<tr><th></th><th>moonviz-engine-wasm</th><th>moonviz-engine-sdk</th></tr>
-<tr><td>运行时依赖</td><td>无（wasm 进程内，≈90KB）</td><td>moon 工具链 + 引擎目录 + ddp_codec</td></tr>
-<tr><td>能力面</td><td>render / validate</td><td>全量 CLI：会话 / 编辑 / 交互流 / 双 Gate 导出 / DDP</td></tr>
-<tr><td>延迟</td><td>毫秒级、同步</td><td>每批一次进程 spawn</td></tr>
-<tr><td>DDP 加解密</td><td>✗（Rust 编解码，独立交付）</td><td>✓</td></tr>
+<tr><th></th><th>wasm-gc 产物（本包）</th><th>classic 标准产物</th><th>moonviz-engine-sdk</th></tr>
+<tr><td>标准</td><td>WASM GC + JS String Builtins（提案仅 JS 引擎实现）</td><td>纯 WASM MVP（跨平台、宿主中立）</td><td>进程外 CLI 协议</td></tr>
+<tr><td>可运行宿主</td><td>浏览器 / Node ≥22</td><td>wasmtime / wasmi 等任意规范运行时</td><td>Node ≥18</td></tr>
+<tr><td>能力面</td><td colspan="2" style="text-align:center">一致：render / validate / 双 Gate applyOp / exportHtml / 五个清单 API</td><td>全量 CLI：会话 / 编辑 / 交互流 / 双 Gate 导出 / DDP</td></tr>
+<tr><td>字符串 ABI</td><td>宿主内建字符串直通</td><td>线性内存对象：<code>[4B refcnt][4B header][len×UTF-16LE]</code></td><td>JSON 文本协议</td></tr>
+<tr><td>DDP 加解密</td><td>✗</td><td>✗</td><td>✓（Rust codec 独立交付）</td></tr>
 </table>
-<p>重新构建产物：<code>moon build --release --target wasm-gc wasm</code> → 拷贝 <code>_build/wasm-gc/release/build/wasm/wasm.wasm</code> 到 <code>sdk/wasm/dist/moonviz.wasm</code>。边界函数与导出配置见 <code>wasm/main.mbt</code> 与 <code>wasm/moon.pkg</code>。</p>
+<p>构建产物（两种均在 <code>wasm/moon.pkg</code> 配置导出面，11 个 API）：</p>
+<pre><code>moon build --release --target wasm-gc wasm   # JS 宿主 → 拷贝到 sdk/wasm/dist/moonviz.wasm
+moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/release/build/wasm/wasm.wasm</code></pre>
+<p>classic 产物已接入 GitHub Actions：<code>engine-v*</code> tag 触发的构建会在 GitHub Releases 归档 <code>moonviz.wasm</code>（连同四平台二进制 tarball）。classic 读取方向示例：返回值 i32 为字符串对象指针，<code>len = header@ptr+4 &amp; 0x0FFF_FFFF</code>，UTF-16LE 数据在 <code>ptr+8</code>；入参方向需引擎堆分配辅助（roadmap）。</p>
 </section>
 
 <section id="mcp">

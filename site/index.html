@@ -117,13 +117,14 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
   <h1>AI 时代的 <span class="grad">Agent 驱动</span>原型设计引擎</h1>
   <p class="sub">纯 MoonBit 实现。一份 <code>.mbt.md</code> 视觉文档是唯一事实源——人类画布操作与 Agent 修改都回写同一份源码，每次预览从源重建；通过 DDP 加密容器安全分发。</p>
   <div class="actions">
-    <a class="btn primary" href="docs.html#quickstart">快速开始</a>
+    <a class="btn primary" href="playground.html">在线 Playground（设计 + 预览）</a>
+    <a class="btn ghost" href="docs.html#quickstart">快速开始</a>
     <a class="btn ghost" href="docs.html">完整使用文档</a>
   </div>
   <div class="stats">
-    <div class="stat"><b>70+</b><span>Agent 工具</span></div>
-    <div class="stat"><b>8×22</b><span>组件 × 变体</span></div>
-    <div class="stat"><b>2</b><span>导出 Gate（Human/Agent）</span></div>
+    <div class="stat"><b>47</b><span>Agent 工具（含 inputSchema）</span></div>
+    <div class="stat"><b>52×93</b><span>组件 × 变体</span></div>
+    <div class="stat"><b>2</b><span>WASM 产物（GC + 标准 MVP）</span></div>
     <div class="stat"><b>100%</b><span>MoonBit · 单二进制</span></div>
   </div>
 </div></header>
@@ -146,7 +147,7 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
   <p class="lead">从命令行手动驱动，到 IDE 内 Agent 自动驱动——同一引擎，同一事实源。</p>
   <div class="grid c3">
     <a class="card" href="docs.html#cli"><h3><span class="dot" style="background:#4B6BFB"></span>CLI 行协议</h3><p>换行分帧 JSON 协议。一个 CLI 进程 = 一个有状态 Project 会话。模板、操作、交互流、导出、渲染全覆盖。</p></a>
-    <a class="card" href="docs.html#sdk"><h3><span class="dot" style="background:#16A34A"></span>Node SDK</h3><p><code>@moonviz/engine-sdk</code>：MoonViz 会话、Project 高层 API、DDP 加解密。纯传输层，不建第二事实源。</p></a>
+    <a class="card" href="docs.html#sdk"><h3><span class="dot" style="background:#16A34A"></span>Node SDK</h3><p><code>@moonviz/engine-sdk</code>：MoonViz 会话、Project 高层 API（theme/token/interact/state）、能力字典（tools/ops/themes/tokens）、交互 HTML 导出、DDP 加解密。</p></a>
     <a class="card" href="docs.html#mcp"><h3><span class="dot" style="background:#9D5CE6"></span>MCP Server</h3><p>stdio JSON-RPC。read_mbt / render_mbt 源侧工具 + lint / critique / infer 设计智能工具，直接接入 MCP 客户端。</p></a>
     <a class="card" href="docs.html#skill"><h3><span class="dot" style="background:#F472B6"></span>SKILL 技能</h3><p>SKILL.md 定义 Agent 操作规范：双 Gate 语义、操作命令、约束红线，让任意 coding agent 安全驱动引擎。</p></a>
     <a class="card" href="docs.html#ddp"><h3><span class="dot" style="background:#F59E0B"></span>DDP 文档分发</h3><p>DDP1 = Argon2id + XChaCha20-Poly1305 加密容器；DDP2 = 免密压缩容器（zstd + CRC32）。Rust 编解码器独立交付。</p></a>
@@ -178,8 +179,18 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
 </div></section>
 
 <section class="alt"><div class="wrap">
+  <h2 class="sec">零工具链：WASM 与预编译二进制</h2>
+  <p class="lead">两种 WASM 产物 + 四平台预编译二进制——按宿主选择，全部由 GitHub Actions 自动构建并归档于 <a href="https://github.com/asdshuaishuai/moonviz/releases">Releases</a>。</p>
+  <div class="grid c3">
+    <div class="card"><h3>wasm-gc 产物</h3><p>浏览器 / Node ≥22 进程内渲染。WASM GC + JS String Builtins，字符串与宿主直通。npm：<code>moonviz-engine-wasm</code>。</p></div>
+    <div class="card"><h3>标准 wasm 产物</h3><p>纯 WASM MVP（0 imports、线性内存）——宿主中立，wasmtime / wasmi 等任意规范运行时可实例化。字符串 ABI 已实测文档化。</p></div>
+    <div class="card"><h3>预编译二进制</h3><p>darwin-arm64 / linux-x64 / linux-arm64 / win32-x64 四平台 <code>moonviz-cli</code> + <code>moonviz-mcp</code>，自包含仅链 libc。</p></div>
+  </div>
+</div></section>
+
+<section class="alt"><div class="wrap">
   <h2 class="sec">深度设计文档</h2>
-  <p class="lead">引擎仓库 <code>docs/</code> 内含 9 篇架构级文档，覆盖从源码格式到渲染生态的完整链路。</p>
+  <p class="lead">引擎仓库 <code>docs/</code> 内含 10 篇架构级文档，覆盖从源码格式到渲染管线的完整链路。</p>
   <div class="grid c3">
     <div class="card"><h3>01 · 架构总览</h3><p>分层设计、模块边界、数据流与架构红线。</p></div>
     <div class="card"><h3>02 · .mbt.md 格式</h3><p>literate 源码规则、moonviz:artboard 块、@decl 公开声明解析。</p></div>
@@ -190,6 +201,7 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
     <div class="card"><h3>07 · Agent 循环</h3><p>Agent 操作协议、双 Gate、debt 机制。</p></div>
     <div class="card"><h3>08 · 路线图与风险</h3><p>演进计划与已知风险清单。</p></div>
     <div class="card"><h3>09 · 渲染生态</h3><p>导出 SVG / DDP / 声明物料的生态位。</p></div>
+    <div class="card"><h3>10 · 渲染管线</h3><p>SVG / PNG / 终端三后端 + 技术栈 + 二进制分发与工具链风险。</p></div>
   </div>
 </div></section>
 
