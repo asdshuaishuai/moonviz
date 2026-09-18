@@ -632,6 +632,7 @@ function pushHistory(){history.push(mbt);if(history.length>HISTORY_MAX)history.s
 function undo(){
   if(!history.length)return;
   mbt=history.pop();setSrc(mbt);
+  resyncSession();
   if(selNode&&!nodeOf(selNode))selNode=null;
   render();setStatus(null,'已撤销');
   $('undobtn').style.display=history.length?'':'none';
@@ -1216,7 +1217,7 @@ function downloadHtml(){
 }
 async function loadTemplates(){
   try{
-    const arr=JSON.parse(engine.list_templates());
+    const arr=engine.list_templates();
     $('tpl').innerHTML='<option value="">📐 从模板新建…</option>'+
       arr.map(x=>`<option value="${x.id}">${x.name}（${x.id}）</option>`).join('');
   }catch(_){$('tpl').innerHTML='<option value="">模板不可用</option>';}
@@ -1249,7 +1250,8 @@ $('tpl').addEventListener('change',e=>{
       if(r2.ok===true&&r2.mbt)doc=r2.mbt;
     }
     mbt=doc;setSrc(mbt);selNode=null;
-    const all=(JSON.parse(engine.render(mbt)).artboards||[]);
+    resyncSession();
+    const all=(engine.render(mbt).artboards||[]);
     artIndex=Math.max(0,all.findIndex(a=>a.id===id));
     selNode=null;
     render();
