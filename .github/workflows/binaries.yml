@@ -175,7 +175,7 @@ jobs:
           TAG="${{ github.ref_name }}"
           case "$TAG" in engine-v*) ;; *) TAG="engine-v${MOONVIZ_VERSION}";; esac
           gh release create "$TAG"             --title "MoonViz engine binaries ${TAG#engine-}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Also includes versioned wasm builds: moonviz-wasm-gc-<ver>.wasm (JS hosts) and moonviz-wasm-classic-<ver>.wasm (standard WASM MVP for wasmtime/wasmi and any spec-compliant runtime)."             --latest || true
-          gh release upload "$TAG" moonviz-bin-*.tgz moonviz-wasm-*/moonviz-wasm-*.wasm --clobber
+          gh release upload "$TAG" moonviz-bin-*.tgz $(find . -name 'moonviz-wasm-*.wasm' | sed 's|^\./||') --clobber
 
   publish:
     name: publish platform packages (requires NPM_TOKEN)
