@@ -3,7 +3,7 @@ name: Build platform binaries
 on:
   push:
     branches: [main]
-    paths: ['core/**', 'decl/**', 'cli/**', 'ddp/**', 'mcp/**', 'npm/**', '.github/workflows/binaries.yml']
+    paths: ['core/**', 'decl/**', 'cli/**', 'ddp/**', 'mcp/**', 'npm/**', 'wasm/**', '.github/workflows/binaries.yml']
   workflow_dispatch:
 
 env:
@@ -48,6 +48,13 @@ jobs:
           moon version
           moon build --release --target native mcp
           moon build --release --target native cli
+          # classic wasm 标准产物（WASM MVP，跨平台宿主中立；wasm 后端与
+          # 构建机平台无关，linux-x64 一次构建即可）
+          if [ "${{ matrix.platform }}" = "linux-x64" ]; then
+            moon build --release --target wasm wasm
+            mkdir -p dist-classic
+            cp _build/wasm/release/build/wasm/wasm.wasm dist-classic/moonviz.wasm
+          fi
           file _build/native/release/build/mcp/mcp.exe _build/native/release/build/cli/cli.exe
       - name: Build MCP server + CLI binaries (Windows)
         if: runner.os == 'Windows'
@@ -130,6 +137,12 @@ jobs:
         with:
           name: moonviz-bin-${{ matrix.platform }}
           path: moonviz-bin-*.tgz
+      - name: Upload classic wasm (linux-x64 only)
+        if: matrix.platform == 'linux-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: moonviz-classic-wasm
+          path: dist-classic/moonviz.wasm
 
   # GitHub Releases 渠道：tag（engine-v*）或手动触发时，把全部平台
   # tarball 归档到 Release——分发不完全依赖 npm（win32-x64 曾被 npm
@@ -151,8 +164,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="engine-v${MOONVIZ_VERSION}"
-          gh release create "$TAG"             --title "MoonViz engine binaries v${MOONVIZ_VERSION}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm."             --latest || true
-          gh release upload "$TAG" moonviz-bin-*.tgz --clobber
+          gh release create "$TAG"             --title "MoonViz engine binaries v${MOONVIZ_VERSION}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Includes moonviz.wasm (classic standard build for wasmtime/wasmi and any WASM MVP runtime)."             --latest || true
+          gh release upload "$TAG" moonviz-bin-*.tgz moonviz-classic-wasm/* --clobber
 
   publish:
     name: publish platform packages (requires NPM_TOKEN)
