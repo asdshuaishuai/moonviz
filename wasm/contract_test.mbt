@@ -67,9 +67,9 @@ test "契约：已关句柄报 invalid_session_handle（issue #4A）" {
 test "契约：save → open_project_json 回灌（issue #4B）" {
   let h = session_open(SEED)
   let _ = session_apply_human(h, "update w btn text=持久化")
+  // 统一信封 {ok:true,data:"<project_json>"}——data 是转义后的 JSON 字符串
   let save = session_save(h)
-  assert_true(save.contains("project_json"))
-  let h2 = session_open_project_json(extract_project_json(save))
+  let h2 = session_open_project_json(extract_data(save))
   assert_true(h2 >= 0, msg="project_json 应回灌打开会话")
   let nodes = session_query_nodes(h2, "w")
   assert_true(nodes.contains("持久化") || nodes.contains("btn"), msg="快照应还原节点")
@@ -88,9 +88,9 @@ test "契约：session_count 可观测泄漏（issue #1）" {
 }
 
 ///|
-/// 从 session_save 的信封里剥出 project_json 字段值（测试辅助）。
-fn extract_project_json(envelope : String) -> String {
-  let marker = "\"project_json\":\""
+/// 从 session_save 统一信封 {ok,data:"..."} 剥出 data 值（测试辅助）。
+fn extract_data(envelope : String) -> String {
+  let marker = "\"data\":\""
   let i = match envelope.find(marker) {
     Some(x) => x + marker.length()
     None => return ""

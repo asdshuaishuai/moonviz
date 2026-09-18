@@ -165,6 +165,16 @@ export async function createEngine(source) {
       return exports.session_open_project_json(projectJson);
     },
 
+    /** 会话 JSON 快照（与 sessionOpenProjectJson 配对）。 */
+    sessionSave(handle) {
+      return JSON.parse(exports.session_save(handle));
+    },
+
+    /** 节点查询（统一信封 {ok, data}）。 */
+    sessionQueryNodes(handle, artboard) {
+      return JSON.parse(exports.session_query_nodes(handle, artboard));
+    },
+
     /** 其余 session_* 以 raw 导出直用（spec/constrain/infer/用户组件…）。 */
     raw: exports,
   };

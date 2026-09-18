@@ -397,7 +397,9 @@ pub fn session_benchmark(handle : Int) -> String {
 /// 项目 JSON 快照（save 语义；session_open 反向恢复需 from_project_json
 /// 路线，见 roadmap）。
 pub fn session_save(handle : Int) -> String {
-  sess_json(handle, fn(p) { Ok("{\"ok\":true,\"project_json\":\"\{@core.json_escape(p.to_project_json())}\"}") })
+  // 统一信封 {ok:true,data:"<project_json 字符串>"}；session_open_project_json
+  // 接收 data 里的 project_json 文本
+  sess_json(handle, fn(p) { Ok("\"\{@core.json_escape(p.to_project_json())}\"") })
 }
 
 ///|
