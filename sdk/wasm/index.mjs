@@ -112,7 +112,50 @@ export async function createEngine(source) {
       return JSON.parse(exports.list_tokens());
     },
 
-    /** 原始 wasm 导出（高级用法）。 */
+    // ── 会话 API（i32 句柄；对齐 CLI/MCP 会话型能力）──
+
+    /** 打开有状态会话，返回句柄（<0 = 错误）。 */
+    sessionOpen(mbt) {
+      return exports.session_open(mbt);
+    },
+
+    /** 应用 mutating op（gate: 'agent' | 'human'）。返回 { ok, mbt }。 */
+    sessionApply(handle, op, gate = 'human') {
+      const fn = gate === 'agent' ? exports.session_apply_agent : exports.session_apply_human;
+      return JSON.parse(fn(handle, op));
+    },
+
+    /** 画板级 SVG 导出。 */
+    sessionExportSvg(handle, artboard) {
+      return JSON.parse(exports.session_export_svg(handle, artboard));
+    },
+
+    /** 设计 Lint。 */
+    sessionLint(handle, artboard) {
+      return JSON.parse(exports.session_lint(handle, artboard));
+    },
+
+    /** AI 设计批评。 */
+    sessionCritique(handle, artboard) {
+      return JSON.parse(exports.session_critique(handle, artboard));
+    },
+
+    /** 交互清单。 */
+    sessionInteractions(handle, artboard) {
+      return JSON.parse(exports.session_interactions(handle, artboard));
+    },
+
+    /** 原型运行时 tap 命中。x/y 为画板坐标。 */
+    sessionTap(handle, artboard, x, y) {
+      return JSON.parse(exports.session_tap(handle, artboard, x, y));
+    },
+
+    /** 关闭会话。 */
+    sessionClose(handle) {
+      return exports.session_close(handle);
+    },
+
+    /** 其余 session_* 以 raw 导出直用（spec/constrain/infer/用户组件…）。 */
     raw: exports,
   };
 }
