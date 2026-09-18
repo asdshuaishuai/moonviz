@@ -5,6 +5,22 @@ import {
 
 options(
   link: {
+    // classic wasm：无 js-string 依赖，字符串以 (ptr,len) 线性内存 ABI
+    // 暴露——wasmtime/wasmi（Rust）可直接实例化；js/wasm-gc 宿主走各自
+    // 的 link 配置。
+    "wasm": {
+      "export-memory-name": "memory",
+      "exports": [
+        "render_mbt",
+        "validate_mbt",
+        "apply_agent_op",
+        "apply_human_op",
+        "list_templates",
+        "list_components",
+        "export_html",
+        "version_info",
+      ],
+    },
     "wasm-gc": {
       "exports": [
         "render_mbt",
