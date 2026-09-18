@@ -375,6 +375,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
           <button data-op="flow">加导航</button>
           <button data-op="hide">隐藏首个节点</button>
           <button data-op="responsive">响应式变体</button>
+          <button data-op="lint">Lint</button>
+          <button data-op="critique">批评</button>
+          <button data-op="interactions">查交互</button>
+          <button data-op="spec">标注</button>
         </div>
         <div class="ops-ids"><span class="lbl">画板/节点（点击插入）</span><div id="idchips" class="chips"></div></div>
       </div>
@@ -430,6 +434,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 const $=id=>document.getElementById(id);
 let engine=null, mbt='', artIndex=0, lastResult=null;
 let mode='design';           // 'design'=设计工作台（默认，墨刀/Axure 式）；'preview'=预览玩家
+let sessH=-1;                // wasm 会话句柄（设计模式持有；<0 未开）
 let selNode=null;            // 当前选中节点 id（属于当前画板）
 let history=[];              // mbt 快照栈（撤销）
 const HISTORY_MAX=50;
@@ -712,7 +717,20 @@ function zoomFit(){
   applyZoom();
 }
 $('canvas').addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();zoomBy(e.deltaY<0?.08:-.08);}},{passive:false});
-function applySource(){mbt=$('src').value;render();}
+function applySource(){
+  mbt=$('src').value;
+  resyncSession();
+  render();
+}
+// 源码被直接编辑/模板追加后：重开会话使有状态路径与新文档一致
+function resyncSession(){
+  if(!engine||mode!=='design')return;
+  try{
+    if(sessH>=0)engine.session_close(sessH);
+  }catch(e){}
+  sessH=engine.session_open(mbt);
+  if(sessH<0){sessH=-1;}
+}
 function validate(){
   if(!engine)return;
   const v=engine.validate(mbt);
@@ -723,6 +741,21 @@ function validate(){
 function humanOp(op,silentOk){
   if(!engine)return false;
   pushHistory();
+  // 设计模式且有活动会话：走 session_apply_human（有状态，省整文档重建）
+  if(mode==='design'&&sessH>=0){
+    try{
+      const sr=engine.session_apply_human(sessH,op);
+      if(sr.ok===true&&sr.mbt){
+        mbt=sr.mbt;$('src').value=mbt;render();
+        if(!silentOk)setStatus(true,`✓ ${op.split(' ').slice(0,2).join(' ')}（会话 · HumanGate）`);
+        return true;
+      }
+      // 会话拒绝 → 落回无状态路径统一报错
+      history.pop();
+      setStatus(false,(sr.error||'操作被拒绝'));
+      return false;
+    }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
+  }
   try{
     const r=engine.apply_human_op(mbt,op);
     if(r.ok===true&&r.mbt){
@@ -889,7 +922,16 @@ function quickCmd(kind){
     flow:n?`flow ${abid} ${abid} ${nid}`:null,hide:n?`update ${abid} ${nid} visible=false`:null,responsive:`responsive ${abid}`,
     token:`token primary #FF7A45`};
   const cmd=cmds[kind];
-  if(!cmd){setStatus(false,'当前画板没有可操作节点');return;}
+  if(!cmd){
+    // 会话型查询（不进 ops 输入框，直接执行并展示）
+    const ab=firstAb();if(!ab){setStatus(false,'先载入模板');return;}
+    const qcmds={lint:()=>{const r=engine.session_lint(sessH,ab.id);setStatus(true,'Lint '+ab.id+' → '+JSON.stringify(r).slice(0,120));$('oplog').innerHTML='<div>'+JSON.stringify(r).replace(/</g,'&lt;').slice(0,300)+'</div>';},
+      critique:()=>{const r=engine.session_critique(sessH,ab.id);$('oplog').innerHTML='<div>'+JSON.stringify(r).replace(/</g,'&lt;').slice(0,300)+'</div>';setStatus(true,'批评完成');},
+      interactions:()=>{const r=engine.session_interactions(sessH,ab.id);$('oplog').innerHTML='<div>'+JSON.stringify(r).replace(/</g,'&lt;').slice(0,300)+'</div>';setStatus(true,'交互 '+r.length+' 条');},
+      spec:()=>{const r=engine.session_spec(sessH,ab.id);$('oplog').innerHTML='<div>'+(r.spec||'').replace(/</g,'&lt;').slice(0,400)+'</div>';setStatus(true,'标注已生成');}};
+    if(qcmds[kind]&&sessH>=0){qcmds[kind]();return;}
+    setStatus(false,'当前画板没有可操作节点');return;
+  }
   $('ops').value=cmd;applyOp();
 }
 document.querySelectorAll('.ops-quick button[data-op]').forEach(b=>b.addEventListener('click',()=>quickCmd(b.dataset.op)));
@@ -1244,7 +1286,11 @@ function retryHuman(){
 
 /* ---------- 原型模式：Axure/墨刀式玩家（交互常驻，源码是二级视图） ---------- */
 function setMode(m){
+  const prev=mode;
   mode=m;document.body.className='mode-'+m;
+  // 会话生命周期跟随设计模式：离开关闭（释放引擎侧资源），回来重开
+  if(m!=='design'&&sessH>=0){try{engine.session_close(sessH);}catch(e){} sessH=-1;}
+  if(m==='design'&&prev!=='design'&&engine){resyncSession();}
   document.querySelectorAll('#modesw button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   if(!artboards().length){render();return;}
   artIndex=Math.max(0,Math.min(artIndex,artboards().length-1));
@@ -1451,15 +1497,44 @@ async function boot(){
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
     const exports=new WebAssembly.Instance(mod,{}).exports;
+    // 对齐最新 wasm-gc 产物（35 导出：11 静态 + 24 会话）
     engine={
+      // —— 无状态（11）——
       version:()=>JSON.parse(exports.version_info()),
       render:s=>JSON.parse(exports.render_mbt(s)),
       validate:s=>JSON.parse(exports.validate_mbt(s)),
       apply_agent_op:(s,o)=>JSON.parse(exports.apply_agent_op(s,o)),
       apply_human_op:(s,o)=>JSON.parse(exports.apply_human_op(s,o)),
-      list_templates:()=>exports.list_templates(),
+      list_templates:()=>JSON.parse(exports.list_templates()),
       list_components:()=>JSON.parse(exports.list_components()),
+      list_themes:()=>JSON.parse(exports.list_themes()),
+      list_tokens:()=>JSON.parse(exports.list_tokens()),
+      list_ops:()=>JSON.parse(exports.list_ops()),
       export_html:s=>JSON.parse(exports.export_html(s)),
+      // —— 会话（24，i32 句柄）——
+      session_open:s=>exports.session_open(s),
+      session_close:h=>exports.session_close(h),
+      session_apply_agent:(h,o)=>JSON.parse(exports.session_apply_agent(h,o)),
+      session_apply_human:(h,o)=>JSON.parse(exports.session_apply_human(h,o)),
+      session_export_svg:(h,a)=>JSON.parse(exports.session_export_svg(h,a)),
+      session_lint:(h,a)=>JSON.parse(exports.session_lint(h,a)),
+      session_critique:(h,a)=>JSON.parse(exports.session_critique(h,a)),
+      session_auto_fix:(h,a)=>JSON.parse(exports.session_auto_fix(h,a)),
+      session_query_nodes:(h,a)=>JSON.parse(exports.session_query_nodes(h,a)),
+      session_list_artboards:h=>JSON.parse(exports.session_list_artboards(h)),
+      session_flows:h=>JSON.parse(exports.session_flows(h)),
+      session_interactions:(h,a)=>JSON.parse(exports.session_interactions(h,a)),
+      session_states:(h,a)=>JSON.parse(exports.session_states(h,a)),
+      session_spec:(h,a)=>JSON.parse(exports.session_spec(h,a)),
+      session_constrain:(h,a,t)=>JSON.parse(exports.session_constrain(h,a,t)),
+      session_infer_page_type:(h,a)=>JSON.parse(exports.session_infer_page_type(h,a)),
+      session_infer_missing:(h,a)=>JSON.parse(exports.session_infer_missing(h,a)),
+      session_extract_design_system:(h,a)=>JSON.parse(exports.session_extract_design_system(h,a)),
+      session_generate_responsive:(h,a)=>JSON.parse(exports.session_generate_responsive(h,a)),
+      session_benchmark:h=>JSON.parse(exports.session_benchmark(h)),
+      session_component_compile_b64:(h,b)=>JSON.parse(exports.session_component_compile_b64(h,b)),
+      session_library_snapshot:h=>JSON.parse(exports.session_library_snapshot(h)),
+      session_tap:(h,a,x,y)=>JSON.parse(exports.session_tap(h,a,x,y)),
     };
     const v=engine.version();
     $('ver').textContent='engine '+v.engine+' v'+v.version+' · wasm-gc · 全程本地运行';
@@ -1469,6 +1544,7 @@ async function boot(){
     await loadTemplates();
     await initPalette();
     showTab('comp');
+    resyncSession();
     render();
     setStatus(null,mode==='preview'?'就绪 — 预览模式：点击元素触发交互':'就绪 — 从组件库拖组件到画布，选中后加交互；「源码」查看它生成的 .mbt.md');
     $('bootlayer').classList.add('off');
