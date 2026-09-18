@@ -136,7 +136,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>export-mbt-human</code></td><td><b>HumanGate</b> 导出 canonical <code>.mbt.md</code>（结构违规硬阻断）</td></tr>
 <tr><td><code>export-mbt-agent</code></td><td><b>AgentGate</b> 导出（语义级校验）</td></tr>
 <tr><td><code>export-svg</code> / <code>export-artifact</code> / <code>export-decl</code></td><td>导出 SVG / 工件 / 声明物料</td></tr>
-<tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（8 组件 × 22 变体）/ 主题 / 设计 token</td></tr>
+<tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（52 组件 × 93 变体）/ 主题 / 设计 token</td></tr>
 <tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
 <tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
 <tr><td><code>list-ops</code></td><td>25 条 mutating op 字典（usage/分类/双门禁）</td></tr>
@@ -237,7 +237,7 @@ const check = engine.validate(mbt);
 <p>构建产物（两种均在 <code>wasm/moon.pkg</code> 配置导出面，11 个 API）：</p>
 <pre><code>moon build --release --target wasm-gc wasm   # JS 宿主 → 拷贝到 sdk/wasm/dist/moonviz.wasm
 moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/release/build/wasm/wasm.wasm</code></pre>
-<p>classic 产物已接入 GitHub Actions：<code>engine-v*</code> tag 触发的构建会在 GitHub Releases 归档 <code>moonviz.wasm</code>（连同四平台二进制 tarball）。classic 读取方向示例：返回值 i32 为字符串对象指针，<code>len = header@ptr+4 &amp; 0x0FFF_FFFF</code>，UTF-16LE 数据在 <code>ptr+8</code>；入参方向需引擎堆分配辅助（roadmap）。</p>
+<p>classic 产物已接入 GitHub Actions：<code>engine-v*</code> tag 触发的构建会在 GitHub Releases 归档<b>全量产物</b>——4 平台二进制 tarball + 双 wasm 构建（版本化命名 <code>moonviz-wasm-gc-&lt;ver&gt;.wasm</code> / <code>moonviz-wasm-classic-&lt;ver&gt;.wasm</code>）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。classic 读取方向 ABI：返回值 i32 为字符串对象指针，长度位于 <code>ptr-4</code>（u32），UTF-16LE 数据从 <code>ptr</code> 开始；入参方向需引擎堆分配辅助（roadmap）。会话 API（24 个 <code>session_*</code>，i32 句柄）与 CLI 会话能力对齐。</p>
 </section>
 
 <section id="mcp">

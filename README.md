@@ -76,7 +76,7 @@
 | `onboarding` | Three-page onboarding |
 | `empty_state` | Illustration + copy + CTA button |
 
-## Built-in Component Library (8 components × 22 variants)
+## Built-in Component Library (52 components × 93 variants)
 
 | Component | Category | Variants |
 | :--- | :--- | :--- |
@@ -156,7 +156,7 @@ moonviz/
 │   ├── policy.mbt     Dual-route policy (human soft / agent hard)
 │   ├── patch.mbt      Transactional patches
 │   ├── tokens.mbt     Design tokens (Material 3 style)
-│   ├── component.mbt  Component system (8 components × 22 variants)
+│   ├── component.mbt  Component system (52 components × 93 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
 │   ├── agent_api.mbt  Agent tool API (47 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
@@ -186,8 +186,8 @@ moonviz/
 │   └── agent_test.mbt Agent workflow end-to-end tests
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
-├── mcp/               MCP Server (stdio JSON-RPC; tool surface mirrors the CLI)
-├── wasm/              WASM-GC boundary (render_mbt / validate_mbt, JS String Builtins passthrough)
+├── mcp/               MCP Server (stdio JSON-RPC; 47 tools mirroring the CLI)
+├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 24 session_* APIs (i32 handles)
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
 ├── sdk/wasm/          WASM SDK "moonviz-engine-wasm": in-process render/validate, zero toolchain (Node ≥22 / modern browsers)
@@ -567,6 +567,9 @@ Six integration routes, the same `.mbt.md` fact source, the same dual gates:
 | **WASM SDK** | npm `moonviz-engine-wasm` (wasm-gc in-process render/validate, JS String passthrough) | Browsers, Edge Functions, dependency-free rendering on Node ≥22 |
 | **SKILL** | Repo-root `SKILL.md` (agent operation spec: fact-source discipline/dual-gate semantics/red lines) | Any coding agent's skill mount |
 | **DDP container** | Rust `ddp_codec` (DDP1 encrypted / DDP2 keyless) | Encrypted design distribution, read-only viewers |
+| **WASM (classic)** | `moon build --target wasm` — pure WASM MVP (0 imports, linear memory), consumed by wasmtime/wasmi and any spec-compliant runtime | Rust hosts, server-side embedding |
+
+Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-0.1.1.wasm` / `moonviz-wasm-classic-0.1.1.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
 
 MCP client configuration (npx prebuilt route):
 

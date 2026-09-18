@@ -72,7 +72,7 @@
 | `onboarding` | 三页引导 |
 | `empty_state` | 插图 + 文案 + CTA 按钮 |
 
-## 内置组件库（8 组件 × 22 变体）
+## 内置组件库（52 组件 × 93 变体）
 
 | 组件 | 分类 | 变体 |
 | :--- | :--- | :--- |
@@ -152,7 +152,7 @@ moonviz/
 │   ├── policy.mbt     双路线策略（人类软/Agent 硬）
 │   ├── patch.mbt      事务式补丁
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
-│   ├── component.mbt  组件系统（8 组件×22 变体）
+│   ├── component.mbt  组件系统（52 组件×93 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
 │   ├── agent_api.mbt  Agent 工具 API（47 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
@@ -182,8 +182,8 @@ moonviz/
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
-├── mcp/               MCP Server（stdio JSON-RPC，工具面同 CLI）
-├── wasm/              WASM-GC 边界（render_mbt / validate_mbt，JS String Builtins 直通）
+├── mcp/               MCP Server（stdio JSON-RPC，47 工具，工具面同 CLI）
+├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 24 个 session_* 有状态 API（i32 句柄）
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
 ├── sdk/wasm/          WASM SDK「moonviz-engine-wasm」：进程内渲染/校验，零工具链（Node ≥22 / 现代浏览器）
@@ -564,6 +564,9 @@ p.suggest_optimizations(artboard="dashboard")
 | **WASM SDK** | npm `moonviz-engine-wasm`（wasm-gc 产物进程内渲染/校验，JS String 直通） | 浏览器、Edge Function、Node ≥22 零依赖渲染 |
 | **SKILL** | 仓库根 `SKILL.md`（Agent 操作规范：事实源纪律/双 Gate 语义/红线） | 任意 coding agent 技能挂载 |
 | **DDP 容器** | Rust `ddp_codec`（DDP1 加密 / DDP2 免密） | 设计文档加密分发、只读查看器 |
+| **WASM（classic）** | `moon build --target wasm` —— 纯 WASM MVP（0 imports、线性内存），wasmtime/wasmi 等任意规范运行时可实例化 | Rust 宿主、服务端嵌入 |
+
+每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-0.1.1.wasm` / `moonviz-wasm-classic-0.1.1.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
 
 MCP 客户端配置（npx 预编译路线）：
 
