@@ -887,7 +887,11 @@ function renderProps(){
     if(v!==Math.round(key==='w'?n.rect.w:n.rect.h))commit(`update ${curAb().id} ${n.id} ${key}=${v}`);
   }));
   const fc=$('pv-fill-c'),ft=$('pv-fill');
-  if(fc&&ft){fc.oninput=()=>{ft.value=fc.value;};ft.addEventListener('change',()=>commit(`update ${curAb().id} ${n.id} fill=${ft.value}`));}
+  if(fc&&ft){
+    // 色板即时提交（HumanGate 会话路径毫秒级，拖选即所见即所得）
+    fc.oninput=()=>{ft.value=fc.value;commit(`update ${curAb().id} ${n.id} fill=${fc.value}`);};
+    ft.addEventListener('change',()=>{if(ft.value!==n.style.fill)commit(`update ${curAb().id} ${n.id} fill=${ft.value}`);});
+  }
   $('pv-text').addEventListener('change',()=>commit(`update ${curAb().id} ${n.id} text=${JSON.stringify($('pv-text').value)}`));
 }
 window.centerH=()=>{const n=nodeOf(selNode);if(n&&curAb())humanOp(`move ${curAb().id} ${selNode} ${Math.max(0,Math.round((curAb().width-n.rect.w)/2))} ${Math.round(n.rect.y)}`);};
