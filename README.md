@@ -63,7 +63,7 @@
 | `center_in_parent` | Center within parent |
 | `suggest_alignment` | Detect near-alignments and suggest snapping |
 
-## Built-in Page Templates (8 complete pages)
+## Built-in Page Templates (14 complete pages)
 
 | Template | Contents |
 |:---|:---|
@@ -75,6 +75,12 @@
 | `list_detail` | List page + detail page |
 | `onboarding` | Three-page onboarding |
 | `empty_state` | Illustration + copy + CTA button |
+| `web_landing` | Web landing page: hero + feature cards + CTA |
+| `web_login` | Web login: split layout with branding panel |
+| `web_dashboard` | Web dashboard: sidebar + topbar + stat cards + table |
+| `pc_app` | Desktop app frame: sidebar navigation + content |
+| `adaptive_landing` | Adaptive landing page for web widths |
+| `login_v2` | Login page, second style variant |
 
 ## Built-in Component Library (52 components × 93 variants)
 

@@ -59,7 +59,7 @@
 | `center_in_parent` | 父容器居中 |
 | `suggest_alignment` | 检测近似对齐并建议吸附 |
 
-## 内置页面模板（8 个完整页面）
+## 内置页面模板（14 个完整页面）
 
 | 模板 | 内容 |
 |:---|:---|
@@ -71,6 +71,12 @@
 | `list_detail` | 列表页 + 详情页 |
 | `onboarding` | 三页引导 |
 | `empty_state` | 插图 + 文案 + CTA 按钮 |
+| `web_landing` | Web 落地页：Hero + 特性卡片 + CTA |
+| `web_login` | Web 登录：分栏布局 + 品牌区 |
+| `web_dashboard` | Web 仪表盘：侧栏 + 顶栏 + 统计卡 + 表格 |
+| `pc_app` | 桌面应用框架：侧边导航 + 内容区 |
+| `adaptive_landing` | 适配 Web 宽度的落地页 |
+| `login_v2` | 登录页第二种风格 |
 
 ## 内置组件库（52 组件 × 93 变体）
 
