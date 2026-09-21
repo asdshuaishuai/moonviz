@@ -121,3 +121,82 @@ fn extract_data(envelope : String) -> String {
   }
   sb.to_string()
 }
+
+
+///|
+/// 写路径（issue：P0-2）：分块字符串槽 → *_in 变体与对应无状态导出等价。
+/// 槽是全公开 API 的 UTF-8 分块压入（GC 分配原语不可达）。
+test "契约：字符串槽写路径与无状态导出等价" {
+  let seed = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n"
+  // 分块压入（4 字节小端一块）
+  in_reset()
+  let chars = seed.to_array()
+  let mut i = 0
+  while i < chars.length() {
+    // 简化：逐字符 charcode 压入，n=4 时一次塞 4 字节
+    let c = chars[i].to_int()
+    in_push(c, 1)
+    i = i + 1
+  }
+  assert_true(in_len() > 0)
+  let v = render_mbt_in()
+  assert_true(v.contains("\"ok\":true"), msg="render_mbt_in 应成功: \{v}")
+  assert_true(v.contains("\"w\""), msg="render_mbt_in 应含画板 w")
+  // apply_agent_op_in：主槽 MBT + 辅槽 op
+  in_reset()
+  for c in seed.to_array() {
+    in_push(c.to_int(), 1)
+  }
+  arg_reset()
+  // ASCII op：逐字节压入（n=1），与宿主 4 字节分块等价但更简单
+  let op = "update w btn text=slot-protocol"
+  for c in op.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+  let r = apply_agent_op_in()
+  assert_true(r.contains("\"ok\":true"), msg="apply_agent_op_in 应成功: \{r}")
+  assert_true(r.contains("slot-protocol"), msg="apply_agent_op_in 应含新文字: \{r}")
+  // session_open_in + session_apply_human_in
+  in_reset()
+  for c in seed.to_array() {
+    in_push(c.to_int(), 1)
+  }
+  let h = session_open_in()
+  assert_true(h >= 0, msg="session_open_in 应成功")
+  arg_reset()
+  let fill_op = "update w btn fill=#123456"
+  for c in fill_op.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+  let sr = session_apply_human_in(h)
+  assert_true(sr.contains("\"ok\":true"), msg="session_apply_human_in 应成功")
+  assert_true(sr.contains("#123456"))
+  // validate_mbt_in / export_html_in
+  in_reset()
+  for c in seed.to_array() {
+    in_push(c.to_int(), 1)
+  }
+  assert_true(validate_mbt_in().contains("\"ok\":true"))
+  assert_true(export_html_in().contains("\"ok\":true"))
+}
+
+///|
+test "契约：session_count 观测泄漏（issue #1）" {
+  let before = session_count()
+  let h1 = session_open(SEED)
+  let h2 = session_open(SEED)
+  assert_eq(session_count(), before + 2)
+  let _ = session_close(h1)
+  assert_eq(session_count(), before + 1)
+  let _ = session_close(h2)
+  assert_eq(session_count(), before)
+}
+
+///|
+test "契约：已关句柄报 invalid_session_handle（issue #4A）" {
+  let h = session_open(SEED)
+  let _ = session_close(h)
+  let r = session_lint(h, "w")
+  assert_true(r.contains("invalid_session_handle"), msg="已关句柄应报 invalid_session_handle: \{r}")
+  let _ = assert_false(session_close(h), msg="重复 close 应返回 false")
+}

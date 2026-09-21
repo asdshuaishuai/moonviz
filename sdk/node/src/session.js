@@ -140,7 +140,7 @@ export class MoonViz {
     });
   }
 
-  /** 引擎工具能力字典（47 工具，含 inputSchema）——与 MCP tools/list 同源。 */
+  /** 引擎工具能力字典（52 工具，含 inputSchema）——与 MCP tools/list 同源。 */
   async tools() {
     return this.last(['list-tools']);
   }

@@ -32,7 +32,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent 工具清单（47 个）
+## Agent 工具清单（52 个）
 
 | 工具 | 语义 |
 | :--- | :--- |
@@ -164,7 +164,7 @@ moonviz/
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
 │   ├── component.mbt  组件系统（52 组件×93 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（47 工具 + list-ops 字典）
+│   ├── agent_api.mbt  Agent 工具 API（52 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
 │   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
 │   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）

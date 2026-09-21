@@ -157,6 +157,14 @@ pub fn ProtoTest::swipe_and_expect(
 // ---------------------------------------------------------------------------
 
 ///|
+/// 记录一条语法/解析失败（不计 passed）。
+pub fn ProtoTest::reject_invalid(self : ProtoTest, detail : String) -> Bool {
+  self.failed = self.failed + 1
+  self.failures.push(detail)
+  false
+}
+
+///|
 pub fn ProtoTest::result(self : ProtoTest) -> String {
   let status = if self.failed == 0 { "PASS" } else { "FAIL" }
   let fj = jstr16(self.failures)
@@ -170,9 +178,13 @@ pub fn ProtoTest::is_pass(self : ProtoTest) -> Bool {
 
 ///|
 fn jstr16(parts : Array[String]) -> String {
+  let escaped : Array[String] = []
+  for p in parts.iter() {
+    escaped.push(json_escape(p))
+  }
   let sb = StringBuilder::new()
   sb.write_string("[")
-  for i in 0..<parts.length() {
+  for i in 0..<escaped.length() {
     if i > 0 {
       sb.write_string(",")
     }
@@ -210,6 +222,8 @@ pub fn run_protest_script(
           lines.push(t)
         }
       }
+      // 语法错误计入 failed 并写进 failures detail——断言 DSL 的价值在
+      // CI 可信，静默跳过会把拼写错误变成"少执行一条"的假 PASS
       for cmd in lines {
         let arrow = match cmd.find(">") {
           Some(i) => i
@@ -226,6 +240,8 @@ pub fn run_protest_script(
             let _ = pt.tap_and_expect_navigate(
               parse_double(nums[0]), parse_double(nums[1]), expect,
             )
+          } else {
+            let _ = pt.reject_invalid("tap 断言缺少 >期望画板：\{cmd}")
           }
         } else if cmd.starts_with("back>") {
           let expect = cmd.substring(start=5).to_string()
@@ -244,11 +260,15 @@ pub fn run_protest_script(
             let node = body.substring(start=0, end=colon).to_string()
             let value = body.substring(start=colon + 1).to_string()
             let _ = pt.set_input_and_expect(node, value)
+          } else {
+            let _ = pt.reject_invalid("set 断言缺少 :值：\{cmd}")
           }
         } else if cmd == "noviol" {
           let _ = pt.expect_no_violations()
         } else if cmd == "render" {
           let _ = pt.expect_renderable()
+        } else {
+          let _ = pt.reject_invalid("未知断言：\{cmd}")
         }
       }
       "{\"ok\":true,\"script_lines\":\{lines.length()},\"result\":\{pt.result()}}"

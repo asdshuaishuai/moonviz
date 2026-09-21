@@ -168,7 +168,7 @@ moonviz/
 │   ├── tokens.mbt     Design tokens (Material 3 style)
 │   ├── component.mbt  Component system (52 components × 93 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
-│   ├── agent_api.mbt  Agent tool API (47 tools + list-ops op dictionary)
+│   ├── agent_api.mbt  Agent tool API (52 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
 │   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
 │   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)

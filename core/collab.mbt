@@ -480,11 +480,11 @@ pub fn merge_sessions_from_spec(spec : String) -> String {
   }
   // 至少 base_rev + 两个 agent 段
   if words.length() < 3 {
-    return "{\"error\":\"collab_spec_usage: <base_rev> <agent>=<op>[+op...] ...\"}"
+    return "{\"ok\":false,\"error\":\"collab_spec_usage: <base_rev> <agent>=<op>[+op...] ...\"}"
   }
   let base = match parse_int_opt(words[0]) {
     Some(v) => v
-    None => return "{\"error\":\"collab_spec_bad_base_revision\"}"
+    None => return "{\"ok\":false,\"error\":\"collab_spec_bad_base_revision\"}"
   }
   let sessions : Array[AgentSession] = []
   let mut bad = ""
@@ -521,19 +521,19 @@ pub fn merge_sessions_from_spec(spec : String) -> String {
     sessions.push(s)
   }
   if bad != "" {
-    return "{\"error\":\"collab_spec_bad_op:\{json_escape(bad)}\"}"
+    return "{\"ok\":false,\"error\":\"collab_spec_bad_op:\{json_escape(bad)}\"}"
   }
   if sessions.length() < 2 {
-    return "{\"error\":\"collab_spec_need_two_agents\"}"
+    return "{\"ok\":false,\"error\":\"collab_spec_need_two_agents\"}"
   }
-  // merge_sessions 是两两合并（ours × theirs）；N 个会话时折叠为
-  // 相邻两两合并的结果数组（首个作为累积 ours）。
+  // 冲突检测语义与 CollabManager::merge_all 对齐：全对枚举（N 个会话
+  // 检测 N×(N-1)/2 对），相邻折叠会漏检非相邻 Agent 对同一节点的冲突。
   let parts : Array[String] = []
-  let mut acc = sessions[0]
-  for i = 1; i < sessions.length(); i = i + 1 {
-    let r = merge_sessions(acc, sessions[i])
-    parts.push(r.to_json())
-    acc = sessions[i]
+  for i = 0; i < sessions.length(); i = i + 1 {
+    for j = i + 1; j < sessions.length(); j = j + 1 {
+      let r = merge_sessions(sessions[i], sessions[j])
+      parts.push(r.to_json())
+    }
   }
   let joined = parts.join(",")
   "{\"ok\":true,\"base_revision\":\{base},\"sessions\":\{sessions.length()},\"merges\":[\{joined}]}"

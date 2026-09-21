@@ -72,8 +72,10 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 }
 
 ///|
-/// 设计版本历史（会话级）：history-init 后随 commit/checkout/undo/redo 演进。
+/// 设计版本历史（会话级）：init 时绑定目标画板，undo/redo/checkout 一律
+/// 落回该画板——此前用 keys().next() 取第一个画板，多画板项目会静默写错。
 let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
 
 ///|
 /// history 子命令族（CLI 侧薄分发；状态在 g_history）。
@@ -88,6 +90,7 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
           None => cli_err("unknown_artboard: " + parts[2])
           Some(ab) => {
             g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+            g_history_board.val = parts[2]
             "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{parts[2]}\"}"
           }
         }
@@ -135,10 +138,7 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
           match doc {
             Err(e) => cli_err(e)
             Ok(d) => {
-              let target = match p.artboards.keys().next() {
-                Some(k) => k
-                None => return cli_err("no_artboards")
-              }
+              let target = g_history_board.val
               match p.set_artboard_doc(artboard=target, d) {
                 Err(e) => cli_err(e)
                 Ok(_) => {

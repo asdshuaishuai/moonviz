@@ -55,7 +55,7 @@ Tools that need the engine directory (`read_mbt` / `render_mbt` / `apply_*` …)
 | `export_svg` / `export_html` / `export_artifact` / `benchmark` | Exports and performance benchmark |
 | `ddp_view` | Read-only DDP container metadata |
 
-47 tools total, each with a full JSON-Schema input description — see `tools/list` or the [tools dictionary](https://asdshuaishuai.github.io/moonviz/assets/moonviz-tools.json).
+52 tools total, each with a full JSON-Schema input description — see `tools/list` or the [tools dictionary](https://asdshuaishuai.github.io/moonviz/assets/moonviz-tools.json).
 
 ## Building the binaries from source
 

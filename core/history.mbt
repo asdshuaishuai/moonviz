@@ -220,7 +220,9 @@ pub fn Project::set_artboard_doc(
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard: \{artboard}")
     Some(ab) => {
-      ab.doc = doc
+      // clone 防别名：checkout/undo 返回的历史快照若按引用落回画板，
+      // 后续编辑会原地改掉该 revision 的快照，时间旅行语义被静默破坏
+      ab.doc = doc.clone()
       Ok(())
     }
   }

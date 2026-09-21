@@ -68,6 +68,7 @@ let g_project : @core.Project = @core.Project::new()
 
 /// 设计版本历史（会话级）：history_init 后随 commit/checkout/undo/redo 演进。
 let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
 
 ///|
 fn main {
@@ -509,16 +510,14 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       match cmd {
         "init" =>
-          match g_history.val {
-            Some(_) => "{\"ok\":true,\"op\":\"history-init\",\"note\":\"already_initialized\"}"
-            None =>
-              match g_project.artboards.get(artboard) {
-                None => err_json("unknown_artboard: " + artboard)
-                Some(ab) => {
-                  g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
-                  "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\"}"
-                }
-              }
+          match g_project.artboards.get(artboard) {
+            None => err_json("unknown_artboard: " + artboard)
+            Some(ab) => {
+              // 允许 rebind：换目标画板即重置历史（与 CLI 语义对齐）
+              g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+              g_history_board.val = artboard
+              "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\"}"
+            }
           }
         "commit" =>
           match g_history.val {
@@ -558,10 +557,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
               match doc {
                 Err(e) => err_json(e)
                 Ok(d) => {
-                  let target = match g_project.artboards.keys().next() {
-                    Some(k) => k
-                    None => return err_json("no_artboards")
-                  }
+                  let target = g_history_board.val
                   match g_project.set_artboard_doc(artboard=target, d) {
                     Err(e) => err_json(e)
                     Ok(_) =>

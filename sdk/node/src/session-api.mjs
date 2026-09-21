@@ -52,13 +52,23 @@ export class Session {
   async exec(command) {
     if (this.closed) throw new EngineError('session_closed');
     if (!command || !command.trim()) throw new Error('exec(command)：command 不能为空');
+    // 命令注入防护：换行分帧协议下，含换行的命令会被拆成多条执行
+    if (/[\r\n]/.test(command)) {
+      throw new EngineError('command_contains_newline', { command });
+    }
     const results = await this.engine.run([...this.history, command]);
+    if (results.length !== this.history.length + 1) {
+      // 响应条数与命令数不符：信封非法或引擎异常，归因不可靠
+      throw new EngineError('response_count_mismatch', { expected: this.history.length + 1, got: results.length });
+    }
     const last = results[results.length - 1];
-    this.history.push(command);
-    if (last && last.ok === false) {
-      // 业务拒绝不回滚 history（CLI 会话本身对失败命令不改状态）
+    // 错误判别：{ok:false} 或无 ok 但带 error 字段（collab/history 等错误信封）
+    const failed = last && (last.ok === false || (last.ok === undefined && typeof last.error === 'string'));
+    if (failed) {
+      // 失败命令不入 history：CLI 对失败命令不改状态，重放时跳过即安全
       throw new EngineError(last.error || 'command_failed', last);
     }
+    this.history.push(command);
     return last;
   }
 
