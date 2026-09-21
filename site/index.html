@@ -188,6 +188,16 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
   </div>
 </div></section>
 
+<section><div class="wrap">
+  <h2 class="sec">发展路线图</h2>
+  <p class="lead">按「能力平权 → 体验深化 → 生态扩展」三层推进——每条路线以「数据模型已支持但边界不可达 / 体验未落地」为线索。完整版见仓库根 <a href="https://github.com/asdshuaishuai/moonviz/blob/main/ROADMAP.md">ROADMAP.md</a>。</p>
+  <div class="grid c3">
+    <div class="card"><h3>P0 · 能力平权</h3><p>搁浅模块出井：collab 多 Agent 协作、history 版本控制、animation 动画、protest 原型测试——core 已实现的 52 个函数补齐 CLI/MCP/WASM 边界。classic wasm 写路径（Rust 宿主双向调用）。</p></div>
+    <div class="card"><h3>P1 · 体验深化</h3><p>deepDesign Studio 全面接入新引擎（撤销/组件库/交互面板）；Playground 补动画系统、用户组件编译、原型测试面板；ddpView 只读加密文档查看器。</p></div>
+    <div class="card"><h3>P2 · 生态扩展</h3><p>npm 0.2.0 发版（session API 全量）；在线 API 参考与示例库；collab 落地双 Agent 同源协作；性能基线进 CI。</p></div>
+  </div>
+</div></section>
+
 <section class="alt"><div class="wrap">
   <h2 class="sec">深度设计文档</h2>
   <p class="lead">引擎仓库 <code>docs/</code> 内含 10 篇架构级文档，覆盖从源码格式到渲染管线的完整链路。</p>
@@ -199,7 +209,7 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
     <div class="card"><h3>05 · 同步管线</h3><p>源码 ⇄ 场景图 ⇄ 画布的双向同步一致性。</p></div>
     <div class="card"><h3>06 · 渲染</h3><p>SVG 渲染管线、主题、线框模式。</p></div>
     <div class="card"><h3>07 · Agent 循环</h3><p>Agent 操作协议、双 Gate、debt 机制。</p></div>
-    <div class="card"><h3>08 · 路线图与风险</h3><p>演进计划与已知风险清单。</p></div>
+    <div class="card"><h3>08 · 路线图与风险</h3><p>演进计划（ROADMAP）与已知风险台账。</p></div>
     <div class="card"><h3>09 · 渲染生态</h3><p>导出 SVG / DDP / 声明物料的生态位。</p></div>
     <div class="card"><h3>10 · 渲染管线</h3><p>SVG / PNG / 终端三后端 + 技术栈 + 二进制分发与工具链风险。</p></div>
   </div>
