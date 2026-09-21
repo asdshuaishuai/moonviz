@@ -133,6 +133,10 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>group</code> / <code>ungroup</code> / <code>align</code></td><td>编组 / 解组 / 对齐</td></tr>
 <tr><td><code>flow &lt;from&gt; &lt;to&gt; &lt;triggerNode&gt;</code></td><td>建立交互流（tap 触发跳转）</td></tr>
 <tr><td><code>resize-canvas</code> / <code>restyle</code> / <code>theme</code></td><td>画布尺寸 / 重排版式 / 主题</td></tr>
+<tr><td><code>collab-merge</code></td><td>多 Agent 三方合并（OT 冲突检测，规格：<code>&lt;base_rev&gt; &lt;agent&gt;=&lt;op&gt;[+op...]</code>）</td></tr>
+<tr><td><code>history</code></td><td>设计版本控制：init / commit / log / undo / redo / checkout / diff</td></tr>
+<tr><td><code>anim-css</code> / <code>anim-list</code></td><td>预设动画 CSS（6 预设）/ 预设清单</td></tr>
+<tr><td><code>protest</code></td><td>原型测试脚本（tap:x:y&gt;board; back&gt;board; noviol; render）</td></tr>
 <tr><td><code>export-mbt-human</code></td><td><b>HumanGate</b> 导出 canonical <code>.mbt.md</code>（结构违规硬阻断）</td></tr>
 <tr><td><code>export-mbt-agent</code></td><td><b>AgentGate</b> 导出（语义级校验）</td></tr>
 <tr><td><code>export-svg</code> / <code>export-artifact</code> / <code>export-decl</code></td><td>导出 SVG / 工件 / 声明物料</td></tr>
@@ -253,7 +257,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
     }
   }
 }</code></pre>
-<h3>工具清单（47 个，节选；完整机器可读字典见 tools/list 或 <a href="assets/moonviz-tools.json">moonviz-tools.json</a>）</h3>
+<h3>工具清单（52 个，节选；完整机器可读字典见 tools/list 或 <a href="assets/moonviz-tools.json">moonviz-tools.json</a>）</h3>
 <table>
 <tr><th>工具</th><th>类别</th><th>说明</th></tr>
 <tr><td><code>initialize</code></td><td>会话</td><td>初始化项目会话，返回引擎能力清单</td></tr>
@@ -263,6 +267,10 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
 <tr><td><code>apply_template</code> / <code>apply_theme</code> / <code>set_token</code></td><td>应用</td><td>实例化模板 / 切换主题（角色重着色，可逆）/ 覆盖单个颜色令牌</td></tr>
 <tr><td><code>interact</code> / <code>define_state</code> / <code>set_state</code> / <code>list_states</code></td><td>交互</td><td>⚡trigger→action 绑定 / 状态补丁 / 当前状态（[cur:] 持久化）/ 状态清单</td></tr>
 <tr><td><code>export_html</code> / <code>export_svg</code></td><td>导出</td><td>自包含可交互 HTML 原型（节点级导航/状态切换/toast）/ 单画板 SVG</td></tr>
+<tr><td><code>collab_merge</code></td><td>协作</td><td>多 Agent 三方合并：OT 冲突检测 + 自动解决</td></tr>
+<tr><td><code>history</code></td><td>版本</td><td>设计版本控制：时间旅行 / 提交日志 / 语义 diff</td></tr>
+<tr><td><code>animation_presets</code> / <code>animation_css</code></td><td>动画</td><td>6 预设清单 / 节点 CSS @keyframes 生成</td></tr>
+<tr><td><code>protest</code></td><td>测试</td><td>原型测试脚本（断言式：导航/输入/渲染/违规）</td></tr>
 <tr><td><code>list_ops</code></td><td>字典</td><td>25 条 mutating op 机器可读字典（usage/category/gates）</td></tr>
 <tr><td><code>lint_design</code> / <code>auto_fix</code></td><td>质量</td><td>设计 Lint 与自动修复</td></tr>
 <tr><td><code>critique</code></td><td>智能</td><td>AI 设计批评（启发式规则集）</td></tr>

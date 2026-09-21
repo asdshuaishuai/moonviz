@@ -10,7 +10,7 @@
 │  discover components → create artboard → place → lint →      │
 │  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (47 tools, JSON in/out)
+               │ Agent Tools API (52 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -36,7 +36,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent Tool List (47 tools)
+## Agent Tool List (52 tools)
 
 | Tool | Semantics |
 | :--- | :--- |
@@ -50,6 +50,10 @@
 | `get_violations` | Get the non-crash predicate violation list |
 | `suggest_fix` | Actionable fix patches for violations |
 | `export_svg` | Export an artboard as engine-derived SVG |
+| `collab_merge` | Multi-agent three-way merge: submit N agents' op sequences, get conflicts + auto-resolution |
+| `history` | Design version control: init/commit/log/undo/redo/checkout/diff (time travel + semantic diff) |
+| `animation_presets` / `animation_css` | List the 6 animation presets / generate CSS @keyframes for a node |
+| `protest` | Run a prototype test script (assertion-based navigation/inputs/render/violations) |
 | `read_mbt` | Read and validate a complete `.mbt.md` source |
 | `render_mbt` | Re-parse and render from `.mbt.md` |
 | `ddp_view` | Read-only DDP view and render contract |
@@ -192,7 +196,7 @@ moonviz/
 │   └── agent_test.mbt Agent workflow end-to-end tests
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
-├── mcp/               MCP Server (stdio JSON-RPC; 47 tools mirroring the CLI)
+├── mcp/               MCP Server (stdio JSON-RPC; 52 tools mirroring the CLI)
 ├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 24 session_* APIs (i32 handles)
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)

@@ -368,3 +368,43 @@ pub fn pop_animation(node_id : String) -> AnimationClip {
   clip.add_keyframe(0.3, [AnimWidth(120.0), AnimHeight(48.0)])
   clip
 }
+
+// ---------------------------------------------------------------------------
+// 边界入口：预设动画 → CSS（CLI/MCP 共用）
+// ---------------------------------------------------------------------------
+
+///|
+/// 预设动画清单（anim-list / animation_presets）。
+pub fn animation_presets_json() -> String {
+  let names = ["press", "fade_in", "slide_in_right", "modal_present", "shake", "pop"]
+  let items : Array[String] = []
+  for n in names.iter() {
+    items.push("\"\{n}\"")
+  }
+  let joined = items.join(",")
+  "{\"ok\":true,\"presets\":[\{joined}]}"
+}
+
+///|
+/// 按预设生成单节点 CSS 动画（anim-css / animation_css）：
+/// `animation_css(node_id, preset)` → { ok, css } 完整 @keyframes + class。
+pub fn animation_css(node_id : String, preset : String) -> String {
+  let clip = match preset {
+    "press" => Some(press_animation(node_id))
+    "fade_in" => Some(fade_in_animation(node_id))
+    "slide_in_right" => Some(slide_in_right(node_id))
+    "modal_present" => Some(modal_present(node_id))
+    "shake" => Some(shake_animation(node_id))
+    "pop" => Some(pop_animation(node_id))
+    _ => None
+  }
+  match clip {
+    None =>
+      "{\"ok\":false,\"error\":\"unknown_preset: \{preset}（press/fade_in/slide_in_right/modal_present/shake/pop）\"}"
+    Some(c) => {
+      let tl = Timeline::new()
+      tl.add(c)
+      "{\"ok\":true,\"node\":\"\{node_id}\",\"preset\":\"\{preset}\",\"css\":\"\{json_escape(tl.to_css())}\"}"
+    }
+  }
+}

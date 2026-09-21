@@ -378,3 +378,188 @@ pub fn CollabManager::status(self : CollabManager) -> String {
   }
   sb.to_string()
 }
+
+// ---------------------------------------------------------------------------
+// 边界入口：文本规格 ⇄ DesignOp / 合并请求
+// ---------------------------------------------------------------------------
+
+///|
+/// DesignOp 文本规格（CLI/MCP 共用，分号分隔多个 op）：
+///   insert:<node>:<parent> | delete:<node> | move:<node>:<parent>
+///   fill:<node>:<old>:<new> | radius:<node>:<old>:<new> | font:<node>:<old>:<new>
+///   text:<node>:<old>:<new> | pos:<node>:<ox>:<nx>:<oy>:<ny>
+///   size:<node>:<ow>:<nw>:<oh>:<nh> | gap:<node>:<old>:<new>
+pub fn DesignOp::from_text(spec : String) -> DesignOp? {
+  let parts : Array[String] = []
+  for p in spec.split(":").iter() {
+    parts.push(p.to_string())
+  }
+  let head = match parts.get(0) {
+    Some(h) => h.to_string()
+    None => return None
+  }
+  match head {
+    "insert" =>
+      if parts.length() < 3 {
+        None
+      } else {
+        Some(OpInsert(parts[1].to_string(), parts[2].to_string()))
+      }
+    "delete" =>
+      if parts.length() < 2 {
+        None
+      } else {
+        Some(OpDelete(parts[1].to_string()))
+      }
+    "move" =>
+      if parts.length() < 3 {
+        None
+      } else {
+        Some(OpMove(parts[1].to_string(), parts[2].to_string()))
+      }
+    "fill" =>
+      if parts.length() < 4 {
+        None
+      } else {
+        Some(OpSetFill(parts[1].to_string(), parts[2].to_string(), parts[3].to_string()))
+      }
+    "radius" =>
+      if parts.length() < 4 {
+        None
+      } else {
+        Some(OpSetRadius(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3])))
+      }
+    "font" =>
+      if parts.length() < 4 {
+        None
+      } else {
+        Some(OpSetFontSize(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3])))
+      }
+    "text" =>
+      if parts.length() < 4 {
+        None
+      } else {
+        Some(OpSetText(parts[1].to_string(), parts[2].to_string(), parts[3].to_string()))
+      }
+    "pos" =>
+      if parts.length() < 6 {
+        None
+      } else {
+        Some(OpSetPosition(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3]), parse_op_double(parts[4]), parse_op_double(parts[5])))
+      }
+    "size" =>
+      if parts.length() < 6 {
+        None
+      } else {
+        Some(OpSetSize(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3]), parse_op_double(parts[4]), parse_op_double(parts[5])))
+      }
+    "gap" =>
+      if parts.length() < 4 {
+        None
+      } else {
+        Some(OpSetGap(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3])))
+      }
+    _ => None
+  }
+}
+
+///|
+///|
+/// 合并请求规格（CLI `collab-merge` / MCP `collab_merge` 共用）：
+///   `<base_rev> <agentA>=<op>[+<op>...] <agentB>=<op>[+<op>...] ...`
+/// 例：`1 a=fill:btn:#000:#111 b=pos:btn:1:2:3:4+gap:btn:8:16`
+/// 返回 MergeResult 数组的 JSON（含冲突标记与自动解决结果）。
+pub fn merge_sessions_from_spec(spec : String) -> String {
+  let trimmed = spec.trim().to_string()
+  let words : Array[String] = []
+  for w in trimmed.split(" ").iter() {
+    let t = w.to_string()
+    if t != "" {
+      words.push(t)
+    }
+  }
+  // 至少 base_rev + 两个 agent 段
+  if words.length() < 3 {
+    return "{\"error\":\"collab_spec_usage: <base_rev> <agent>=<op>[+op...] ...\"}"
+  }
+  let base = match parse_int_opt(words[0]) {
+    Some(v) => v
+    None => return "{\"error\":\"collab_spec_bad_base_revision\"}"
+  }
+  let sessions : Array[AgentSession] = []
+  let mut bad = ""
+  for i = 1; i < words.length(); i = i + 1 {
+    let c = words[i]
+    let eq = match c.find("=") {
+      Some(p) => p
+      None => {
+        if bad == "" {
+          bad = c
+        }
+        continue
+      }
+    }
+    let agent = c.substring(start=0, end=eq).to_string()
+    let s = AgentSession::new(agent, base)
+    let ops_part = c.substring(start=eq + 1).to_string()
+    let op_specs : Array[String] = []
+    for o in ops_part.split("+").iter() {
+      op_specs.push(o.to_string())
+    }
+    for o in op_specs {
+      if o == "" {
+        continue
+      }
+      match DesignOp::from_text(o) {
+        Some(op) => s.add_op(op)
+        None =>
+          if bad == "" {
+            bad = o
+          }
+      }
+    }
+    sessions.push(s)
+  }
+  if bad != "" {
+    return "{\"error\":\"collab_spec_bad_op:\{json_escape(bad)}\"}"
+  }
+  if sessions.length() < 2 {
+    return "{\"error\":\"collab_spec_need_two_agents\"}"
+  }
+  // merge_sessions 是两两合并（ours × theirs）；N 个会话时折叠为
+  // 相邻两两合并的结果数组（首个作为累积 ours）。
+  let parts : Array[String] = []
+  let mut acc = sessions[0]
+  for i = 1; i < sessions.length(); i = i + 1 {
+    let r = merge_sessions(acc, sessions[i])
+    parts.push(r.to_json())
+    acc = sessions[i]
+  }
+  let joined = parts.join(",")
+  "{\"ok\":true,\"base_revision\":\{base},\"sessions\":\{sessions.length()},\"merges\":[\{joined}]}"
+}
+
+///|
+/// 十进制整数解析（纯 core，无外部依赖）；None 表示非法。
+fn parse_int_opt(text : String) -> Int? {
+  let t = text.trim().to_string()
+  if t.length() == 0 {
+    return None
+  }
+  let mut value = 0
+  let mut i = 0
+  let neg = t.substring(start=0, end=1) == "-"
+  if neg {
+    i = 1
+  }
+  while i < t.length() {
+    let c = t.substring(start=i, end=i + 1)
+    let d = "0123456789".find(c)
+    match d {
+      None => return None
+      Some(v) => value = value * 10 + v
+    }
+    i = i + 1
+  }
+  Some(if neg { -value } else { value })
+}

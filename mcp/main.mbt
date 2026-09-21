@@ -66,6 +66,9 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 /// 全局项目状态（跨请求保持）
 let g_project : @core.Project = @core.Project::new()
 
+/// 设计版本历史（会话级）：history_init 后随 commit/checkout/undo/redo 演进。
+let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+
 ///|
 fn main {
   let mut running = true
@@ -498,6 +501,123 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       "{\"ok\":true,\"read_only\":true,\"mutations\":false,\"codec\":\"engine\"}"
     "export_artifact" => p.export_artifact(agent_id="mcp")
     "list_ops" => @core.list_ops_json()
+    "animation_presets" => @core.animation_presets_json()
+    "history" => {
+      let cmd = extract_arg_string(request_line, "command")
+      if cmd == "" {
+        return err_json("missing command (init|commit|log|undo|redo|checkout|diff)")
+      }
+      match cmd {
+        "init" =>
+          match g_history.val {
+            Some(_) => "{\"ok\":true,\"op\":\"history-init\",\"note\":\"already_initialized\"}"
+            None =>
+              match g_project.artboards.get(artboard) {
+                None => err_json("unknown_artboard: " + artboard)
+                Some(ab) => {
+                  g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+                  "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\"}"
+                }
+              }
+          }
+        "commit" =>
+          match g_history.val {
+            None => err_json("history_not_initialized")
+            Some(h) =>
+              match g_project.artboards.get(artboard) {
+                None => err_json("unknown_artboard: " + artboard)
+                Some(ab) => {
+                  let msg = extract_arg_string(request_line, "message")
+                  let m = if msg == "" { "commit" } else { msg }
+                  let _ = h.commit("mcp", m, [], ab.doc.clone())
+                  "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{h.rev()},\"message\":\"\{@core.json_escape(m)}\"}"
+                }
+              }
+          }
+        "log" =>
+          match g_history.val {
+            None => err_json("history_not_initialized")
+            Some(h) =>
+              "{\"ok\":true,\"op\":\"history-log\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
+          }
+        "undo" | "redo" | "checkout" =>
+          match g_history.val {
+            None => err_json("history_not_initialized")
+            Some(h) => {
+              let want = extract_arg_string(request_line, "rev")
+              let doc = if cmd == "undo" {
+                h.undo()
+              } else if cmd == "redo" {
+                h.redo()
+              } else {
+                match mcp_parse_rev(want) {
+                  Some(v) => h.checkout(v)
+                  None => return err_json("bad_revision")
+                }
+              }
+              match doc {
+                Err(e) => err_json(e)
+                Ok(d) => {
+                  let target = match g_project.artboards.keys().next() {
+                    Some(k) => k
+                    None => return err_json("no_artboards")
+                  }
+                  match g_project.set_artboard_doc(artboard=target, d) {
+                    Err(e) => err_json(e)
+                    Ok(_) =>
+                      "{\"ok\":true,\"op\":\"history-\{cmd}\",\"rev\":\{h.rev()},\"artboard\":\"\{target}\"}"
+                  }
+                }
+              }
+            }
+          }
+        "diff" =>
+          match g_history.val {
+            None => err_json("history_not_initialized")
+            Some(h) => {
+              let a = mcp_parse_rev(extract_arg_string(request_line, "from"))
+              let b = mcp_parse_rev(extract_arg_string(request_line, "to"))
+              match (a, b) {
+                (Some(x), Some(y)) =>
+                  match h.diff(x, y) {
+                    Err(e) => err_json(e)
+                    Ok(json) =>
+                      "{\"ok\":true,\"op\":\"history-diff\",\"from\":\{x},\"to\":\{y},\"diff\":\{json}}"
+                  }
+                _ => err_json("usage: history diff <from> <to>")
+              }
+            }
+          }
+        _ => err_json("unknown history command: " + cmd)
+      }
+    }
+    "protest" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      let script = extract_arg_string(request_line, "script")
+      if script == "" {
+        return err_json("missing script (tap:x:y>board; back>board; noviol; render)")
+      }
+      @core.run_protest_script(p, artboard, script)
+    }
+    "animation_css" => {
+      if node_id == "" {
+        return err_json("missing node_id")
+      }
+      let preset = extract_arg_string(request_line, "preset")
+      if preset == "" {
+        return err_json("missing preset (press/fade_in/slide_in_right/modal_present/shake/pop)")
+      }
+      @core.animation_css(node_id, preset)
+    }
+    "collab_merge" => {
+      let spec = extract_arg_string(request_line, "spec")
+      if spec == "" {
+        return err_json("missing spec: <base_rev> <agent>=<op>[+op...] ...")
+      }
+      @core.merge_sessions_from_spec(spec)
+    }
     "generate_spec" => {
       if artboard == "" {
         return err_json("missing artboard")
@@ -983,4 +1103,24 @@ fn decode_b64_text(payload : String) -> Result[String, String] {
     _ => return Err("mbt_transport_invalid_base64")
   }
   Ok(@utf8.decode(bytes) catch { _ => return Err("mbt_transport_invalid_utf8") })
+}
+
+///|
+fn mcp_parse_rev(text : String) -> Int? {
+  let t = text.trim().to_string()
+  if t.length() == 0 {
+    return None
+  }
+  let mut v = 0
+  let mut i = 0
+  while i < t.length() {
+    let c = t.substring(start=i, end=i + 1)
+    let d = "0123456789".find(c)
+    match d {
+      None => return None
+      Some(x) => v = v * 10 + x
+    }
+    i = i + 1
+  }
+  Some(v)
 }

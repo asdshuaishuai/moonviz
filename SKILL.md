@@ -29,6 +29,12 @@ Machine-readable source of truth: `list-ops` (CLI) / `list_ops` (MCP) emit the
 complete op surface as JSON (op / usage / category / gates / description) —
 `moonviz-ops.json` on Pages is generated from it. Keep this block in lockstep.
 
+Session-level tools (stateful, mirror the CLI session commands):
+`history` (init/commit/log/undo/redo/checkout/diff — design version control) ·
+`collab_merge` (multi-agent three-way merge with OT conflict detection) ·
+`animation_presets` / `animation_css` (6 presets → CSS @keyframes) ·
+`protest` (assertion-based prototype test scripts).
+
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
 `place <ab> <component> <id> [variant|-] [x] [y] [k=v ...]` ·
@@ -43,6 +49,13 @@ Structural:
 Images: `place <ab> image <id>` then `update <ab> <id> text=<https://...|data:image/...> radius=<n>` —
 a non-empty URL renders a real `<image>` (rounded clip, cover-fit); empty text falls back to the
 placeholder glyph. The URL lives in the node's `text` field and round-trips through canonical MBT.
+
+Multi-agent / versioning / animation / testing:
+`collab-merge <base_rev> <agent>=<op>[+op...]`（OT 三方合并；op: insert/delete/
+move/fill/radius/font/text/pos/size/gap）· `history init|commit|log|undo|redo|
+checkout|diff`（设计版本控制）· `anim-css <node> <preset>` / `anim-list`
+（press/fade_in/slide_in_right/modal_present/shake/pop）· `protest <ab> <script>`
+（tap:x:y>board; back>board; swipe:left>board; set:node:val; noviol; render）
 
 Navigation / theme / tokens / debt:
 `flow <from_ab> <to_ab> <node>` (tap navigation edge) ·

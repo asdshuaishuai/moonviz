@@ -181,3 +181,77 @@ fn jstr16(parts : Array[String]) -> String {
   sb.write_string("]")
   sb.to_string()
 }
+
+// ---------------------------------------------------------------------------
+// 边界入口：测试脚本 DSL（CLI `protest` / MCP `protest` 共用）
+// ---------------------------------------------------------------------------
+
+///|
+/// 原型测试脚本（分号分隔，可带空行）：
+///   `tap:<x>:<y>><expect_board>`    点击 → 期望导航
+///   `back><expect_board>`           返回 → 期望画板
+///   `swipe:<dir>><expect_board>`    滑动 → 期望画板（dir: left/right/up/down）
+///   `set:<node>:<value>`            输入 → 期望回读一致
+///   `noviol`                        期望零违规
+///   `render`                        期望可渲染
+/// 例：`tap:160:422>home; back>login; noviol; render`
+pub fn run_protest_script(
+  project : Project,
+  initial : String,
+  script : String,
+) -> String {
+  match ProtoTest::create(project, initial~) {
+    Err(e) => "{\"ok\":false,\"error\":\"\{json_escape(e)}\"}"
+    Ok(pt) => {
+      let lines : Array[String] = []
+      for l in script.split(";").iter() {
+        let t = l.trim().to_string()
+        if t != "" {
+          lines.push(t)
+        }
+      }
+      for cmd in lines {
+        let arrow = match cmd.find(">") {
+          Some(i) => i
+          None => -1
+        }
+        if cmd.starts_with("tap:") && arrow > 0 {
+          let coords = cmd.substring(start=4, end=arrow).to_string()
+          let expect = cmd.substring(start=arrow + 1).to_string()
+          let nums : Array[String] = []
+          for n in coords.split(":").iter() {
+            nums.push(n.to_string())
+          }
+          if nums.length() >= 2 {
+            let _ = pt.tap_and_expect_navigate(
+              parse_double(nums[0]), parse_double(nums[1]), expect,
+            )
+          }
+        } else if cmd.starts_with("back>") {
+          let expect = cmd.substring(start=5).to_string()
+          let _ = pt.back_and_expect(expect)
+        } else if cmd.starts_with("swipe:") && arrow > 0 {
+          let dir = cmd.substring(start=6, end=arrow).to_string()
+          let expect = cmd.substring(start=arrow + 1).to_string()
+          let _ = pt.swipe_and_expect(dir, expect)
+        } else if cmd.starts_with("set:") {
+          let body = cmd.substring(start=4).to_string()
+          let colon = match body.find(":") {
+            Some(i) => i
+            None => -1
+          }
+          if colon > 0 {
+            let node = body.substring(start=0, end=colon).to_string()
+            let value = body.substring(start=colon + 1).to_string()
+            let _ = pt.set_input_and_expect(node, value)
+          }
+        } else if cmd == "noviol" {
+          let _ = pt.expect_no_violations()
+        } else if cmd == "render" {
+          let _ = pt.expect_renderable()
+        }
+      }
+      "{\"ok\":true,\"script_lines\":\{lines.length()},\"result\":\{pt.result()}}"
+    }
+  }
+}

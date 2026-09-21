@@ -1,5 +1,6 @@
 import {
   "moonviz/core",
+  "moonbitlang/core/ref",
   "moonviz/decl",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",

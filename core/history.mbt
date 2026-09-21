@@ -207,3 +207,21 @@ fn jstr18(parts : Array[String]) -> String {
   }
   sb.to_string()
 }
+
+///|
+/// 把 Document 写回指定画板（history 时间旅行的落地原语）。
+/// 边界层（CLI/MCP）持有 DesignHistory，checkout/undo/redo 的结果经此
+/// 落回 Project——「源码是唯一事实源」不变：写回后仍走 canonical 序列化。
+pub fn Project::set_artboard_doc(
+  self : Project,
+  artboard~ : String,
+  doc : Document,
+) -> Result[Unit, String] {
+  match self.artboards.get(artboard) {
+    None => Err("unknown_artboard: \{artboard}")
+    Some(ab) => {
+      ab.doc = doc
+      Ok(())
+    }
+  }
+}

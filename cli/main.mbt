@@ -72,6 +72,129 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 }
 
 ///|
+/// 设计版本历史（会话级）：history-init 后随 commit/checkout/undo/redo 演进。
+let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+
+///|
+/// history 子命令族（CLI 侧薄分发；状态在 g_history）。
+fn cli_history(p : @core.Project, parts : Array[String]) -> String {
+  let sub = if parts.length() >= 2 { parts[1] } else { "" }
+  match sub {
+    "init" =>
+      if parts.length() < 3 {
+        cli_err("usage: history init <artboard>")
+      } else {
+        match p.artboards.get(parts[2]) {
+          None => cli_err("unknown_artboard: " + parts[2])
+          Some(ab) => {
+            g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+            "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{parts[2]}\"}"
+          }
+        }
+      }
+    "commit" =>
+      match g_history.val {
+        None => cli_err("history_not_initialized: 先 history init <artboard>")
+        Some(h) => {
+          let msg = if parts.length() >= 3 { parts[2] } else { "commit" }
+          let target = if parts.length() >= 4 { parts[4 - 1] } else { "" }
+          match p.artboards.get(target) {
+            None => cli_err("usage: history commit <msg> <artboard>")
+            Some(ab) => {
+              let _ = h.commit("cli", msg, [], ab.doc.clone())
+              "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{h.rev()},\"msg\":\"\{@core.json_escape(msg)}\"}"
+            }
+          }
+        }
+      }
+    "log" =>
+      match g_history.val {
+        None => cli_err("history_not_initialized")
+        Some(h) =>
+          "{\"ok\":true,\"op\":\"history-log\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
+      }
+    "undo" | "redo" | "checkout" =>
+      match g_history.val {
+        None => cli_err("history_not_initialized")
+        Some(h) => {
+          let want_rev = if sub == "checkout" && parts.length() >= 3 {
+            parse_rev(parts[2])
+          } else {
+            None
+          }
+          let doc = if sub == "undo" {
+            h.undo()
+          } else if sub == "redo" {
+            h.redo()
+          } else {
+            match want_rev {
+              Some(v) => h.checkout(v)
+              None => return cli_err("usage: history checkout <rev>")
+            }
+          }
+          match doc {
+            Err(e) => cli_err(e)
+            Ok(d) => {
+              let target = match p.artboards.keys().next() {
+                Some(k) => k
+                None => return cli_err("no_artboards")
+              }
+              match p.set_artboard_doc(artboard=target, d) {
+                Err(e) => cli_err(e)
+                Ok(_) => {
+                  let shown = match want_rev {
+                    Some(v) => v
+                    None => h.rev()
+                  }
+                  "{\"ok\":true,\"op\":\"history-\{sub}\",\"rev\":\{shown},\"artboard\":\"\{target}\"}"
+                }
+              }
+            }
+          }
+        }
+      }
+    "diff" =>
+      if parts.length() < 4 {
+        cli_err("usage: history diff <revA> <revB>")
+      } else {
+        match g_history.val {
+          None => cli_err("history_not_initialized")
+          Some(h) =>
+            match (parse_rev(parts[2]), parse_rev(parts[3])) {
+              (Some(a), Some(b)) =>
+                match h.diff(a, b) {
+                  Err(e) => cli_err(e)
+                  Ok(json) =>
+                    "{\"ok\":true,\"op\":\"history-diff\",\"diff\":\{json}}"
+                }
+              _ => cli_err("bad_revision")
+            }
+        }
+      }
+    _ => cli_err("usage: history init|commit|log|undo|redo|checkout|diff ...")
+  }
+}
+
+fn parse_rev(text : String) -> Int? {
+  let t = text.trim().to_string()
+  if t.length() == 0 {
+    return None
+  }
+  let mut v = 0
+  let mut i = 0
+  while i < t.length() {
+    let c = t.substring(start=i, end=i + 1)
+    let d = "0123456789".find(c)
+    match d {
+      None => return None
+      Some(x) => v = v * 10 + x
+    }
+    i = i + 1
+  }
+  Some(v)
+}
+
+///|
 fn main {
   let p = @core.Project::new()
   let mut running = true
@@ -976,6 +1099,37 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "list" => p.list_artboards_json()
     "exit" | "quit" => ":exit"
+    "anim-list" => @core.animation_presets_json()
+    "history" => cli_history(p, parts)
+    "protest" =>
+      match line.find(" ") {
+        None => cli_err("usage: protest <artboard> <script>（tap:x:y>board; back>board; noviol; render）")
+        Some(sp) => {
+          let rest = line.substring(start=sp + 1).trim().to_string()
+          let sp2 = match rest.find(" ") {
+            Some(i) => i
+            None => return cli_err("usage: protest <artboard> <script>")
+          }
+          let artboard = rest.substring(start=0, end=sp2).to_string()
+          let script = rest.substring(start=sp2 + 1).trim().to_string()
+          @core.run_protest_script(p, artboard, script)
+        }
+      }
+    "anim-css" =>
+      if parts.length() < 3 {
+        cli_err("usage: anim-css <node_id> <preset>")
+      } else {
+        @core.animation_css(parts[1], parts[2])
+      }
+    // 多 Agent 协作：collab-merge <base_rev> <agent>=<op>[+op...] ...
+    "collab-merge" =>
+      match line.find(" ") {
+        None => cli_err("usage: collab-merge <base_rev> <agent>=<op>[+op...] ...")
+        Some(sp) => {
+          let rest = line.substring(start=sp + 1).trim().to_string()
+          @core.merge_sessions_from_spec(rest)
+        }
+      }
     other => cli_err("unknown_command: " + other)
   }
 }

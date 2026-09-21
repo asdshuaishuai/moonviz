@@ -51,4 +51,23 @@ assert.ok(tokens && Array.isArray(tokens.colors) && tokens.colors.some(c => c.k 
 const html = await engine.exportHtml(mbt);
 assert.ok(html.includes('<!DOCTYPE html>') && html.includes('MV_ACT'), 'exportHtml() 应产出可交互原型');
 
-console.log('SDK selftest passed: template/update/flow/export/render/DDP1/DDP2/tools/ops/themes/tokens/exportHtml all OK');
+// 7) 会话 API（P0-3：与 wasm session 形态对齐）
+{
+  const { Session } = await import('../src/session-api.mjs');
+  const s = await Session.open(engine, 'template login t_sess 390 844');
+  assert.ok(s.depth === 1, 'open 后应有 1 条历史');
+  const upd = await s.apply('update t_sess welcome_title text=会话封装');
+  assert.ok(upd.ok === true, 'session.apply 应成功');
+  const lint = await s.lint('t_sess');
+  assert.ok(Array.isArray(lint) || (lint && lint.ok !== false), 'session.lint 应返回结果');
+  const inter = await s.interactions('t_sess');
+  assert.ok(Array.isArray(inter), 'session.interactions 应返回数组');
+  const spec = await s.spec('t_sess');
+  assert.ok(spec.ok === true && typeof spec.spec_length === 'number', 'session.spec 应生成标注');
+  const mbt2 = await s.exportMbt();
+  assert.ok(mbt2.ok === true && mbt2.mbt.includes('会话封装'), 'session.exportMbt 应反映会话变更');
+  assert.ok(s.depth === 6, '历史应累积到 6 条');
+  await s.close();
+}
+
+console.log('SDK selftest passed: template/update/flow/export/render/DDP1/DDP2/tools/ops/themes/tokens/exportHtml/session all OK');

@@ -63,14 +63,15 @@
 ## 附：当前搁浅模块清点（测量于 v0.1.1）
 
 ```
-模块                公开函数    CLI   MCP   WASM
-core/collab.mbt     OT/冲突/合并  ✗     ✗     ✗
-core/history.mbt    版本控制       ✗     ✗     ✗
-core/animation.mbt  动画/CSS导出   ✗     ✗     ✗
-core/prototest.mbt  原型测试断言   ✗     ✗     ✗
-core/runtime.mbt    交互运行时     ✓(tap) ✗   ✓(session_tap)
-core/reasoning.mbt  自然语言约束   ✓(constrain) ✗ ✗
-core/variants.mbt   变体探索       ✗     △(部分) ✗
+模块                公开函数    CLI            MCP                    WASM
+core/collab.mbt     OT/冲突/合并  ✓(collab-merge) ✓(collab_merge)      ✗
+core/history.mbt    版本控制       ✓(history×7)    ✓(history)           ✗
+core/animation.mbt  动画/CSS导出   ✓(anim-css)     ✓(animation_css)     ✗
+core/prototest.mbt  原型测试断言   ✓(protest)      ✓(protest)           ✗
+core/runtime.mbt    交互运行时     ✓(tap)          ✗                    ✓(session_tap)
+core/reasoning.mbt  自然语言约束   ✓(constrain)    ✗                    ✗
+core/variants.mbt   变体探索       ✗               △(部分)              ✗
 ```
 
-> 测量方法：`grep -c "<module>" {cli,mcp,wasm}/main.mbt`。P0 第 1 项即消灭此表中的 ✗。
+> 测量方法：`grep -c "<module>" {cli,mcp,wasm}/main.mbt`。P0-1 已消灭四个 ✗ 行；
+> `core/variants.mbt`（fork/score/merge 变体探索）是剩余最后一个搁浅模块，列入下一轮。

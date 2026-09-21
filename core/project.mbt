@@ -6,7 +6,7 @@ pub(all) struct ArtboardMeta {
   name : String
   width : Double
   height : Double
-  doc : Document
+  mut doc : Document
 }
 
 ///|

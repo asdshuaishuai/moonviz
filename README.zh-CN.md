@@ -46,6 +46,10 @@
 | `get_violations` | 获取不崩谓词违规列表 |
 | `suggest_fix` | 针对违规给出可执行修复补丁 |
 | `export_svg` | 导出画板为引擎派生 SVG |
+| `collab_merge` | 多 Agent 三方合并：提交 N 个 Agent 的操作序列，返回冲突与自动解决 |
+| `history` | 设计版本控制：init/commit/log/undo/redo/checkout/diff（时间旅行 + 语义 diff） |
+| `animation_presets` / `animation_css` | 动画预设清单 / 为节点生成 CSS @keyframes |
+| `protest` | 运行原型测试脚本（断言式验证导航/输入/渲染/违规） |
 | `read_mbt` | 读取并校验完整 `.mbt.md` 源码 |
 | `render_mbt` | 从 `.mbt.md` 重新解析并渲染 |
 | `ddp_view` | 只读 DDP 查看与渲染契约 |
@@ -188,7 +192,7 @@ moonviz/
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
-├── mcp/               MCP Server（stdio JSON-RPC，47 工具，工具面同 CLI）
+├── mcp/               MCP Server（stdio JSON-RPC，52 工具，工具面同 CLI）
 ├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 24 个 session_* 有状态 API（i32 句柄）
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）

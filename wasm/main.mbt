@@ -477,3 +477,123 @@ pub fn session_tap(handle : Int, artboard : String, x : Double, y : Double) -> S
 fn encode_mbt_b64(text : String) -> String {
   @base64.encode(@utf8.encode(text))
 }
+
+// ---------------------------------------------------------------------------
+// 写路径：分块字符串槽（classic wasm 双向调用）
+//
+// classic wasm 无法导出 GC 内部的字符串分配原语（unsafe_make_string_raw
+// 不可达），宿主也没有 FFI 写引擎堆的通道。本协议用全公开 API 打通：
+//   1. in_reset() / arg_reset()           清空输入槽
+//   2. in_push(chunk, n) / arg_push(...)  小端 4 字节小块压入（n=有效字节 1-4）
+//   3. render_mbt_in() 等 *_in 变体       用槽内字符串调用既有入口
+// UTF-8 解码失败时槽内字符串为空（宿主应保证 in_len 与预期一致）。
+// ---------------------------------------------------------------------------
+
+let g_in_bytes : Ref[Array[Byte]] = Ref::new([])
+let g_arg_bytes : Ref[Array[Byte]] = Ref::new([])
+
+fn slot_push(slot : Ref[Array[Byte]], chunk : Int, n : Int) -> Unit {
+  let count = if n < 1 {
+    1
+  } else if n > 4 {
+    4
+  } else {
+    n
+  }
+  let mut i = 0
+  while i < count {
+    let b = ((chunk >> (i * 8)) & 0xFF).to_byte()
+    slot.val.push(b)
+    i = i + 1
+  }
+}
+
+fn slot_string(slot : Ref[Array[Byte]]) -> String {
+  @utf8.decode(Bytes::from_iter(slot.val.iter())) catch {
+    _ => ""
+  }
+}
+
+///|
+/// 主输入槽：重置（render/validate/apply/session_open 的 MBT 文本）。
+pub fn in_reset() -> Unit {
+  g_in_bytes.val = []
+}
+
+///|
+/// 主输入槽：压入一小块（chunk 小端 4 字节，n 为有效字节数 1-4）。
+pub fn in_push(chunk : Int, n : Int) -> Unit {
+  slot_push(g_in_bytes, chunk, n)
+}
+
+///|
+/// 主输入槽当前字节数。
+pub fn in_len() -> Int {
+  g_in_bytes.val.length()
+}
+
+///|
+/// 辅输入槽：重置（apply_*_op 的 op 文本 / session_* 的 artboard 文本）。
+pub fn arg_reset() -> Unit {
+  g_arg_bytes.val = []
+}
+
+///|
+/// 辅输入槽：压入一小块（chunk 小端 4 字节，n 为有效字节数 1-4）。
+pub fn arg_push(chunk : Int, n : Int) -> Unit {
+  slot_push(g_arg_bytes, chunk, n)
+}
+
+///|
+/// 辅输入槽当前字节数。
+pub fn arg_len() -> Int {
+  g_arg_bytes.val.length()
+}
+
+///|
+/// 用主输入槽渲染（等价 render_mbt）。
+pub fn render_mbt_in() -> String {
+  render_mbt(slot_string(g_in_bytes))
+}
+
+///|
+/// 用主输入槽校验（等价 validate_mbt）。
+pub fn validate_mbt_in() -> String {
+  validate_mbt(slot_string(g_in_bytes))
+}
+
+///|
+/// 用主输入槽导出交互 HTML（等价 export_html）。
+pub fn export_html_in() -> String {
+  export_html(slot_string(g_in_bytes))
+}
+
+///|
+/// Agent 路线操作：主槽 = MBT，辅槽 = op（等价 apply_agent_op）。
+pub fn apply_agent_op_in() -> String {
+  apply_agent_op(slot_string(g_in_bytes), slot_string(g_arg_bytes))
+}
+
+///|
+/// Human 路线操作：主槽 = MBT，辅槽 = op（等价 apply_human_op）。
+pub fn apply_human_op_in() -> String {
+  apply_human_op(slot_string(g_in_bytes), slot_string(g_arg_bytes))
+}
+
+///|
+/// 用主输入槽打开会话（等价 session_open）。
+pub fn session_open_in() -> Int {
+  session_open(slot_string(g_in_bytes))
+}
+
+///|
+/// 会话 Agent 操作：辅槽 = op（等价 session_apply_agent）。
+pub fn session_apply_agent_in(handle : Int) -> String {
+  session_apply_agent(handle, slot_string(g_arg_bytes))
+}
+
+///|
+/// 会话 Human 操作：辅槽 = op（等价 session_apply_human）。
+pub fn session_apply_human_in(handle : Int) -> String {
+  session_apply_human(handle, slot_string(g_arg_bytes))
+}
