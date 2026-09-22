@@ -930,9 +930,9 @@ function quickCmd(kind){
   if(!cmd){
     // 会话型查询（不进 ops 输入框，直接执行并展示）
     const ab=firstAb();if(!ab){setStatus(false,'先载入模板');return;}
-    const qcmds={lint:()=>{const r=engine.session_lint(sessH,ab.id);setStatus(true,'Lint '+ab.id+' → '+JSON.stringify(r).slice(0,120));$('oplog').innerHTML='<div>'+JSON.stringify(r).replace(/</g,'&lt;').slice(0,300)+'</div>';},
+    const qcmds={lint:()=>{const r=engine.session_lint(sessH,ab.id);const rows=(r&&r.data)||r;setStatus(true,'Lint '+ab.id+' → '+rows.length+' 条');$('oplog').innerHTML='<div>'+JSON.stringify(rows).replace(/</g,'&lt;').slice(0,300)+'</div>';},
       critique:()=>{const r=engine.session_critique(sessH,ab.id);$('oplog').innerHTML='<div>'+JSON.stringify(r).replace(/</g,'&lt;').slice(0,300)+'</div>';setStatus(true,'批评完成');},
-      interactions:()=>{const r=engine.session_interactions(sessH,ab.id);$('oplog').innerHTML='<div>'+JSON.stringify(r).replace(/</g,'&lt;').slice(0,300)+'</div>';setStatus(true,'交互 '+r.length+' 条');},
+      interactions:()=>{const r=engine.session_interactions(sessH,ab.id);const rows=(r&&r.data)||r;setStatus(true,'交互 '+(rows.length??0)+' 条');$('oplog').innerHTML='<div>'+JSON.stringify(rows).replace(/</g,'&lt;').slice(0,300)+'</div>';},
       spec:()=>{const r=engine.session_spec(sessH,ab.id);$('oplog').innerHTML='<div>'+(r.spec||'').replace(/</g,'&lt;').slice(0,400)+'</div>';setStatus(true,'标注已生成');}};
     if(qcmds[kind]&&sessH>=0){qcmds[kind]();return;}
     setStatus(false,'当前画板没有可操作节点');return;
@@ -1541,6 +1541,9 @@ async function boot(){
       session_component_compile_b64:(h,b)=>JSON.parse(exports.session_component_compile_b64(h,b)),
       session_library_snapshot:h=>JSON.parse(exports.session_library_snapshot(h)),
       session_tap:(h,a,x,y)=>JSON.parse(exports.session_tap(h,a,x,y)),
+      session_count:()=>exports.session_count(),
+      session_save:h=>JSON.parse(exports.session_save(h)),
+      session_open_project_json:j=>exports.session_open_project_json(j),
     };
     const v=engine.version();
     $('ver').textContent='engine '+v.engine+' v'+v.version+' · wasm-gc · 全程本地运行';
@@ -1553,6 +1556,7 @@ async function boot(){
     resyncSession();
     render();
     setStatus(null,mode==='preview'?'就绪 — 预览模式：点击元素触发交互':'就绪 — 从组件库拖组件到画布，选中后加交互；「源码」查看它生成的 .mbt.md');
+    window.__sessDepth=()=>sessH>=0?engine.session_count():-1;
     $('bootlayer').classList.add('off');
   }catch(e){
     const m=String(e.message||e);
