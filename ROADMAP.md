@@ -7,7 +7,7 @@
 | 维度 | 现状 |
 |---|---|
 | 引擎内核 | 100% MoonBit，48 个核心模块、275+ 公开函数；不崩谓词 5 项 + 双门禁 |
-| 工具面 | CLI 60 命令 · MCP 52 工具（含 inputSchema 字典）· WASM 双产物 37/38 导出（session 26）（26 个 session API）· Node SDK |
+| 工具面 | CLI 65 命令 · MCP 52 工具（含 inputSchema 字典）· WASM 双产物 70/51 导出（session 26）· Node SDK |
 | 组件与模板 | 52 组件 × 93 变体 · 14 个整页模板（移动 + Web/桌面） |
 | 分发 | npm 7 包 + GitHub Releases 全产物 10 项（4 平台 tarball + 双 wasm + npm 全家族） |
 | 人类体验 | Playground 设计工作台（设计/预览双模式）+ deepDesign Studio 画布 |

@@ -1,6 +1,6 @@
 {
   "name": "moonviz-skill",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Agent skill document for the MoonViz prototype design engine: operation grammar, dual-gate semantics, CLI/MCP usage, .mbt.md fact-source workflow. Install and point your coding agent at SKILL.md.",
   "type": "module",
   "files": [

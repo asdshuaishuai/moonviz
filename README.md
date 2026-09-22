@@ -125,7 +125,7 @@ cd ddp && cargo build --release && cd ..
 #    Produces ddp/target/release/ddp_codec (stdin JSON → stdout JSON)
 #    Override the path with MOONVIZ_DDP_HELPER; the SDK searches ddp/target/{debug,release} automatically
 
-# 4. Full test suite (174 tests)
+# 4. Full test suite (191 tests)
 moon test
 ```
 

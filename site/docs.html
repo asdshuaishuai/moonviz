@@ -336,7 +336,7 @@ ddpView.app/Contents/MacOS/DDPView --selftest &lt;file.ddp&gt; [&lt;pwd&gt;]   #
 <tr><td><b>RenderPlan</b></td><td><code>core/runtime.mbt</code></td><td>后端无关显示列表 + 事件协议，宿主只实现解释器</td></tr>
 </table>
 <h3>二进制分发与工具链风险</h3>
-<p>预编译二进制（CLI 1.26MB / MCP 1.10MB）<b>自包含、仅链系统 libc</b>——moon 工具链只存在于编译时。MCP 走 <code>npx moonviz-mcp</code> 平台包；Node SDK 安装 <code>moonviz-bin-&lt;platform&gt;</code> 后自动发现预编译 CLI（或 <code>MOONVIZ_CLI_BIN</code>），全程零工具链。CI 与 Pages 构建使用 latest 工具链（历史锁定版本目录会从下载 CDN 下架），每次构建以 174 项测试 + CLI/MCP 冒烟挡板验证；已发布产物永久冻结不受影响。平台 tarball 同时归档于 GitHub Releases（engine-v* tag）——分发不依赖 npm 单渠道。</p>
+<p>预编译二进制（CLI 1.26MB / MCP 1.10MB）<b>自包含、仅链系统 libc</b>——moon 工具链只存在于编译时。MCP 走 <code>npx moonviz-mcp</code> 平台包；Node SDK 安装 <code>moonviz-bin-&lt;platform&gt;</code> 后自动发现预编译 CLI（或 <code>MOONVIZ_CLI_BIN</code>），全程零工具链。CI 与 Pages 构建使用 latest 工具链（历史锁定版本目录会从下载 CDN 下架），每次构建以 191 项测试 + CLI/MCP 冒烟挡板验证；已发布产物永久冻结不受影响。平台 tarball 同时归档于 GitHub Releases（engine-v* tag）——分发不依赖 npm 单渠道。</p>
 </section>
 
 <section id="ddp">
