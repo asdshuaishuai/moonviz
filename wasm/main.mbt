@@ -225,36 +225,26 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
-      // AgentGate 与无状态 apply_agent_op 同一门：从当前文档重建 →
-      // 应用 op → commit_and_render(AgentGate) 做门检查（违规整体拒绝，
-      // 返回 mbt_gate_block 信封），成功后把提交的 canonical 文本同步
-      // 回会话槽位——绕过门检查会让 Agent 硬门槛在会话面被架空
-      // （issue #2）。
-      match @decl.project_to_mbt(p) {
+      // AgentGate 与无状态 apply_agent_op 同一门：克隆会话 Project →
+      // 克隆上应用 op → project_gate_check 直接在 Project 上做门检查
+      // （不序列化、不重解析、不渲染，issue #6 的三重往返优化）。
+      // 通过才把克隆替换回会话槽位（apply 失败不污染会话状态）；
+      // 响应的 canonical 文本复用克隆（省第二次序列化）。绕过门检查
+      // 会让 Agent 硬门槛在会话面被架空（issue #2）。
+      let snapshot = p.clone()
+      match @core.apply_operation(snapshot, op) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-        Ok(snapshot) =>
-          match @decl.load_mbt_project(snapshot.to_mbt()) {
+        Ok(_) =>
+          match @decl.project_gate_check(snapshot, @core.AgentGate) {
             Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-            Ok(model) =>
-              match @core.apply_operation(model.project, op) {
+            Ok(_debt) => {
+              p.replace_with(snapshot)
+              match @decl.project_to_mbt(p) {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-                Ok(_) => {
-                  // 门检查（会整体拒绝违规 op）；canonical 文本以提交后的
-                  // Project 为准（op 已应用在 model.project 上）
-                  let gate_result = model.commit_and_render(@core.AgentGate)
-                  match gate_result {
-                    Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-                    Ok(_) => {
-                      p.replace_with(model.project)
-                      match @decl.project_to_mbt(p) {
-                        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-                        Ok(final_model) =>
-                          "{\"ok\":true,\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
-                      }
-                    }
-                  }
-                }
+                Ok(final_model) =>
+                  "{\"ok\":true,\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
               }
+            }
           }
       }
     }
@@ -596,4 +586,85 @@ pub fn session_apply_agent_in(handle : Int) -> String {
 /// 会话 Human 操作：辅槽 = op（等价 session_apply_human）。
 pub fn session_apply_human_in(handle : Int) -> String {
   session_apply_human(handle, slot_string(g_arg_bytes))
+}
+
+///|
+/// 会话只读变体（artboard 经辅槽）：与 session_query_nodes 等一一对应，
+/// 供 classic wasm 宿主（无 String 传参能力）调用。
+pub fn session_export_svg_in(handle : Int) -> String {
+  session_export_svg(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_lint_in(handle : Int) -> String {
+  session_lint(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_query_nodes_in(handle : Int) -> String {
+  session_query_nodes(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_interactions_in(handle : Int) -> String {
+  session_interactions(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_states_in(handle : Int) -> String {
+  session_states(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_spec_in(handle : Int) -> String {
+  session_spec(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_infer_page_type_in(handle : Int) -> String {
+  session_infer_page_type(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_infer_missing_in(handle : Int) -> String {
+  session_infer_missing(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_extract_design_system_in(handle : Int) -> String {
+  session_extract_design_system(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_generate_responsive_in(handle : Int) -> String {
+  session_generate_responsive(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_component_compile_b64_in(handle : Int) -> String {
+  session_component_compile_b64(handle, slot_string(g_arg_bytes))
+}
+
+///|
+/// 第三槽（intent/value 等自由文本）。
+let g_arg2_bytes : Ref[Array[Byte]] = Ref::new([])
+
+///|
+pub fn arg2_reset() -> Unit {
+  g_arg2_bytes.val = []
+}
+
+///|
+pub fn arg2_push(chunk : Int, n : Int) -> Unit {
+  slot_push(g_arg2_bytes, chunk, n)
+}
+
+///|
+pub fn session_constrain_in(handle : Int) -> String {
+  session_constrain(handle, slot_string(g_arg_bytes), slot_string(g_arg2_bytes))
+}
+
+///|
+pub fn session_tap_in(handle : Int, x : Double, y : Double) -> String {
+  session_tap(handle, slot_string(g_arg_bytes), x, y)
 }

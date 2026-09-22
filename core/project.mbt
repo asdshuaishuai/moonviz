@@ -52,6 +52,77 @@ pub fn Project::new() -> Project {
 }
 
 ///|
+/// 深拷贝当前项目状态（会话路径的失败回滚用：克隆上应用 op，通过门检
+/// 查才 replace_with 回会话，apply 失败不污染会话）。
+pub fn Project::clone(self : Project) -> Project {
+  // 必须深拷贝：replace_with 是 Map 引用赋值，浅拷贝会与原 Project 共享
+  // artboards 等容器——在克隆上的任何 op 会直接改到原体会话。
+  let copy = Project::new()
+  for k in self.artboards.keys() {
+    match self.artboards.get(k) {
+      Some(ab) => copy.artboards.set(k, {
+        id: ab.id,
+        name: ab.name,
+        width: ab.width,
+        height: ab.height,
+        doc: ab.doc.clone(),
+      })
+      None => ()
+    }
+  }
+  for f in self.flows.iter() {
+    copy.flows.push(f)
+  }
+  copy.tokens = DesignTokens::default()
+  for role in self.tokens.colors.keys() {
+    match self.tokens.colors.get(role) {
+      Some(v) => copy.tokens.colors.set(role, v)
+      None => ()
+    }
+  }
+  for k in self.tokens.spacing.keys() {
+    match self.tokens.spacing.get(k) {
+      Some(v) => copy.tokens.spacing.set(k, v)
+      None => ()
+    }
+  }
+  for k in self.tokens.radii.keys() {
+    match self.tokens.radii.get(k) {
+      Some(v) => copy.tokens.radii.set(k, v)
+      None => ()
+    }
+  }
+  for k in self.tokens.typography.keys() {
+    match self.tokens.typography.get(k) {
+      Some(v) => copy.tokens.typography.set(k, v)
+      None => ()
+    }
+  }
+  for cid in self.components.keys() {
+    match self.components.get(cid) {
+      Some(def) => copy.components.set(cid, def)
+      None => ()
+    }
+  }
+  for uid in self.user_components.keys() {
+    match self.user_components.get(uid) {
+      Some(def) => copy.user_components.set(uid, def)
+      None => ()
+    }
+  }
+  for nid in self.node_states.keys() {
+    match self.node_states.get(nid) {
+      Some(def) => copy.node_states.set(nid, def)
+      None => ()
+    }
+  }
+  copy.revision = self.revision
+  copy.active_theme = self.active_theme
+  copy.token_overrides = self.token_overrides
+  copy
+}
+
+///|
 /// 用从唯一 MBT 源码重建的项目快照原子替换临时计算缓存。
 ///
 /// Studio/CLI 不会持久化这个 Project；每次载入都应来自 `.mbt.md`，它只是

@@ -617,6 +617,44 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
 ///|
 /// 使用指定的双路线 Gate 校验由 MBT 编译出的所有画板。
 /// 返回的人类 debt 数只描述当前 MBT 的视觉债；任何结构问题都会拒绝。
+///|
+/// 直接在 Project 上做门检查（不序列化、不渲染）：违规按 gate 分类，
+/// 阻断项非空即 Err(mbt_gate_block:...)，放行则返回视觉债计数。
+/// 会话路径（session_apply_agent/human）用它在已解析的 Project 上完成
+/// 门检查——省掉「序列化→重解析」的三重往返（issue #6）。
+pub fn project_gate_check(
+  p : @core.Project,
+  gate : @core.Gate,
+) -> Result[Int, String] {
+  let mut debt_count = 0
+  for artboard_id in p.artboards.keys() {
+    match p.artboards.get(artboard_id) {
+      None => ()
+      Some(artboard) => {
+        let violations = @core.validate(artboard.doc)
+        match @core.decide(gate, violations) {
+          @core.Allow(debt) => debt_count = debt_count + debt.length()
+          @core.Reject(blocking) =>
+            match blocking.get(0) {
+              Some(first) =>
+                return Err(
+                  "mbt_gate_block:" +
+                  artboard_id +
+                  ":" +
+                  first.predicate.name() +
+                  ":" +
+                  first.node_id,
+                )
+              None => return Err("mbt_gate_block:" + artboard_id)
+            }
+        }
+      }
+    }
+  }
+  Ok(debt_count)
+}
+
+///|
 pub fn MbtProject::validate_for(
   self : MbtProject,
   gate : @core.Gate,

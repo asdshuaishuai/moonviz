@@ -207,6 +207,7 @@ const back = await DDP.decrypt(free.bytes);         // → { mbt }</code></pre>
 <section id="wasm">
 <h2>WASM SDK（moonviz-engine-wasm）</h2>
 <p>引擎的 <b>WebAssembly GC</b> 构建：渲染与校验管线跑在进程内 wasm 实例里——<b>零工具链、零子进程、零服务器</b>。通过 JS String Builtins，MoonBit String 与宿主字符串直接互通。API 面：<code>render</code> / <code>validate</code> / <code>applyOp</code>（双门禁）/ <code>exportHtml</code> / <code>listComponents</code> / <code>listTemplates</code> / <code>listThemes</code> / <code>listTokens</code> / <code>listOps</code>。</p>
+<p><b>classic 字符串 ABI 已契约化</b>：对象布局双判别式、UTF-16LE 编码、槽协议全文档见 <a href="https://github.com/asdshuaishuai/moonviz/blob/main/docs/wasm-abi.md">docs/wasm-abi.md</a>，CI 断言防漂移。</p>
 <p><b>标准 wasm 产物（宿主中立）</b>：<code>moon build --target wasm</code> 产出纯 WASM MVP 模块（线性内存、0 imports、<code>(i32)-&gt;i32</code> 签名、导出 memory）——不依赖任何宿主特定提案，wasmtime/wasmi 等任何规范运行时均可实例化。字符串 ABI：对象 = <code>[4B refcnt][4B header][len×UTF-16LE]</code>，header = <code>(kind&lt;&lt;30)|(shift&lt;&lt;28)|len</code>。</p>
 <h3>环境要求</h3>
 <table>
