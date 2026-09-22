@@ -71,7 +71,8 @@ session_lint_in session_query_nodes_in session_interactions_in
 session_states_in session_spec_in session_infer_page_type_in
 session_infer_missing_in session_extract_design_system_in
 session_generate_responsive_in session_component_compile_b64_in
-session_constrain_in session_tap_in`。
+session_constrain_in session_tap_in session_critique_in
+session_auto_fix_in session_open_project_json_in`。
 
 ## 6. 防漂移
 
