@@ -506,7 +506,7 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
 }
 
 ///|
-fn mbt_validate_flows(project : @core.Project) -> Result[Unit, String] {
+pub fn mbt_validate_flows(project : @core.Project) -> Result[Unit, String] {
   for flow in project.flows.iter() {
     match (project.artboards.get(flow.from), project.artboards.get(flow.to)) {
       (Some(from), Some(_)) =>

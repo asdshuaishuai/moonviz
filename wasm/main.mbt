@@ -232,19 +232,25 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
       // 响应的 canonical 文本复用克隆（省第二次序列化）。绕过门检查
       // 会让 Agent 硬门槛在会话面被架空（issue #2）。
       let snapshot = p.clone()
-      match @core.apply_operation(snapshot, op) {
+      let flow_check = @decl.mbt_validate_flows(snapshot)
+      match flow_check {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
         Ok(_) =>
-          match @decl.project_gate_check(snapshot, @core.AgentGate) {
+          match @core.apply_operation(snapshot, op) {
             Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-            Ok(_debt) => {
-              p.replace_with(snapshot)
-              match @decl.project_to_mbt(p) {
+            Ok(_) =>
+              match @decl.project_gate_check(snapshot, @core.AgentGate) {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-                Ok(final_model) =>
-                  "{\"ok\":true,\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
+                Ok(_) => {
+                  p.replace_with(snapshot)
+                  match @decl.project_to_mbt(p) {
+                    Err(e) =>
+                      "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                    Ok(final_model) =>
+                      "{\"ok\":true,\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
+                  }
+                }
               }
-            }
           }
       }
     }
@@ -258,15 +264,27 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
 pub fn session_apply_human(handle : Int, op : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
-    Some(p) =>
-      match @core.apply_operation(p, op) {
+    Some(p) => {
+      // HumanGate：结构违规拒绝、视觉债放行并计入 debt 字段——
+      // 与无状态 apply_human_op 同门（此前实现无门检查，注释失实）
+      let snapshot = p.clone()
+      match @core.apply_operation(snapshot, op) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-        Ok(_) =>
-          match @decl.project_to_mbt(p) {
+        Ok(_) => {
+          match @decl.project_gate_check(snapshot, @core.HumanGate) {
             Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-            Ok(model) => "{\"ok\":true,\"mbt\":\"\{@core.json_escape(model.to_mbt())}\"}"
+            Ok(debt) => {
+              p.replace_with(snapshot)
+              match @decl.project_to_mbt(p) {
+                Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                Ok(final_model) =>
+                  "{\"ok\":true,\"debt\":\{debt},\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
+              }
+            }
           }
+        }
       }
+    }
   }
 }
 
@@ -667,4 +685,20 @@ pub fn session_constrain_in(handle : Int) -> String {
 ///|
 pub fn session_tap_in(handle : Int, x : Double, y : Double) -> String {
   session_tap(handle, slot_string(g_arg_bytes), x, y)
+}
+
+///|
+pub fn session_critique_in(handle : Int) -> String {
+  session_critique(handle, slot_string(g_arg_bytes))
+}
+
+///|
+pub fn session_auto_fix_in(handle : Int) -> String {
+  session_auto_fix(handle, slot_string(g_arg_bytes))
+}
+
+///|
+/// save→open 回灌的 classic 入口：主槽压 project_json 字符串后调用。
+pub fn session_open_project_json_in() -> Int {
+  session_open_project_json(slot_string(g_in_bytes))
 }

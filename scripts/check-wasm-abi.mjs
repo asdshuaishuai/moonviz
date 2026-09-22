@@ -10,11 +10,24 @@ const inst = new WebAssembly.Instance(mod, {});
 const X = inst.exports;
 
 const names = WebAssembly.Module.exports(mod).map(e => e.name);
+// 全量导出清单（除 memory 外全部必须存在）——契约文档 docs/wasm-abi.md
 const required = [
-  'memory', 'version_info', 'render_mbt', 'validate_mbt',
+  'version_info', 'render_mbt', 'validate_mbt',
   'apply_agent_op', 'apply_human_op', 'export_html', 'list_ops',
+  'list_templates', 'list_components', 'list_themes', 'list_tokens',
   'session_open', 'session_close', 'session_count',
-  'session_apply_agent_in', 'session_query_nodes_in', 'render_mbt_in',
+  'session_open_project_json', 'session_save',
+  'session_apply_agent_in', 'session_apply_human_in',
+  'session_query_nodes_in', 'session_lint_in', 'session_critique_in',
+  'session_auto_fix_in', 'session_export_svg_in', 'session_interactions_in',
+  'session_states_in', 'session_spec_in', 'session_flows',
+  'session_constrain_in', 'session_infer_page_type_in',
+  'session_infer_missing_in', 'session_extract_design_system_in',
+  'session_generate_responsive_in', 'session_component_compile_b64_in',
+  'session_tap_in', 'session_benchmark',
+  'in_reset', 'in_push', 'in_len', 'arg_reset', 'arg_push', 'arg_len',
+  'arg2_reset', 'arg2_push', 'render_mbt_in', 'validate_mbt_in',
+  'export_html_in', 'session_open_project_json_in',
 ];
 const missing = required.filter(n => !names.includes(n));
 if (missing.length) {
