@@ -188,7 +188,7 @@ fn jstr16(parts : Array[String]) -> String {
     if i > 0 {
       sb.write_string(",")
     }
-    sb.write_string("\"\{parts[i]}\"")
+    sb.write_string("\"\{escaped[i]}\"")
   }
   sb.write_string("]")
   sb.to_string()
@@ -271,7 +271,7 @@ pub fn run_protest_script(
           let _ = pt.reject_invalid("未知断言：\{cmd}")
         }
       }
-      "{\"ok\":true,\"script_lines\":\{lines.length()},\"result\":\{pt.result()}}"
+      "{\"ok\":\{pt.is_pass()},\"script_lines\":\{lines.length()},\"result\":\{pt.result()}}"
     }
   }
 }

@@ -615,9 +615,6 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
 }
 
 ///|
-/// 使用指定的双路线 Gate 校验由 MBT 编译出的所有画板。
-/// 返回的人类 debt 数只描述当前 MBT 的视觉债；任何结构问题都会拒绝。
-///|
 /// 直接在 Project 上做门检查（不序列化、不渲染）：违规按 gate 分类，
 /// 阻断项非空即 Err(mbt_gate_block:...)，放行则返回视觉债计数。
 /// 会话路径（session_apply_agent/human）用它在已解析的 Project 上完成
@@ -655,6 +652,8 @@ pub fn project_gate_check(
 }
 
 ///|
+/// 使用指定的双路线 Gate 校验由 MBT 编译出的所有画板。
+/// 返回的人类 debt 数只描述当前 MBT 的视觉债；任何结构问题都会拒绝。
 pub fn MbtProject::validate_for(
   self : MbtProject,
   gate : @core.Gate,

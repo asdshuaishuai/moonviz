@@ -112,13 +112,39 @@ pub fn Project::clone(self : Project) -> Project {
   }
   for nid in self.node_states.keys() {
     match self.node_states.get(nid) {
-      Some(def) => copy.node_states.set(nid, def)
+      // ComponentStateDef 值对象深拷贝：states Map 与 mut current 若共享，
+      // 克隆上的 set-state op 会原地写穿原会话（别名污染）
+      Some(def) => {
+        let states_copy : Map[String, NodePatch] = Map::new()
+        for st in def.states.keys() {
+          match def.states.get(st) {
+            Some(patch) => states_copy.set(st, patch)
+            None => ()
+          }
+        }
+        copy.node_states.set(
+          nid,
+          { node_id: def.node_id, states: states_copy, current: def.current },
+        )
+      }
       None => ()
     }
   }
   copy.revision = self.revision
   copy.active_theme = self.active_theme
-  copy.token_overrides = self.token_overrides
+  match self.token_overrides {
+    Some(ov) => {
+      let ov_copy : Map[String, String] = Map::new()
+      for role in ov.keys() {
+        match ov.get(role) {
+          Some(v) => ov_copy.set(role, v)
+          None => ()
+        }
+      }
+      copy.token_overrides = Some(ov_copy)
+    }
+    None => copy.token_overrides = None
+  }
   copy
 }
 

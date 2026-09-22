@@ -200,3 +200,24 @@ test "契约：已关句柄报 invalid_session_handle（issue #4A）" {
   assert_true(r.contains("invalid_session_handle"), msg="已关句柄应报 invalid_session_handle: \{r}")
   let _ = assert_false(session_close(h), msg="重复 close 应返回 false")
 }
+///|
+test "契约：protest 畸形断言计 FAIL 不假 PASS" {
+  let seed = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let r = @core.run_protest_script(session_get_project_for_test(), "w", "nvoiol; tap:1:2")
+  assert_true(r.contains("\"failed\":2"), msg="畸形断言应计 failed: \{r}")
+  assert_true(r.contains("\"status\":\"FAIL\""))
+}
+
+///|
+/// 测试辅助：取共享 seed 的会话 Project（run_protest_script 需要 Project）。
+fn session_get_project_for_test() -> @core.Project {
+  let p = @core.Project::new()
+  let seed = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  match @decl.load_mbt_project(seed) {
+    Ok(m) => {
+      p.replace_with(m.project)
+      p
+    }
+    Err(_) => p
+  }
+}

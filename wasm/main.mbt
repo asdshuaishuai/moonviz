@@ -232,11 +232,12 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
       // 响应的 canonical 文本复用克隆（省第二次序列化）。绕过门检查
       // 会让 Agent 硬门槛在会话面被架空（issue #2）。
       let snapshot = p.clone()
-      let flow_check = @decl.mbt_validate_flows(snapshot)
-      match flow_check {
+      match @core.apply_operation(snapshot, op) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-        Ok(_) =>
-          match @core.apply_operation(snapshot, op) {
+        Ok(_) => {
+          // flow 校验必须跑在 apply 之后的新状态上：op 自身可能引入悬空
+          // flow（add_flow 零校验），前置校验拦不住（审查 F1）
+          match @decl.mbt_validate_flows(snapshot) {
             Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
             Ok(_) =>
               match @decl.project_gate_check(snapshot, @core.AgentGate) {
@@ -252,6 +253,7 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
                 }
               }
           }
+        }
       }
     }
   }
@@ -266,21 +268,28 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
       // HumanGate：结构违规拒绝、视觉债放行并计入 debt 字段——
-      // 与无状态 apply_human_op 同门（此前实现无门检查，注释失实）
+      // 与无状态 apply_human_op 同门（此前实现无门检查，注释失实）。
+      // flow 校验与无状态路径同层：apply 之后的新状态上执行
       let snapshot = p.clone()
       match @core.apply_operation(snapshot, op) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
         Ok(_) => {
-          match @decl.project_gate_check(snapshot, @core.HumanGate) {
+          let flow_check = @decl.mbt_validate_flows(snapshot)
+          match flow_check {
             Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-            Ok(debt) => {
-              p.replace_with(snapshot)
-              match @decl.project_to_mbt(p) {
+            Ok(_) =>
+              match @decl.project_gate_check(snapshot, @core.HumanGate) {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-                Ok(final_model) =>
-                  "{\"ok\":true,\"debt\":\{debt},\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
+                Ok(debt) => {
+                  p.replace_with(snapshot)
+                  match @decl.project_to_mbt(p) {
+                    Err(e) =>
+                      "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                    Ok(final_model) =>
+                      "{\"ok\":true,\"debt\":\{debt},\"mbt\":\"\{@core.json_escape(final_model.to_mbt())}\"}"
+                  }
+                }
               }
-            }
           }
         }
       }
@@ -402,8 +411,7 @@ pub fn session_benchmark(handle : Int) -> String {
 }
 
 ///|
-/// 项目 JSON 快照（save 语义；session_open 反向恢复需 from_project_json
-/// 路线，见 roadmap）。
+/// 项目 JSON 快照（save 语义；回灌用 session_open_project_json）。
 pub fn session_save(handle : Int) -> String {
   // 统一信封 {ok:true,data:"<project_json 字符串>"}；session_open_project_json
   // 接收 data 里的 project_json 文本

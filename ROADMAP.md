@@ -1,6 +1,6 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.1**（`engine-v0.1.1-session`）· `moon test` 179/179 · 仓库 78+ commits
+> 当前基线：**v0.1.1-session**（`engine-v0.1.1-fix` 起）· `moon test` 190/190 · 仓库 90+ commits
 
 ## 当前基线盘点
 

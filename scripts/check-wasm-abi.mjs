@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-// classic wasm ABI 布局断言（issue #8）：导出清单 / 0 imports /
-// 字符串对象判别式实测。用法：node scripts/check-wasm-abi.mjs <wasm路径>
+// classic wasm ABI 布局断言（issue #8）：导出清单以 wasm/moon.pkg 的
+// classic exports 段为准（单一事实源），防手工清单漂移。
+// 用法：node scripts/check-wasm-abi.mjs <wasm路径>
 import { readFile } from 'node:fs/promises';
+
+const required = ["render_mbt", "validate_mbt", "apply_agent_op", "apply_human_op", "list_templates", "list_components", "list_themes", "list_tokens", "list_ops", "export_html", "version_info", "in_reset", "in_push", "in_len", "arg_reset", "arg_push", "arg_len", "render_mbt_in", "validate_mbt_in", "export_html_in", "apply_agent_op_in", "apply_human_op_in", "session_open_in", "session_apply_agent_in", "session_apply_human_in", "session_export_svg_in", "session_lint_in", "session_query_nodes_in", "session_interactions_in", "session_states_in", "session_spec_in", "session_infer_page_type_in", "session_infer_missing_in", "session_extract_design_system_in", "session_generate_responsive_in", "session_component_compile_b64_in", "session_constrain_in", "session_tap_in", "session_critique_in", "session_auto_fix_in", "session_open_project_json_in", "arg2_reset", "arg2_push", "session_apply_agent", "session_apply_human", "session_auto_fix", "session_benchmark", "session_close", "session_count", "session_open_project_json", "session_component_compile_b64", "session_constrain", "session_critique", "session_export_svg", "session_extract_design_system", "session_flows", "session_generate_responsive", "session_infer_missing", "session_infer_page_type", "session_interactions", "session_library_snapshot", "session_lint", "session_list_artboards", "session_open", "session_query_nodes", "session_save", "session_spec", "session_states", "session_tap"];
 
 const path = process.argv[2] ?? '_build/wasm/release/build/wasm/wasm.wasm';
 const bytes = await readFile(path);
@@ -10,25 +13,6 @@ const inst = new WebAssembly.Instance(mod, {});
 const X = inst.exports;
 
 const names = WebAssembly.Module.exports(mod).map(e => e.name);
-// 全量导出清单（除 memory 外全部必须存在）——契约文档 docs/wasm-abi.md
-const required = [
-  'version_info', 'render_mbt', 'validate_mbt',
-  'apply_agent_op', 'apply_human_op', 'export_html', 'list_ops',
-  'list_templates', 'list_components', 'list_themes', 'list_tokens',
-  'session_open', 'session_close', 'session_count',
-  'session_open_project_json', 'session_save',
-  'session_apply_agent_in', 'session_apply_human_in',
-  'session_query_nodes_in', 'session_lint_in', 'session_critique_in',
-  'session_auto_fix_in', 'session_export_svg_in', 'session_interactions_in',
-  'session_states_in', 'session_spec_in', 'session_flows',
-  'session_constrain_in', 'session_infer_page_type_in',
-  'session_infer_missing_in', 'session_extract_design_system_in',
-  'session_generate_responsive_in', 'session_component_compile_b64_in',
-  'session_tap_in', 'session_benchmark',
-  'in_reset', 'in_push', 'in_len', 'arg_reset', 'arg_push', 'arg_len',
-  'arg2_reset', 'arg2_push', 'render_mbt_in', 'validate_mbt_in',
-  'export_html_in', 'session_open_project_json_in',
-];
 const missing = required.filter(n => !names.includes(n));
 if (missing.length) {
   console.error(`ABI 断言失败：缺导出 ${missing.join(', ')}`);
@@ -48,9 +32,9 @@ const w1 = dv.getUint32(ptr + 4, true);
 let len, dataAt;
 if ((w1 >>> 28) === 0x5) { len = w1 & 0x0FFFFFFF; dataAt = ptr + 8; }
 else {
-  // 静态字面量布局：len@ptr-4，数据@ptr（判别：ptr-4 处 u32 合理且 < 1M）
+  // 静态字面量布局：len@ptr-4，数据@ptr
   len = dv.getUint32(ptr - 4, true); dataAt = ptr;
-  if (len === 0 || len > 1_000_000) {
+  if (len === 0 || len > 1000000) {
     console.error(`ABI 断言失败：无法识别的字符串对象布局 w0=${w0.toString(16)} w1=${w1.toString(16)} len@-4=${len}`);
     process.exit(1);
   }
