@@ -97,7 +97,7 @@ export async function createEngine(source) {
       return JSON.parse(exports.export_html(mbt));
     },
 
-    /** op 面字典（25 条 mutating op：op/usage/category/gates）。 */
+    /** op 面字典（26 条 mutating op：op/usage/category/gates）。 */
     listOps() {
       return JSON.parse(exports.list_ops());
     },

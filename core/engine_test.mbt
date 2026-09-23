@@ -284,3 +284,71 @@ test "query_nodes：节点条目带 parent 字段（issue #13）" {
     Err(e) => assert_true(false, msg=e)
   }
 }
+
+///|
+test "auto_fix：背景层不参与重叠推挤（review 5a5641a）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=375.0, height=812.0)
+  let _ = p.place_component(artboard="m", component_id="rect", instance_id="bg", y=0.0)
+  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[("w", "375"), ("h", "812")])
+  // a 与 b 部分相交（真实视觉债）
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="a", x=0.0, y=100.0)
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="b", x=60.0, y=120.0)
+  match p.auto_fix(artboard="m") {
+    Ok(json) => assert_true(json.contains("\"ok\""), msg=json)
+    Err(e) => assert_true(false, msg=e)
+  }
+  // 修复后：真实重叠清零，且没有任何内容被推出画板之外（背景此前会把
+  // max_bottom 抬到 812，修复者直接出界）
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let vs = validate(ab.doc)
+      let layout = solve(ab.doc)
+      let mut n_overlap = 0
+      for v in vs.iter() {
+        if v.predicate is NoSiblingOverlap { n_overlap = n_overlap + 1 }
+      }
+      assert_eq(n_overlap, 0, msg="部分相交应被修复")
+      for id in ["a", "b"] {
+        match layout.rect_of(id) {
+          Some(r) =>
+            assert_true(
+              r.y + r.height <= 812.0,
+              msg="\{id} 被推出画板: y=\{r.y} h=\{r.height}",
+            )
+          None => assert_true(false, msg="\{id} 无解")
+        }
+      }
+    }
+    None => assert_true(false)
+  }
+}
+
+///|
+test "history：撤销后新提交截断 redo 分支（review 5a5641a）" {
+  let h = DesignHistory::new(Document::new({ width: 390.0, height: 844.0 }))
+  let doc1 = Document::sample_login()
+  let _ = h.commit("t", "e1", [], doc1)
+  assert_eq(h.rev(), 1)
+  let _ = h.undo()
+  assert_eq(h.rev(), 0)
+  // 撤销后编辑再提交：旧 redo 分支（rev1 旧快照）被截断，新提交复用 rev1
+  // ——checkout 线性扫描必须命中新快照而非被旧条目遮蔽（review 5a5641a）
+  let doc2 = Document::sample_login()
+  let marker = { ..Node::make("marker", Rect), name: "added-after-undo" }
+  let _ = doc2.insert_node(marker, "root")
+  let _ = h.commit("t", "e2", [], doc2)
+  assert_eq(h.rev(), 1)
+  match h.checkout(1) {
+    Ok(d) =>
+      match d.nodes.get("marker") {
+        Some(_) => ()
+        None => assert_true(false, msg="checkout(1) 应命中新提交（含 marker），而非被旧 rev1 快照遮蔽")
+      }
+    Err(e) => assert_true(false, msg=e)
+  }
+  match h.redo() {
+    Err(e) => assert_true(e.contains("nothing_to_redo"), msg=e)
+    Ok(_) => assert_true(false, msg="commit 后 redo 应不可用")
+  }
+}

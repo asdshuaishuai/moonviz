@@ -135,8 +135,14 @@ fn fix_overlap(doc : Document, node_id : String) -> String? {
                   for cid in parent.children.iter() {
                     if cid != node_id {
                       match layout.rect_of(cid) {
-                        Some(cr) =>
-                          if nr.y < cr.y + cr.height &&
+                        Some(cr) => {
+                          // 全包含对＝有意分层（背景压内容），与谓词层豁免
+                          // 同语义同容差——背景不参与 max_bottom 推挤，否则
+                          // 内容会被推到画板之外（review 5a5641a）
+                          if nr.contains_rect_eps(cr, 0.5) ||
+                            cr.contains_rect_eps(nr, 0.5) {
+                            ()
+                          } else if nr.y < cr.y + cr.height &&
                             nr.y + nr.height > cr.y &&
                             nr.x < cr.x + cr.width &&
                             cr.x < nr.x + nr.width {
@@ -145,6 +151,7 @@ fn fix_overlap(doc : Document, node_id : String) -> String? {
                               max_bottom = b
                             }
                           }
+                        }
                         None => ()
                       }
                     }

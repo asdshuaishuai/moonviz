@@ -54,6 +54,16 @@ pub fn DesignHistory::commit(
   ops : Array[DesignOp],
   doc : Document,
 ) -> Int {
+  // 撤销后新提交：截断 current 之后的 redo 分支（git 语义）。否则
+  // current+1 会与 redo 链上已存在的 revision 撞号，checkout/redo 的
+  // 线性扫描命中旧快照、新提交被静默遮蔽（review 5a5641a）。
+  // entries 按 revision 升序追加，从尾部弹出即精确截断。
+  while self.entries.length() > 0 &&
+        self.entries[self.entries.length() - 1].revision >
+        self.current_revision {
+    let _ = self.entries.pop()
+  }
+  self.redo_stack = []
   let rev = self.current_revision + 1
   self.entries.push({
     revision: rev,

@@ -7,7 +7,7 @@
 | 维度 | 现状 |
 |---|---|
 | 引擎内核 | 100% MoonBit，48 个核心模块、275+ 公开函数；不崩谓词 5 项 + 双门禁 |
-| 工具面 | CLI 65 命令 · MCP 52 工具（含 inputSchema 字典）· WASM 双产物 70/51 导出（session 26）· Node SDK |
+| 工具面 | CLI 65 命令 · MCP 52 工具（含 inputSchema 字典）· WASM 双产物 72/53 导出（session 28）· Node SDK |
 | 组件与模板 | 65 组件 × 115 变体 · 14 个整页模板（移动 + Web/桌面） |
 | 分发 | npm 7 包 + GitHub Releases 全产物 10 项（4 平台 tarball + 双 wasm + npm 全家族） |
 | 人类体验 | Playground 设计工作台（设计/预览双模式）+ deepDesign Studio 画布 |
@@ -36,7 +36,7 @@
 
 ### P1 · 体验深化
 
-**4. deepDesign Studio 全面接入新引擎。** 引擎能力面（52 工具/25 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
+**4. deepDesign Studio 全面接入新引擎。** 引擎能力面（52 工具/26 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
 
 **5. Playground 能力补全。** 动画系统接入（`animation.mbt` → 预览模式实时动效）；用户组件编译入口（MCP `component_compile` 已有，Playground 缺 UI）；原型测试面板（`protest.mbt` 断言可视化运行）。
 

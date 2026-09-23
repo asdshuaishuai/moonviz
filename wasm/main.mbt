@@ -95,7 +95,7 @@ pub fn list_tokens() -> String {
 }
 
 ///|
-/// 机器可读 op 面字典：25 条 mutating op（usage/category/gates），
+/// 机器可读 op 面字典：26 条 mutating op（usage/category/gates），
 /// 与 CLI list-ops / MCP list_ops 同源（core/agent_api.mbt）。
 pub fn list_ops() -> String {
   @core.list_ops_json()
@@ -190,9 +190,22 @@ fn history_rev(text : String) -> Int? {
 /// `history` 子命令族一致：
 ///   init <artboard> | commit <msg> [artboard] | log | undo | redo |
 ///   checkout <rev> | diff <from> <to>
-/// undo/redo/checkout 的文档经 Project::set_artboard_doc 落回画板——
-/// 写回后仍走 canonical 序列化，「源码是唯一事实源」不变；快照栈不经过
-/// 门的历史方案被有意排除（见 issue #11 讨论）。
+/// undo/redo/checkout 的文档经 Project::set_artboard_doc 落回画板，并在
+/// 响应中回传全项目 canonical mbt（与 session_apply_* 的宿主持久化契约
+/// 同形——宿主应保存返回文本供下次 session_open 使用，否则时间旅行
+/// 结果在重开后丢失）。undo/redo 恢复的是历史上已过门的状态，不重跑
+/// 门；引入新变更仍必须走 apply_agent/apply_human。
+///|
+/// 全项目 canonical 文本（与 session_apply_* 的 mbt 字段同源）；
+/// 失败时返回空串，信封退化为无 mbt 字段。
+fn session_canonical_mbt(p : @core.Project) -> String {
+  match @decl.project_to_mbt(p) {
+    Ok(m) => ",\"mbt\":\"\{@core.json_escape(m.to_mbt())}\""
+    Err(_) => ""
+  }
+}
+
+///|
 pub fn session_history(handle : Int, line : String) -> String {
   let s = session_store()
   if handle < 0 || handle >= s.length() || !(s[handle].val.alive) {
@@ -221,7 +234,7 @@ pub fn session_history(handle : Int, line : String) -> String {
             history: Some(@core.DesignHistory::new(board.doc.clone())),
             history_board: ab,
           }
-          "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{ab}\"}"
+          "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{@core.json_escape(ab)}\"}"
         }
       }
     }
@@ -260,7 +273,7 @@ pub fn session_history(handle : Int, line : String) -> String {
               match cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(_) =>
-                  "{\"ok\":true,\"op\":\"history-\{sub}\",\"artboard\":\"\{cur.history_board}\",\"rev\":\{h.rev()}}"
+                  "{\"ok\":true,\"op\":\"history-\{sub}\",\"artboard\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{h.rev()}\{session_canonical_mbt(cur.project)}}"
               }
             }
           }
@@ -285,7 +298,7 @@ pub fn session_history(handle : Int, line : String) -> String {
                   match cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
                     Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                     Ok(_) =>
-                      "{\"ok\":true,\"op\":\"history-checkout\",\"artboard\":\"\{cur.history_board}\",\"rev\":\{rev}}"
+                      "{\"ok\":true,\"op\":\"history-checkout\",\"artboard\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{rev}\{session_canonical_mbt(cur.project)}}"
                   }
                 }
               }

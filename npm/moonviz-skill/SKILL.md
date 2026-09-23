@@ -59,6 +59,7 @@ checkout|diff`（设计版本控制）· `anim-css <node> <preset>` / `anim-list
 
 Navigation / theme / tokens / debt:
 `flow <from_ab> <to_ab> <node>` (tap navigation edge) ·
+`unflow <from_ab> <to_ab> <node>` (remove one navigation edge) ·
 `theme <name>` (`light dark high_contrast sepia nord sunset`) ·
 `token <name> <value>` (COLOR tokens ONLY — `primary`, `on_primary`,
 `secondary`, `surface`, `background`, `error`, `text_primary`, ...; full set

@@ -246,6 +246,9 @@ test "契约：session_history init/commit/undo/redo/checkout（issue #11）" {
   // undo → 应回到初版（btn 文案还原）
   let ru = session_history(h, "undo")
   assert_true(ru.contains("\"op\":\"history-undo\""), msg=ru)
+  // 宿主持久化契约：undo/redo/checkout 必须回传 canonical mbt
+  // （与 session_apply_* 同形），否则按 apply 契约存盘的宿主会丢时间旅行
+  assert_true(ru.contains("\"mbt\":\""), msg="undo 应回传 mbt: " + ru)
   let q1 = session_query_nodes(h, "w")
   assert_true(q1.contains("OK"), msg="undo 后 btn 应回到初始文案 OK: " + q1)
   // redo
