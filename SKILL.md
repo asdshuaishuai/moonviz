@@ -212,6 +212,11 @@ returns.
 - **CLI/MCP**: Source-based engine protocols over stdin/stdout.
 - **Tauri/browser shell**: file dialogs, opaque DDP transport, and visual presentation only.
 - **DDP**: one encrypted `.mbt.md` source.
+- **Release baseline (agent 元规则)**: whenever build artifacts are synced, docs, website, all
+  artifacts, and the playground move to the same baseline together. Two authoritative values must
+  agree (CI smoke asserts it, mismatch fails the job): `core/version.mbt` `ENGINE_VERSION` and
+  `binaries.yml` `MOONVIZ_VERSION` in the engine repo. Full procedure:
+  root [`AGENTS.md`](AGENTS.md) — checklist, sync targets, red lines.
 
 
 ## User Components (custom component registry)
