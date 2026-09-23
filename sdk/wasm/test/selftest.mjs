@@ -10,6 +10,20 @@ const ver = engine.version();
 assert.equal(ver.ok, true, 'version 应返回 ok');
 assert.equal(ver.engine, 'moonviz', 'engine 名称应为 moonviz');
 
+// 基线同步硬断言（AGENTS.md 元规则）：包内 dist wasm 的引擎自报版本必须
+// 等于本包版本——dist 忘了随 release 更新时这里直接 fail，而不是静默发旧引擎。
+const pkgVersion = JSON.parse(await import('node:fs/promises').then(fs => fs.readFile(new URL('../package.json', import.meta.url), 'utf8'))).version;
+assert.equal(ver.version, pkgVersion, `dist wasm 引擎版本(${ver.version})必须等于包版本(${pkgVersion})——dist 未随基线同步`);
+
+// 2. 组件目录基线（0.1.4 = 65 组件 × 115 变体）；list_components 返回裸数组
+const comps = engine.listComponents();
+const catalog = Array.isArray(comps) ? comps : comps.components;
+assert.ok(Array.isArray(catalog) && catalog.length >= 65, `组件目录应 ≥65（当前 ${catalog?.length}）——dist wasm 疑似旧构建`);
+const allIds = new Set(catalog.map(c => c.id));
+for (const need of ['multi_select', 'command_palette', 'bento_grid', 'resize_handle']) {
+  assert.ok(allIds.has(need), `新组件 ${need} 不在目录中——dist wasm 疑似 0.1.3 前旧构建`);
+}
+
 // 2. 最小合法文档渲染
 const mbt = `---
 moonbit:

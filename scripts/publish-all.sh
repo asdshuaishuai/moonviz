@@ -12,7 +12,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-RUN_ID="${MOONVIZ_CI_RUN:-35104131216}"
+RUN_ID="${MOONVIZ_CI_RUN:-35836654432}"  # engine-v0.1.4 全产物构建 run
 TGZ_DIR="${MOONVIZ_TGZ_DIR:-/tmp/mv-tgz}"
 
 cd "$ROOT"
@@ -69,6 +69,8 @@ for tgz in "$TGZ_DIR"/*/*.tgz; do
 done
 
 # 2) 本地包（engine-sdk / engine-wasm / skill / mcp wrapper）
+# skill 的 SKILL.md 单一事实源在仓库根，发布前强制重拷，杜绝副本漂移
+cp "$ROOT/SKILL.md" "$ROOT/npm/moonviz-skill/SKILL.md"
 for dir in sdk/node sdk/wasm npm/moonviz-skill npm/moonviz-mcp; do
   name="$(basename "$dir")"
   # 必须用绝对/./ 路径：裸 owner/repo 形式会被 npm 解析成 GitHub 简写

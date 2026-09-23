@@ -1,6 +1,6 @@
 {
   "name": "moonviz-engine-sdk",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Node.js integration SDK for the MoonViz prototype design engine (pure MoonBit). Spawn-and-drive the MoonViz CLI from any Node host: sessions, templates, operations, flows, render, dual-gate export, DDP encrypt/decrypt.",
   "type": "module",
   "main": "src/index.js",

@@ -170,7 +170,7 @@ Argument passing mirrors the CLI: list-ish arguments are comma-separated
 
 ## Components
 
-The component catalog is owned by `core/`, not by the Studio shell. `builtin_components()` currently provides **52 unique engine presets** across actions, inputs, selection, display, layout, navigation, feedback, and overlay categories, with variants and default geometry. The shell discovers this catalog through the engine and only renders previews/materializes operations.
+The component catalog is owned by `core/`, not by the Studio shell. `builtin_components()` currently provides **65 unique engine presets** across actions, inputs, selection, display, layout, navigation, feedback, and overlay categories, with variants and default geometry. The shell discovers this catalog through the engine and only renders previews/materializes operations.
 
 ## Rendering
 
@@ -208,10 +208,15 @@ returns.
 
 ## Architecture
 
-- **Engine (`core/`, `decl/`)**: MBT scanning, visual declaration parsing, 52 component presets, project reconstruction, layout, predicates, Human/Agent gates, canonical MBT serialization, SVG and RenderPlan.
+- **Engine (`core/`, `decl/`)**: MBT scanning, visual declaration parsing, 65 component presets, project reconstruction, layout, predicates, Human/Agent gates, canonical MBT serialization, SVG and RenderPlan.
 - **CLI/MCP**: Source-based engine protocols over stdin/stdout.
 - **Tauri/browser shell**: file dialogs, opaque DDP transport, and visual presentation only.
 - **DDP**: one encrypted `.mbt.md` source.
+- **Release baseline (agent 元规则)**: whenever build artifacts are synced, docs, website, all
+  artifacts, and the playground move to the same baseline together. Two authoritative values must
+  agree (CI smoke asserts it, mismatch fails the job): `core/version.mbt` `ENGINE_VERSION` and
+  `binaries.yml` `MOONVIZ_VERSION` in the engine repo. Full procedure:
+  root [`AGENTS.md`](AGENTS.md) — checklist, sync targets, red lines.
 
 
 ## User Components (custom component registry)

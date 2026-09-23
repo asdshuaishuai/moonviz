@@ -65,5 +65,6 @@ moon check                                              # 类型检查
 moon test --target native                               # 全量测试（含 wasm 契约测试）
 node scripts/check-wasm-abi.mjs                         # classic ABI 断言（本地）
 moon build --release --target native cli mcp            # 仅本地验证用；产物发布走 CI
-bash scripts/publish-all.sh --auth-type=web             # npm 全家族发布（浏览器 passkey）
+# 发布渠道以 GitHub Releases 为准（npm 仓库暂不入驻，
+# scripts/publish-all.sh 仅在用户显式要求发 npm 时使用，浏览器 passkey）
 ```

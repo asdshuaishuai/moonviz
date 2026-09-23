@@ -128,6 +128,10 @@ export class MoonViz {
             try { results.push(JSON.parse(t)); } catch { /* 非 JSON 行忽略 */ }
           }
         }
+        // 0.1.3+ CLI 首行是启动横幅 {"moonviz":"cli","version":...}，不是命令响应
+        if (results.length > 0 && results[0] && results[0].moonviz === 'cli') {
+          results.shift();
+        }
         if (results.length === 0 && code !== 0) {
           reject(new Error(`引擎无输出（exit ${code}）：${err.slice(0, 300)}`));
           return;
