@@ -1516,7 +1516,8 @@ async function boot(){
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
     const exports=new WebAssembly.Instance(mod,{}).exports;
-    // 对齐最新 wasm-gc 产物（35 导出：11 静态 + 24 会话）
+    // 对齐最新 wasm-gc 产物（71 导出；此处包裹 38 个：11 静态 + 27 会话，
+    // 其余为 _in 槽变体与 memory，不经 JS 包装）
     engine={
       // —— 无状态（11）——
       version:()=>JSON.parse(exports.version_info()),
@@ -1542,6 +1543,7 @@ async function boot(){
       session_query_nodes:(h,a)=>JSON.parse(exports.session_query_nodes(h,a)),
       session_list_artboards:h=>JSON.parse(exports.session_list_artboards(h)),
       session_flows:h=>JSON.parse(exports.session_flows(h)),
+      session_history:(h,l)=>JSON.parse(exports.session_history(h,l)),
       session_interactions:(h,a)=>JSON.parse(exports.session_interactions(h,a)),
       session_states:(h,a)=>JSON.parse(exports.session_states(h,a)),
       session_spec:(h,a)=>JSON.parse(exports.session_spec(h,a)),

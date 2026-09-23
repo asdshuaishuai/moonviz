@@ -239,10 +239,10 @@ const check = engine.validate(mbt);
 <tr><td>字符串 ABI</td><td>宿主内建字符串直通</td><td>线性内存对象：<code>[4B refcnt][4B header][len×UTF-16LE]</code></td><td>JSON 文本协议</td></tr>
 <tr><td>DDP 加解密</td><td>✗</td><td>✗</td><td>✓（Rust codec 独立交付）</td></tr>
 </table>
-<p>构建产物（两种均在 <code>wasm/moon.pkg</code> 配置导出面，11 个 API）：</p>
+<p>构建产物（两种均在 <code>wasm/moon.pkg</code> 配置导出面，各 71 个：27 个 <code>session_*</code> 会话 API + 25 个 <code>_in</code> 槽变体 + 19 个无状态/清单 API；classic 另含 memory）：</p>
 <pre><code>moon build --release --target wasm-gc wasm   # JS 宿主 → 拷贝到 sdk/wasm/dist/moonviz.wasm
 moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/release/build/wasm/wasm.wasm</code></pre>
-<p>classic 产物已接入 GitHub Actions：<code>engine-v*</code> tag 触发的构建会在 GitHub Releases 归档<b>全量产物</b>——4 平台二进制 tarball + 双 wasm 构建（版本化命名 <code>moonviz-wasm-gc-&lt;ver&gt;.wasm</code> / <code>moonviz-wasm-classic-&lt;ver&gt;.wasm</code>）+ 集成包 tarball（SDK / wasm 绑定 / MCP 启动器 / Skill，版本由 CI 统一盖戳）。分发仅走 GitHub Releases。classic 读取方向 ABI：返回值 i32 为字符串对象指针，长度位于 <code>ptr-4</code>（u32），UTF-16LE 数据从 <code>ptr</code> 开始；入参方向需引擎堆分配辅助（roadmap）。会话 API（26 个 <code>session_*</code>，i32 句柄）与 CLI 会话能力对齐：apply_agent 走 AgentGate（违规返回 mbt_gate_block）、已关句柄返回 invalid_session_handle、只读导出统一 {ok,data} 信封、save 快照可经 session_open_project_json 回灌、session_count 观测泄漏。版本号自 core/version.mbt 单一常量注入，与 CI 的 MOONVIZ_VERSION 硬门校验一致；全部产物（含集成包）统一盖同一基线版本戳。</p>
+<p>classic 产物已接入 GitHub Actions：<code>engine-v*</code> tag 触发的构建会在 GitHub Releases 归档<b>全量产物</b>——4 平台二进制 tarball + 双 wasm 构建（版本化命名 <code>moonviz-wasm-gc-&lt;ver&gt;.wasm</code> / <code>moonviz-wasm-classic-&lt;ver&gt;.wasm</code>）+ 集成包 tarball（SDK / wasm 绑定 / MCP 启动器 / Skill，版本由 CI 统一盖戳）。分发仅走 GitHub Releases。classic 读取方向 ABI：返回值 i32 为字符串对象指针，长度位于 <code>ptr-4</code>（u32），UTF-16LE 数据从 <code>ptr</code> 开始；入参方向的 <code>_in</code> 槽变体（arg 槽协议）已全量落地。会话 API（27 个 <code>session_*</code>，i32 句柄）与 CLI 会话能力对齐：apply_agent 走 AgentGate（违规返回 mbt_gate_block）、已关句柄返回 invalid_session_handle、只读导出统一 {ok,data} 信封、save 快照可经 session_open_project_json 回灌、session_count 观测泄漏、session_history 提供产品内撤销/时间旅行（undo/redo/checkout 响应回传 canonical mbt，与 apply 契约同形）。版本号自 core/version.mbt 单一常量注入，与 CI 的 MOONVIZ_VERSION 硬门校验一致；全部产物（含集成包）统一盖同一基线版本戳。</p>
 </section>
 
 <section id="mcp">
