@@ -1,6 +1,6 @@
 {
   "name": "moonviz-engine-wasm",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "WASM-GC build of the MoonViz prototype design engine. Render and validate .mbt.md visual documents in the browser or Node with zero toolchain, zero subprocess — pure WebAssembly.",
   "type": "module",
   "main": "index.mjs",

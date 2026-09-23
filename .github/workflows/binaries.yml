@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  MOONVIZ_VERSION: "0.1.4"
+  MOONVIZ_VERSION: "0.1.5"
   # 不锁定工具链：历史锁定版目录会从下载 CDN 下架（403），latest 与
   # pages.yml 一致；wasm-gc/native 对小版本不敏感，产物以冒烟测试兜底。
 
@@ -183,17 +183,52 @@ jobs:
           # 回退到 MOONVIZ_VERSION 公式
           TAG="${{ github.ref_name }}"
           case "$TAG" in engine-v*) ;; *) TAG="engine-v${MOONVIZ_VERSION}";; esac
-          gh release create "$TAG"             --title "MoonViz engine binaries ${TAG#engine-}"             --notes "Prebuilt moonviz-cli + moonviz-mcp per platform (self-contained, libc only). Same packages as the npm \`moonviz-bin-*\` family; hosted here so distribution does not depend on npm. Also includes versioned wasm builds: moonviz-wasm-gc-<ver>.wasm (JS hosts) and moonviz-wasm-classic-<ver>.wasm (standard WASM MVP for wasmtime/wasmi and any spec-compliant runtime)."             --latest || true
+          NOTES="MoonViz engine ${TAG#engine-} — every artifact carries the same baseline version (single source: core/version.mbt ENGINE_VERSION, CI-gated against MOONVIZ_VERSION). Distribution channel is GitHub Releases only.
+          \`\`\`
+          Engine binaries (per platform, self-contained, libc only)
+            moonviz-bin-darwin-arm64-<ver>.tgz   macOS Apple Silicon
+            moonviz-bin-linux-x64-<ver>.tgz      Linux x64
+            moonviz-bin-linux-arm64-<ver>.tgz    Linux arm64
+            moonviz-bin-win32-x64-<ver>.tgz      Windows x64
+              → each packs moonviz-cli (line-protocol CLI) + moonviz-mcp
+                (stdio MCP server, 52 tools with inputSchema)
+
+          WASM engines (platform-neutral, host-neutral)
+            moonviz-wasm-gc-<ver>.wasm       wasm-gc + JS String Builtins;
+                                             JS hosts (Node >= 22 / modern browsers)
+            moonviz-wasm-classic-<ver>.wasm  standard WASM MVP, zero imports;
+                                             wasmtime / wasmi / any spec runtime
+
+          Integration packages (packed from this repo, stamped to <ver>)
+            moonviz-engine-sdk-<ver>.tgz     Node SDK: stateless API + Session
+                                             command-replay + DDP helpers
+            moonviz-engine-wasm-<ver>.tgz    JS binding around the wasm-gc engine
+                                             (createEngine; embeds dist/moonviz.wasm)
+            moonviz-mcp-<ver>.tgz            MCP launcher: resolves the platform
+                                             binary from moonviz-bin-* deps, zero compile
+            moonviz-skill-<ver>.tgz          Agent skill spec (SKILL.md): fact-source
+                                             discipline, tool/ops dictionary, gates
+          \`\`\`"
+          # 重建式发布：已存在则跳过 create（|| true），资产按名覆盖
+          gh release create "$TAG" --title "MoonViz engine binaries ${TAG#engine-}"             --notes "$NOTES" --latest || true
           gh release upload "$TAG" moonviz-bin-*.tgz $(find . -name 'moonviz-wasm-*.wasm' | sed 's|^\./||') --clobber
-          # 全产物：把 npm 家族全部当前版本 tarball 也归档进来（与应用包
-          # 双渠道分发），缺包自动跳过
-          for pv in "moonviz-mcp" "moonviz-engine-sdk" "moonviz-engine-wasm" "moonviz-skill"; do
-            ver=$(curl -fsSL "https://registry.npmjs.org/$pv" | python3 -c "import sys,json;d=json.load(sys.stdin);vs=sorted(d.get('versions',{}));print(vs[-1] if vs else '')" || true)
-            [ -z "$ver" ] && continue
-            curl -fsSL -o "$pv-$ver.tgz" "https://registry.npmjs.org/$pv/-/$pv-$ver.tgz" \
-              && gh release upload "$TAG" "$pv-$ver.tgz" --clobber \
-              && echo "archived $pv-$ver" || echo "skip $pv（registry 暂缺）"
+          # 集成包从仓库状态打包（不镜像 npm registry——registry 停更即漂移），
+          # 版本统一盖 MOONVIZ_VERSION 基线戳；wasm 绑定包内嵌本次构建的 wasm-gc
+          WASM_GC=$(find . -name 'moonviz-wasm-gc-*.wasm' | head -1)
+          ROOT="$PWD"
+          for dir in sdk/node sdk/wasm npm/moonviz-skill npm/moonviz-mcp; do
+            (
+              cd "$dir" && npm pkg set version="${MOONVIZ_VERSION}"
+              if [ "$dir" = "sdk/wasm" ]; then cp "$ROOT/$WASM_GC" dist/moonviz.wasm; fi
+              npm pack --pack-destination "$ROOT"
+            ) && echo "packed $dir @ ${MOONVIZ_VERSION}" || echo "PACK FAILED: $dir"
           done
+          ls moonviz-engine-*.tgz moonviz-mcp-*.tgz moonviz-skill-*.tgz
+          # 旧版本号残留资产清理：只保留与基线一致的命名
+          for stale in $(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -v "${MOONVIZ_VERSION}" | grep -vE '^moonviz-bin-|^moonviz-wasm-'); do
+            gh release delete-asset "$TAG" "$stale" -y && echo "removed stale asset $stale"
+          done
+          gh release upload "$TAG" moonviz-engine-sdk-*.tgz moonviz-engine-wasm-*.tgz moonviz-mcp-*.tgz moonviz-skill-*.tgz --clobber
 
   publish:
     name: publish platform packages (requires NPM_TOKEN)

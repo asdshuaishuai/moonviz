@@ -1,6 +1,6 @@
 {
   "name": "moonviz-mcp",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP server launcher for the MoonViz prototype design engine. Ships a prebuilt native binary per platform (zero compile, instant start); falls back to `moon run` when no binary matches.",
   "type": "module",
   "bin": {
@@ -16,10 +16,10 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "moonviz-bin-darwin-arm64": "^0.1.4",
-    "moonviz-bin-linux-x64": "^0.1.4",
-    "moonviz-bin-linux-arm64": "^0.1.4",
-    "moonviz-bin-win32-x64": "^0.1.4"
+    "moonviz-bin-darwin-arm64": "^0.1.5",
+    "moonviz-bin-linux-x64": "^0.1.5",
+    "moonviz-bin-linux-arm64": "^0.1.5",
+    "moonviz-bin-win32-x64": "^0.1.5"
   },
   "scripts": {
     "test": "node test/selftest.mjs"
