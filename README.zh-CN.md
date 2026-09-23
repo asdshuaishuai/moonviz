@@ -82,7 +82,7 @@
 | `adaptive_landing` | 适配 Web 宽度的落地页 |
 | `login_v2` | 登录页第二种风格 |
 
-## 内置组件库（52 组件 × 93 变体）
+## 内置组件库（65 组件 × 115 变体）
 
 | 组件 | 分类 | 变体 |
 | :--- | :--- | :--- |
@@ -162,7 +162,7 @@ moonviz/
 │   ├── policy.mbt     双路线策略（人类软/Agent 硬）
 │   ├── patch.mbt      事务式补丁
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
-│   ├── component.mbt  组件系统（52 组件×93 变体）
+│   ├── component.mbt  组件系统（65 组件×115 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
 │   ├── agent_api.mbt  Agent 工具 API（52 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）

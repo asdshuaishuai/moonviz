@@ -440,3 +440,197 @@ pub fn extended_components(
 
   m
 }
+
+// ---------------- v5：namethatui.com 对标补全（14 组件） ----------------
+
+///|
+/// 追加 v5 批次：avatar_group / bento_grid / chat_bubble / command_palette /
+/// hover_card / lightbox / marquee / masonry / multi_select / resize_handle /
+/// scrim / status_dot / steps / toggle_group
+pub fn extended_components_v5(
+  m : Map[String, ComponentDef],
+) -> Map[String, ComponentDef] {
+  // ---------------- selection ----------------
+  let mg : Map[String, NodePatch] = Map::new()
+  mg.set("multi", patch3("primary_container", "text_primary", 8.0))
+  mg.set("single", patch3("surface_variant", "text_primary", 8.0))
+  m.set("multi_select", {
+    id: "multi_select",
+    kind: "rect",
+    description: "多选控件：勾选多个值的下拉面板，text 为占位文案。",
+    variants: mg,
+    default_variant: "multi",
+    default_size: (200.0, 44.0),
+    default_layout: None,
+    category: "inputs",
+  })
+
+  let tg : Map[String, NodePatch] = Map::new()
+  tg.set("single", patch3("surface_variant", "text_primary", 8.0))
+  tg.set("segmented", patch3("primary", "on_primary", 8.0))
+  m.set("toggle_group", {
+    id: "toggle_group",
+    kind: "rect",
+    description: "切换组/分段控件：一组互斥按钮，text 为当前段文案。",
+    variants: tg,
+    default_variant: "single",
+    default_size: (180.0, 36.0),
+    default_layout: None,
+    category: "selection",
+  })
+
+  let st : Map[String, NodePatch] = Map::new()
+  st.set("active", patch3("primary", "on_primary", 999.0))
+  st.set("inactive", patch3("surface_variant", "text_secondary", 999.0))
+  m.set("steps", {
+    id: "steps",
+    kind: "rect",
+    description: "步骤条：向导/流程进度（当前步高亮），text 为当前步名。",
+    variants: st,
+    default_variant: "active",
+    default_size: (240.0, 32.0),
+    default_layout: None,
+    category: "navigation",
+  })
+
+  // ---------------- status / indicator ----------------
+  let sd : Map[String, NodePatch] = Map::new()
+  sd.set("online", patch3("success", "on_primary", 999.0))
+  sd.set("away", patch3("warning", "on_primary", 999.0))
+  sd.set("offline", patch3("outline", "on_primary", 999.0))
+  m.set("status_dot", {
+    id: "status_dot",
+    kind: "rect",
+    description: "状态点/在线指示器：小圆点标示在线状态，text 可省略。",
+    variants: sd,
+    default_variant: "online",
+    default_size: (16.0, 16.0),
+    default_layout: None,
+    category: "display",
+  })
+
+  // ---------------- overlay ----------------
+  let sc : Map[String, NodePatch] = Map::new()
+  sc.set("default", patch2("text_primary", 0.0))
+  m.set("scrim", {
+    id: "scrim",
+    kind: "rect",
+    description: "遮罩层/背景覆盖：半透明压暗层，text 为空。opacity 建议调低。",
+    variants: sc,
+    default_variant: "default",
+    default_size: (390.0, 844.0),
+    default_layout: None,
+    category: "overlay",
+  })
+
+  let hc : Map[String, NodePatch] = Map::new()
+  hc.set("default", patch3("surface", "text_primary", 12.0))
+  m.set("hover_card", {
+    id: "hover_card",
+    kind: "rect",
+    description: "悬停卡片：hover 展示的预览卡（头像+简介），text 为简介。",
+    variants: hc,
+    default_variant: "default",
+    default_size: (240.0, 120.0),
+    default_layout: None,
+    category: "overlay",
+  })
+
+  let lb : Map[String, NodePatch] = Map::new()
+  lb.set("default", patch2("text_primary", 0.0))
+  m.set("lightbox", {
+    id: "lightbox",
+    kind: "image",
+    description: "灯箱：点击放大的全屏图片查看层，text 为图片 src。",
+    variants: lb,
+    default_variant: "default",
+    default_size: (390.0, 500.0),
+    default_layout: None,
+    category: "overlay",
+  })
+
+  let cp : Map[String, NodePatch] = Map::new()
+  cp.set("default", patch3("surface", "text_primary", 12.0))
+  m.set("command_palette", {
+    id: "command_palette",
+    kind: "rect",
+    description: "命令面板：⌘K 式快捷命令搜索列表，text 为搜索占位。",
+    variants: cp,
+    default_variant: "default",
+    default_size: (320.0, 240.0),
+    default_layout: None,
+    category: "overlay",
+  })
+
+  // ---------------- content / layout ----------------
+  let cb : Map[String, NodePatch] = Map::new()
+  cb.set("mine", patch3("primary", "on_primary", 16.0))
+  cb.set("theirs", patch3("surface_variant", "text_primary", 16.0))
+  m.set("chat_bubble", {
+    id: "chat_bubble",
+    kind: "rect",
+    description: "聊天气泡：对话消息（mine=右侧主视角，theirs=左侧对方），text 为消息。",
+    variants: cb,
+    default_variant: "mine",
+    default_size: (220.0, 48.0),
+    default_layout: None,
+    category: "display",
+  })
+
+  let mq : Map[String, NodePatch] = Map::new()
+  mq.set("default", patch3("surface_variant", "text_primary", 0.0))
+  m.set("marquee", {
+    id: "marquee",
+    kind: "rect",
+    description: "跑马灯：横向循环滚动的文字条，text 为滚动文案。",
+    variants: mq,
+    default_variant: "default",
+    default_size: (340.0, 40.0),
+    default_layout: None,
+    category: "display",
+  })
+
+  let ms : Map[String, NodePatch] = Map::new()
+  ms.set("default", patch3("surface_variant", "text_primary", 12.0))
+  ms.set("dense", patch3("surface_variant", "text_primary", 8.0))
+  m.set("masonry", {
+    id: "masonry",
+    kind: "frame",
+    description: "瀑布流布局容器：不等高多列卡片流。",
+    variants: ms,
+    default_variant: "default",
+    default_size: (340.0, 400.0),
+    default_layout: None,
+    category: "layout",
+  })
+
+  let bg : Map[String, NodePatch] = Map::new()
+  bg.set("default", patch3("surface_variant", "text_primary", 16.0))
+  bg.set("compact", patch3("surface_variant", "text_primary", 8.0))
+  m.set("bento_grid", {
+    id: "bento_grid",
+    kind: "frame",
+    description: "便当盒网格：大小混排的模块化网格布局。",
+    variants: bg,
+    default_variant: "default",
+    default_size: (340.0, 320.0),
+    default_layout: None,
+    category: "layout",
+  })
+
+  let rh : Map[String, NodePatch] = Map::new()
+  rh.set("vertical", patch3("outline", "on_primary", 2.0))
+  rh.set("horizontal", patch3("outline", "on_primary", 2.0))
+  m.set("resize_handle", {
+    id: "resize_handle",
+    kind: "rect",
+    description: "调整大小手柄：面板分割处的拖拽把手（vertical/horizontal）。",
+    variants: rh,
+    default_variant: "vertical",
+    default_size: (8.0, 64.0),
+    default_layout: None,
+    category: "layout",
+  })
+
+  m
+}

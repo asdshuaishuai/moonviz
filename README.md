@@ -86,7 +86,7 @@
 | `adaptive_landing` | Adaptive landing page for web widths |
 | `login_v2` | Login page, second style variant |
 
-## Built-in Component Library (52 components × 93 variants)
+## Built-in Component Library (65 components × 115 variants)
 
 | Component | Category | Variants |
 | :--- | :--- | :--- |
@@ -166,7 +166,7 @@ moonviz/
 │   ├── policy.mbt     Dual-route policy (human soft / agent hard)
 │   ├── patch.mbt      Transactional patches
 │   ├── tokens.mbt     Design tokens (Material 3 style)
-│   ├── component.mbt  Component system (52 components × 93 variants)
+│   ├── component.mbt  Component system (65 components × 115 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
 │   ├── agent_api.mbt  Agent tool API (52 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)

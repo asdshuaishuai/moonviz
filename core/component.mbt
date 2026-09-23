@@ -353,7 +353,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "inputs",
   })
 
-  let m2 = extended_components(m)
+  let m2 = extended_components(extended_components_v5(m))
   m2
 }
 

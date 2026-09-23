@@ -97,9 +97,9 @@ test "Agent 工作流：导航流 + 导出 SVG" {
 }
 
 ///|
-test "engine catalog contains all 52 predefined component presets" {
+test "engine catalog contains all 65 predefined component presets" {
   let comps = builtin_components()
-  assert_eq(comps.length(), 52)
+  assert_eq(comps.length(), 65)
   for id in comps.keys() {
     match comps.get(id) {
       Some(def) => {
