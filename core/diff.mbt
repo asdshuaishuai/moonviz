@@ -161,7 +161,7 @@ pub fn DocDiff::to_json(self : DocDiff) -> String {
   if self.added.length() > 0 {
     let adds : Array[String] = []
     for id in self.added.iter() {
-      adds.push("\"\{id}\"")
+      adds.push("\"\{json_escape(id)}\"")
     }
     parts.push("\"added\":[" + jstr7(adds, ",") + "]")
   }
@@ -169,7 +169,7 @@ pub fn DocDiff::to_json(self : DocDiff) -> String {
   if self.removed.length() > 0 {
     let rems : Array[String] = []
     for id in self.removed.iter() {
-      rems.push("\"\{id}\"")
+      rems.push("\"\{json_escape(id)}\"")
     }
     parts.push("\"removed\":[" + jstr7(rems, ",") + "]")
   }
@@ -197,7 +197,9 @@ pub fn DocDiff::to_json(self : DocDiff) -> String {
   if self.restyled.length() > 0 {
     let ss : Array[String] = []
     for e in self.restyled.iter() {
-      ss.push("{\"id\":\"\{e.node_id}\",\"changes\":\"\{e.after}\"}")
+      ss.push(
+        "{\"id\":\"\{json_escape(e.node_id)}\",\"changes\":\"\{json_escape(e.after)}\"}",
+      )
     }
     parts.push("\"restyled\":[" + jstr7(ss, ",") + "]")
   }
@@ -206,7 +208,7 @@ pub fn DocDiff::to_json(self : DocDiff) -> String {
     let ls : Array[String] = []
     for e in self.relayout.iter() {
       ls.push(
-        "{\"id\":\"\{e.node_id}\",\"from\":\"\{e.before}\",\"to\":\"\{e.after}\"}",
+        "{\"id\":\"\{json_escape(e.node_id)}\",\"from\":\"\{json_escape(e.before)}\",\"to\":\"\{json_escape(e.after)}\"}",
       )
     }
     parts.push("\"relayout\":[" + jstr7(ls, ",") + "]")
@@ -215,7 +217,7 @@ pub fn DocDiff::to_json(self : DocDiff) -> String {
     return "{\"unchanged\":true}"
   }
   let j = jstr7(parts, ",")
-  "{\{j}"
+  "{\{j}}"
 }
 
 ///|
