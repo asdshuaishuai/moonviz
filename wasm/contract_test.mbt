@@ -221,3 +221,13 @@ fn session_get_project_for_test() -> @core.Project {
     Err(_) => p
   }
 }
+
+///|
+test "契约：session_auto_fix 无违规 → detail 为合法空数组（issue #10）" {
+  let h = session_open(SEED)
+  let out = session_auto_fix(h, "w")
+  // 此前 fixes=0 时输出 "detail":}}（空 join 无括号）——宿主 JSON.parse 直接抛异常
+  assert_true(out.contains("\"fixes\":0,\"detail\":[]"), msg=out)
+  assert_true(out.contains("\"ok\":true"), msg=out)
+  let _ = session_close(h)
+}

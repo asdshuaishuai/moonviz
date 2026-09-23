@@ -576,7 +576,7 @@ p.suggest_optimizations(artboard="dashboard")
 | **DDP 容器** | Rust `ddp_codec`（DDP1 加密 / DDP2 免密） | 设计文档加密分发、只读查看器 |
 | **WASM（classic）** | `moon build --target wasm` —— 纯 WASM MVP（0 imports、线性内存），wasmtime/wasmi 等任意规范运行时可实例化 | Rust 宿主、服务端嵌入 |
 
-每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-0.1.1.wasm` / `moonviz-wasm-classic-0.1.1.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
+每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-0.1.3.wasm` / `moonviz-wasm-classic-0.1.3.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
 
 MCP 客户端配置（npx 预编译路线）：
 

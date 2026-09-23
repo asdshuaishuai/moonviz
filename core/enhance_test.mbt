@@ -174,3 +174,48 @@ test "Agent 完整工作流：创建→放置→lint→修复→diff→导出" {
   let svg = p.export_svg(artboard="checkout")
   assert_true(svg is Ok(_))
 }
+
+///|
+test "envelope 合法性：无违规/空集合路径 detail 与 missing 必须是 JSON 数组（issue #10 同类）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="clean", width=390.0, height=844.0)
+  // auto_fix：无违规 → fixes=0，detail 必须是 []（此前 "detail":}}）
+  match p.auto_fix(artboard="clean") {
+    Ok(json) => assert_true(json.contains("\"fixes\":0,\"detail\":[]"), msg=json)
+    Err(_) => assert_true(false)
+  }
+  // snap_to_grid：空画板 → snapped=0，detail 必须是 []
+  match p.snap_to_grid(artboard="clean", grid=8.0) {
+    Ok(json) => assert_true(json.contains("\"snapped\":0") && json.contains("\"detail\":[]"), msg=json)
+    Err(_) => assert_true(false)
+  }
+  // suggest_alignment：空画板 → hints=0，detail 必须是 []
+  match p.suggest_alignment(artboard="clean") {
+    Ok(json) => assert_true(json.contains("\"hints\":0,\"detail\":[]"), msg=json)
+    Err(_) => assert_true(false)
+  }
+  // infer_missing / suggest_improvements：数组键必须带括号起始
+  match p.infer_missing(artboard="clean") {
+    Ok(json) => assert_true(json.contains("\"missing\":["), msg=json)
+    Err(_) => assert_true(false)
+  }
+  match p.suggest_improvements(artboard="clean") {
+    Ok(json) => assert_true(json.contains("\"detail\":["), msg=json)
+    Err(_) => assert_true(false)
+  }
+  // auto_arrange：少于 2 子元素走 message 早退（同为合法 JSON）
+  match p.auto_arrange(artboard="clean") {
+    Ok(json) => assert_true(json.contains("\"message\""), msg=json)
+    Err(_) => assert_true(false)
+  }
+  // ≥2 子元素走 detail 数组臂
+  let _ = p.place_component(artboard="clean", component_id="button", instance_id="ax1", y=40.0)
+  let _ = p.place_component(artboard="clean", component_id="button", instance_id="ax2", y=120.0)
+  match p.auto_arrange(artboard="clean") {
+    Ok(json) => {
+      assert_true(json.contains("\"arranged\":2"), msg=json)
+      assert_true(json.contains("\"detail\":[{"), msg=json)
+    }
+    Err(_) => assert_true(false)
+  }
+}

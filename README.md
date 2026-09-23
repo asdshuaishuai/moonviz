@@ -579,7 +579,7 @@ Six integration routes, the same `.mbt.md` fact source, the same dual gates:
 | **DDP container** | Rust `ddp_codec` (DDP1 encrypted / DDP2 keyless) | Encrypted design distribution, read-only viewers |
 | **WASM (classic)** | `moon build --target wasm` — pure WASM MVP (0 imports, linear memory), consumed by wasmtime/wasmi and any spec-compliant runtime | Rust hosts, server-side embedding |
 
-Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-0.1.1.wasm` / `moonviz-wasm-classic-0.1.1.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
+Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-0.1.3.wasm` / `moonviz-wasm-classic-0.1.3.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
 
 MCP client configuration (npx prebuilt route):
 

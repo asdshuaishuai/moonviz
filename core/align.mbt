@@ -80,7 +80,7 @@ pub fn Project::auto_arrange(
             }
           }
           let j = jstr10(fixed)
-          Ok("{\"ok\":true,\"arranged\":\{n_children},\"detail\":\{j}}")
+          Ok("{\"ok\":true,\"arranged\":\{n_children},\"detail\":[\{j}]}")
         }
       }
   }
@@ -130,7 +130,7 @@ pub fn Project::snap_to_grid(
       }
       let j = jstr10(snapped)
       Ok(
-        "{\"ok\":true,\"snapped\":\{snapped.length()},\"grid\":\{grid},\"detail\":\{j}}",
+        "{\"ok\":true,\"snapped\":\{snapped.length()},\"grid\":\{grid},\"detail\":[\{j}]}",
       )
     }
   }
@@ -246,7 +246,7 @@ pub fn Project::suggest_alignment(
         }
       }
       let hj = jstr10(hints)
-      Ok("{\"ok\":true,\"hints\":\{hints.length()},\"detail\":\{hj}}")
+      Ok("{\"ok\":true,\"hints\":\{hints.length()},\"detail\":[\{hj}]}")
     }
   }
 }

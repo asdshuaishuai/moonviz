@@ -165,3 +165,39 @@ test "设计 lint：触控目标 + 空容器检测" {
     Err(_) => assert_true(false)
   }
 }
+
+///|
+test "engine catalog: 65 组件 × 全变体放置渲染冒烟（组件目录回归锚）" {
+  let comps = builtin_components()
+  let p = Project::new()
+  let _ = p.create_artboard(name="all", width=1200.0, height=9600.0)
+  let mut placed = 0
+  let mut y = 20.0
+  for id in comps.keys() {
+    match comps.get(id) {
+      Some(def) => {
+        // 全变体逐个放置：任何非法 kind/未注册令牌/坏 patch 都会在此暴露
+        for vname in def.variants.keys() {
+          match p.place_component(
+            artboard="all",
+            component_id=id,
+            instance_id="\{id}_\{vname}",
+            variant=vname,
+            y=y,
+          ) {
+            Ok(_) => placed = placed + 1
+            Err(e) => assert_true(false, msg="\{id}.\{vname}: \{e}")
+          }
+          y = y + 80.0
+        }
+      }
+      None => assert_true(false)
+    }
+  }
+  assert_eq(placed, 115)
+  // 整画板可渲染且内容非空
+  match p.export_svg(artboard="all") {
+    Ok(svg) => assert_true(svg.contains("<svg") && svg.length() > 1000)
+    Err(e) => assert_true(false, msg=e)
+  }
+}

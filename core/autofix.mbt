@@ -58,11 +58,11 @@ pub fn Project::auto_fix(
       let final_count = validate(ab.doc).length()
       if final_count == 0 {
         let j = jstr6(fixes)
-        Ok("{\"ok\":true,\"fixes\":\{fixes.length()},\"detail\":\{j}}")
+        Ok("{\"ok\":true,\"fixes\":\{fixes.length()},\"detail\":[\{j}]}")
       } else {
         let j = jstr6(fixes)
         Ok(
-          "{\"ok\":false,\"remaining\":\{final_count},\"fixes\":\{fixes.length()},\"detail\":\{j}}",
+          "{\"ok\":false,\"remaining\":\{final_count},\"fixes\":\{fixes.length()},\"detail\":[\{j}]}",
         )
       }
     }

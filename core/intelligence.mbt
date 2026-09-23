@@ -203,7 +203,7 @@ pub fn Project::infer_missing(
       }
       let j = jstr14(missing)
       Ok(
-        "{\"page_type\":\"\{page_type}\",\"missing_count\":\{missing.length()},\"missing\":\{j}}",
+        "{\"page_type\":\"\{page_type}\",\"missing_count\":\{missing.length()},\"missing\":[\{j}]}",
       )
     }
   }
@@ -311,7 +311,7 @@ pub fn Project::suggest_improvements(
       }
 
       let j = jstr14(suggestions)
-      Ok("{\"suggestions\":\{suggestions.length()},\"detail\":\{j}}")
+      Ok("{\"suggestions\":\{suggestions.length()},\"detail\":[\{j}]}")
     }
   }
 }
