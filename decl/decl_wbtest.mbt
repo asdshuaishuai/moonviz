@@ -180,7 +180,7 @@ test "move_node：人类语义操作修改声明并保持谓词通过" {
   }
   let b = {
     ..rect(id="b", width=@core.Fixed(100.0), height=@core.Fixed(40.0)),
-    x: @core.Fixed(10.0),
+    x: @core.Fixed(50.0),
     y: @core.Fixed(0.0),
   }
   page.add(a)

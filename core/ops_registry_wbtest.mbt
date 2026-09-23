@@ -9,7 +9,7 @@
 ///    usage 漂移一律红。
 test "list-ops：注册表与分发器对齐" {
   let ops = op_entries()
-  assert_eq(ops.length(), 25)
+  assert_eq(ops.length(), 26)
   let p = Project::new()
   for e in ops.iter() {
     let want = "mbt_operation_usage:" + e.usage

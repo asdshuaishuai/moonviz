@@ -195,3 +195,92 @@ test "Agent 全流程：模板 → 变体 → 评分 → lint → 对齐 → 导
   let svg = p.export_svg(artboard=base)
   assert_true(svg is Ok(_))
 }
+
+///|
+test "门语义：兄弟全包含＝有意分层豁免，部分相交仍违规（issue #15）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=375.0, height=812.0)
+  // 顺序 1：先背景（fill 全屏）后内容——内容完整包含于背景
+  let _ = p.place_component(artboard="m", component_id="rect", instance_id="bg", y=0.0)
+  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[("width", "375"), ("height", "812"), ("fill", "#112233")])
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="cta", y=100.0)
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let vs = validate(ab.doc)
+      let mut n_overlap = 0
+      for v in vs.iter() {
+        if v.predicate is NoSiblingOverlap { n_overlap = n_overlap + 1 }
+      }
+      assert_eq(n_overlap, 0, msg="全包含层叠不应记 no_sibling_overlap")
+    }
+    None => assert_true(false)
+  }
+  // 顺序 2：部分相交必须仍然记违规。背景改为非全屏（300×600），
+  // 内容放在其右下角外——place 的内容盒钳制不会把它推进背景内
+  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[("w", "300"), ("h", "600")])
+  let _ = p.place_component(
+    artboard="m",
+    component_id="button",
+    instance_id="cta2",
+    x=250.0,
+    y=550.0,
+  )
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let vs = validate(ab.doc)
+      let mut n_overlap = 0
+      for v in vs.iter() {
+        if v.predicate is NoSiblingOverlap { n_overlap = n_overlap + 1 }
+      }
+      assert_true(n_overlap > 0, msg="部分相交必须仍记 no_sibling_overlap")
+    }
+    None => assert_true(false)
+  }
+}
+
+///|
+test "unflow：单条导航边删除（issue #12）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="detail", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="about", width=390.0, height=844.0)
+  p.add_flow(from="home", to="detail", trigger="tap:card")
+  p.add_flow(from="home", to="about", trigger="tap:menu")
+  assert_eq(p.flow_json().contains("\"to\":\"detail\""), true)
+  // 删一条留一条
+  match p.remove_flow(from="home", to="detail", trigger="tap:card") {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+  let fj = p.flow_json()
+  assert_eq(fj.contains("\"to\":\"detail\""), false, msg="detail 边应已删除")
+  assert_eq(fj.contains("\"to\":\"about\""), true, msg="about 边应保留")
+  // 不存在的边报 unknown_flow
+  match p.remove_flow(from="home", to="detail", trigger="tap:card") {
+    Err(e) => assert_true(e.contains("unknown_flow"), msg=e)
+    Ok(_) => assert_true(false, msg="重复删除应报错")
+  }
+}
+
+///|
+test "query_nodes：节点条目带 parent 字段（issue #13）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="tree", width=390.0, height=844.0)
+  let _ = p.place_component(artboard="tree", component_id="card", instance_id="grp1", y=20.0)
+  let _ = p.place_component(artboard="tree", component_id="button", instance_id="b1", y=40.0)
+  let _ = p.place_component(artboard="tree", component_id="button", instance_id="b2", y=120.0)
+  let _ = p.group_nodes(artboard="tree", node_ids=["b1", "b2"], group_id="demo1")
+  match p.query_nodes(artboard="tree") {
+    Ok(json) => {
+      // 顶层节点 parent=root；组员 parent=组节点
+      assert_true(json.contains("\"id\":\"grp1\",\"parent\":\"\"" ) || json.contains("\"id\":\"grp1\",\"parent\":\"root\""), msg=json)
+      assert_true(json.contains("\"parent\":\"demo1\""), msg="组员应带 parent=demo1: " + json)
+      // render 载荷复用 query_nodes，自动获得 parent
+      match p.export_svg(artboard="tree") {
+        Ok(_) => ()
+        Err(e) => assert_true(false, msg=e)
+      }
+    }
+    Err(e) => assert_true(false, msg=e)
+  }
+}

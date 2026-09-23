@@ -231,3 +231,73 @@ test "契约：session_auto_fix 无违规 → detail 为合法空数组（issue 
   assert_true(out.contains("\"ok\":true"), msg=out)
   let _ = session_close(h)
 }
+
+///|
+test "契约：session_history init/commit/undo/redo/checkout（issue #11）" {
+  let h = session_open(SEED)
+  // init
+  let r0 = session_history(h, "init w")
+  assert_true(r0.contains("\"op\":\"history-init\""), msg=r0)
+  // commit 一版
+  let r1 = session_apply_agent(h, "update w btn text=V2")
+  assert_true(r1.contains("\"ok\":true"), msg="agent op 应过门: " + r1)
+  let rc = session_history(h, "commit agent-edit")
+  assert_true(rc.contains("\"op\":\"history-commit\"") && rc.contains("\"rev\":1"), msg=rc)
+  // undo → 应回到初版（btn 文案还原）
+  let ru = session_history(h, "undo")
+  assert_true(ru.contains("\"op\":\"history-undo\""), msg=ru)
+  let q1 = session_query_nodes(h, "w")
+  assert_true(q1.contains("OK"), msg="undo 后 btn 应回到初始文案 OK: " + q1)
+  // redo
+  let rr = session_history(h, "redo")
+  assert_true(rr.contains("\"op\":\"history-redo\""), msg=rr)
+  let q2 = session_query_nodes(h, "w")
+  assert_true(q2.contains("V2"), msg="redo 后 btn 应为 V2: " + q2)
+  // checkout rev0
+  let rk = session_history(h, "checkout 0")
+  assert_true(rk.contains("\"op\":\"history-checkout\""), msg=rk)
+  let q3 = session_query_nodes(h, "w")
+  assert_true(q3.contains("OK"), msg="checkout 0 应回初版: " + q3)
+  // log / diff
+  let rl = session_history(h, "log")
+  assert_true(rl.contains("\"op\":\"history-log\""), msg=rl)
+  let rd = session_history(h, "diff 0 1")
+  assert_true(rd.contains("\"op\":\"history-diff\""), msg=rd)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：session_history 已关句柄拒绝（issue #11 × #4A）" {
+  let h = session_open(SEED)
+  let _ = session_history(h, "init w")
+  let _ = session_close(h)
+  let r = session_history(h, "undo")
+  assert_true(r.contains("invalid_session_handle"), msg=r)
+}
+
+///|
+test "契约：unflow 经 agent 门可达（issue #12）" {
+  let h = session_open(SEED)
+  let _ = session_apply_agent(h, "create detail")
+  let r1 = session_apply_agent(h, "flow w detail btn")
+  assert_true(r1.contains("\"ok\":true"), msg="flow 应过门: " + r1)
+  let r2 = session_apply_agent(h, "unflow w detail btn")
+  assert_true(r2.contains("\"ok\":true"), msg="unflow 应过门: " + r2)
+  let f = session_flows(h)
+  assert_true(f.contains("detail") == false, msg="边应已删: " + f)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：全部内置模板 × AgentGate 零债（issue #14 回归锚）" {
+  let tpl = ["login", "signup", "dashboard", "profile", "settings", "list_detail", "onboarding", "empty_state", "web_landing", "web_login", "web_dashboard", "pc_app", "adaptive_landing", "login_v2"]
+  let seed_mbt = SEED
+  for t in tpl {
+    let out = apply_agent_op(seed_mbt, "template \{t} __t_\{t}")
+    assert_true(
+      out.contains("\"ok\":true"),
+      msg="模板 \{t} 被 AgentGate 拒绝: \{out}",
+    )
+  }
+}
+

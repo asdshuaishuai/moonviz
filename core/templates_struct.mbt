@@ -29,7 +29,9 @@ fn landing_tree(width : Double) -> LT {
 fn landing_desktop() -> LT {
   lt_v(id="page", kids=[
     // 顶部导航
-    lt_h(id="nav", pad=24.0, gap=16.0, kids=[
+    // pad 12：容器高 72，pad 24 时内容盒只剩 24，装不下 44 高的 nav_cta
+    // （issue #14 adaptive_landing nav_* contained_in_parent）
+    lt_h(id="nav", pad=12.0, gap=16.0, kids=[
       lt_dot(id="nav_logo", fill="#4B6BFB", d=36.0),
       lt_text(id="nav_name", role="h4", s="MoonViz"),
       lt_flex(id="nav_sp"),
@@ -40,7 +42,8 @@ fn landing_desktop() -> LT {
       lt_btn(id="nav_cta", label="Get Started"),
     ]).h(Fixed(72.0)),
     // Hero：左文案右插图
-    lt_h(id="hero", pad=48.0, gap=48.0, kids=[
+    // pad 28：hero 高 380，pad 48 时内容盒 284 装不下 300 高的 hero_art
+    lt_h(id="hero", pad=28.0, gap=48.0, kids=[
       lt_v(id="hero_copy", gap=14.0, kids=[
         lt_text(
           id="hero_title",
@@ -96,9 +99,10 @@ fn landing_desktop() -> LT {
           s="Replayable op log as the document.",
         ).color("#5A6270"),
       ]),
-    ]).h(Fixed(240.0)),
+    ]).h(Fixed(280.0)),
     // Footer
-    lt_h(id="footer", pad=24.0, gap=16.0, kids=[
+    // pad 12：footer 高 64，pad 24 时内容盒 16 装不下 18.75 高的 caption
+    lt_h(id="footer", pad=12.0, gap=16.0, kids=[
       lt_text(id="foot_l", role="caption", s="© 2026 MoonViz").color("#9AA1AB"),
       lt_flex(id="foot_sp"),
       lt_text(id="foot_r", role="caption", s="About   Privacy   Contact").color(
@@ -260,7 +264,7 @@ fn login_tree(width : Double) -> LT {
       .cx(),
     ])
     .w(if desktop { Fixed(420.0) } else { Fill })
-    .h(Fixed(430.0)),
+    .h(Fixed(460.0)),
     lt_flex(id="bot_sp"),
   ])
 }

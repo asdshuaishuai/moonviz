@@ -506,6 +506,18 @@ pub fn apply_operation(
         project.revision = project.revision + 1
         Ok(())
       }
+    "unflow" =>
+      if parts.length() < 4 {
+        Err("mbt_operation_usage:unflow <from> <to> <node>")
+      } else {
+        match project.remove_flow(from=parts[1], to=parts[2], trigger="tap:" + parts[3]) {
+          Ok(_) => {
+            project.revision = project.revision + 1
+            Ok(())
+          }
+          Err(error) => Err(error)
+        }
+      }
     "theme" =>
       if parts.length() < 2 {
         Err("mbt_operation_usage:theme <name>")

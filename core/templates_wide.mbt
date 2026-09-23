@@ -141,7 +141,9 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     let bid = "feat_body" + i.to_string()
     let _ = self.place_comp(ab, "body_text", bid, x=fx[i] + 24.0, y=588.0)
     self.set_text(ab, bid, descs[i])
-    self.resize_node(ab, bid, 240.0, 20.0, 0.0)
+    // 200 而非 240：收编进卡片后由栈布局接管排布，240 会溢出卡片内容盒
+    // （issue #14：web_landing feat_bodyN contained_in_parent）
+    self.resize_node(ab, bid, 200.0, 20.0, 0.0)
   }
 
   // Footer
@@ -360,7 +362,9 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       x=sx[i],
       y=88.0,
     )
-    self.resize_node(ab, cid, 236.0, 100.0, 12.0)
+    // 116 而非 100：栈内容 16+18+8+30+8+16=96 + 底 pad 16 = 112 才装得下
+    // 三行（issue #14：wd_sdN contained_in_parent）
+    self.resize_node(ab, cid, 236.0, 116.0, 12.0)
     let lid = "wd_sl" + i.to_string()
     let _ = self.place_comp(
       ab,
@@ -393,7 +397,8 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       y=160.0,
     )
     self.set_text(ab, did, deltas[i])
-    self.resize_node(ab, did, 196.0, 16.0, 0.0)
+    // 164 而非 196：卡内容宽 204（236-2×16），交叉轴居中下 196 会溢出
+    self.resize_node(ab, did, 164.0, 16.0, 0.0)
     self.w_style(ab, did, [
       ("text_color", if i == 3 { "#E57373" } else { "#81C784" }),
     ])

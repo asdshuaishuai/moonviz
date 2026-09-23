@@ -313,6 +313,12 @@ pub fn op_entries() -> Array[OpEntry] {
     "Add a tap navigation edge between artboards.",
   )
   add(
+    "unflow",
+    "unflow <from> <to> <node>",
+    "navigation",
+    "Remove a single navigation edge.",
+  )
+  add(
     "theme",
     "theme <name>",
     "theme",

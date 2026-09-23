@@ -331,6 +331,27 @@ pub fn Project::add_flow(
 }
 
 ///|
+///|
+/// 删除单条导航边（issue #12）：画错一条边不再需要整板删除重建。
+/// trigger 写法与 add_flow 的调用约定对齐（"tap:<node>"）。
+pub fn Project::remove_flow(
+  self : Project,
+  from~ : String,
+  to~ : String,
+  trigger~ : String,
+) -> Result[Unit, String] {
+  let before = self.flows.length()
+  self.flows = self.flows.filter(
+    fn(f) { !(f.from == from && f.to == to && f.trigger == trigger) },
+  )
+  if self.flows.length() == before {
+    Err("unknown_flow: \{from} -> \{to} (\{trigger})")
+  } else {
+    Ok(())
+  }
+}
+
+///|
 pub fn Project::flow_json(self : Project) -> String {
   let parts : Array[String] = []
   for e in self.flows.iter() {
@@ -399,10 +420,15 @@ pub fn Project::query_nodes(
               n.text.contains(text_contains)
             if kind_match && comp_match && text_match && id != "root" {
               match layout.rect_of(id) {
-                Some(r) =>
-                  results.push(
-                    query_node_json(id, n, r),
-                  )
+                Some(r) => {
+                  // parent 字段（issue #13）：图层树的父子关系此前在 wasm
+                  // 各读面均不可达；root 顶层节点的 parent 即 "root"
+                  let parent = match ab.doc.find_parent(id) {
+                    Some(p) => p
+                    None => ""
+                  }
+                  results.push(query_node_json(id, n, r, parent))
+                }
                 None => ()
               }
             }
@@ -419,7 +445,12 @@ pub fn Project::query_nodes(
 /// 单个节点的查询 JSON。
 /// 必须与 NodeStyle / Node 的完整字段保持同步：Studio 属性面板、
 /// 图层名与布局控件都从这里取值；漏字段会让引擎已支持的能力在界面上不可达。
-fn query_node_json(id : String, n : Node, r : Rect) -> String {
+fn query_node_json(
+  id : String,
+  n : Node,
+  r : Rect,
+  parent : String,
+) -> String {
   let layout_json = match n.layout {
     Some(l) =>
       "{\"dir\":\"" +
@@ -442,6 +473,7 @@ fn query_node_json(id : String, n : Node, r : Rect) -> String {
   }
   let out = StringBuilder::new()
   out.write_string("{\"id\":\"" + id + "\",")
+  out.write_string("\"parent\":\"" + json_escape_field(parent) + "\",")
   out.write_string("\"kind\":\"" + kind_of(n) + "\",")
   out.write_string("\"component\":\"" + json_escape_field(n.component) + "\",")
   out.write_string("\"name\":\"" + json_escape_field(n.name) + "\",")

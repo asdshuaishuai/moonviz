@@ -67,6 +67,21 @@ pub fn Rect::contains_rect(self : Rect, other : Rect) -> Bool {
 }
 
 ///|
+/// self 是否包含 other（带像素级容差）：浮点求解的 Fill 子节点与父内容盒
+/// 理论上严丝合缝，但 IEEE754 尘埃会算出 2e-13 之类的假溢出（issue #14
+/// adaptive_landing feat_bN 一类）。≤0.5px 的越界在渲染上不可见，视为包含。
+pub fn Rect::contains_rect_eps(
+  self : Rect,
+  other : Rect,
+  eps : Double,
+) -> Bool {
+  self.x <= other.x + eps &&
+  self.y <= other.y + eps &&
+  self.right() + eps >= other.right() &&
+  self.bottom() + eps >= other.bottom()
+}
+
+///|
 /// 两矩形是否相交（“无重叠”谓词的几何核心；仅贴边不算相交）
 pub fn Rect::intersects(self : Rect, other : Rect) -> Bool {
   self.x < other.right() &&

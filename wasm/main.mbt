@@ -134,6 +134,10 @@ pub fn apply_human_op(mbt : String, op : String) -> String {
 
 struct WasmSession {
   project : @core.Project
+  /// 会话级设计历史（issue #11）：CLI `history` 子命令族的 wasm 对应面。
+  /// CLI 版状态在进程全局（g_history），wasm 多会话并发，故挂在本结构上。
+  history : @core.DesignHistory?
+  history_board : String
   /// 存活标记：close 置 false（tombstone，槽位不复用以保句柄稳定）。
   /// session_get 对已关槽位返回 None——宿主得到 invalid_session_handle
   /// 而不是在空项目上误操作（issue #4A）。
@@ -153,10 +157,170 @@ pub fn session_open(mbt : String) -> Int {
     Err(_) => -1
     Ok(model) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: model.project, alive: true }))
+      s.push(Ref::new({ project: model.project, history: None, history_board: "", alive: true }))
       s.length() - 1
     }
   }
+}
+
+///|
+/// 会话 history 的 revision 解析（对齐 cli parse_rev：非负十进制）。
+fn history_rev(text : String) -> Int? {
+  let t = text.trim().to_string()
+  if t.length() == 0 {
+    return None
+  }
+  let mut v = 0
+  let digits = "0123456789"
+  let mut i = 0
+  while i < t.length() {
+    let c = t.substring(start=i, end=i + 1)
+    match digits.find(c) {
+      None => return None
+      Some(x) => v = v * 10 + x
+    }
+    i = i + 1
+  }
+  Some(v)
+}
+
+///|
+/// 会话级设计历史（issue #11）：classic wasm 面此前无任何 history 导出，
+/// 桌面端「产品内撤销」无法在不绕过门的前提下实现。line 语法与 CLI
+/// `history` 子命令族一致：
+///   init <artboard> | commit <msg> [artboard] | log | undo | redo |
+///   checkout <rev> | diff <from> <to>
+/// undo/redo/checkout 的文档经 Project::set_artboard_doc 落回画板——
+/// 写回后仍走 canonical 序列化，「源码是唯一事实源」不变；快照栈不经过
+/// 门的历史方案被有意排除（见 issue #11 讨论）。
+pub fn session_history(handle : Int, line : String) -> String {
+  let s = session_store()
+  if handle < 0 || handle >= s.length() || !(s[handle].val.alive) {
+    return "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+  }
+  let parts : Array[String] = []
+  for seg in line.split(" ") {
+    let t = seg.to_string()
+    if t != "" {
+      parts.push(t)
+    }
+  }
+  let sub = if parts.length() > 0 { parts[0] } else { "" }
+  let cur = s[handle].val
+  match sub {
+    "init" => {
+      if parts.length() < 2 {
+        return "{\"ok\":false,\"error\":\"mbt_operation_usage:history init <artboard>\"}"
+      }
+      let ab = parts[1]
+      match cur.project.artboards.get(ab) {
+        None => "{\"ok\":false,\"error\":\"unknown_artboard: \{ab}\"}"
+        Some(board) => {
+          s[handle].val = {
+            ..cur,
+            history: Some(@core.DesignHistory::new(board.doc.clone())),
+            history_board: ab,
+          }
+          "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{ab}\"}"
+        }
+      }
+    }
+    "commit" =>
+      match cur.history {
+        None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
+        Some(h) => {
+          let msg = if parts.length() >= 2 { parts[1] } else { "commit" }
+          let ab = if parts.length() >= 3 { parts[2] } else { cur.history_board }
+          match cur.project.artboards.get(ab) {
+            None => "{\"ok\":false,\"error\":\"unknown_artboard: \{ab}\"}"
+            Some(board) => {
+              let rev = h.commit("agent", msg, [], board.doc.clone())
+              "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{rev},\"msg\":\"\{@core.json_escape(msg)}\"}"
+            }
+          }
+        }
+      }
+    "log" =>
+      match cur.history {
+        None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
+        Some(h) =>
+          "{\"ok\":true,\"op\":\"history-log\",\"board\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
+      }
+    "undo" | "redo" =>
+      match cur.history {
+        None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
+        Some(h) => {
+          let result = if sub == "undo" { h.undo() } else { h.redo() }
+          match result {
+            Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+            Ok(doc) => {
+              if cur.history_board == "" {
+                return "{\"ok\":false,\"error\":\"history_board_missing\"}"
+              }
+              match cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
+                Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                Ok(_) =>
+                  "{\"ok\":true,\"op\":\"history-\{sub}\",\"artboard\":\"\{cur.history_board}\",\"rev\":\{h.rev()}}"
+              }
+            }
+          }
+        }
+      }
+    "checkout" => {
+      if parts.length() < 2 {
+        return "{\"ok\":false,\"error\":\"mbt_operation_usage:history checkout <rev>\"}"
+      }
+      match cur.history {
+        None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
+        Some(h) =>
+          match history_rev(parts[1]) {
+            None => "{\"ok\":false,\"error\":\"invalid_revision: \{parts[1]}\"}"
+            Some(rev) =>
+              match h.checkout(rev) {
+                Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                Ok(doc) => {
+                  if cur.history_board == "" {
+                    return "{\"ok\":false,\"error\":\"history_board_missing\"}"
+                  }
+                  match cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
+                    Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                    Ok(_) =>
+                      "{\"ok\":true,\"op\":\"history-checkout\",\"artboard\":\"\{cur.history_board}\",\"rev\":\{rev}}"
+                  }
+                }
+              }
+          }
+      }
+    }
+    "diff" => {
+      if parts.length() < 3 {
+        return "{\"ok\":false,\"error\":\"mbt_operation_usage:history diff <from> <to>\"}"
+      }
+      match cur.history {
+        None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
+        Some(h) => {
+          let from = history_rev(parts[1])
+          let to = history_rev(parts[2])
+          match (from, to) {
+            (Some(a), Some(b)) =>
+              match h.diff(a, b) {
+                Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                Ok(diffjson) =>
+                  "{\"ok\":true,\"op\":\"history-diff\",\"diff\":\{diffjson}}"
+              }
+            _ => "{\"ok\":false,\"error\":\"invalid_revision\"}"
+          }
+        }
+      }
+    }
+    _ => "{\"ok\":false,\"error\":\"unknown_history_sub: \{@core.json_escape(sub)}\"}"
+  }
+}
+
+///|
+/// 会话只读变体（line 经辅槽）：与 session_query_nodes 等一一对应。
+pub fn session_history_in(handle : Int) -> String {
+  session_history(handle, slot_string(g_arg_bytes))
 }
 
 ///|
@@ -165,7 +329,7 @@ pub fn session_open(mbt : String) -> Int {
 pub fn session_close(handle : Int) -> Bool {
   let s = session_store()
   if handle >= 0 && handle < s.length() && s[handle].val.alive {
-    s[handle] = Ref::new({ project: @core.Project::new(), alive: false })
+    s[handle] = Ref::new({ project: @core.Project::new(), history: None, history_board: "", alive: false })
     true
   } else {
     false
@@ -188,7 +352,7 @@ pub fn session_open_project_json(project_json : String) -> Int {
     Err(_) => -1
     Ok(_) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: p, alive: true }))
+      s.push(Ref::new({ project: p, history: None, history_board: "", alive: true }))
       s.length() - 1
     }
   }

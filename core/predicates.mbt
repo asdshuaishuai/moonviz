@@ -173,7 +173,7 @@ fn check_visual_frames(
                       match layout.rects.get(kids[i]) {
                         None => ()
                         Some(ri) =>
-                          if !content.contains_rect(ri) {
+                          if !content.contains_rect_eps(ri, 0.5) {
                             out.push({
                               predicate: ContainedInParent,
                               node_id: kids[i],
@@ -202,7 +202,10 @@ fn check_visual_frames(
 }
 
 ///|
-/// 兄弟两两相交检查（O(n^2)，v1 节点规模下足够）
+/// 兄弟两两相交检查（O(n^2)，v1 节点规模下足够）。
+/// 豁免：一方完整包含另一方＝有意分层（整屏背景/遮罩/浮层压内容），
+/// 不是碰撞事故——「全屏背景+内容」是移动端 UI 最基本模式，任何顺序
+/// 都必须可在双门下存在（issue #15）；部分相交仍是违规。
 fn push_overlap_violations(
   out : Array[Violation],
   kids : Array[String],
@@ -217,7 +220,9 @@ fn push_overlap_violations(
         while j < kids.length() {
           match layout.rects.get(kids[j]) {
             Some(rj) =>
-              if ri.intersects(rj) {
+              if ri.intersects(rj) &&
+                !ri.contains_rect(rj) &&
+                !rj.contains_rect(ri) {
                 out.push({
                   predicate: NoSiblingOverlap,
                   node_id: kids[i],
