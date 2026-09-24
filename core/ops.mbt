@@ -280,7 +280,7 @@ pub fn apply_operation(
     "place" =>
       if parts.length() < 4 {
         Err(
-          "mbt_operation_usage:place <artboard> <component> <id> [variant] [x] [y]",
+          "mbt_operation_usage:place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]",
         )
       } else {
         let variant = if parts.length() >= 5 && parts[4] != "-" {
@@ -290,10 +290,23 @@ pub fn apply_operation(
         }
         let x = if parts.length() >= 6 { parse_op_double(parts[5]) } else { 0.0 }
         let y = if parts.length() >= 7 { parse_op_double(parts[6]) } else { 0.0 }
+        // 位置参数 w/h（issue #18）：place 一步到位指定最终尺寸，
+        // AgentGate 在最终 bbox 上评估，消除中间态拒绝
+        let mut w = 0.0
+        let mut h = 0.0
+        let mut kv_start = 7
+        if parts.length() >= 8 && parts[7].find("=") is None {
+          w = parse_op_double(parts[7])
+          kv_start = 8
+          if parts.length() >= 9 && parts[8].find("=") is None {
+            h = parse_op_double(parts[8])
+            kv_start = 9
+          }
+        }
         // 与 cli_exec 的 place 保持一致：尾部 k=v 对为用户组件参数槽
         let kv : Map[String, String] = Map::new()
         let mut kv_error = ""
-        for i = 7; i < parts.length(); i = i + 1 {
+        for i = kv_start; i < parts.length(); i = i + 1 {
           match parts[i].find("=") {
             None =>
               if kv_error == "" {
@@ -320,6 +333,8 @@ pub fn apply_operation(
               variant~,
               x~,
               y~,
+              w~,
+              h~,
               args=kv,
             ) {
             Ok(_) => Ok(())

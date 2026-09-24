@@ -187,6 +187,23 @@ pub fn Project::create_artboard(
 
 ///|
 /// 在画板上放置组件实例
+///|
+/// place 后尺寸直设（issue #18）：AgentGate 在最终 bbox 上评估，消除
+/// 「默认尺寸 place → update 修正」的中间态拒绝（真实 LLM run 111 次
+/// 拒绝的主根因）。w/h ≤ 0 表示不覆盖（沿用组件默认尺寸）。
+fn apply_place_size(doc : Document, instance_id : String, w : Double, h : Double) -> Unit {
+  if w > 0.0 || h > 0.0 {
+    let _ = doc.update_node(instance_id, fn(x) {
+      {
+        ..x,
+        width: if w > 0.0 { Fixed(w) } else { x.width },
+        height: if h > 0.0 { Fixed(h) } else { x.height },
+      }
+    })
+  }
+}
+
+///|
 pub fn Project::place_component(
   self : Project,
   artboard~ : String,
@@ -196,6 +213,8 @@ pub fn Project::place_component(
   parent_id? : String = "",
   x? : Double = 0.0,
   y? : Double = 0.0,
+  w? : Double = 0.0,
+  h? : Double = 0.0,
   args? : Map[String, String] = Map::new(),
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
@@ -215,6 +234,7 @@ pub fn Project::place_component(
           ) {
             Err(error) => Err(error)
             Ok(root_id) => {
+              apply_place_size(ab.doc, root_id, w, h)
               self.revision = self.revision + 1
               // node 透传实例真实根节点 id（instance::<cid>）：
               // 调用方据此做 move/update/query（见 usercomp.mbt 的 id 命名契约）。
@@ -244,6 +264,7 @@ pub fn Project::place_component(
           match pid {
             "root" => {
               let _ = ab.doc.insert_node(placed, "root")
+              apply_place_size(ab.doc, instance_id, w, h)
               self.revision = self.revision + 1
               Ok(
                 "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"artboard\":\"\{artboard}\"}",
@@ -252,6 +273,7 @@ pub fn Project::place_component(
             _ =>
               match ab.doc.insert_node(placed, pid) {
                 true => {
+                  apply_place_size(ab.doc, instance_id, w, h)
                   self.revision = self.revision + 1
                   Ok(
                     "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"parent\":\"\{pid}\"}",

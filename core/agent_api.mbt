@@ -191,9 +191,9 @@ pub fn op_entries() -> Array[OpEntry] {
   )
   add(
     "place",
-    "place <artboard> <component> <id> [variant] [x] [y]",
+    "place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]",
     "structural",
-    "Place a component instance (user-component params as trailing k=v).",
+    "Place a component instance at final size (gate evaluates final bbox; user-component params as trailing k=v).",
   )
   add(
     "duplicate",

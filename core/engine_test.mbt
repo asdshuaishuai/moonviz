@@ -375,3 +375,99 @@ test "constrain：cannot_parse 错误自描述语法（issue #17）" {
     Err(e) => assert_true(false, msg=e)
   }
 }
+
+///|
+test "place：w/h 一步到位，门在最终 bbox 评估（issue #18）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=375.0, height=812.0)
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="b1", x=150.0, y=20.0)
+  // 最终尺寸直设：bg(375×812) 完全包含 b1 → 豁免 → 零违规
+  match p.place_component(
+    artboard="m",
+    component_id="rect",
+    instance_id="bg",
+    x=0.0,
+    y=0.0,
+    w=375.0,
+    h=812.0,
+  ) {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let vs = validate(ab.doc)
+      let mut n = 0
+      for v in vs.iter() {
+        if v.predicate is NoSiblingOverlap { n = n + 1 }
+      }
+      assert_eq(n, 0, msg="最终尺寸 bg 应完全包含 b1（豁免）")
+      let layout = solve(ab.doc)
+      match layout.rect_of("bg") {
+        Some(r) => {
+          assert_eq(r.width, 375.0)
+          assert_eq(r.height, 812.0)
+        }
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+  // 对照：默认尺寸 place（200×100）与 b1 部分相交 → 违规（中间态拒绝真实存在）
+  let p2 = Project::new()
+  let _ = p2.create_artboard(name="m", width=375.0, height=812.0)
+  let _ = p2.place_component(artboard="m", component_id="button", instance_id="b1", x=150.0, y=20.0)
+  let _ = p2.place_component(artboard="m", component_id="rect", instance_id="bg", x=0.0, y=0.0)
+  match p2.artboards.get("m") {
+    Some(ab) => {
+      let vs = validate(ab.doc)
+      let mut n = 0
+      for v in vs.iter() {
+        if v.predicate is NoSiblingOverlap { n = n + 1 }
+      }
+      assert_true(n > 0, msg="默认尺寸 bg 应与 b1 部分相交违规")
+    }
+    None => assert_true(false)
+  }
+}
+
+///|
+test "place：op 面位置参数 w/h 解析（issue #18）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=375.0, height=812.0)
+  // place <ab> <comp> <id> - <x> <y> <w> <h>
+  match apply_operation(p, "place m button b2 - 100 300 200 40") {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      match layout.rect_of("b2") {
+        Some(r) => {
+          assert_eq(r.width, 200.0)
+          assert_eq(r.height, 40.0)
+          assert_eq(r.x, 100.0)
+          assert_eq(r.y, 300.0)
+        }
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+  // 不带 w/h 的旧形态不受影响
+  match apply_operation(p, "place m button b3 - 10 10") {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let layout2 = solve(ab.doc)
+      match layout2.rect_of("b3") {
+        Some(r) => assert_eq(r.width, 120.0, msg="默认宽应保持")
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+}

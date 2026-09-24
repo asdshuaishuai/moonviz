@@ -37,7 +37,7 @@ Session-level tools (stateful, mirror the CLI session commands):
 
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
-`place <ab> <component> <id> [variant|-] [x] [y] [k=v ...]` ·
+`place <ab> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]` (final-size place — gate evaluates final bbox) ·
 `duplicate <ab> <new_name>` · `delete-artboard <ab>` ·
 `move <ab> <node> <x> <y>` · `copy <ab> <node> <new_id> [dx] [dy]` ·
 `delete <ab> <node>` · `reorder <ab> <node> front|back|up|down` ·

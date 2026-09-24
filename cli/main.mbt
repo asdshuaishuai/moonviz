@@ -536,7 +536,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "place" =>
       if parts.length() < 4 {
-        cli_err("usage: place <artboard> <component> <id> [variant] [x] [y]")
+        cli_err("usage: place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]")
       } else {
         let ab = parts[1]
         let comp = parts[2]
@@ -1177,7 +1177,7 @@ fn cli_help() -> String {
   "  list                 List all artboards\n" +
   "  create <name>        Create empty artboard\n" +
   "  template <id> <name> Apply page template\n" +
-  "  place <ab> <comp> <id> [variant] [x] [y]  Place component\n" +
+  "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]  Place at final size\n" +
   "  query <ab>           Query nodes in artboard\n" +
   "  lint <ab>            Run design lint\n" +
   "  critique <ab>        Run 8-principle critique\n" +
