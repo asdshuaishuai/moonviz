@@ -35,6 +35,10 @@
 **3. Node SDK 会话封装。** `moonviz-engine-sdk` 的 `MoonViz` 类目前走 CLI 通道；对齐 wasm SDK 的 session API 形态（open/apply/lint/…/count），让 Node 宿主与 WASM 宿主共享同一套调用心智。
 
 ### P1 · 体验深化
+- **显式层叠语义（issue #17 延伸）**：部分相交的合法层叠（半透明遮罩、
+  贴边装饰）目前 AgentGate 下无正道——全包含已由 0.1.5-fix 豁免，但
+  「显式声明 A 压 B」需要节点级 layer 声明或 reorder 感知豁免；
+  设计约束：声明走双门、序列化/decl 往返保持、不复活视觉债遮蔽。
 
 **4. deepDesign Studio 全面接入新引擎。** 引擎能力面（52 工具/26 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
 

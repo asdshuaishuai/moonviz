@@ -114,8 +114,13 @@ prototype: node-level tap bindings + component states as CSS variants) ·
 
 ### CLI-pipeline-only (NOT reachable through either apply gate)
 
-`constrain <ab> <intent_text>` — both apply gates return
-`mbt_operation_unsupported`; it only runs on the load/session pipeline.
+`constrain <ab> <intent_text>` — LAYOUT INTENT ONLY (居中 | 垂直居中 |
+垂直排列 | 水平排列 | 等宽 | 等高 | 等间距 | 网格 N | 顶部 | 底部 |
+放大 N | 缩小 N | 边距 N | 间距 N) — it does NOT do layering/z-order.
+Both apply gates return `mbt_operation_unsupported`; it only runs on the
+load/session pipeline. Layering: a fully-contained sibling (fullscreen
+background + content) passes both gates since 0.1.5-fix (containment
+exemption); z-order via `reorder <ab> <node> front|back|up|down`.
 To rename a node through the gates, use `update <ab> <node> name=<id>`
 (there is no standalone `name` op on the gated surface).
 

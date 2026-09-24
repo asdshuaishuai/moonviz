@@ -352,3 +352,26 @@ test "history：撤销后新提交截断 redo 分支（review 5a5641a）" {
     Ok(_) => assert_true(false, msg="commit 后 redo 应不可用")
   }
 }
+
+///|
+test "constrain：cannot_parse 错误自描述语法（issue #17）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a", width=390.0, height=844.0)
+  // 自由文本层级诉求不被误解析，且错误就地给出全部可用意图
+  match p.apply_constraint("bg 是全屏背景层 允许重叠", artboard="a") {
+    Err(e) => {
+      assert_true(e.contains("cannot_parse"), msg=e)
+      assert_true(e.contains("布局意图"), msg="错误应声明这是布局意图: " + e)
+      assert_true(
+        e.contains("垂直排列") && e.contains("网格 N"),
+        msg="错误应自带语法清单: " + e,
+      )
+    }
+    Ok(json) => assert_true(false, msg="层级自由文本不应被误解析: " + json)
+  }
+  // 合法意图照常执行
+  match p.apply_constraint("等间距", artboard="a") {
+    Ok(json) => assert_true(json.contains("\"ok\":true"), msg=json)
+    Err(e) => assert_true(false, msg=e)
+  }
+}

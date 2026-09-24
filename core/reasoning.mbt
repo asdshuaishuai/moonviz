@@ -280,7 +280,7 @@ pub fn Project::apply_intent(
           })
           Ok("{\"intent\":\"set_gap\",\"value\":\{v}}")
         }
-        Unknown => Err("cannot_parse_intent")
+        Unknown => Err("cannot_parse_intent（支持：居中 | 垂直居中 | 垂直排列 | 水平排列 | 等宽 | 等高 | 等间距 | 网格 N | 顶部 | 底部 | 放大 N | 缩小 N | 边距 N | 间距 N）")
       }
   }
 }
@@ -295,7 +295,12 @@ pub fn Project::apply_constraint(
 ) -> Result[String, String] {
   let intent = parse_layout_intent(text)
   match intent {
-    Unknown => Err("cannot_parse: \"\{text}\"")
+    // 错误即文档：宿主（和 LLM）看到 cannot_parse 时就地拿到可用的全部
+    // 意图词表——issue #17 的「语法无文档」由此闭环，无需翻 SKILL
+    Unknown =>
+      Err(
+        "cannot_parse: \"\{text}\"。constrain 是布局意图（非层级/z-order）：居中 | 垂直居中 | 垂直排列 | 水平排列 | 等宽 | 等高 | 等间距 | 网格 N | 顶部 | 底部 | 放大 N | 缩小 N | 边距 N | 间距 N",
+      )
     _ => self.apply_intent(intent, artboard~, parent_id~)
   }
 }
