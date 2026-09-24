@@ -120,7 +120,7 @@ fn cmd_component_describe(p : @core.Project, parts : Array[String]) -> String {
         kv_sb.write_string(kv)
       }
       let kv_j = if kvs.length() > 0 { " " + kv_sb.to_string() } else { "" }
-      let usage = "place <artboard> \{id} <instance_id> [variant] [x] [y]\{kv_j}"
+      let usage = "place <artboard> \{id} <instance_id> [variant] [x] [y] [w] [h]\{kv_j}"
       "{\"ok\":true,\"id\":\"\{@core.json_escape(id)}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"size\":\"\{def.width}x\{def.height}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"usage\":\"\{@core.json_escape(usage)}\"}"
     }
   }

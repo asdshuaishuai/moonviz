@@ -154,6 +154,8 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
   let source_b64 = extract_arg_string(request_line, "source_b64")
   let x = extract_arg_num(request_line, "x")
   let y = extract_arg_num(request_line, "y")
+  let w = extract_arg_num(request_line, "w")
+  let h = extract_arg_num(request_line, "h")
   let node_id = extract_arg_string(request_line, "node_id")
   let new_id = extract_arg_string(request_line, "new_id")
   let mode = extract_arg_string(request_line, "mode")
@@ -238,7 +240,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
             kv_sb.write_string(kv)
           }
           let kv_j = if kvs.length() > 0 { " " + kv_sb.to_string() } else { "" }
-          let usage = "place <artboard> \{component_id} <instance_id> [variant] [x] [y]\{kv_j}"
+          let usage = "place <artboard> \{component_id} <instance_id> [variant] [x] [y] [w] [h]\{kv_j}"
           "{\"ok\":true,\"id\":\"\{@core.json_escape(component_id)}\",\"description\":\"\{@core.json_escape(def.description)}\",\"source\":\"user\",\"size\":\"\{def.width}x\{def.height}\",\"params\":[\{mcp_join(ps)}],\"variants\":[\{mcp_join(vs)}],\"usage\":\"\{@core.json_escape(usage)}\"}"
         }
       }
@@ -399,6 +401,8 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           variant~,
           x~,
           y~,
+          w~,
+          h~,
           args=kv,
         ) {
         Ok(msg) => "{\"ok\":true,\"result\":\"\{msg}\"}"
