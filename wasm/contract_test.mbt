@@ -302,6 +302,16 @@ test "契约：全部内置模板 × AgentGate 零债（issue #14 回归锚）" 
       msg="模板 \{t} 被 AgentGate 拒绝: \{out}",
     )
   }
+  // normalize_nesting 树结构锚：仅靠 #15 全包含豁免也能过门，若收编逻辑
+  // 被删这里会静默全绿——抽查 web_landing 的卡片子节点归属防回归
+  let h = session_open(seed_mbt)
+  let _ = session_apply_agent(h, "template web_landing __t_wl_nest")
+  let q = session_query_nodes(h, "__t_wl_nest")
+  assert_true(
+    q.contains("\"id\":\"feat_body0\",\"parent\":\"feat_card0\""),
+    msg="feat_body0 应回到 feat_card0 下（normalize_nesting 树结构）: " + q,
+  )
+  let _ = session_close(h)
 }
 
 

@@ -131,7 +131,7 @@ MCF 编解码落在 **ddp_codec（Rust 工具）新增 operation**，不新建�
 | `component-export <id> [--out <file>]` | 组件 id | 经 ddp_codec `mcf_pack` 产出 `.mcf` |
 | `component-import <file.mcf>` | MCF 文件 | 指纹/crc 校验 → mcf_unpack → **重跑完整编译管线** → 注册（版本冲突提示，`--force` 覆盖） |
 
-`place <artboard> <component_id> <inst> [variant|-] x y [w] [h] [k=v…]` 直接消费用户组件——传参即代入参数槽；`[w] [h]` 一步指定最终尺寸（门在最终 bbox 评估，消除默认尺寸中间态拒绝）。
+`place <artboard> <component_id> <inst> [variant|-] x y [w] [h] [k=v…]` 直接消费用户组件——传参即代入参数槽；`[w] [h]` 一步指定最终尺寸（门在最终 bbox 评估，消除默认尺寸中间态拒绝；尺寸作用于实例根节点）。
 
 ## 5. Agent 感知与 SKILL 增补
 
