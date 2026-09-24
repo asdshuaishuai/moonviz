@@ -126,6 +126,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>duplicate &lt;src&gt; &lt;newName&gt;</code></td><td>复制画板</td></tr>
 <tr><td><code>delete-artboard &lt;id&gt;</code></td><td>删除画板（至少保留一个，引擎侧校验）</td></tr>
 <tr><td><code>update &lt;artboard&gt; &lt;node&gt; k=v …</code></td><td>更新节点属性（text/fill/x/y/w/h/radius/opacity/tracking…；字符串用 JSON 引号）</td></tr>
+<tr><td><code>place &lt;ab&gt; &lt;comp&gt; &lt;id&gt; [variant|-] [x] [y] [w] [h] [k=v…]</code></td><td>放置组件实例，一步指定最终尺寸（门在最终 bbox 评估）</td></tr>
 <tr><td><code>move &lt;artboard&gt; &lt;node&gt; &lt;x&gt; &lt;y&gt;</code></td><td>移动节点</td></tr>
 <tr><td><code>copy &lt;artboard&gt; &lt;node&gt; &lt;newId&gt; &lt;dx&gt; &lt;dy&gt;</code></td><td>复制节点</td></tr>
 <tr><td><code>flip &lt;artboard&gt; &lt;node&gt; h|v|both|none</code></td><td>翻转</td></tr>
@@ -141,6 +142,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>export-mbt-agent</code></td><td><b>AgentGate</b> 导出（语义级校验）</td></tr>
 <tr><td><code>export-svg</code> / <code>export-artifact</code> / <code>export-decl</code></td><td>导出 SVG / 工件 / 声明物料</td></tr>
 <tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（65 组件 × 115 变体）/ 主题 / 设计 token</td></tr>
+<tr><td><code>constrain &lt;ab&gt; &lt;intent&gt;</code></td><td>布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N（层级/z-order 走 reorder；全包含背景直通）</td></tr>
 <tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
 <tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
 <tr><td><code>list-ops</code></td><td>26 条 mutating op 字典（usage/分类/双门禁）</td></tr>
@@ -278,6 +280,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
 <tr><td><code>infer_page_type</code> / <code>infer_missing</code></td><td>智能</td><td>页面类型推断 / 缺失元素推断</td></tr>
 <tr><td><code>extract_design_system</code></td><td>智能</td><td>从既有画板反向提取设计系统</td></tr>
 <tr><td><code>generate_spec</code> / <code>generate_responsive</code></td><td>生成</td><td>开发移交标注 / 响应式断点变体</td></tr>
+<tr><td><code>place_component</code></td><td>结构</td><td>放置组件实例（variant/x/y/w/h/args——w/h 一步最终尺寸，门在最终 bbox 评估）</td></tr>
 <tr><td><code>update_node</code> / <code>move_node</code></td><td>节点编辑</td><td>修改任意节点属性（30+ 键，含 align/italic/dash/visible/layout/name）</td></tr>
 <tr><td><code>group_nodes</code> / <code>ungroup_node</code> / <code>align_nodes</code></td><td>结构</td><td>打组 / 解组 / 多节点对齐</td></tr>
 <tr><td><code>resize_canvas</code> / <code>restyle_component</code></td><td>结构</td><td>画板缩放（约束重排）/ 主组件样式传播</td></tr>

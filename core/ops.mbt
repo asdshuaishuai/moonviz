@@ -134,6 +134,17 @@ pub fn parse_op_double(s : String) -> Double {
 ///
 /// 这个函数不负责持久化。调用方随后必须经 commit_and_render() 把变更写成
 /// canonical MBT，再从 MBT 重建画布，避免 Project/命令日志成为第二事实源。
+///|
+/// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）。
+/// 与 cli_exec 的 place_token_is_number 同规则——双路线解析必须一致。
+fn place_token_is_number(t : String) -> Bool {
+  t.length() > 0 && {
+    let c0 = t.substring(start=0, end=1)
+    c0 >= "0" && c0 <= "9"
+  }
+}
+
+///|
 pub fn apply_operation(
   project : Project,
   operation : String,
@@ -294,19 +305,34 @@ pub fn apply_operation(
         // AgentGate 在最终 bbox 上评估，消除中间态拒绝
         let mut w = 0.0
         let mut h = 0.0
+        let mut kv_error = ""
         let mut kv_start = 7
         if parts.length() >= 8 && parts[7].find("=") is None {
-          w = parse_op_double(parts[7])
-          kv_start = 8
-          if parts.length() >= 9 && parts[8].find("=") is None {
-            h = parse_op_double(parts[8])
-            kv_start = 9
+          if parts[7] == "-" {
+            kv_start = 8
+          } else if place_token_is_number(parts[7]) {
+            w = parse_op_double(parts[7])
+            kv_start = 8
+            if parts.length() >= 9 && parts[8].find("=") is None {
+              if parts[8] == "-" {
+                kv_start = 9
+              } else if place_token_is_number(parts[8]) {
+                h = parse_op_double(parts[8])
+                kv_start = 9
+              } else {
+                kv_error = "place_invalid_arg:" + parts[8]
+              }
+            }
+          } else {
+            kv_error = "place_invalid_arg:" + parts[7]
           }
         }
         // 与 cli_exec 的 place 保持一致：尾部 k=v 对为用户组件参数槽
         let kv : Map[String, String] = Map::new()
-        let mut kv_error = ""
         for i = kv_start; i < parts.length(); i = i + 1 {
+          if kv_error != "" {
+            break
+          }
           match parts[i].find("=") {
             None =>
               if kv_error == "" {

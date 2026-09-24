@@ -549,10 +549,38 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
         let x = if parts.length() >= 6 { parse_d(parts[5]) } else { 0.0 }
         let y = if parts.length() >= 7 { parse_d(parts[6]) } else { 0.0 }
+        // 位置参数 w/h（issue #18）：与 op 面（core/ops.mbt place 臂）同规则——
+        // 槽 7/8 的无 "=" 数字 token 视为宽/高；"-" 表示沿用默认尺寸
+        let mut w = 0.0
+        let mut h = 0.0
+        let mut kv_error = ""
+        let mut kv_start = 7
+        if parts.length() >= 8 && parts[7].find("=") is None {
+          if parts[7] == "-" {
+            kv_start = 8
+          } else if place_token_is_number(parts[7]) {
+            w = parse_d(parts[7])
+            kv_start = 8
+            if parts.length() >= 9 && parts[8].find("=") is None {
+              if parts[8] == "-" {
+                kv_start = 9
+              } else if place_token_is_number(parts[8]) {
+                h = parse_d(parts[8])
+                kv_start = 9
+              } else {
+                kv_error = "place_invalid_arg:" + parts[8]
+              }
+            }
+          } else {
+            kv_error = "place_invalid_arg:" + parts[7]
+          }
+        }
         // 尾部 k=v 对：用户组件参数槽传参（内置组件忽略）
         let kv : Map[String, String] = Map::new()
-        let mut kv_error = ""
-        for i = 7; i < parts.length(); i = i + 1 {
+        for i = kv_start; i < parts.length(); i = i + 1 {
+          if kv_error != "" {
+            break
+          }
           match parts[i].find("=") {
             None =>
               if kv_error == "" {
@@ -579,6 +607,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               variant~,
               x~,
               y~,
+              w~,
+              h~,
               args=kv,
             ) {
             Ok(msg) => msg
@@ -1146,6 +1176,16 @@ fn index_of_str(s : String, sub : String) -> Int {
 }
 
 ///|
+///|
+/// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）
+fn place_token_is_number(t : String) -> Bool {
+  t.length() > 0 && {
+    let c0 = t.substring(start=0, end=1)
+    c0 >= "0" && c0 <= "9"
+  }
+}
+
+///|
 fn parse_d(s : String) -> Double {
   @core.parse_op_double(s)
 }
@@ -1177,7 +1217,7 @@ fn cli_help() -> String {
   "  list                 List all artboards\n" +
   "  create <name>        Create empty artboard\n" +
   "  template <id> <name> Apply page template\n" +
-  "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]  Place at final size\n" +
+  "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h] [k=v ...]  Place at final size\n" +
   "  query <ab>           Query nodes in artboard\n" +
   "  lint <ab>            Run design lint\n" +
   "  critique <ab>        Run 8-principle critique\n" +
@@ -1232,7 +1272,7 @@ fn cli_help() -> String {
   "  set-state <node> <state_name> [toggle]   Activate/toggle a state\n" +
   "\n" +
   "Layout reasoning:\n" +
-  "  constrain <ab> <intent_text>      e.g. 居中对齐 | 垂直排列 | 等宽 | 间距 16\n" +
+  "  constrain <ab> <intent_text>      布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N\n" +
   "  exit                 Exit CLI"
 }
 

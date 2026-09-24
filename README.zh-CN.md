@@ -121,7 +121,7 @@ cd ddp && cargo build --release && cd ..
 #    产物 ddp/target/release/ddp_codec（stdin JSON → stdout JSON）
 #    可用 MOONVIZ_DDP_HELPER 指定路径；SDK 会自动在 ddp/target/{debug,release} 下查找
 
-# 4. 全量测试（191 项）
+# 4. 全量测试（207 项）
 moon test
 ```
 
@@ -627,7 +627,7 @@ MCP 客户端配置（npx 预编译路线）：
 MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分四层：
 
 1. **产物冻结**（根本手段）：预编译二进制与 WASM 一经发布即快照——工具链后续破坏性变更不影响任何已分发产物，语言不确定性被隔离在构建时。
-2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 191 项测试 + CLI/MCP 冒烟挡板验证。
+2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 207 项测试 + CLI/MCP 冒烟挡板验证。
 3. **协议稳定**：`SolvedLayout` / `GateDecision` / `RenderPlan` 等对外协议刻意稳定（求解器预留 Cassowary 替换接口），不随语言版本漂移。
 4. **组件隔离兜底**：DDP 已示范非 MoonBit 组件独立进程化路线，极端情况下任何组件可按此模式替换而不动 `.mbt.md` 事实源格式。
 

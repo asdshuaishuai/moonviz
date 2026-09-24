@@ -405,7 +405,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           h~,
           args=kv,
         ) {
-        Ok(msg) => "{\"ok\":true,\"result\":\"\{msg}\"}"
+        Ok(msg) => "{\"ok\":true,\"result\":\"\{@core.json_escape(msg)}\"}"
         Err(e) => err_json(e)
       }
     }

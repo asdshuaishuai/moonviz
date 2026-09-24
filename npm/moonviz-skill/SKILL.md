@@ -243,7 +243,7 @@ component-compile-b64 <b64>
 # 3. Discover & use exactly like builtins
 list-components        # merged view, source: user
 component-describe <id>  # params/variants/usage template
-place <artboard> <id> <inst> [variant] [x] [y] key=value...
+place <artboard> <id> <inst> [variant|-] [x] [y] [w] [h] key=value...
 
 # 4. Share — the ONLY outbound form is the proprietary MCF container
 component-export <id>   # → mcf_b64 (byte source never leaves the engine)

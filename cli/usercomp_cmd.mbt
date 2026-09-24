@@ -105,7 +105,7 @@ fn cmd_component_describe(p : @core.Project, parts : Array[String]) -> String {
       for v in def.variants.keys() {
         vs.push("\"\{v}\"")
       }
-      // usage 示例：place <ab> <id> <inst> [variant] [x] [y] k=<kind> ...
+      // usage 示例：place <ab> <id> <inst> [variant|-] [x] [y] [w] [h] k=<kind> ...
       let kvs : Array[String] = []
       for param in def.params.iter() {
         kvs.push("\{param.name}=<\{param.kind}>")
