@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  MOONVIZ_VERSION: "0.1.5-fix-2"
+  MOONVIZ_VERSION: "0.1.6"
   # 不锁定工具链：历史锁定版目录会从下载 CDN 下架（403），latest 与
   # pages.yml 一致；wasm-gc/native 对小版本不敏感，产物以冒烟测试兜底。
 
