@@ -222,11 +222,11 @@ pub fn Project::apply_intent(
         EqualWidth => {
           // 所有子节点 width = Fill
           let count = equalize_width(ab.doc, parent_id)
-          Ok("{\"intent\":\"equal_width\",\"applied\":\{count} nodes}")
+          Ok("{\"intent\":\"equal_width\",\"applied\":\{count}}")
         }
         EqualHeight => {
           let count = equalize_height(ab.doc, parent_id)
-          Ok("{\"intent\":\"equal_height\",\"applied\":\{count} nodes}")
+          Ok("{\"intent\":\"equal_height\",\"applied\":\{count}}")
         }
         EqualSpacing => self.auto_arrange(artboard~, parent_id~)
         GridAlign(grid) => self.snap_to_grid(artboard~, grid~)

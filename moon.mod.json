@@ -1,6 +1,6 @@
 {
   "name": "moonviz",
-  "version": "0.1.6",
+  "version": "0.1.6-fix",
   "description": "Agent-Native 原型绘制引擎：.mbt.md 唯一事实源，人类画布与 Agent 声明共同演化，MoonBit 不崩谓词护航",
   "readme": "README.md"
 }

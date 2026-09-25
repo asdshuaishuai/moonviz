@@ -145,9 +145,29 @@ export async function createEngine(source) {
       return JSON.parse(exports.session_interactions(handle, artboard));
     },
 
-    /** 原型运行时 tap 命中。x/y 为画板坐标。 */
+    /** 原型运行时 tap 命中。x/y 为画板坐标。成功信封带 canonical mbt（⚡ set_text/set_state 会写穿会话文档）。 */
     sessionTap(handle, artboard, x, y) {
       return JSON.parse(exports.session_tap(handle, artboard, x, y));
+    },
+
+    /**
+     * 自然语言布局意图（居中 | 垂直排列 | 等宽 | 间距 N …）。
+     * 成功信封带 canonical mbt——按 canonical 交换的宿主应保存它供下次 sessionOpen 使用。
+     */
+    sessionConstrain(handle, artboard, intent) {
+      return JSON.parse(exports.session_constrain(handle, artboard, intent));
+    },
+
+    /**
+     * 自动修复（违规严格下降才提交）。成功信封带 canonical mbt（含 fixes=0 的零修复路径）。
+     */
+    sessionAutoFix(handle, artboard) {
+      return JSON.parse(exports.session_auto_fix(handle, artboard));
+    },
+
+    /** 响应式变体（新建 _tablet/_desktop 画板）。成功信封带 canonical mbt（含新画板）。 */
+    sessionGenerateResponsive(handle, artboard) {
+      return JSON.parse(exports.session_generate_responsive(handle, artboard));
     },
 
     /** 关闭会话。 */
@@ -175,7 +195,7 @@ export async function createEngine(source) {
       return JSON.parse(exports.session_query_nodes(handle, artboard));
     },
 
-    /** 其余 session_* 以 raw 导出直用（spec/constrain/infer/用户组件…）。 */
+    /** 其余 session_* 以 raw 导出直用（spec/infer/用户组件…）。改文档面（constrain/auto_fix/responsive/tap/component_compile）成功信封均带 canonical mbt，宿主应保存供下次 sessionOpen 使用。 */
     raw: exports,
   };
 }

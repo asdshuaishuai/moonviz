@@ -85,6 +85,10 @@ const back   = await DDP.decrypt(free.bytes);        // → { mbt, mode: 'DDP2' 
 
 `template / create / duplicate / deleteArtboard / update / move / flip / reorder / copy / flow / exportHuman` — each method appends one CLI command and returns `this`; `exportHuman()` executes the batch and returns the canonical `.mbt.md`.
 
+### `Session` — stateful CLI session (mirrors the wasm session surface)
+
+`open(engine, seedCommand?) / exec(cmd) / apply(op) / lint(ab) / critique(ab) / autoFix(ab) / constrain(ab, intent) / interactions(ab) / states(ab) / queryNodes(ab) / flows() / spec(ab) / protest(ab, script) / collabMerge(spec) / animationCss(id, preset) / history(...) / exportMbt() / close()` — `constrain` is the natural-language layout intent （居中 | 垂直排列 | 等宽 | 间距 N …, same semantics as the wasm `sessionConstrain`).
+
 ### `DDP` — container codec
 
 `encrypt(mbt, password, { codecPath?, moonvizDir? })` and `decrypt(bytes, password?, options?)`. DDP1 = Argon2id + XChaCha20-Poly1305; DDP2 (empty password) = zstd + CRC32, no encryption.

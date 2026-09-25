@@ -1532,6 +1532,8 @@ async function boot(){
       list_ops:()=>JSON.parse(exports.list_ops()),
       export_html:s=>JSON.parse(exports.export_html(s)),
       // —— 会话（24，i32 句柄）——
+      // 改文档面（apply_*/constrain/auto_fix/responsive/tap/component_compile/history undo|redo|checkout）
+      // 成功信封带 canonical mbt（r.mbt）：按 canonical 交换的宿主须保存它供下次 open 用
       session_open:s=>exports.session_open(s),
       session_close:h=>exports.session_close(h),
       session_apply_agent:(h,o)=>JSON.parse(exports.session_apply_agent(h,o)),

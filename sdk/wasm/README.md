@@ -65,6 +65,13 @@ document.querySelector('#stage').innerHTML = engine.render(mbt).artboards[0].svg
 | `version()` | `{ ok, engine, version }` | Engine build info. |
 | `render(mbt)` | `{ ok, entry?, flows?, artboards?, error? }` | Full rebuild from source (AgentGate level). Each artboard carries `svg` markup and a `nodes` index. |
 | `validate(mbt)` | `{ ok, entry?, revision?, blockKinds?, error? }` | Validate without rendering. |
+| `sessionOpen(mbt)` / `sessionClose(h)` / `sessionCount()` | handle / bool / int | Stateful session lifecycle. |
+| `sessionApply(h, op, gate?)` | `{ ok, mbt?, ... }` | Apply a mutating op; success envelope carries canonical `.mbt.md` — persist it for the next `sessionOpen`. |
+| `sessionConstrain(h, ab, intent)` | `{ ok, mbt?, ...moves }` | Natural-language layout intent （居中 | 垂直排列 | 等宽 | 间距 N …); success envelope carries canonical mbt. |
+| `sessionAutoFix(h, ab)` | `{ ok, fixes, detail, mbt? }` | Auto-fix violations (commits only when violations strictly decrease); success envelope carries canonical mbt. |
+| `sessionGenerateResponsive(h, ab)` | `{ ok, variants, mbt? }` | Generate `_tablet`/`_desktop` variants; success envelope carries canonical mbt (with the new boards). |
+| `sessionTap(h, ab, x, y)` | `{ ok, changes, current, mbt? }` | Prototype runtime tap; ⚡ `set_text`/`set_state` writes through to the session doc, so the envelope carries canonical mbt. |
+| `sessionSave(h)` / `sessionOpenProjectJson(j)` | `{ ok, data }` / handle | Project-JSON snapshot round-trip (cross-process persistence). |
 | `raw` | wasm exports | Escape hatch for advanced use. |
 
 Both entry points accept a complete `.mbt.md` document and return parsed objects. Malformed input returns `{ ok: false, error }` instead of throwing.

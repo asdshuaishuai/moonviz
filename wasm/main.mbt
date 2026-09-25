@@ -396,6 +396,40 @@ fn sess_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> Str
 }
 
 ///|
+/// 改文档会话面的统一信封（issue #19）：core 侧 Ok 即视为「会话文档
+/// 可能已变」，一律在信封里回传全项目 canonical mbt——与
+/// session_apply_*/history-undo 同形，键控缓存宿主零额外往返即可接住
+/// 变更。注意 auto_fix 的「部分修复」是 Ok 包着 {"ok":false,...}（已修
+/// 项已落库），同样走 mbt 拼接；真正的 Err（unknown_artboard 等，文档
+/// 未动）不回 mbt。
+/// 内层自带 "ok" 即保留全部字段并拼接 mbt；无 ok 的裸 intent 负载包一层
+/// {"ok":true,"moves":<inner>,"mbt":...}。
+fn sess_mut_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> String {
+  match session_get(handle) {
+    None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+    Some(p) =>
+      match f(p) {
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+        Ok(inner) => sess_mut_ok(p, inner)
+      }
+  }
+}
+
+///|
+fn sess_mut_ok(p : @core.Project, inner : String) -> String {
+  let mbt_frag = session_canonical_mbt(p)
+  if inner.contains("\"ok\":") &&
+    inner.length() > 0 &&
+    inner.substring(start=inner.length() - 1) == "}" {
+    inner.substring(start=0, end=inner.length() - 1) + mbt_frag + "}"
+  } else if inner.contains("\"ok\":") {
+    "{\"ok\":true,\"moves\":\"\{@core.json_escape(inner)}\"" + mbt_frag + "}"
+  } else {
+    "{\"ok\":true,\"moves\":" + inner + mbt_frag + "}"
+  }
+}
+
+///|
 /// 应用一条 mutating op（AgentGate）。返回 { ok, mbt } —— canonical 文本随
 /// 变更回写，宿主需保存供下次 session_open 使用。
 pub fn session_apply_agent(handle : Int, op : String) -> String {
@@ -499,9 +533,11 @@ pub fn session_critique(handle : Int, artboard : String) -> String {
 }
 
 ///|
-/// 自动修复（违规严格下降才提交）。
+/// 自动修复（违规严格下降才提交）。成功信封回传 canonical mbt——
+/// 与 session_apply_*/history-undo 同形，键控缓存宿主零额外往返即可
+/// 接住变更（issue #19）。
 pub fn session_auto_fix(handle : Int, artboard : String) -> String {
-  sess_json(handle, fn(p) { p.auto_fix(artboard~) })
+  sess_mut_json(handle, fn(p) { p.auto_fix(artboard~) })
 }
 
 ///|
@@ -547,9 +583,10 @@ pub fn session_spec(handle : Int, artboard : String) -> String {
 }
 
 ///|
-/// 自然语言布局意图（居中对齐/垂直排列/等宽/间距 N…）。
+/// 自然语言布局意图（居中对齐/垂直排列/等宽/间距 N…）。成功信封回传
+/// canonical mbt——键控缓存宿主要求（issue #19）。
 pub fn session_constrain(handle : Int, artboard : String, intent : String) -> String {
-  sess_json(handle, fn(p) { p.apply_constraint(intent, artboard~) })
+  sess_mut_json(handle, fn(p) { p.apply_constraint(intent, artboard~) })
 }
 
 ///|
@@ -576,9 +613,11 @@ pub fn session_extract_design_system(handle : Int, artboard : String) -> String 
 }
 
 ///|
-/// 响应式断点变体生成。
+/// 响应式断点变体生成（新建 _tablet/_desktop 画板）。成功信封回传
+/// canonical mbt——变体是新画板，按 canonical 交换的宿主必须拿到新键
+/// 才能继续操作（issue #19 同类）。
 pub fn session_generate_responsive(handle : Int, artboard : String) -> String {
-  sess_json(handle, fn(p) { p.generate_responsive(artboard~) })
+  sess_mut_json(handle, fn(p) { p.generate_responsive(artboard~) })
 }
 
 ///|
@@ -596,7 +635,9 @@ pub fn session_save(handle : Int) -> String {
 }
 
 ///|
-/// 用户组件：编译注册（声明为 base64 utf8 文本）。
+/// 用户组件：编译注册（声明为 base64 utf8 文本）。注册表是会话级状态，
+/// 不进 canonical mbt（与 session_library_snapshot 配对持久化）；成功
+/// 信封仍带 mbt 字段（与改文档面同形），宿主无需逐面特判（issue #19）。
 pub fn session_component_compile_b64(handle : Int, decl_b64 : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
@@ -613,7 +654,10 @@ pub fn session_component_compile_b64(handle : Int, decl_b64 : String) -> String 
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(def) => {
                   p.user_components.set(def.id, def)
-                  "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"params_count\":\{def.params.length()}}"
+                  sess_mut_ok(
+                    p,
+                    "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"params_count\":\{def.params.length()}}",
+                  )
                 }
               }
           }
@@ -647,6 +691,8 @@ pub fn session_library_snapshot(handle : Int) -> String {
 
 ///|
 /// 交互运行时命中：tap <x> <y> → 状态变更/导航（原型播放语义）。
+/// ⚡ set_text/set_state 会写穿会话文档（运行时直接持有 Project 引用），
+/// 故成功信封同样回传 canonical mbt——与 #19 同一闭环要求。
 pub fn session_tap(handle : Int, artboard : String, x : Double, y : Double) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
@@ -660,7 +706,10 @@ pub fn session_tap(handle : Int, artboard : String, x : Double, y : Double) -> S
             items.push("\"\{@core.json_escape(c.describe())}\"")
           }
           let joined = items.join(",")
-          "{\"ok\":true,\"changes\":[\{joined}],\"current\":\"\{@core.json_escape(rt.nav.current)}\"}"
+          sess_mut_ok(
+            p,
+            "{\"ok\":true,\"changes\":[\{joined}],\"current\":\"\{@core.json_escape(rt.nav.current)}\"}",
+          )
         }
       }
   }

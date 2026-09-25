@@ -233,6 +233,100 @@ test "契约：session_auto_fix 无违规 → detail 为合法空数组（issue 
 }
 
 ///|
+/// 从改文档会话面信封剥出 mbt 值（与 extract_data 同一反转义扫描）。
+fn extract_mbt(envelope : String) -> String {
+  let marker = "\"mbt\":\""
+  let i = match envelope.find(marker) {
+    Some(x) => x + marker.length()
+    None => return ""
+  }
+  let rest = envelope.substring(start=i)
+  let sb = StringBuilder()
+  let chars : Array[Char] = []
+  for c in rest.iter() {
+    chars.push(c)
+  }
+  let mut j = 0
+  while j < chars.length() {
+    let c = chars[j]
+    if c == '\\' {
+      // json_escape 的转义集：\" \\ \n \r \t——必须还原成原字符，
+      // 否则多行 mbt 会变成字面 n/r/t 而无法重开（extract_data 只处理
+      // 单行 project JSON 才可取下一字符原样）
+      if j + 1 < chars.length() {
+        let n = chars[j + 1]
+        if n == 'n' {
+          sb.write_char('\n')
+        } else if n == 'r' {
+          sb.write_char('\r')
+        } else if n == 't' {
+          sb.write_char('\t')
+        } else {
+          sb.write_char(n)
+        }
+      }
+      j = j + 2
+      continue
+    }
+    if c == '"' {
+      break
+    }
+    sb.write_char(c)
+    j = j + 1
+  }
+  sb.to_string()
+}
+
+///|
+test "契约：改文档会话面成功信封回传 canonical mbt（issue #19）" {
+  let h = session_open(SEED)
+  // constrain：issue 本体——成功后宿主必须零额外往返拿到新 canonical
+  let rc = session_constrain(h, "w", "居中")
+  assert_true(rc.contains("\"ok\":true"), msg="constrain 应成功: " + rc)
+  assert_true(rc.contains("\"mbt\":\""), msg="constrain 成功信封应回传 mbt: " + rc)
+  let h2 = session_open(extract_mbt(rc))
+  assert_true(h2 >= 0, msg="constrain 回传的 mbt 应可重开会话")
+  let q2 = session_query_nodes(h2, "w")
+  assert_true(q2.contains("btn"), msg="重开后节点应在: " + q2)
+  let _ = session_close(h2)
+  // auto_fix（fixes=0 也回 mbt——变更闭环不依赖 fixes 计数）
+  let ra = session_auto_fix(h, "w")
+  assert_true(ra.contains("\"ok\":true"), msg="auto_fix 应成功: " + ra)
+  assert_true(ra.contains("\"mbt\":\""), msg="auto_fix 成功信封应回传 mbt: " + ra)
+  assert_true(session_open(extract_mbt(ra)) >= 0, msg="auto_fix 回传的 mbt 应可重开")
+  // generate_responsive：新建画板，宿主必须拿到新键
+  let rg = session_generate_responsive(h, "w")
+  assert_true(rg.contains("\"ok\":true"), msg="responsive 应成功: " + rg)
+  assert_true(rg.contains("\"mbt\":\""), msg="responsive 成功信封应回传 mbt: " + rg)
+  let h3 = session_open(extract_mbt(rg))
+  assert_true(h3 >= 0, msg="responsive 回传的 mbt 应可重开")
+  let l3 = session_list_artboards(h3)
+  assert_true(l3.contains("w_tablet"), msg="重开后变体画板应在: " + l3)
+  let _ = session_close(h3)
+  // tap：⚡ set_text 写穿会话文档时同样闭环
+  let _ = session_apply_agent(h, "interact w btn tap set_text:btn:\"tapped\"")
+  let rt = session_tap(h, "w", 80.0, 42.0)
+  assert_true(rt.contains("\"ok\":true"), msg="tap 应成功: " + rt)
+  assert_true(rt.contains("\"mbt\":\""), msg="tap 成功信封应回传 mbt: " + rt)
+  let h4 = session_open(extract_mbt(rt))
+  assert_true(h4 >= 0, msg="tap 回传的 mbt 应可重开")
+  let q4 = session_query_nodes(h4, "w")
+  assert_true(q4.contains("tapped"), msg="重开后 tap 写入应在: " + q4)
+  let _ = session_close(h4)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：constrain 等宽 intent 负载是合法 JSON（#19 附带）" {
+  let h = session_open(SEED)
+  let r = session_constrain(h, "w", "等宽")
+  assert_true(r.contains("\"ok\":true"), msg=r)
+  assert_true(r.contains("\"applied\":"), msg=r)
+  assert_false(r.contains("nodes}"), msg="applied 后不应有裸文本: " + r)
+  let _ = session_close(h)
+}
+
+///|
 test "契约：session_history init/commit/undo/redo/checkout（issue #11）" {
   let h = session_open(SEED)
   // init

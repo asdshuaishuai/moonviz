@@ -58,6 +58,8 @@ assert.ok(html.includes('<!DOCTYPE html>') && html.includes('MV_ACT'), 'exportHt
   assert.ok(s.depth === 1, 'open 后应有 1 条历史');
   const upd = await s.apply('update t_sess welcome_title text=会话封装');
   assert.ok(upd.ok === true, 'session.apply 应成功');
+  const con = await s.constrain('t_sess', '居中');
+  assert.ok(con.ok === true, 'session.constrain 应成功: ' + JSON.stringify(con));
   const lint = await s.lint('t_sess');
   assert.ok(Array.isArray(lint) || (lint && lint.ok !== false), 'session.lint 应返回结果');
   const inter = await s.interactions('t_sess');
@@ -66,7 +68,7 @@ assert.ok(html.includes('<!DOCTYPE html>') && html.includes('MV_ACT'), 'exportHt
   assert.ok(spec.ok === true && typeof spec.spec_length === 'number', 'session.spec 应生成标注');
   const mbt2 = await s.exportMbt();
   assert.ok(mbt2.ok === true && mbt2.mbt.includes('会话封装'), 'session.exportMbt 应反映会话变更');
-  assert.ok(s.depth === 6, '历史应累积到 6 条');
+  assert.ok(s.depth === 7, '历史应累积到 7 条');
   await s.close();
 }
 

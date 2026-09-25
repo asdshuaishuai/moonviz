@@ -65,6 +65,13 @@ document.querySelector('#stage').innerHTML = engine.render(mbt).artboards[0].svg
 | `version()` | `{ ok, engine, version }` | 引擎构建信息。 |
 | `render(mbt)` | `{ ok, entry?, flows?, artboards?, error? }` | 从源码全量重建（AgentGate 级）。每个画板带 `svg` 标记与 `nodes` 索引。 |
 | `validate(mbt)` | `{ ok, entry?, revision?, blockKinds?, error? }` | 只校验不渲染。 |
+| `sessionOpen(mbt)` / `sessionClose(h)` / `sessionCount()` | 句柄 / 布尔 / 整数 | 有状态会话生命周期。 |
+| `sessionApply(h, op, gate?)` | `{ ok, mbt?, ... }` | 应用 mutating op；成功信封带 canonical `.mbt.md`，请保存供下次 `sessionOpen` 使用。 |
+| `sessionConstrain(h, ab, intent)` | `{ ok, mbt?, ...moves }` | 自然语言布局意图（居中 \| 垂直排列 \| 等宽 \| 间距 N …）；成功信封带 canonical mbt。 |
+| `sessionAutoFix(h, ab)` | `{ ok, fixes, detail, mbt? }` | 自动修复（违规严格下降才提交）；成功信封带 canonical mbt。 |
+| `sessionGenerateResponsive(h, ab)` | `{ ok, variants, mbt? }` | 生成 `_tablet`/`_desktop` 变体；成功信封带 canonical mbt（含新画板）。 |
+| `sessionTap(h, ab, x, y)` | `{ ok, changes, current, mbt? }` | 原型运行时 tap；⚡ `set_text`/`set_state` 会写穿会话文档，故信封带 canonical mbt。 |
+| `sessionSave(h)` / `sessionOpenProjectJson(j)` | `{ ok, data }` / 句柄 | 项目 JSON 快照往返（跨进程持久化）。 |
 | `raw` | wasm 导出 | 高级用法逃生门。 |
 
 两个入口都接受完整 `.mbt.md` 文档并返回解析后的对象；畸形输入返回 `{ ok: false, error }` 而不是抛异常。

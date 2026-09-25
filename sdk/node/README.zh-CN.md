@@ -85,6 +85,10 @@ const back   = await DDP.decrypt(free.bytes);        // → { mbt, mode: 'DDP2' 
 
 `template / create / duplicate / deleteArtboard / update / move / flip / reorder / copy / flow / exportHuman` —— 每个方法追加一条 CLI 命令并返回 `this`；`exportHuman()` 执行整批并返回 canonical `.mbt.md`。
 
+### `Session` —— 有状态 CLI 会话（与 wasm 会话面对齐）
+
+`open(engine, seedCommand?) / exec(cmd) / apply(op) / lint(ab) / critique(ab) / autoFix(ab) / constrain(ab, intent) / interactions(ab) / states(ab) / queryNodes(ab) / flows() / spec(ab) / protest(ab, script) / collabMerge(spec) / animationCss(id, preset) / history(...) / exportMbt() / close()` —— `constrain` 为自然语言布局意图（居中 | 垂直排列 | 等宽 | 间距 N …，与 wasm `sessionConstrain` 同语义）。
+
 ### `DDP` —— 容器编解码
 
 `encrypt(mbt, password, { codecPath?, moonvizDir? })` 与 `decrypt(bytes, password?, options?)`。DDP1 = Argon2id + XChaCha20-Poly1305；DDP2（空密码）= zstd + CRC32，不加密。

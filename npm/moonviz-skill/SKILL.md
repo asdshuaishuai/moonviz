@@ -35,6 +35,15 @@ Session-level tools (stateful, mirror the CLI session commands):
 `animation_presets` / `animation_css` (6 presets → CSS @keyframes) ·
 `protest` (assertion-based prototype test scripts).
 
+Session envelope contract (wasm `session_*`, classic + wasm-gc):
+every mutating surface (`session_apply_agent/human`, `session_constrain`,
+`session_auto_fix`, `session_generate_responsive`, `session_tap`,
+`session_component_compile_b64`, `history undo/redo/checkout`) returns the
+canonical `.mbt.md` in its success envelope as `"mbt"`. Hosts that key
+sessions by canonical text MUST persist the returned `mbt` and use it for
+the next `session_open` — otherwise the mutation is silently lost on reopen.
+Read-only surfaces keep the `{ok:true,data:...}` envelope.
+
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
 `place <ab> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]` (final-size place — gate evaluates final bbox) ·

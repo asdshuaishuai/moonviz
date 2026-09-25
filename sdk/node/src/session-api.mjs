@@ -84,6 +84,9 @@ export class Session {
   /** 自动修复。 */
   autoFix(artboard) { return this.exec(`fix ${artboard}`); }
 
+  /** 自然语言布局意图（居中 | 垂直排列 | 等宽 | 间距 N …；与 wasm sessionConstrain 同语义）。 */
+  constrain(artboard, intent) { return this.exec(`constrain ${artboard} ${intent}`); }
+
   /** 交互清单。 */
   interactions(artboard) { return this.exec(`interactions ${artboard}`); }
 
