@@ -164,7 +164,7 @@ moonviz/
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
 │   ├── component.mbt  组件系统（65 组件×115 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（52 工具 + list-ops 字典）
+│   ├── agent_api.mbt  Agent 工具 API（53 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
 │   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
 │   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）
@@ -192,7 +192,7 @@ moonviz/
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
-├── mcp/               MCP Server（stdio JSON-RPC，52 工具，工具面同 CLI）
+├── mcp/               MCP Server（stdio JSON-RPC，53 工具，工具面同 CLI）
 ├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 27 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）

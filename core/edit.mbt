@@ -288,6 +288,10 @@ pub fn Project::edit_node(
               cur = { ..cur, style: { ..cur.style, stroke_dash: ds } }
               applied.push("dash")
             }
+            "overlay" => {
+              cur = { ..cur, style: { ..cur.style, overlay: v == "true" } }
+              applied.push("overlay")
+            }
             "visible" => {
               let vis = !(v == "false" || v == "0" || v == "off" || v == "hidden")
               cur = { ..cur, style: { ..cur.style, visible: vis } }

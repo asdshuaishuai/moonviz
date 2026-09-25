@@ -9,7 +9,7 @@
 
 1.0 不是功能清单的终点，而是一条**稳定版承诺**：
 
-- `.mbt.md` 文档格式、26 条 mutating op、`session_*` 会话面、MCP 52 工具（含 inputSchema）、
+- `.mbt.md` 文档格式、26 条 mutating op、`session_*` 会话面、MCP 53 工具（含 inputSchema）、
   classic wasm ABI（72 导出/0 imports）、JSON 信封形态——**全部冻结**；
 - 冻结后只增不破：新增能力走新增 op/工具/导出，已有签名与信封字段向前兼容；
 - 下游（deepDesign Studio、第三方 wasmtime/Node 宿主）可以按 1.0 锚定构建产品，
@@ -18,6 +18,10 @@
 **达成即发布 1.0 GA**；在此之前所有版本为 0.x 预发布序列（0.2、0.3…），允许按 #7/#18
 先例做破坏性修正（但每次破坏必须走契约测试红绿评审）。
 
+> **发布策略**：1.0 处于正式开发阶段、**不发布**——`release/1.0` 是开发分支，面向用户
+> 的发布线仍在 main（0.1.x → 0.2.x 序列）。1.0 tag/GA 只在 M1–M3 全部达成且 GA 门禁
+> 走完后出现。
+
 ---
 
 ## 二、现状基线（规划起点，测量于 v0.1.6-fix）
@@ -25,7 +29,7 @@
 | 维度 | 现状 | 1.0 缺口 |
 |---|---|---|
 | 引擎内核 | 100% MoonBit，不崩谓词 5 项 + 双门禁，207→209 测试 | 门语义最后一项缺口：显式层叠（部分相交合法层叠） |
-| 工具面 | CLI 65 命令 · MCP 52 工具（inputSchema）· WASM 双产物 72/53 导出 · Node SDK | variants.mbt（变体探索）是最后一个零边界模块 |
+| 工具面 | CLI 65 命令 · MCP 53 工具（inputSchema）· WASM 双产物 72/53 导出 · Node SDK | variants.mbt（变体探索）是最后一个零边界模块 |
 | 组件与模板 | 65 组件 × 115 变体 · 14 整页模板（移动 + Web/桌面） | 模板/组件与 AgentGate 全绿已有契约锚 |
 | 会话面 | session 28 导出（含 history 撤销/时间旅行、constrain 意图、canonical mbt 回传） | constrain 只覆盖布局意图；层级诉求部分由 #15 豁免承接 |
 | 分发 | GitHub Releases 全产物 10 项 · npm 7 包托管于 GitHub（不入 npm 仓库） | 无 |
@@ -36,22 +40,18 @@
 
 ## 三、里程碑
 
-### M1 · 语义补全（能力面封顶）
+### M1 · 语义补全（能力面封顶）——✅ 已完成
 
 1.0 收口前把「半成品语义」补齐，避免冻结后带憾：
 
-- **显式层叠语义**（ROADMAP P1 已立项）：节点级 layer 声明或 reorder 感知豁免，
-  让「部分相交的合法层叠」（半透明遮罩、贴边装饰）在 AgentGate 下有正道。
-  设计约束：声明走双门、decl 往返保持、不复活视觉债遮蔽。
-- **variants.mbt 出井**：最后一个搁浅模块（fork/score/merge 变体探索）补 CLI/MCP 边界，
-  按搁浅模块出井模式交付（同源派生 + 字典同步 + 测试锚定）。
-- **智能面会话导出复核**：`infer_*`/`extract_design_system`/`generate_responsive`
-  的成功信封统一回传 canonical mbt（对齐 #19 确立的宿主持久化契约）。
+- **显式层叠语义 ✅**：`NodeStyle.overlay` 声明（`update <ab> <node> overlay=true`，双门可达）——声明节点与兄弟的重叠为有意层叠，不再记 no_sibling_overlap；decl 往返保持（canonical 条件写出 `overlay=true`，apply_decl_style 解析）；autofix 修复层同步豁免；非 overlay 对照债不被遮蔽。契约测试：压叠移动「未声明拒 → 声明后过」+ canonical 携带声明。
+- **variants.mbt 出井 ✅**：CLI 三命令（variants-fork/score/merge）+ MCP `variants` 工具（action 分发，inputSchema 见 tools/list）+ merge 信封裸箭头修为合法 JSON（#10 同类）+ 回归测试（fork 复制/评分覆盖/merge 信封/未知画板）。
+- **智能面会话导出复核 ✅**：复核结论——仅 `generate_responsive` 变更文档（新建画板），其已走 `sess_mut_json` 回传 canonical mbt（#19 修复面）；`infer_*`/`extract_design_system`/`benchmark` 为纯只读分析，无 canonical 义务。无需改码。
 
 ### M2 · 稳定化（冻结审计）
 
 - **三张冻结表**：op 表（26 条 usage/gates）、session 表（28 导出签名与信封）、
-  MCP 表（52 工具 inputSchema）——逐条评审定稿，作为 1.0 契约附件随仓库发布；
+  MCP 表（53 工具 inputSchema）——逐条评审定稿，作为 1.0 契约附件随仓库发布；
 - **契约测试全覆盖**：每个 wasm 导出 ×（合法输入 / 非法输入 / 已关句柄 / 空集合）
   四象限断言，消灭 `contains` 式弱断言（一律 JSON.parse 级校验）；
 - **性能基线进 CI**：`benchmark.mbt` 输出（节点数/深度/Fill 密度/评分）入构建流水线，

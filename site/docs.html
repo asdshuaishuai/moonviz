@@ -146,7 +146,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
 <tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
 <tr><td><code>list-ops</code></td><td>26 条 mutating op 字典（usage/分类/双门禁）</td></tr>
-<tr><td><code>help</code> / <code>list-tools</code> / <code>exit</code></td><td>帮助 / 52 工具字典 / 退出</td></tr>
+<tr><td><code>help</code> / <code>list-tools</code> / <code>exit</code></td><td>帮助 / 53 工具字典 / 退出</td></tr>
 </table>
 
 <h3>无会话命令（单发）</h3>
@@ -195,7 +195,7 @@ const back = await DDP.decrypt(free.bytes);         // → { mbt }</code></pre>
 <table>
 <tr><th>导出</th><th>说明</th></tr>
 <tr><td><code>MoonViz</code></td><td>引擎会话类：<code>run(cmds)</code> / <code>last(cmds)</code> / <code>render</code> / <code>validate</code> / <code>applyHumanOp</code> / <code>applyAgentOp</code> / <code>apply</code> / <code>create</code></td></tr>
-<tr><td>能力字典 / 清单</td><td><code>tools()</code>（52 工具含 inputSchema）/ <code>ops()</code>（26 op）/ <code>listTemplates()</code> / <code>listComponents()</code> / <code>listThemes()</code> / <code>listTokens()</code> —— 与 MCP tools/list、CLI list-tools·list-ops 同源</td></tr>
+<tr><td>能力字典 / 清单</td><td><code>tools()</code>（53 工具含 inputSchema）/ <code>ops()</code>（26 op）/ <code>listTemplates()</code> / <code>listComponents()</code> / <code>listThemes()</code> / <code>listTokens()</code> —— 与 MCP tools/list、CLI list-tools·list-ops 同源</td></tr>
 <tr><td>导出</td><td><code>exportSvg(mbt, artboard)</code> / <code>exportHtml(mbt)</code>（自包含可交互原型）</td></tr>
 <tr><td><code>Project</code></td><td>构建器：<code>template/create/duplicate/deleteArtboard/update/move/flip/reorder/copy/flow/exportHuman</code> + <code>theme/token/interact/state/setState/exportHtml</code></td></tr>
 <tr><td><code>Session</code></td><td>有状态 CLI 会话（与 wasm 会话面对齐）：<code>open/exec/apply/lint/critique/autoFix/constrain/interactions/states/queryNodes/flows/spec/protest/collabMerge/animationCss/history/exportMbt/close</code> —— <code>constrain</code> 为自然语言布局意图</td></tr>

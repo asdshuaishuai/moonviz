@@ -53,7 +53,7 @@ fn no(name : String, desc : String) -> ToolArg {
 }
 
 ///|
-/// 引擎内置工具清单：与 mcp/main.mbt execute_tool 的 46 个分支一一对应。
+/// 引擎内置工具清单：与 mcp/main.mbt execute_tool 的 47 个分支一一对应。
 pub fn list_tools() -> Array[AgentTool] {
   let tools : Array[AgentTool] = []
   let add = fn(name : String, description : String, args : Array[ToolArg]) {
@@ -81,7 +81,8 @@ pub fn list_tools() -> Array[AgentTool] {
   // ---- 节点查询 / 编辑 ----
   add("query_nodes", "Query nodes of an artboard (id/kind/component/rect/style/text).", [s("artboard", "artboard id")])
   add("place_component", "Place a component instance on an artboard at final size (w/h applied at place time, so gate surfaces evaluate the final bbox).", [s("artboard", "artboard id"), s("component_id", "component id from list_components"), s("instance_id", "unique node id for the instance"), so("variant", "variant name (or '-' for default)"), n("x", "x position"), n("y", "y position"), no("w", "final width (>0 overrides default size; omit to keep default)"), no("h", "final height (>0 overrides default size; omit to keep default)"), so("args", "space-separated k=v slots for user component params")])
-  add("update_node", "Edit node properties via space-separated k=v pairs.", [s("artboard", "artboard id"), s("node_id", "node id"), s("args", "k=v keys: w h text fill text_color stroke stroke_width radius opacity font_size weight shadow rotate blur blend line_height tracking flip text_align font_style stroke_dash visible constraint. Image src goes in text=<url>")])
+  add("variants", "Design variant exploration: fork an artboard into variants, score all artboards (richness vs debt), or merge a source variant back into a target. action: fork | score | merge.", [s("action", "fork | score | merge"), so("artboard", "fork: base artboard id"), so("names", "fork: comma-separated variant artboard names"), so("source", "merge: source artboard id"), so("target", "merge: target artboard id")])
+  add("update_node", "Edit node properties via space-separated k=v pairs.", [s("artboard", "artboard id"), s("node_id", "node id"), s("args", "k=v keys: w h text fill text_color stroke stroke_width radius opacity font_size weight shadow rotate blur blend line_height tracking flip text_align font_style stroke_dash visible overlay constraint. Image src goes in text=<url>. overlay=true declares a decorative layer (sibling overlaps become intentional layering)")])
   add("move_node", "Move a node to absolute x/y.", [s("artboard", "artboard id"), s("node_id", "node id"), n("x", "new x"), n("y", "new y")])
   add("group_nodes", "Group >=2 nodes into a frame/group.", [s("artboard", "artboard id"), s("new_id", "group id"), s("nodes", "comma-separated node ids")])
   add("ungroup_node", "Ungroup a group; children return to parent.", [s("artboard", "artboard id"), s("node_id", "group id to dissolve")])

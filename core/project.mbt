@@ -496,6 +496,7 @@ fn query_node_json(
   let out = StringBuilder::new()
   out.write_string("{\"id\":\"" + id + "\",")
   out.write_string("\"parent\":\"" + json_escape_field(parent) + "\",")
+  out.write_string("\"overlay\":" + (if n.style.overlay { "true" } else { "false" }) + ",")
   out.write_string("\"kind\":\"" + kind_of(n) + "\",")
   out.write_string("\"component\":\"" + json_escape_field(n.component) + "\",")
   out.write_string("\"name\":\"" + json_escape_field(n.name) + "\",")

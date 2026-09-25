@@ -471,3 +471,94 @@ test "place：op 面位置参数 w/h 解析（issue #18）" {
     None => assert_true(false)
   }
 }
+
+///|
+test "overlay：声明的装饰层与兄弟部分相交不再违规（1.0 M1）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=375.0, height=812.0)
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="btn", x=20.0, y=20.0)
+  // 装饰层与 btn 部分相交（130..190 × 40..60 vs 20..140 × 20..64）
+  let _ = p.place_component(
+    artboard="m",
+    component_id="rect",
+    instance_id="deco",
+    x=130.0,
+    y=40.0,
+    w=60.0,
+    h=20.0,
+  )
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let mut n = 0
+      for v in validate(ab.doc).iter() {
+        if v.predicate is NoSiblingOverlap { n = n + 1 }
+      }
+      assert_true(n > 0, msg="未声明 overlay 的部分相交必须记违规")
+    }
+    None => assert_true(false)
+  }
+  // 声明 overlay → 涉及该节点的重叠对豁免
+  match p.edit_node(artboard="m", node_id="deco", kvs=[("overlay", "true")]) {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let mut n = 0
+      for v in validate(ab.doc).iter() {
+        if v.predicate is NoSiblingOverlap { n = n + 1 }
+      }
+      assert_eq(n, 0, msg="声明 overlay 后部分相交应豁免")
+    }
+    None => assert_true(false)
+  }
+  // 非 overlay 对照：新增普通节点压 btn 仍记违规（视觉债不被遮蔽）
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="plain", x=30.0, y=30.0)
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let mut n = 0
+      for v in validate(ab.doc).iter() {
+        if v.predicate is NoSiblingOverlap { n = n + 1 }
+      }
+      assert_true(n > 0, msg="非 overlay 节点的部分相交仍须记违规")
+    }
+    None => assert_true(false)
+  }
+}
+
+///|
+test "variants：fork/score/merge 出井（1.0 M1）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="base", width=390.0, height=844.0)
+  let _ = p.place_component(artboard="base", component_id="button", instance_id="btn", x=20.0, y=20.0)
+  // fork 两个变体
+  match p.fork_variants(base="base", names=["v1", "v2"]) {
+    Ok(json) => {
+      assert_true(json.contains("\"variants\":[\"v1\",\"v2\"]"), msg=json)
+    }
+    Err(e) => assert_true(false, msg=e)
+  }
+  // 变体携带 base 内容
+  match p.artboards.get("v1") {
+    Some(ab) => assert_true(ab.doc.nodes.get("btn") is Some(_), msg="变体应复制 base 节点")
+    None => assert_true(false)
+  }
+  // score 覆盖全部画板
+  let score = p.score_variants()
+  assert_true(score.contains("\"artboard\":\"v1\"") && score.contains("\"artboard\":\"v2\""), msg=score)
+  // merge v1 → base：信封合法 JSON（修复裸箭头）且内容到达
+  match p.merge_variant(source="v1", target="base") {
+    Ok(json) => {
+      // 信封合法性（修复裸箭头后应为标准 k/v 形态，#10 红线同类）
+      assert_true(json.contains("\"merged_from\":\"v1\""), msg=json)
+      assert_true(json.contains("\"merged_to\":\"base\""), msg=json)
+      assert_true(json.contains("→") == false, msg="信封不得含裸非 JSON 字符: " + json)
+    }
+    Err(e) => assert_true(false, msg=e)
+  }
+  // 重复 merge 校验
+  match p.merge_variant(source="v1", target="nonexistent") {
+    Err(e) => assert_true(e.contains("unknown_artboard"), msg=e)
+    Ok(_) => assert_true(false)
+  }
+}

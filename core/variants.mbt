@@ -129,7 +129,9 @@ pub fn Project::merge_variant(
         }
       }
       self.revision = self.revision + 1
-      Ok("{\"ok\":true,\"merged\":\"\{source}\" → \"\{target}\"}")
+      Ok(
+        "{\"ok\":true,\"merged_from\":\"\{source}\",\"merged_to\":\"\{target}\"}",
+      )
     }
     _ => Err("unknown_artboard")
   }

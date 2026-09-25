@@ -616,6 +616,31 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           }
         }
       }
+    "variants-fork" =>
+      if parts.length() < 3 {
+        cli_err("usage: variants-fork <base> <name1> [name2 ...]")
+      } else {
+        let names : Array[String] = []
+        let mut i = 2
+        while i < parts.length() {
+          names.push(parts[i])
+          i = i + 1
+        }
+        match p.fork_variants(base=parts[1], names~) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "variants-score" => p.score_variants()
+    "variants-merge" =>
+      if parts.length() < 3 {
+        cli_err("usage: variants-merge <source> <target>")
+      } else {
+        match p.merge_variant(source=parts[1], target=parts[2]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
     "query" =>
       if parts.length() < 2 {
         cli_err("usage: query <artboard> [kind] [component]")
@@ -1233,7 +1258,7 @@ fn cli_help() -> String {
   "  update <ab> <node> k=v [k=v ...]  Edit properties; keys:\n" +
   "      w h text fill text_color stroke stroke_width radius opacity font_size\n" +
   "      weight shadow rotate blur blend line tracking constraint align italic\n" +
-  "      dash visible layout gap justify padding width_mode height_mode\n" +
+  "      dash visible overlay layout gap justify padding width_mode height_mode\n" +
   "      x_mode y_mode name\n" +
   "      (align left|center|right; dash solid|dashed|dotted; visible true|false;\n" +
   "       layout vertical|horizontal|none; width_mode/height_mode hug|fill;\n" +
@@ -1272,7 +1297,9 @@ fn cli_help() -> String {
   "  set-state <node> <state_name> [toggle]   Activate/toggle a state\n" +
   "\n" +
   "Layout reasoning:\n" +
-  "  constrain <ab> <intent_text>      布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N\n" +
+  "  constrain <ab> <intent_text>      布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N\n" +  "  variants-fork <base> <n1> [n2…]     Fork artboard variants for exploration\n" +
+  "  variants-score                       Score all artboards (richness vs debt)\n" +
+  "  variants-merge <src> <tgt>           Copy src content into tgt\n" +
   "  exit                 Exit CLI"
 }
 

@@ -79,7 +79,7 @@ An override recolors immediately, persists in the document's frontmatter
 
 Node properties (`update <ab> <node> k=v ...`):
 `w h text fill text_color stroke stroke_width radius opacity font_size weight
-shadow rotate blur blend line tracking constraint align italic dash visible
+shadow rotate blur blend line tracking constraint align italic dash visible overlay
 layout gap justify padding width_mode height_mode x_mode y_mode name`
 
 - `align` `left|center|right`; `italic true|false`; `dash solid|dashed|dotted`

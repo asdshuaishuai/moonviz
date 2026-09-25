@@ -427,3 +427,20 @@ test "契约：place 一步最终尺寸——门在最终 bbox 评估（issue #1
   assert_true(r4.contains("\"ok\":true"), msg="最终尺寸 place 应过门: " + r4)
   let _ = session_close(h)
 }
+
+///|
+test "契约：overlay 声明走双门——移动压兄弟从拒到过（1.0 M1）" {
+  let h = session_open(SEED)
+  // 装饰层落在空位
+  let r1 = session_apply_agent(h, "place w rect deco - 20 200 60 20")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  // 未声明 overlay 时移动压 btn → 拒
+  let r2 = session_apply_agent(h, "move w deco 100 30")
+  assert_true(r2.contains("mbt_gate_block"), msg="未声明 overlay 的压叠移动应拒: " + r2)
+  // 声明 overlay（走门，update 可达）后再移动 → 过；canonical 文本携带声明
+  let r3 = session_apply_agent(h, "update w deco overlay=true")
+  assert_true(r3.contains("\"ok\":true") && r3.contains("overlay=true"), msg=r3)
+  let r4 = session_apply_agent(h, "move w deco 100 30")
+  assert_true(r4.contains("\"ok\":true"), msg="声明 overlay 后压叠移动应过: " + r4)
+  let _ = session_close(h)
+}

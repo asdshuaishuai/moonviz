@@ -411,6 +411,10 @@ fn node_call(n : @core.Node) -> String {
   parts.push("font_style=\"\{decl_escape(n.style.font_style)}\"")
   parts.push("stroke_dash=\"\{decl_escape(n.style.stroke_dash)}\"")
   parts.push("visible=\{n.style.visible}")
+  // overlay 仅在声明时写出——保持既有 canonical 文本零扰动
+  if n.style.overlay {
+    parts.push("overlay=true")
+  }
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）
   if n.name != n.id {
@@ -777,6 +781,10 @@ fn apply_decl_style(
   }
   match opt_param(params, "visible") {
     Some(v) => cur = { ..cur, style: { ..cur.style, visible: str_val(v) != "false" } }
+    None => ()
+  }
+  match opt_param(params, "overlay") {
+    Some(v) => cur = { ..cur, style: { ..cur.style, overlay: str_val(v) == "true" } }
     None => ()
   }
   match num_opt(params, "radius", line) {

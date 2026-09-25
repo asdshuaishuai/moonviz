@@ -182,7 +182,7 @@ fn check_visual_frames(
                           }
                       }
                     }
-                    push_overlap_violations(out, kids, layout, cur)
+                    push_overlap_violations(out, kids, layout, cur, doc)
                   }
                   None => ()
                 }
@@ -211,7 +211,18 @@ fn push_overlap_violations(
   kids : Array[String],
   layout : SolvedLayout,
   parent_id : String,
+  doc : Document,
 ) -> Unit {
+  // overlay 声明节点（issue #17 延伸 / 1.0 M1）：显式声明的覆盖/装饰层
+  // 与任何兄弟的重叠均为有意层叠——双向豁免；非 overlay 对照旧判定，
+  // 视觉债不被遮蔽
+  fn is_overlay(id : String) -> Bool {
+    match doc.nodes.get(id) {
+      Some(n) => n.style.overlay
+      None => false
+    }
+  }
+
   for i in 0..<kids.length() {
     match layout.rects.get(kids[i]) {
       None => ()
@@ -222,7 +233,9 @@ fn push_overlap_violations(
             Some(rj) =>
               if ri.intersects(rj) &&
                 !ri.contains_rect(rj) &&
-                !rj.contains_rect(ri) {
+                !rj.contains_rect(ri) &&
+                !is_overlay(kids[i]) &&
+                !is_overlay(kids[j]) {
                 out.push({
                   predicate: NoSiblingOverlap,
                   node_id: kids[i],

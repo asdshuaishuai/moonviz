@@ -409,6 +409,44 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         Err(e) => err_json(e)
       }
     }
+    "variants" => {
+      let action = extract_arg_string(request_line, "action")
+      match action {
+        "fork" => {
+          if artboard == "" {
+            return err_json("missing artboard (base)")
+          }
+          let names_arg = extract_arg_string(request_line, "names")
+          if names_arg == "" {
+            return err_json("missing names (comma-separated)")
+          }
+          let names : Array[String] = []
+          for part_view in names_arg.split(",") {
+            let t = part_view.to_string()
+            if t != "" {
+              names.push(t)
+            }
+          }
+          match p.fork_variants(base=artboard, names~) {
+            Ok(json) => json
+            Err(e) => err_json(e)
+          }
+        }
+        "score" => p.score_variants()
+        "merge" => {
+          let source = extract_arg_string(request_line, "source")
+          let target = extract_arg_string(request_line, "target")
+          if source == "" || target == "" {
+            return err_json("missing source/target")
+          }
+          match p.merge_variant(source~, target~) {
+            Ok(json) => json
+            Err(e) => err_json(e)
+          }
+        }
+        _ => err_json("unknown_action: fork | score | merge")
+      }
+    }
     "query_nodes" => {
       if artboard == "" {
         return err_json("missing artboard")
