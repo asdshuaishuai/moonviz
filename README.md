@@ -135,6 +135,7 @@ moon test
 # A. Stateful CLI session: one command per stdin line → one JSON per stdout line
 moon run --target native cli
 template login t_login 390 844     # Create an artboard from a template
+create t_home 390 844              # Target artboard for navigation
 update t_login welcome_title text="Welcome back"
 flow t_login t_home login_btn      # Sign-in button → navigate to home
 export-mbt-human                    # HumanGate validation + returns canonical .mbt.md

@@ -1,0 +1,64 @@
+name: CI
+
+# 覆盖检查、构建、测试全流程（赛事标准第 5 条）：
+# moonc 版本门 → moon check（静态检查）→ moon test（全量测试）→
+# 示例可复现（examples/login-demo + README Quick Start）
+on:
+  push:
+    branches: [main, release/1.0]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: check + test + examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain (latest)
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+
+      - name: moonc version gate (>= 0.10.14)
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          V="$($HOME/.moon/bin/moonc -v | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+          echo "moonc $V"
+          MIN="0.10.14"
+          LOWEST="$(printf '%s\n%s\n' "$MIN" "$V" | sort -V | head -1)"
+          if [ "$LOWEST" != "$MIN" ]; then
+            echo "moonc $V < required $MIN" >&2
+            exit 1
+          fi
+
+      - name: moon check (static)
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon check --target native
+
+      - name: moon test (full suite)
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon test --target native
+
+      - name: Example repro (examples/login-demo.mbt.md)
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon build --target native cli
+          B64="$(base64 -w0 examples/login-demo.mbt.md)"
+          printf 'load-mbt-b64 %s\nlist\nexit\n' "$B64" \
+            | _build/native/debug/build/cli/cli.exe | grep -q '"t_login"'
+
+      - name: README Quick Start repro
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          printf 'template login t_login 390 844\ncreate t_home 390 844\nupdate t_login welcome_title text="Welcome back"\nflow t_login t_home login_btn\nexport-mbt-human\nexit\n' \
+            | _build/native/debug/build/cli/cli.exe | grep -q '"debt":'
+
+      - name: Dual wasm build
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon build --release --target wasm-gc wasm
+          moon build --release --target wasm wasm
+          node scripts/check-wasm-abi.mjs _build/wasm/release/build/wasm/wasm.wasm
