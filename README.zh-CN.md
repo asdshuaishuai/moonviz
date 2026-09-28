@@ -1,4 +1,15 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.6-moon 新特性
+
+- **place 一步最终尺寸** — `place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]`：
+  门在最终 bbox 上评估，消除「默认尺寸 place 被拒 → update 修正」的中间态
+  （真实 LLM run 111 次拒绝的根因）。
+- **产品内撤销/时间旅行** — wasm 面 `session_history`
+  （init/commit/log/undo/redo/checkout/diff），响应回传 canonical MBT 供宿主持久化。
+- **`unflow` op** — 单条删除交互流边，不再整板重建。
+- **constrain 错误自描述** — cannot_parse 就地返回全部可用意图词表。
+- **工具链** — moonc ≥ 0.10.14 构建；CI 覆盖检查 + 全量测试 + 示例复现，含 moonc 版本硬门。
+
 
 > 🇬🇧 English: [README.md](./README.md)
 
@@ -152,7 +163,26 @@ moon run --target native playground       # 交互式（png 命令出 PNG）
 moon run playground                       # 脚本演示
 ```
 
-## 目录导览
+## MoonBit 包（mooncakes.io）
+
+引擎同时也是 [mooncakes.io](https://mooncakes.io) 上的原生 MoonBit 包——任何 MoonBit 工程可直接内嵌：
+
+```bash
+moon add asdshuaishuai/moonviz
+```
+
+```moonbit
+// 使用 SDK 门面（sdk/）——与 CLI/MCP/WASM 同一 op 面
+let p = @sdk.new()
+let _ = @sdk.apply(p, "template login t_login 390 844")
+let _ = @sdk.apply(p, "place t_login button btn - 20 20 120 44")
+let svg = @sdk.render_svg(p, artboard="t_login")     // 引擎原始输出
+let mbt = @sdk.canonical(p)                          // canonical .mbt.md 唯一事实源
+```
+
+发布由本仓库执行：`moon login` + `moon publish`（需要 mooncakes.io 账号）。
+
+
 
 ```
 moonviz/

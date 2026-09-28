@@ -1,4 +1,18 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
+# MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
+
+## What's New in 0.1.6-moon
+
+- **One-step final-size placement** — `place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]`:
+  the gate evaluates the final bbox, eliminating the intermediate-state rejections
+  (place at default size → get blocked → update to fix) that caused 111 rejections in a real LLM run.
+- **In-product undo / time travel** — `session_history` on the wasm surface
+  (init/commit/log/undo/redo/checkout/diff), responses carry canonical MBT for host persistence.
+- **`unflow` op** — remove a single navigation edge instead of rebuilding the artboard.
+- **Self-describing `constrain` errors** — cannot_parse now returns the full intent vocabulary.
+- **Toolchain** — built with moonc ≥ 0.10.14; CI now runs check + full tests + example repro
+  with a moonc version gate.
+
 
 > 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
 
@@ -155,6 +169,25 @@ _build/native/release/build/mcp/mcp.exe   # Self-contained executable (links lib
 moon run --target native playground       # Interactive (`png` command emits a PNG)
 moon run playground                       # Scripted demo
 ```
+
+## MoonBit Package (mooncakes.io)
+
+The engine is also a native MoonBit package on [mooncakes.io](https://mooncakes.io) — embed it directly in any MoonBit project:
+
+```bash
+moon add asdshuaishuai/moonviz
+```
+
+```moonbit
+// Use the SDK facade (sdk/) — same op surface as CLI/MCP/WASM
+let p = @sdk.new()
+let _ = @sdk.apply(p, "template login t_login 390 844")
+let _ = @sdk.apply(p, "place t_login button btn - 20 20 120 44")
+let svg = @sdk.render_svg(p, artboard="t_login")     // engine raw output
+let mbt = @sdk.canonical(p)                          // canonical .mbt.md fact source
+```
+
+Publishing is done from this repo with `moon login` + `moon publish` (mooncakes.io account required).
 
 ## Repository Tour
 
