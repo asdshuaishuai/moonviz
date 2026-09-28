@@ -1,4 +1,18 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
+# MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
+
+## What's New in 0.1.6-moon
+
+- **One-step final-size placement** — `place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]`:
+  the gate evaluates the final bbox, eliminating the intermediate-state rejections
+  (place at default size → get blocked → update to fix) that caused 111 rejections in a real LLM run.
+- **In-product undo / time travel** — `session_history` on the wasm surface
+  (init/commit/log/undo/redo/checkout/diff), responses carry canonical MBT for host persistence.
+- **`unflow` op** — remove a single navigation edge instead of rebuilding the artboard.
+- **Self-describing `constrain` errors** — cannot_parse now returns the full intent vocabulary.
+- **Toolchain** — built with moonc ≥ 0.10.14; CI now runs check + full tests + example repro
+  with a moonc version gate.
+
 
 > 🇨🇳 简体中文: [README.zh-CN.md](./README.zh-CN.md)
 

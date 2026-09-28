@@ -1,4 +1,15 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.6-moon 新特性
+
+- **place 一步最终尺寸** — `place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]`：
+  门在最终 bbox 上评估，消除「默认尺寸 place 被拒 → update 修正」的中间态
+  （真实 LLM run 111 次拒绝的根因）。
+- **产品内撤销/时间旅行** — wasm 面 `session_history`
+  （init/commit/log/undo/redo/checkout/diff），响应回传 canonical MBT 供宿主持久化。
+- **`unflow` op** — 单条删除交互流边，不再整板重建。
+- **constrain 错误自描述** — cannot_parse 就地返回全部可用意图词表。
+- **工具链** — moonc ≥ 0.10.14 构建；CI 覆盖检查 + 全量测试 + 示例复现，含 moonc 版本硬门。
+
 
 > 🇬🇧 English: [README.md](./README.md)
 
