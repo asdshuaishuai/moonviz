@@ -131,6 +131,7 @@ moon test
 # A. 有状态 CLI 会话：stdin 逐行命令 → stdout 逐行 JSON
 moon run --target native cli
 template login t_login 390 844     # 从模板建画板
+create t_home 390 844              # 导航目标画板
 update t_login welcome_title text="欢迎回来"
 flow t_login t_home login_btn      # 登录按钮 → 跳转主页
 export-mbt-human                    # HumanGate 校验 + 返回 canonical .mbt.md
