@@ -170,6 +170,25 @@ moon run --target native playground       # Interactive (`png` command emits a P
 moon run playground                       # Scripted demo
 ```
 
+## MoonBit Package (mooncakes.io)
+
+The engine is also a native MoonBit package on [mooncakes.io](https://mooncakes.io) — embed it directly in any MoonBit project:
+
+```bash
+moon add asdshuaishuai/moonviz
+```
+
+```moonbit
+// Use the SDK facade (sdk/) — same op surface as CLI/MCP/WASM
+let p = @sdk.new()
+let _ = @sdk.apply(p, "template login t_login 390 844")
+let _ = @sdk.apply(p, "place t_login button btn - 20 20 120 44")
+let svg = @sdk.render_svg(p, artboard="t_login")     // engine raw output
+let mbt = @sdk.canonical(p)                          // canonical .mbt.md fact source
+```
+
+Publishing is done from this repo with `moon login` + `moon publish` (mooncakes.io account required).
+
 ## Repository Tour
 
 ```

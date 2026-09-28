@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(gh:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

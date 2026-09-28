@@ -163,7 +163,26 @@ moon run --target native playground       # 交互式（png 命令出 PNG）
 moon run playground                       # 脚本演示
 ```
 
-## 目录导览
+## MoonBit 包（mooncakes.io）
+
+引擎同时也是 [mooncakes.io](https://mooncakes.io) 上的原生 MoonBit 包——任何 MoonBit 工程可直接内嵌：
+
+```bash
+moon add asdshuaishuai/moonviz
+```
+
+```moonbit
+// 使用 SDK 门面（sdk/）——与 CLI/MCP/WASM 同一 op 面
+let p = @sdk.new()
+let _ = @sdk.apply(p, "template login t_login 390 844")
+let _ = @sdk.apply(p, "place t_login button btn - 20 20 120 44")
+let svg = @sdk.render_svg(p, artboard="t_login")     // 引擎原始输出
+let mbt = @sdk.canonical(p)                          // canonical .mbt.md 唯一事实源
+```
+
+发布由本仓库执行：`moon login` + `moon publish`（需要 mooncakes.io 账号）。
+
+
 
 ```
 moonviz/
