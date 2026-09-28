@@ -251,6 +251,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
 <section id="mcp">
 <h2>MCP Server</h2>
 <p><code>mcp/</code> 是标准 stdio JSON-RPC MCP Server，可直接接入 Claude Desktop、ZCode、Cursor 等任何 MCP 客户端。</p>
+<p>引擎同时上架 <a href="https://mooncakes.io">mooncakes.io</a>（MoonBit 官方包中心）：<code>moon add asdshuaishuai/moonviz</code> 后经 <code>sdk/</code> 门面（<code>@sdk.new/apply/validate/render_svg/canonical</code>）在 MoonBit 工程内直接内嵌引擎。</p>
 <h3>客户端配置</h3>
 <pre><code>{
   "mcpServers": {

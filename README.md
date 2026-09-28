@@ -1,6 +1,13 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.7
+
+- **Official MoonBit native package** — the engine ships on
+  [mooncakes.io](https://mooncakes.io): `moon add asdshuaishuai/moonviz`, then embed the
+  engine via the new `sdk/` facade (`@sdk.new/apply/validate/render_svg/canonical`).
+- Built with moonc ≥ 0.10.14 (version-gated in CI).
+
 ## What's New in 0.1.6-moon
 
 - **One-step final-size placement** — `place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]`:
@@ -139,7 +146,7 @@ cd ddp && cargo build --release && cd ..
 #    Produces ddp/target/release/ddp_codec (stdin JSON → stdout JSON)
 #    Override the path with MOONVIZ_DDP_HELPER; the SDK searches ddp/target/{debug,release} automatically
 
-# 4. Full test suite (207 tests)
+# 4. Full test suite (205 on the default target; 209 with --target native)
 moon test
 ```
 
@@ -233,6 +240,7 @@ moonviz/
 ├── mcp/               MCP Server (stdio JSON-RPC; 52 tools mirroring the CLI)
 ├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 27 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
+├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
 ├── sdk/wasm/          WASM SDK "moonviz-engine-wasm": in-process render/validate, zero toolchain (Node ≥22 / modern browsers)
 ├── npm/               npm distribution: moonviz-mcp (launcher) + moonviz-bin-<platform> (prebuilt platform packages)

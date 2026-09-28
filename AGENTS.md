@@ -10,6 +10,8 @@ decl/                声明式 DSL：MBT 扫描 ⇄ 场景图 ⇄ .mbt.md 双向
 wasm/                双 wasm 产物：wasm-gc（JS 宿主）+ classic 标准 MVP（wasmtime 等任意运行时）
 cli/ mcp/            行协议 CLI + MCP Server（stdio，含 protest proto DSL）
 site/                官网 + 文档 + playground（GitHub Pages 部署）
+sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
+                     → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）
 npm/                 npm 全家族（mcp / skill / engine-sdk / engine-wasm / moonviz-bin-*）
 .github/workflows/   binaries.yml（全产物构建 + Release 归档）· pages.yml（官网部署）
 docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
@@ -57,6 +59,14 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 - 工具字典单一事实源在 `core/agent_api.mbt`（`list_tools_json()` / `list_ops_json()`），
   产物 `moonviz-tools.json` / `moonviz-ops.json` 由 CI 从 CLI 生成，改工具描述只改一处。
 - `moon test` 全量绿是提交前提；组件目录扩充必须带"全变体放置 + 渲染"冒烟测试。
+
+## MoonBit 原生包（mooncakes.io）
+
+模块名固定为 `asdshuaishuai/moonviz`——**新建 moon 包时 import 必须用此前缀**
+（`"asdshuaishuai/moonviz/core"` 等），改名需全仓同步并跑三目标验证。
+发布：`moon login`（mooncakes.io 账号）→ `moon publish`，由仓库所有者执行；
+版本取自 moon.mod.json，须与 `ENGINE_VERSION` 基线协调。工具链底线
+moonc ≥ 0.10.14，ci.yml 有版本硬门。
 
 ## 构建与测试
 

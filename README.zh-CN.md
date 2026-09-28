@@ -1,4 +1,11 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.7 新特性
+
+- **正式 MoonBit 原生包**——引擎上架 [mooncakes.io](https://mooncakes.io)：
+  `moon add asdshuaishuai/moonviz`，经新增的 `sdk/` 门面内嵌
+  （`@sdk.new/apply/validate/render_svg/canonical`）。
+- 构建工具链 moonc ≥ 0.10.14（CI 版本硬门）。
+
 ## 0.1.6-moon 新特性
 
 - **place 一步最终尺寸** — `place <ab> <comp> <id> [variant|-] [x] [y] [w] [h]`：
@@ -132,7 +139,7 @@ cd ddp && cargo build --release && cd ..
 #    产物 ddp/target/release/ddp_codec（stdin JSON → stdout JSON）
 #    可用 MOONVIZ_DDP_HELPER 指定路径；SDK 会自动在 ddp/target/{debug,release} 下查找
 
-# 4. 全量测试（207 项）
+# 4. 全量测试（默认目标 205 项；--target native 全量 209 项）
 moon test
 ```
 
@@ -226,6 +233,7 @@ moonviz/
 ├── mcp/               MCP Server（stdio JSON-RPC，53 工具，工具面同 CLI）
 ├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 27 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
+├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
 ├── sdk/wasm/          WASM SDK「moonviz-engine-wasm」：进程内渲染/校验，零工具链（Node ≥22 / 现代浏览器）
 ├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-bin-<platform>（预编译平台包）
@@ -658,7 +666,7 @@ MCP 客户端配置（npx 预编译路线）：
 MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分四层：
 
 1. **产物冻结**（根本手段）：预编译二进制与 WASM 一经发布即快照——工具链后续破坏性变更不影响任何已分发产物，语言不确定性被隔离在构建时。
-2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 207 项测试 + CLI/MCP 冒烟挡板验证。
+2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 209 项测试（`--target native` 全量）+ CLI/MCP 冒烟挡板验证。
 3. **协议稳定**：`SolvedLayout` / `GateDecision` / `RenderPlan` 等对外协议刻意稳定（求解器预留 Cassowary 替换接口），不随语言版本漂移。
 4. **组件隔离兜底**：DDP 已示范非 MoonBit 组件独立进程化路线，极端情况下任何组件可按此模式替换而不动 `.mbt.md` 事实源格式。
 
