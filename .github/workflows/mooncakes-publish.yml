@@ -1,0 +1,33 @@
+name: Publish to mooncakes.io
+
+# 手动触发：从 GitHub Actions 环境执行 moon publish
+# 绕过本地网络的 HTTP/2 协议不兼容问题
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+
+      - name: Restore mooncakes credentials
+        env:
+          MOONCAKES_CREDENTIALS: ${{ secrets.MOONCAKES_CREDENTIALS }}
+        run: |
+          mkdir -p ~/.moon
+          echo "$MOONCAKES_CREDENTIALS" > ~/.moon/credentials.json
+
+      - name: moon publish
+        env:
+          PATH_OVERRIDE: $HOME/.moon/bin
+        run: |
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon publish
+
+      - name: Report result
+        if: always()
+        run: echo "Publish exit code $?"
