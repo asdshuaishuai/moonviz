@@ -112,7 +112,7 @@ pub fn list_tools() -> Array[AgentTool] {
   add("export_html", "Export the whole project as a self-contained interactive HTML prototype (node-level flows, state CSS, nav stack, toast).", [])
   add("export_svg", "Export one artboard as SVG (themed surface/outline).", [s("artboard", "artboard id")])
   add("ddp_view", "Report DDP codec status (read-only view).", [])
-  add("list_ops", "Machine-readable CLI op surface: all 25 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).", [])
+  add("list_ops", "Machine-readable CLI op surface: all 26 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).", [])
   add("history", "Design version control on the current artboard: time-travel, branch-less commit log, semantic diff. command: init|commit|log|undo|redo|checkout|diff; args: artboard, message, rev, from, to", [arg("command", "string", "init|commit|log|undo|redo|checkout|diff", required=true), arg("artboard", "string", "artboard id (init/commit)", required=false), arg("message", "string", "commit message", required=false), arg("rev", "string", "target revision (checkout)", required=false), arg("from", "string", "diff from revision", required=false), arg("to", "string", "diff to revision", required=false)])
   add("protest", "Run a prototype test script against an artboard (assertion-based: navigation/inputs/render/violations). script: tap:x:y>board; back>board; swipe:left>board; set:node:value; noviol; render", [arg("artboard", "string", "artboard id", required=true), arg("script", "string", "semicolon-separated assertions", required=true)])
   add("animation_presets", "List the 6 builtin animation presets (press/fade_in/slide_in_right/modal_present/shake/pop).", [])

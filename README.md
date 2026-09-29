@@ -1,5 +1,4 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
-# MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
 ## What's New in 0.1.7
 
@@ -36,8 +35,8 @@
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
-│  │ 16 colors/  │ │ 8 comps ×  │ │ multi-    │ │ lint/diff │ │
-│  │ 7 spacing/  │ │ 22 variants│ │ boards/   │ │ /suggest  │ │
+│  │ 17 colors/  │ │ 65 comps × │ │ multi-    │ │ lint/diff │ │
+│  │ 7 spacing/  │ │115 variants│ │ boards/   │ │ /suggest  │ │
 │  │ 6 radii/    │ │            │ │ flows/    │ │           │ │
 │  │ 8 font sizes│ │            │ │ tokens    │ │           │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
@@ -243,11 +242,12 @@ moonviz/
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
 ├── sdk/wasm/          WASM SDK "moonviz-engine-wasm": in-process render/validate, zero toolchain (Node ≥22 / modern browsers)
-├── npm/               npm distribution: moonviz-mcp (launcher) + moonviz-bin-<platform> (prebuilt platform packages)
+├── npm/               npm distribution: moonviz-mcp (launcher) + moonviz-skill + moonviz-bin-<platform> (prebuilt platform packages)
 ├── playground/        Terminal canvas + PNG rendering + REPL
 ├── site/              Website (GitHub Pages: asdshuaishuai.github.io/moonviz/)
 ├── scripts/           publish-npm.sh and other release scripts
-└── docs/              Design documents 01–10
+├── examples/          DDP2 parse/render replica samples (CI example repro)
+└── docs/              Design documents 01–11 + wasm-abi.md
 ```
 
 ## Interactive Prototype System
@@ -339,7 +339,7 @@ p.apply_constraint("scale 1.5x", artboard="login")     // → all sizes × 1.5
 p.apply_constraint("grid 8", artboard="login")         // → snap_to_grid(8)
 ```
 
-12 layout intents in Chinese and English; numbers auto-extracted ("间距 16px" → gap=16.0).
+14 layout intents in Chinese and English; numbers auto-extracted ("间距 16px" → gap=16.0).
 
 ## Responsive Breakpoints
 
@@ -609,7 +609,7 @@ The two editing routes apply different merge thresholds to the same set of non-c
 
 ## Integration Overview
 
-Six integration routes, the same `.mbt.md` fact source, the same dual gates:
+Seven integration routes, the same `.mbt.md` fact source, the same dual gates:
 
 | Route | Shape | Fits |
 |---|---|---|
@@ -696,3 +696,4 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
 8. [08-roadmap-risks.md](docs/08-roadmap-risks.md) — Implementation path and risks
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit rendering ecosystem survey
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **Complete technical notes on the rendering scheme and pipeline** (declaration parsing → layout → predicates → SVG/PNG/terminal backends + tech stack + binary distribution and toolchain risk)
+11. [11-user-components.md](docs/11-user-components.md) — User components (component_compile / component_import / component_export)

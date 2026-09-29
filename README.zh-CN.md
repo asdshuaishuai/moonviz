@@ -27,12 +27,12 @@
 │  Agent (任意 LLM)                                            │
 │  发现组件 → 创建画板 → 放置元素 → lint → 修复 → 导出         │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (11 tools, JSON in/out)
+               │ Agent Tools API (52 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
-│  │ 16色/7距/  │ │ 8组件×22   │ │ 多画板/流  │ │ lint/diff │ │
+│  │ 17色/7距/  │ │ 65组件×115 │ │ 多画板/流  │ │ lint/diff │ │
 │  │ 6角/8字号  │ │ 变体       │ │ /令牌/组件 │ │ /suggest  │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -189,7 +189,7 @@ let mbt = @sdk.canonical(p)                          // canonical .mbt.md 唯一
 
 发布由本仓库执行：`moon login` + `moon publish`（需要 mooncakes.io 账号）。
 
-
+## 仓库导览
 
 ```
 moonviz/
@@ -236,11 +236,12 @@ moonviz/
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
 ├── sdk/wasm/          WASM SDK「moonviz-engine-wasm」：进程内渲染/校验，零工具链（Node ≥22 / 现代浏览器）
-├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-bin-<platform>（预编译平台包）
+├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-skill + moonviz-bin-<platform>（预编译平台包）
 ├── playground/        终端画布 + PNG 渲染 + REPL
 ├── site/              官网（GitHub Pages：asdshuaishuai.github.io/moonviz/）
 ├── scripts/           publish-npm.sh 等发布脚本
-└── docs/              设计文档 01–09
+├── examples/          DDP2 解析/渲染复刻样例（CI 示例复现）
+└── docs/              设计文档 01–11
 ```
 
 ## 交互原型系统
@@ -333,7 +334,7 @@ p.apply_constraint("放大 1.5", artboard="login")      // → 全部尺寸 × 1
 p.apply_constraint("网格 8", artboard="login")        // → snap_to_grid(8)
 ```
 
-支持中英文共 12 种布局意图，数字自动提取（"间距 16px" → gap=16.0）。
+支持中英文共 14 种布局意图，数字自动提取（"间距 16px" → gap=16.0）。
 
 ## 响应式断点
 
@@ -603,7 +604,7 @@ p.suggest_optimizations(artboard="dashboard")
 
 ## 集成方式总览
 
-六条集成路线，同一份 `.mbt.md` 事实源，同一套双 Gate：
+七条集成路线，同一份 `.mbt.md` 事实源，同一套双 Gate：
 
 | 路线 | 形态 | 适用 |
 |---|---|---|
@@ -690,3 +691,4 @@ MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分
 8. [08-roadmap-risks.md](docs/08-roadmap-risks.md) — 实现路径与风险
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit 绘制引擎生态调研
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **绘制方案与渲染管线完整技术说明**（声明解析 → 布局 → 谓词 → SVG/PNG/终端三后端 + 技术栈 + 二进制分发与工具链风险）
+11. [11-user-components.md](docs/11-user-components.md) — 用户组件（component_compile / component_import / component_export）

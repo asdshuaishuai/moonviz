@@ -12,8 +12,8 @@ cli/ mcp/            行协议 CLI + MCP Server（stdio，含 protest proto DSL�
 site/                官网 + 文档 + playground（GitHub Pages 部署）
 sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
                      → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）
-npm/                 npm 全家族（mcp / skill / engine-sdk / engine-wasm / moonviz-bin-*）
-.github/workflows/   binaries.yml（全产物构建 + Release 归档）· pages.yml（官网部署）
+npm/                 npm 分发（mcp / skill / moonviz-bin-*）；engine-sdk / engine-wasm 包源在 sdk/{node,wasm}
+.github/workflows/   ci.yml（moonc 硬门 + native 全量测试 + 示例复现）· binaries.yml（全产物构建 + Release 归档）· pages.yml（官网部署）
 docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ```
 
@@ -34,7 +34,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ### 同步产物时的检查单（每项都过，缺一项即未完成）
 
 1. **计数类**：组件/变体/工具/测试数改动时，同步清扫 `README.md`、`README.zh-CN.md`、
-   `site/docs.html`(`52×93` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
+   `site/docs.html`(`52 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
    以及测试断言（如 `core/agent_test.mbt` 的 catalog 数量测试）。
 2. **playground**：`COMP_ZH` / `COMP_ICON` 随组件目录补全（JS 语法自校验：两表 key 数
    必须与 `builtin_components()` 一致）；界面方法表与 wasm 导出面对齐。
