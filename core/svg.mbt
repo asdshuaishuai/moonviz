@@ -165,7 +165,7 @@ fn render_node(
                   _ => (r.x + r.width / 2.0, " middle")
                 }
                 sb.write_string(
-                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",
+                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{font_weight_value(n.style.font_weight)}\"",
                 )
                 if n.style.font_style == "italic" {
                   sb.write_string(" font-style=\"italic\"")
@@ -187,10 +187,33 @@ fn render_node(
 
 ///|
 /// 文本节点：支持 \n 多行、自定义行高、字距
+///|
+/// 字重名 → 数值（SVG font-weight 用数值才能拿到真实字重渲染；
+/// "normal"/数字串原样透传）。1.0 R1：字重真实映射。
+fn font_weight_value(w : String) -> String {
+  match w {
+    "light" => "300"
+    "normal" | "regular" => "400"
+    "medium" => "500"
+    "semibold" => "600"
+    "bold" => "700"
+    "black" => "900"
+    _ => w
+  }
+}
+
+///|
 fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
   let lines = split_lines(n.text)
   let lh = n.style.font_size * n.style.line_height
-  let first_baseline = r.y + n.style.font_size * 1.0
+  // 单行文本在高于字号的矩形内垂直居中（按钮/输入框标签的标准形态，
+  // 修 login-demo「按钮文字贴顶」证据）；多行保持顶部排版流
+  let single_line = lines.length() == 1
+  let first_baseline = if single_line && r.height >= n.style.font_size * 1.4 {
+    r.y + (r.height + n.style.font_size * 0.72) / 2.0
+  } else {
+    r.y + n.style.font_size * 1.0
+  }
   // 水平对齐：left（默认，x 起点）/ center / right（x 终点 + text-anchor）
   let (tx, anchor) = match n.style.text_align {
     "center" => (r.x + r.width / 2.0, " text-anchor=\"middle\"")
@@ -198,7 +221,7 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
     _ => (r.x, "")
   }
   sb.write_string(
-    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
+    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{font_weight_value(n.style.font_weight)}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
   )
   if anchor != "" {
     sb.write_string(anchor)

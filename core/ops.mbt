@@ -238,6 +238,50 @@ pub fn apply_operation(
           Err(error) => Err(error)
         }
       }
+    "adaptive" =>
+      if parts.length() < 4 {
+        Err(
+          "mbt_operation_usage:" +
+          "adaptive <artboard> <node> <preset> [width-fill | anchor:rb | anchor:lt | keep]",
+        )
+      } else {
+        match project.artboards.get(parts[1]) {
+          None => Err("unknown_artboard: \{parts[1]}")
+          Some(ab) =>
+            match ab.doc.nodes.get(parts[2]) {
+              None => Err("unknown_node: \{parts[2]}")
+              Some(_) => {
+                let preset = parts[3]
+                match preset {
+                  "width-fill" => {
+                    let _ = ab.doc.update_node(parts[2], fn(x) {
+                      { ..x, width: Fill }
+                    })
+                    project.revision = project.revision + 1
+                    Ok(())
+                  }
+                  "anchor:rb" | "anchor:lt" => {
+                    let c = preset.substring(start=7, end=preset.length())
+                    let _ = ab.doc.update_node(parts[2], fn(x) {
+                      { ..x, constraint: c }
+                    })
+                    project.revision = project.revision + 1
+                    Ok(())
+                  }
+                  "keep" => {
+                    // keep：清除自适应语义（约束回左上锚定，尺寸保持现状）
+                    let _ = ab.doc.update_node(parts[2], fn(x) {
+                      { ..x, constraint: "lt" }
+                    })
+                    project.revision = project.revision + 1
+                    Ok(())
+                  }
+                  _ => Err("unknown_preset: \{preset}（width-fill | anchor:rb | anchor:lt | keep）")
+                }
+              }
+            }
+        }
+      }
     "reorder" =>
       if parts.length() < 4 {
         Err("mbt_operation_usage:reorder <artboard> <node> front|back|up|down")

@@ -1,6 +1,16 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## 1.0 Development (release/1.0 branch — not released yet)
+
+- **Component self-adaptation** — `place` without w/h applies per-component adaptive
+  presets (buttons/text/inputs = width-fill, fab = anchor bottom-right); explicit w/h always wins.
+  `adaptive <ab> <node> <preset>` op for explicit control.
+- **Overlay declaration** — `update <ab> <node> overlay=true`: declared decorative layers
+  no longer trip the sibling-overlap gate.
+- **Elevation ladder e0–e5** — incl. brand-tinted shadows (`shadow="e4"`).
+- **variants exploration ops** — `variants-fork / variants-score / variants-merge` (CLI).
+
 ## What's New in 0.1.7
 
 - **Official MoonBit native package** — the engine ships on

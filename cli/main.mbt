@@ -632,6 +632,11 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "variants-score" => p.score_variants()
+    "adaptive" =>
+      match @core.apply_operation(p, line) {
+        Ok(_) => "{\"ok\":true,\"op\":\"adaptive\"}"
+        Err(e) => cli_err(e)
+      }
     "variants-merge" =>
       if parts.length() < 3 {
         cli_err("usage: variants-merge <source> <target>")

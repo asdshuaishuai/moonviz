@@ -1,4 +1,14 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 1.0 开发中（release/1.0 分支——不发布）
+
+- **组件自适应** — `place` 不带 w/h 时按组件自适应预设落位
+  （按钮/输入框/正文 = 宽度跟随，fab = 锚定右下）；显式 w/h 永远优先。
+  `adaptive <画板> <节点> <预设>` op 显式控制。
+- **overlay 层叠声明** — `update <ab> <node> overlay=true`：声明的装饰层
+  不再触发兄弟重叠门禁。
+- **elevation 阶梯 e0–e5** — 含品牌色调阴影（`shadow="e4"`）。
+- **variants 探索 op** — `variants-fork / variants-score / variants-merge`（CLI）。
+
 ## 0.1.7 新特性
 
 - **正式 MoonBit 原生包**——引擎上架 [mooncakes.io](https://mooncakes.io)：

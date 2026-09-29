@@ -9,6 +9,8 @@ core/                引擎内核（组件目录、ops、令牌、谓词、门�
 decl/                声明式 DSL：MBT 扫描 ⇄ 场景图 ⇄ .mbt.md 双向往返
 wasm/                双 wasm 产物：wasm-gc（JS 宿主）+ classic 标准 MVP（wasmtime 等任意运行时）
 cli/ mcp/            行协议 CLI + MCP Server（stdio，含 protest proto DSL）
+core/adaptive.mbt    组件自适应预设注册表（单一事实源）：button 等内容组件=width-fill、
+                     fab=anchor:rb；place 无 w/h 时按预设自适应，显式 w/h 优先
 site/                官网 + 文档 + playground（GitHub Pages 部署）
 sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
                      → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）
@@ -59,6 +61,13 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 - 工具字典单一事实源在 `core/agent_api.mbt`（`list_tools_json()` / `list_ops_json()`），
   产物 `moonviz-tools.json` / `moonviz-ops.json` 由 CI 从 CLI 生成，改工具描述只改一处。
 - `moon test` 全量绿是提交前提；组件目录扩充必须带"全变体放置 + 渲染"冒烟测试。
+
+## 分支策略
+
+- `main` = 发布线（0.x 序列，Release 资产从 main tag 构建）
+- `release/1.0` = 1.0 开发分支（**不发布**）：M1 语义补全 ✅、M1.5 渲染精致化 +
+  组件自适应（规划见 RENDER-1.0.md）、M2 稳定化进行中
+- 能力改动在两个分支都成立时才双写；分支特有能力的文档随分支走
 
 ## MoonBit 原生包（mooncakes.io）
 
