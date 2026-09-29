@@ -9,7 +9,7 @@
 
 1.0 不是功能清单的终点，而是一条**稳定版承诺**：
 
-- `.mbt.md` 文档格式、26 条 mutating op、`session_*` 会话面、MCP 53 工具（含 inputSchema）、
+- `.mbt.md` 文档格式、27 条 mutating op、`session_*` 会话面、MCP 53 工具（含 inputSchema）、
   classic wasm ABI（72 导出/0 imports）、JSON 信封形态——**全部冻结**；
 - 冻结后只增不破：新增能力走新增 op/工具/导出，已有签名与信封字段向前兼容；
 - 下游（deepDesign Studio、第三方 wasmtime/Node 宿主）可以按 1.0 锚定构建产品，
@@ -71,7 +71,7 @@ login-demo 重渲达宣传图水准、PaintSpec/图标/状态进 tools 与 ops �
 
 ### M2 · 稳定化（冻结审计）
 
-- **三张冻结表**：op 表（26 条 usage/gates）、session 表（28 导出签名与信封）、
+- **三张冻结表**：op 表（27 条 usage/gates）、session 表（28 导出签名与信封）、
   MCP 表（53 工具 inputSchema）——逐条评审定稿，作为 1.0 契约附件随仓库发布；
 - **契约测试全覆盖**：每个 wasm 导出 ×（合法输入 / 非法输入 / 已关句柄 / 空集合）
   四象限断言，消灭 `contains` 式弱断言（一律 JSON.parse 级校验）；

@@ -416,7 +416,7 @@ fn node_call(n : @core.Node) -> String {
     parts.push("overlay=true")
   }
   if n.style.icon != "" {
-    parts.push("icon=\{n.style.icon}")
+    parts.push("icon=\"\{decl_escape(n.style.icon)}\"")
   }
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）

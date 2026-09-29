@@ -10,7 +10,7 @@
 /// ```
 ///
 /// 设计约束：门面只做转发与组装，不改写引擎语义——所有变更仍走
-/// `apply`（26 条 mutating op，HumanGate/AgentGate 语义由调用方选路），
+/// `apply`（27 条 mutating op，HumanGate/AgentGate 语义由调用方选路），
 /// 与 CLI/MCP/WASM 三面同源。
 
 ///|
@@ -20,7 +20,7 @@ pub fn new() -> @core.Project {
 }
 
 ///|
-/// 应用一条 mutating op（与 CLI/MCP/WASM 四面同源分发，26 条）。
+/// 应用一条 mutating op（与 CLI/MCP/WASM 四面同源分发，27 条）。
 /// 典型：`create` / `template` / `place` / `update` / `flow` / `unflow` /
 /// `reorder` / `theme` / `token` / `fix`。
 pub fn apply(

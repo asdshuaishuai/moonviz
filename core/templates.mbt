@@ -202,6 +202,7 @@ pub fn Project::apply_template(
       // 收编保证树结构与查询面正确；过门由几何修正+谓词豁免共同承担
       // （契约测试「14 模板 × AgentGate 零违规」锚定）。
       self.normalize_nesting(ab)
+      self.polish_visual(ab)
       Ok(ab)
     }
   }
@@ -831,6 +832,63 @@ fn jstr9(parts : Array[String]) -> String {
     sb.write_string(parts[i])
   }
   sb.to_string()
+}
+
+///|
+/// 模板视觉精修（1.0 M1.5）：统一注入阴影/对比度/字重——让所有模板
+/// 直接出图即可用作产品宣传素材，不再依赖调用方二次美化。
+/// 规则按节点角色（组件类型 + 命名前缀）分类，不逐节点硬编码。
+fn Project::polish_visual(self : Project, ab_id : String) -> Unit {
+  let ab = match self.artboards.get(ab_id) {
+    Some(a) => a
+    None => return
+  }
+  for id in ab.doc.nodes.keys() {
+    if id == "root" { continue }
+    match ab.doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        let c = n.component
+        let prefix = if id.length() >= 4 { id.substring(start=0, end=4) } else { "" }
+        // 按钮：e1 阴影 + 加粗
+        if c == "button" {
+          let _ = ab.doc.update_node(id, fn(x) {
+            { ..x, style: { ..x.style, shadow: "e1", font_weight: "bold" } }
+          })
+        }
+        // 卡片：e2 阴影 + 细描边
+        if c == "card" {
+          let _ = ab.doc.update_node(id, fn(x) {
+            { ..x, style: { ..x.style, shadow: "e2", stroke: "#E8ECF4", stroke_width: 0.8 } }
+          })
+        }
+        // 输入框：细描边 + placeholder 色由模板 text 控制
+        if c == "text_input" {
+          let _ = ab.doc.update_node(id, fn(x) {
+            { ..x, style: { ..x.style, stroke: "#D4DAE4", stroke_width: 1.0 } }
+          })
+        }
+        // 标题字重
+        if c == "heading" {
+          let _ = ab.doc.update_node(id, fn(x) {
+            { ..x, style: { ..x.style, font_weight: "600" } }
+          })
+        }
+        // 图片：e1 阴影
+        if c == "image" {
+          let _ = ab.doc.update_node(id, fn(x) {
+            { ..x, style: { ..x.style, shadow: "e1" } }
+          })
+        }
+        // 弱化文本对比度提升：#9098A1 → #5A6270（4.5:1 达标）
+        if n.style.text_color == "#9098A1" || n.style.text_color == "#9AA1AB" {
+          let _ = ab.doc.update_node(id, fn(x) {
+            { ..x, style: { ..x.style, text_color: "#5A6270" } }
+          })
+        }
+      }
+    }
+  }
 }
 
 ///|

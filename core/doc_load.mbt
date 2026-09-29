@@ -114,6 +114,7 @@ fn parse_node_obj(
   let mut stroke_dash = "solid"
   let mut line_height = 1.5
   let mut tracking = 0.0
+  let mut stroke_width = 1.0
   let mut constraint = "lt"
   let mut flip = "none"
   let kids : Array[Node] = []
@@ -206,6 +207,7 @@ fn parse_node_obj(
         icon = sp.icon
         visible = sp.visible
         overlay = sp.overlay
+        stroke_width = sp.stroke_width
         pos = send
       } else {
         return ParseFail("style_not_object")
@@ -241,6 +243,7 @@ fn parse_node_obj(
         "blur" => blur = num_or_obj.num
         "line_height" => line_height = num_or_obj.num
         "tracking" => tracking = num_or_obj.num
+        "stroke_width" => stroke_width = num_or_obj.num
         "text_color" => text_color = num_or_obj.str
         "width" => width = num_or_obj.spec
         "height" => height = num_or_obj.spec
@@ -289,6 +292,7 @@ fn parse_node_obj(
       blend,
       line_height,
       tracking,
+      stroke_width,
       flip,
       text_align,
       font_style,
@@ -587,6 +591,7 @@ struct StyleParse {
   blend : String
   line_height : Double
   tracking : Double
+  stroke_width : Double
   flip : String
   text_align : String
   font_style : String
@@ -615,6 +620,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
   let mut text_align_s = "left"
   let mut font_style_s = "normal"
   let mut stroke_dash_s = "solid"
+  let mut stroke_width_s = 1.0
   let mut visible_b = true
   let mut overlay_b = false
   let mut icon_s = ""
@@ -680,6 +686,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
         "blur" => blur = num
         "line_height" => line_height = num
         "tracking" => tracking = num
+        "stroke_width" => stroke_width_s = num
         _ => ()
       }
       pos = end
@@ -703,6 +710,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
     blend,
     line_height,
     tracking,
+    stroke_width: stroke_width_s,
     flip: flip_s,
     text_align: text_align_s,
     font_style: font_style_s,
