@@ -48,6 +48,24 @@
 - **variants.mbt 出井 ✅**：CLI 三命令（variants-fork/score/merge）+ MCP `variants` 工具（action 分发，inputSchema 见 tools/list）+ merge 信封裸箭头修为合法 JSON（#10 同类）+ 回归测试（fork 复制/评分覆盖/merge 信封/未知画板）。
 - **智能面会话导出复核 ✅**：复核结论——仅 `generate_responsive` 变更文档（新建画板），其已走 `sess_mut_json` 回传 canonical mbt（#19 修复面）；`infer_*`/`extract_design_system`/`benchmark` 为纯只读分析，无 canonical 义务。无需改码。
 
+### M1.5 · 渲染精致化（→ 精致 UI 引擎转向）——规划见 `RENDER-1.0.md`
+
+评测结论：渲染基座（渐变/多行文本/图片裁剪/阴影/主题）已具备，粗糙在**消费层精度
+与体系**——组件无图标/无状态形态/无 elevation、按钮文字不居中、无字体系统、
+无装饰层。专项分四阶段：
+
+- **R1 绘画基座**：PaintSpec（solid/linear/radial/image，兼容纯色串）、字体族 token
+  + 字重映射、文本自动居中、ShadowSpec 多层/elevation token、per-side 边框；
+- **R2 视觉资产**：内置 mono 图标库（~120 枚）、object-fit、噪点/光斑/mesh 装饰层、
+  玻璃拟态近似；
+- **R3 组件精致化审计**：65 组件逐个过堂（对比度 ≥4.5:1、内边距节奏、图标位）、
+  状态变体入目录（hover/pressed/disabled，115 → ~250+）、精致度基准页；
+- **R4 主题 × 回归**：6 主题 × 65 组件快照 golden + diff 进 CI、login-demo
+  before/after 重渲。
+
+专项验收（并入 GA 门禁）：基准页 before/after 随 1.0 发布、快照基线进 CI、
+login-demo 重渲达宣传图水准、PaintSpec/图标/状态进 tools 与 ops 字典。
+
 ### M2 · 稳定化（冻结审计）
 
 - **三张冻结表**：op 表（26 条 usage/gates）、session 表（28 导出签名与信封）、
@@ -80,6 +98,7 @@
 - [ ] 官网参数级 API 参考 + 示例库上线
 - [ ] deepDesign 真实 LLM run 指标达标并出具消费侧验收
 - [ ] `moon test` 全量绿、双 wasm 构建 + ABI 断言绿、GitHub Release 10 资产齐全
+- [ ] 渲染精致化 M1.5（RENDER-1.0.md）四阶段交付 + 基准页 before/after 达标
 
 ---
 
