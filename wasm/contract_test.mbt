@@ -444,3 +444,17 @@ test "契约：overlay 声明走双门——移动压兄弟从拒到过（1.0 M1
   assert_true(r4.contains("\"ok\":true"), msg="声明 overlay 后压叠移动应过: " + r4)
   let _ = session_close(h)
 }
+
+///|
+test "契约：icon 字段进 canonical 文本（1.0 R2 图标系统往返）" {
+  let h = session_open(SEED)
+  let _ = session_apply_agent(h, "update w btn icon=mail")
+  let r = session_save(h)
+  assert_true(r.contains("\"ok\":true"), msg=r)
+  // save 快照为转义 JSON：style 字段形态为 "icon":"mail"
+  assert_true(r.contains("icon") && r.contains("mail"), msg="save 快照应携带 icon=mail")
+  // 重新解析后仍保留（往返）
+  let mbt_json = session_apply_human(h, "update w btn icon=mail")
+  assert_true(mbt_json.contains("\"ok\":true"), msg=mbt_json)
+  let _ = session_close(h)
+}

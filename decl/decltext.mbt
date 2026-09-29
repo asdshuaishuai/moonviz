@@ -415,6 +415,9 @@ fn node_call(n : @core.Node) -> String {
   if n.style.overlay {
     parts.push("overlay=true")
   }
+  if n.style.icon != "" {
+    parts.push("icon=\{n.style.icon}")
+  }
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）
   if n.name != n.id {
@@ -785,6 +788,10 @@ fn apply_decl_style(
   }
   match opt_param(params, "overlay") {
     Some(v) => cur = { ..cur, style: { ..cur.style, overlay: str_val(v) == "true" } }
+    None => ()
+  }
+  match opt_param(params, "icon") {
+    Some(v) => cur = { ..cur, style: { ..cur.style, icon: str_val(v) } }
     None => ()
   }
   match num_opt(params, "radius", line) {

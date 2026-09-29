@@ -106,6 +106,12 @@ fn parse_node_obj(
   let mut rotate = 0.0
   let mut blur = 0.0
   let mut blend = "normal"
+  let mut visible = true
+  let mut overlay = false
+  let mut icon = ""
+  let mut text_align = "left"
+  let mut font_style = "normal"
+  let mut stroke_dash = "solid"
   let mut line_height = 1.5
   let mut tracking = 0.0
   let mut constraint = "lt"
@@ -188,6 +194,18 @@ fn parse_node_obj(
         if sp.flip != "" {
           flip = sp.flip
         }
+        if sp.text_align != "" {
+          text_align = sp.text_align
+        }
+        if sp.font_style != "" {
+          font_style = sp.font_style
+        }
+        if sp.stroke_dash != "" {
+          stroke_dash = sp.stroke_dash
+        }
+        icon = sp.icon
+        visible = sp.visible
+        overlay = sp.overlay
         pos = send
       } else {
         return ParseFail("style_not_object")
@@ -272,6 +290,12 @@ fn parse_node_obj(
       line_height,
       tracking,
       flip,
+      text_align,
+      font_style,
+      stroke_dash,
+      visible,
+      overlay,
+      icon,
     },
     constraint,
   }
@@ -564,6 +588,12 @@ struct StyleParse {
   line_height : Double
   tracking : Double
   flip : String
+  text_align : String
+  font_style : String
+  stroke_dash : String
+  visible : Bool
+  overlay : Bool
+  icon : String
 }
 
 ///|
@@ -582,6 +612,12 @@ fn parse_style_obj(obj : String) -> StyleParse {
   let mut line_height = 1.5
   let mut tracking = 0.0
   let mut flip_s = ""
+  let mut text_align_s = "left"
+  let mut font_style_s = "normal"
+  let mut stroke_dash_s = "solid"
+  let mut visible_b = true
+  let mut overlay_b = false
+  let mut icon_s = ""
   let n = obj.length()
   let mut pos = 1 // 跳过 {
   while pos < n {
@@ -610,8 +646,29 @@ fn parse_style_obj(obj : String) -> StyleParse {
         "shadow" => shadow = vt
         "blend" => blend = vt
         "flip" => flip_s = vt
+        "text_align" => text_align_s = vt
+        "font_style" => font_style_s = vt
+        "stroke_dash" => stroke_dash_s = vt
+        "icon" => icon_s = vt
         _ => ()
       }
+    } else if key_t == "visible" || key_t == "overlay" {
+      // 布尔字面量：value_end 只吃数字，必须按字母前缀显式读 true/false
+      let mut e2 = pos
+      while e2 < n && {
+        let c = char_at2(obj, e2)
+        (c >= "a" && c <= "z") || (c >= "A" && c <= "Z")
+      } {
+        e2 = e2 + 1
+      }
+      let token = obj.substring(start=pos, end=e2).to_string()
+      let b = token == "true"
+      if key_t == "visible" {
+        visible_b = b
+      } else {
+        overlay_b = b
+      }
+      pos = e2
     } else {
       let end = value_end(obj, pos)
       let num = parse_num_str(obj.substring(start=pos, end~))
@@ -647,6 +704,12 @@ fn parse_style_obj(obj : String) -> StyleParse {
     line_height,
     tracking,
     flip: flip_s,
+    text_align: text_align_s,
+    font_style: font_style_s,
+    stroke_dash: stroke_dash_s,
+    visible: visible_b,
+    overlay: overlay_b,
+    icon: icon_s,
   }
 }
 

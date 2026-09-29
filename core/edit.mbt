@@ -288,6 +288,10 @@ pub fn Project::edit_node(
               cur = { ..cur, style: { ..cur.style, stroke_dash: ds } }
               applied.push("dash")
             }
+            "icon" => {
+              cur = { ..cur, style: { ..cur.style, icon: v } }
+              applied.push("icon")
+            }
             "overlay" => {
               cur = { ..cur, style: { ..cur.style, overlay: v == "true" } }
               applied.push("overlay")

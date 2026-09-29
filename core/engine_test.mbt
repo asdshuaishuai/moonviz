@@ -625,3 +625,53 @@ test "elevation：e4/e5 品牌阴影阶梯出图（1.0 R1）" {
     None => assert_true(false)
   }
 }
+
+///|
+test "icons：注册表 + 节点图标渲染与序列化往返（1.0 R2）" {
+  // 注册表完整性：icon_names 与 icon_path 一致
+  for name in icon_names() {
+    assert_true(icon_path(name) is Some(_), msg="icon_path 缺少已注册图标: \{name}")
+  }
+  assert_true(icon_path("nonexistent") is None, msg="未知名应返回 None")
+  // 放置 + 设置图标 → SVG 含缩放后的图标组
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=390.0, height=844.0)
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="b1", x=20.0, y=20.0, w=120.0, h=44.0)
+  let _ = p.edit_node(artboard="m", node_id="b1", kvs=[("icon", "mail"), ("text", "")])
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let svg = match p.export_svg(artboard="m") {
+        Ok(x) => x
+        Err(e) => { assert_true(false, msg=e); "" }
+      }
+      assert_true(svg.contains("<path d=\"M3 6h18v12H3z"), msg="SVG 应包含 mail 图标路径")
+      assert_true(svg.contains("stroke-linejoin=\"round\""), msg="图标应为 round join 风格")
+    }
+    None => assert_true(false)
+  }
+}
+
+///|
+test "resize：fill/锚定语义在画板变化下保持（1.0 组件自适应不变量）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=390.0, height=844.0)
+  // 宽度自适应组件（width-fill 预设）
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="b1", x=0.0, y=20.0)
+  // 显式尺寸组件（对照）
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="fixed", x=20.0, y=80.0, w=120.0, h=44.0)
+  let _ = p.resize_canvas(artboard="m", width=800.0, height=600.0)
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      match layout.rect_of("b1") {
+        Some(r) => assert_true(r.width > 700.0, msg="width-fill 组件应跟随新画板宽度: \{r.width}")
+        None => assert_true(false)
+      }
+      match layout.rect_of("fixed") {
+        Some(r) => assert_eq(r.width, 120.0, msg="显式尺寸组件不应被 resize 改写")
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+}

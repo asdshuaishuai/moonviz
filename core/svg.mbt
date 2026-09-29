@@ -154,6 +154,23 @@ fn render_node(
                 )
               }
               sb.write_string("/>")
+              // 图标在 rect 闭合后作为兄弟元素输出——写进 <rect> 起始标签内会产出非法 XML
+              if n.style.icon != "" {
+                match icon_path(n.style.icon) {
+                  Some(d) => {
+                    let short = if r.width < r.height { r.width } else { r.height }
+                    if short > 0.0 {
+                      let s2 = short * 0.55 / 24.0
+                      let ix = r.x + (r.width - 24.0 * s2) / 2.0
+                      let iy = r.y + (r.height - 24.0 * s2) / 2.0
+                      sb.write_string(
+                        "<g transform=\"translate(\{ix},\{iy}) scale(\{s2})\" fill=\"none\" stroke=\"\{paint_ref_t(n.style.text_color, n.id)}\" stroke-width=\"\{2.0 / s2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"\{d}\"/></g>",
+                      )
+                    }
+                  }
+                  None => ()
+                }
+              }
               // 带文字的形状（按钮 / 输入框占位符）：默认水平垂直居中，
               // align=left/right 时改为左/右对齐到内边距
               if n.text != "" {
