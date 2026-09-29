@@ -234,6 +234,7 @@ pub fn Project::place_component(
           ) {
             Err(error) => Err(error)
             Ok(root_id) => {
+              apply_place_adaptive(ab.doc, component_id, root_id, w, h)
               apply_place_size(ab.doc, root_id, w, h)
               self.revision = self.revision + 1
               // node 透传实例真实根节点 id（instance::<cid>）：
@@ -265,6 +266,7 @@ pub fn Project::place_component(
             "root" => {
               let _ = ab.doc.insert_node(placed, "root")
               apply_place_size(ab.doc, instance_id, w, h)
+              apply_place_adaptive(ab.doc, component_id, instance_id, w, h)
               self.revision = self.revision + 1
               Ok(
                 "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"artboard\":\"\{artboard}\"}",
@@ -273,6 +275,7 @@ pub fn Project::place_component(
             _ =>
               match ab.doc.insert_node(placed, pid) {
                 true => {
+                  apply_place_adaptive(ab.doc, component_id, instance_id, w, h)
                   apply_place_size(ab.doc, instance_id, w, h)
                   self.revision = self.revision + 1
                   Ok(

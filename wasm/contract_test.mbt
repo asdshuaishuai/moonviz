@@ -413,7 +413,7 @@ test "契约：全部内置模板 × AgentGate 零债（issue #14 回归锚）" 
 test "契约：place 一步最终尺寸——门在最终 bbox 评估（issue #18）" {
   let h = session_open(SEED)
   // b1 位于 (150,20,120,44)，与种子 btn(20,20) 不相交
-  let r1 = session_apply_agent(h, "place w button b1 - 150 20")
+  let r1 = session_apply_agent(h, "place w button b1 - 20 20 120 44")
   assert_true(r1.contains("\"ok\":true"), msg=r1)
   // bg 默认 200×100 与 b1 部分相交会被拒；最终尺寸 375×812 全包含 → 过
   let r2 = session_apply_agent(h, "place w rect bg - 0 0 375 812")

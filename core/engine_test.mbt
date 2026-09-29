@@ -464,7 +464,7 @@ test "place：op 面位置参数 w/h 解析（issue #18）" {
     Some(ab) => {
       let layout2 = solve(ab.doc)
       match layout2.rect_of("b3") {
-        Some(r) => assert_eq(r.width, 120.0, msg="默认宽应保持")
+        Some(r) => assert_true(r.width > 300.0, msg="无 w/h 时应按 width-fill 预设自适应: \{r.width}")
         None => assert_true(false)
       }
     }
@@ -476,7 +476,8 @@ test "place：op 面位置参数 w/h 解析（issue #18）" {
 test "overlay：声明的装饰层与兄弟部分相交不再违规（1.0 M1）" {
   let p = Project::new()
   let _ = p.create_artboard(name="m", width=375.0, height=812.0)
-  let _ = p.place_component(artboard="m", component_id="button", instance_id="btn", x=20.0, y=20.0)
+  // 显式尺寸（w/h 覆盖自适应预设）——fixture 需要确定的几何
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="btn", x=20.0, y=20.0, w=120.0, h=44.0)
   // 装饰层与 btn 部分相交（130..190 × 40..60 vs 20..140 × 20..64）
   let _ = p.place_component(
     artboard="m",
@@ -513,7 +514,7 @@ test "overlay：声明的装饰层与兄弟部分相交不再违规（1.0 M1）"
     None => assert_true(false)
   }
   // 非 overlay 对照：新增普通节点压 btn 仍记违规（视觉债不被遮蔽）
-  let _ = p.place_component(artboard="m", component_id="button", instance_id="plain", x=30.0, y=30.0)
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="plain", x=30.0, y=30.0, w=120.0, h=44.0)
   match p.artboards.get("m") {
     Some(ab) => {
       let mut n = 0
@@ -560,5 +561,67 @@ test "variants：fork/score/merge 出井（1.0 M1）" {
   match p.merge_variant(source="v1", target="nonexistent") {
     Err(e) => assert_true(e.contains("unknown_artboard"), msg=e)
     Ok(_) => assert_true(false)
+  }
+}
+
+///|
+test "adaptive：组件按预设自适应画板尺寸（1.0 迭代一）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="m", width=390.0, height=844.0)
+  // button → width-fill：宽度跟随容器
+  let _ = p.place_component(artboard="m", component_id="button", instance_id="b1", x=0.0, y=20.0)
+  // fab → anchor:rb：锚定右下
+  let _ = p.place_component(artboard="m", component_id="fab", instance_id="fab1", x=300.0, y=700.0)
+  let _ = p.resize_canvas(artboard="m", width=800.0, height=600.0)
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      match layout.rect_of("b1") {
+        Some(r) => assert_true(r.width > 700.0, msg="width-fill 应跟随容器变宽: \{r.width}")
+        None => assert_true(false)
+      }
+      match layout.rect_of("fab1") {
+        Some(r) => {
+          // 锚定右下：画板变宽变矮后 fab 应贴近新右下角
+          assert_true(r.x + r.width > 700.0, msg="fab 应锚定右侧: x=\{r.x}")
+          assert_true(r.y + r.height > 500.0, msg="fab 应锚定底部: y=\{r.y}")
+        }
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+  // 无预设组件不受影响（默认 keep）
+  let _ = p.place_component(artboard="m", component_id="card", instance_id="c1", x=40.0, y=40.0)
+  match p.artboards.get("m") {
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      match layout.rect_of("c1") {
+        Some(r) => assert_true(r.width == 320.0, msg="无预设组件保持默认尺寸: \{r.width}")
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+}
+
+///|
+test "elevation：e4/e5 品牌阴影阶梯出图（1.0 R1）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="e", width=390.0, height=844.0)
+  let _ = p.place_component(artboard="e", component_id="card", instance_id="c", x=20.0, y=20.0)
+  let _ = p.edit_node(artboard="e", node_id="c", kvs=[("shadow", "e5")])
+  match p.artboards.get("e") {
+    Some(ab) => {
+      let svg = match p.export_svg(artboard="e") {
+        Ok(x) => x
+        Err(e) => {
+          assert_true(false, msg=e)
+          ""
+        }
+      }
+      assert_true(svg.contains("e5"), msg="SVG 应包含 e5 滤镜引用")
+    }
+    None => assert_true(false)
   }
 }

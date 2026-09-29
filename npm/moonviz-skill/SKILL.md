@@ -46,7 +46,7 @@ Read-only surfaces keep the `{ok:true,data:...}` envelope.
 
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
-`place <ab> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]` (final-size place — gate evaluates final bbox) ·
+`place <ab> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]` (final-size place — gate evaluates final bbox; omit w/h and adaptive presets apply: button/text_input/body_text/heading/divider/image = width-fill, fab = anchor bottom-right) ·
 `duplicate <ab> <new_name>` · `delete-artboard <ab>` ·
 `move <ab> <node> <x> <y>` · `copy <ab> <node> <new_id> [dx] [dy]` ·
 `delete <ab> <node>` · `reorder <ab> <node> front|back|up|down` ·
