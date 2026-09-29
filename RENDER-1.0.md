@@ -75,7 +75,30 @@
 
 ---
 
-## 3. 工程约束（沿用既有纪律）
+## 3. 组件自适应能力（1.0 核心，与渲染精致化并列）
+
+组件应当**自行与画板的尺寸、位置自适应**——现在 place 默认 Fixed 尺寸 +
+AlignStart 锚定，画板 resize 后组件纹丝不动，精致感无从谈起。
+
+基座已在：PosSpec（Fill/Hug/Fixed + AlignStart/Center/End）、constraint 锚定
+（resize_canvas 按 constraint 重排）。缺口是**组件定义不携带自适应策略**、
+**place 不写约束**、**父容器尺寸变化不联动**。
+
+交付三件：
+- **组件定义携带 adaptive 预设**（ComponentDef 扩展）：如
+  `width: Fill` / `anchor: bottom-right` / `保持纵横比` / `外边距恒定`——
+  65 组件逐个标定（按钮=横向 Fill、卡片=Fill×Hug、fab=锚右下…）；
+- **place 写入约束**：place 时按组件预设落 constraint（Agent 仍可用
+  `adaptive <ab> <node> <preset>` 显式覆盖），后续画板/父容器 resize 自动重排；
+- **resize_canvas 联动验证**：约束重排已有基座，补快照测试锚定
+  「resize 前后布局语义一致」。
+
+验收：调整画板尺寸（390×844 → 1280×800）后，全部组件按预设自适应、
+零违规（快照测试锚定）。
+
+---
+
+## 4. 工程约束（沿用既有纪律）
 
 - NodeStyle 字段扩展走 overlay 先例流程：canonical 条件写出 + apply_decl_style 解析 +
   字典/help/SKILL 同步 + 契约测试；
@@ -84,7 +107,7 @@
 
 ---
 
-## 4. GA 门禁增补（并入 ROADMAP-1.0）
+## 5. GA 门禁增补（并入 ROADMAP-1.0）
 
 - [ ] 基准页 before/after 对照随 1.0 发布
 - [ ] 6 主题 × 65 组件快照基线进 CI
@@ -93,7 +116,7 @@
 
 ---
 
-## 5. 风险
+## 6. 风险
 
 | 风险 | 应对 |
 |---|---|

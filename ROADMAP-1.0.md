@@ -62,6 +62,9 @@
   状态变体入目录（hover/pressed/disabled，115 → ~250+）、精致度基准页；
 - **R4 主题 × 回归**：6 主题 × 65 组件快照 golden + diff 进 CI、login-demo
   before/after 重渲。
+- **组件自适应能力（1.0 核心，与渲染精致化并列）**：组件定义携带 adaptive
+  预设（Fill/锚定/保持比例），place 落约束，画板/父容器 resize 自动重排——
+  「精致」不只是好看，还包括**放到哪都对**。
 
 专项验收（并入 GA 门禁）：基准页 before/after 随 1.0 发布、快照基线进 CI、
 login-demo 重渲达宣传图水准、PaintSpec/图标/状态进 tools 与 ops 字典。
