@@ -458,3 +458,50 @@ test "契约：icon 字段进 canonical 文本（1.0 R2 图标系统往返）" {
   assert_true(mbt_json.contains("\"ok\":true"), msg=mbt_json)
   let _ = session_close(h)
 }
+
+///|
+test "契约：fit 自适应字号——溢出缩小渲染 + canonical 往返（1.0 R1）" {
+  let h = session_open(SEED)
+  let r1 = session_apply_agent(h, "place w body_text fit_txt - 20 20 80 30")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  let _ = session_apply_agent(h, "update w fit_txt fit=shrink text=这是一段远超容器宽度的比较长的中文文本内容会触发缩放")
+  // session_export_svg 返回 JSON 信封：svg 值为转义形态 font-size=\"8\"
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("\"ok\":true"), msg=svg)
+  assert_true(svg.contains("font-size=\\\"8"), msg="溢出文本应缩到下限 8px: " + svg)
+  // canonical 携带 font_fit 往返（update 响应含 canonical mbt 文本）
+  let upd = session_apply_agent(h, "update w fit_txt fit=auto")
+  assert_true(upd.contains("font_fit=\\\"auto\\\""), msg="canonical 应携带 font_fit=auto: " + upd)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：fit=auto 单行留白放大——短标题填满文本槽位（1.0 R1）" {
+  let h = session_open(SEED)
+  let r1 = session_apply_agent(h, "place w body_text fit_grow - 20 200 200 40")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  let _ = session_apply_agent(h, "update w fit_grow fit=auto text=短标题")
+  let svg = session_export_svg(h, "w")
+  // 40px 高槽位、单行短文本：字号应涨过 preferred 14（by_h = 40/1.5 ≈ 26.7）
+  assert_true(svg.contains("\"ok\":true"), msg=svg)
+  assert_true(svg.contains("font-size=\\\"2"), msg="短标题应放大填充: " + svg)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：resize 联动——Fill 宽文本随画板宽度重新换行（1.0 R1）" {
+  let h = session_open(SEED)
+  // 不带 w 的 body_text 走 width-fill 自适应预设：宽度跟随画板
+  let r1 = session_apply_agent(h, "place w body_text rewrap - 20 100")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  let _ = session_apply_agent(h, "update w rewrap text=这是一段会随画板宽度变化重新测量换行的比较长的中文文本内容自动换行")
+  let before = session_export_svg(h, "w")
+  assert_true(before.contains("\"ok\":true"), msg=before)
+  // 画板收窄到 200：同一节点渲染时应产生更多换行段（tspan 数量上升）
+  let rc = session_apply_agent(h, "resize-canvas w 200 300")
+  assert_true(rc.contains("\"ok\":true"), msg=rc)
+  let after = session_export_svg(h, "w")
+  assert_true(after.split("<tspan").length() > before.split("<tspan").length(),
+    msg="Fill 宽文本应在画板收窄后重新换行: before=\{before} after=\{after}")
+  let _ = session_close(h)
+}

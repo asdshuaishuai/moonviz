@@ -87,6 +87,7 @@ pub(all) struct NodeStyle {
   font_style : String // "normal" | "italic"
   stroke_dash : String // 描边线型 "solid" | "dashed" | "dotted"
   visible : Bool // false = 隐藏但仍存在于文档（不参与渲染与命中）
+  font_fit : String // ""=off | "auto"=双向字号适配（不溢出+不留白）| "shrink"=只缩不涨
   overlay : Bool // true = 声明为覆盖/装饰层：与兄弟的重叠是有意层叠，
   // 不记 no_sibling_overlap（部分相交的合法层叠，1.0 M1；全包含对本就豁免）
   icon : String // 非空 = 在节点内居中渲染内置 mono 图标（core/icons.mbt 注册表）
@@ -114,6 +115,7 @@ pub fn NodeStyle::default() -> NodeStyle {
     font_style: "normal",
     stroke_dash: "solid",
     visible: true,
+    font_fit: "",
     overlay: false,
     icon: "",
   }

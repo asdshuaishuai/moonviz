@@ -418,6 +418,9 @@ fn node_call(n : @core.Node) -> String {
   if n.style.icon != "" {
     parts.push("icon=\"\{decl_escape(n.style.icon)}\"")
   }
+  if n.style.font_fit != "" {
+    parts.push("font_fit=\"\{decl_escape(n.style.font_fit)}\"")
+  }
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）
   if n.name != n.id {
@@ -780,6 +783,14 @@ fn apply_decl_style(
   }
   match opt_param(params, "stroke_dash") {
     Some(v) => cur = { ..cur, style: { ..cur.style, stroke_dash: str_val(v) } }
+    None => ()
+  }
+  match opt_param(params, "font_fit") {
+    Some(v) => {
+      let fv = str_val(v)
+      let fv2 = if fv == "auto" || fv == "shrink" { fv } else { "" }
+      cur = { ..cur, style: { ..cur.style, font_fit: fv2 } }
+    }
     None => ()
   }
   match opt_param(params, "visible") {

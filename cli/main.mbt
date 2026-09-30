@@ -1263,11 +1263,13 @@ fn cli_help() -> String {
   "  update <ab> <node> k=v [k=v ...]  Edit properties; keys:\n" +
   "      w h text fill text_color stroke stroke_width radius opacity font_size\n" +
   "      weight shadow rotate blur blend line tracking constraint align italic\n" +
-  "      dash visible overlay layout gap justify padding width_mode height_mode\n" +
+  "      dash visible overlay fit layout gap justify padding width_mode height_mode\n" +
   "      x_mode y_mode name\n" +
   "      (align left|center|right; dash solid|dashed|dotted; visible true|false;\n" +
   "       layout vertical|horizontal|none; width_mode/height_mode hug|fill;\n" +
-  "       x_mode/y_mode center|start; w/h also accept fill|hug)\n" +
+  "       x_mode/y_mode center|start; w/h also accept fill|hug; fit auto|shrink\n" +
+  "       = font auto-fit (shrink on overflow; auto also grows single-line into\n" +
+  "       empty space, 2x cap))\n" +
   "  delete <ab> <node>                Delete subtree\n" +
   "  copy <ab> <node> <new_id> [dx] [dy]   Clone subtree\n" +
   "  reorder <ab> <node> front|back|up|down   Z-order\n" +

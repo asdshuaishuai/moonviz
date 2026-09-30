@@ -599,6 +599,7 @@ struct StyleParse {
   visible : Bool
   overlay : Bool
   icon : String
+  font_fit : String
 }
 
 ///|
@@ -624,6 +625,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
   let mut visible_b = true
   let mut overlay_b = false
   let mut icon_s = ""
+  let mut font_fit_s = ""
   let n = obj.length()
   let mut pos = 1 // 跳过 {
   while pos < n {
@@ -656,6 +658,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
         "font_style" => font_style_s = vt
         "stroke_dash" => stroke_dash_s = vt
         "icon" => icon_s = vt
+        "font_fit" => font_fit_s = vt
         _ => ()
       }
     } else if key_t == "visible" || key_t == "overlay" {
@@ -717,6 +720,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
     stroke_dash: stroke_dash_s,
     visible: visible_b,
     overlay: overlay_b,
+    font_fit: font_fit_s,
     icon: icon_s,
   }
 }

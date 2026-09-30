@@ -81,9 +81,13 @@ An override recolors immediately, persists in the document's frontmatter
 Node properties (`update <ab> <node> k=v ...`):
 `w h text fill text_color stroke stroke_width radius opacity font_size weight
 shadow rotate blur blend line tracking constraint align italic dash visible overlay
-layout gap justify padding width_mode height_mode x_mode y_mode name`
+fit layout gap justify padding width_mode height_mode x_mode y_mode name`
 
 - `align` `left|center|right`; `italic true|false`; `dash solid|dashed|dotted`
+- `fit auto|shrink` enables font auto-fit: text shrinks to stay inside its box
+  (floor 8px) and — with `auto` — a single-line text grows into spare vertical
+  space (capped at 2x `font_size`); wrapping is width-aware (Latin breaks on
+  words, CJK breaks per character) and re-measures on every render
 - `visible false` hides the subtree without deleting it — it also stops
   rendering *and* hit-testing, so hidden nodes cannot be tapped
 - `layout vertical|horizontal|none` enables/clears a container stack layout;

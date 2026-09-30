@@ -172,9 +172,21 @@ fn render_node(
                 }
               }
               // 带文字的形状（按钮 / 输入框占位符）：默认水平垂直居中，
-              // align=left/right 时改为左/右对齐到内边距
+              // align=left/right 时改为左/右对齐到内边距；font_fit 同样生效
               if n.text != "" {
-                let baseline = r.y + (r.height + n.style.font_size * 0.7) / 2.0
+                let fs2 = if n.style.font_fit == "auto" || n.style.font_fit == "shrink" {
+                  fit_font_size(
+                    n.text,
+                    n.style.font_size,
+                    r.width - 24.0,
+                    r.height,
+                    n.style.line_height,
+                    n.style.font_fit,
+                  )
+                } else {
+                  n.style.font_size
+                }
+                let baseline = r.y + (r.height + fs2 * 0.7) / 2.0
                 let pad = 12.0
                 let (tx, anchor) = match n.style.text_align {
                   "left" => (r.x + pad, " start")
@@ -182,7 +194,7 @@ fn render_node(
                   _ => (r.x + r.width / 2.0, " middle")
                 }
                 sb.write_string(
-                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{font_weight_value(n.style.font_weight)}\"",
+                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{fs2}\" font-weight=\"\{font_weight_value(n.style.font_weight)}\"",
                 )
                 if n.style.font_style == "italic" {
                   sb.write_string(" font-style=\"italic\"")
@@ -220,17 +232,71 @@ fn font_weight_value(w : String) -> String {
 }
 
 ///|
+///|
+/// 1.0 R1 自适应字号：font_fit="auto" 双向（溢出等比缩 / 单行留白放大，2 倍
+/// preferred 封顶）或 "shrink" 只缩不涨。单次比例计算无循环，下限 8px，永不崩溃。
+fn fit_font_size(
+  text : String,
+  pref : Double,
+  width : Double,
+  height : Double,
+  line_h : Double,
+  mode : String,
+) -> Double {
+  if width <= 0.0 || height <= 0.0 || pref <= 0.0 || text.length() == 0 {
+    return pref
+  }
+  let min_fit = 8.0
+  let lines = wrap_text_lines(text, pref, width)
+  let needed = lines.length().to_double() * pref * line_h
+  if needed > height {
+    // 溢出 → 等比缩（换行数按小字号只会更少，实际渲染只会更紧凑，不会回溢）
+    let f = pref * height / needed
+    if f < min_fit {
+      return min_fit
+    }
+    return f
+  }
+  if mode == "auto" && lines.length() == 1 {
+    // 单行文本才有"涨"的价值（标题填满 hero 槽位）；多行涨会扰动断行
+    let by_h = height / line_h
+    let by_w = width / text_em_width(text)
+    let mut f = if by_h < by_w { by_h } else { by_w }
+    let cap = pref * 2.0
+    if f > cap {
+      f = cap
+    }
+    if f > pref {
+      return f
+    }
+  }
+  pref
+}
+
+///|
 fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
-  // 1.0 R1：宽度感知换行——容器宽度内按词/CJK 自动断行
-  let lines = wrap_text_lines(n.text, n.style.font_size, r.width)
-  let lh = n.style.font_size * n.style.line_height
+  // 1.0 R1：自适应字号（font_fit 开启时）+ 宽度感知换行
+  let fs = if n.style.font_fit == "auto" || n.style.font_fit == "shrink" {
+    fit_font_size(
+      n.text,
+      n.style.font_size,
+      r.width,
+      r.height,
+      n.style.line_height,
+      n.style.font_fit,
+    )
+  } else {
+    n.style.font_size
+  }
+  let lines = wrap_text_lines(n.text, fs, r.width)
+  let lh = fs * n.style.line_height
   // 单行文本在高于字号的矩形内垂直居中（按钮/输入框标签的标准形态，
   // 修 login-demo「按钮文字贴顶」证据）；多行保持顶部排版流
   let single_line = lines.length() == 1
-  let first_baseline = if single_line && r.height >= n.style.font_size * 1.4 {
-    r.y + (r.height + n.style.font_size * 0.72) / 2.0
+  let first_baseline = if single_line && r.height >= fs * 1.4 {
+    r.y + (r.height + fs * 0.72) / 2.0
   } else {
-    r.y + n.style.font_size * 1.0
+    r.y + fs * 1.0
   }
   // 水平对齐：left（默认，x 起点）/ center / right（x 终点 + text-anchor）
   let (tx, anchor) = match n.style.text_align {
@@ -239,7 +305,7 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
     _ => (r.x, "")
   }
   sb.write_string(
-    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{font_weight_value(n.style.font_weight)}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
+    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{fs}\" font-weight=\"\{font_weight_value(n.style.font_weight)}\" letter-spacing=\"\{n.style.tracking * fs}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
   )
   if anchor != "" {
     sb.write_string(anchor)

@@ -500,6 +500,7 @@ fn query_node_json(
   out.write_string("{\"id\":\"" + id + "\",")
   out.write_string("\"parent\":\"" + json_escape_field(parent) + "\",")
   out.write_string("\"overlay\":" + (if n.style.overlay { "true" } else { "false" }) + ",")
+  out.write_string("\"font_fit\":\"" + n.style.font_fit + "\",")
   out.write_string("\"icon\":\"" + json_escape_field(n.style.icon) + "\",")
   out.write_string("\"kind\":\"" + kind_of(n) + "\",")
   out.write_string("\"component\":\"" + json_escape_field(n.component) + "\",")

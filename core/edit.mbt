@@ -296,6 +296,12 @@ pub fn Project::edit_node(
               cur = { ..cur, style: { ..cur.style, overlay: v == "true" } }
               applied.push("overlay")
             }
+            // 自适应字号：auto=双向（溢出缩放+留白放大，2 倍 preferred 封顶）/ shrink=只缩
+            "fit" => {
+              let f = if v == "auto" || v == "shrink" { v } else { "" }
+              cur = { ..cur, style: { ..cur.style, font_fit: f } }
+              applied.push("fit")
+            }
             "visible" => {
               let vis = !(v == "false" || v == "0" || v == "off" || v == "hidden")
               cur = { ..cur, style: { ..cur.style, visible: vis } }
