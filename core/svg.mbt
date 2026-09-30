@@ -221,7 +221,8 @@ fn font_weight_value(w : String) -> String {
 
 ///|
 fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
-  let lines = split_lines(n.text)
+  // 1.0 R1：宽度感知换行——容器宽度内按词/CJK 自动断行
+  let lines = wrap_text_lines(n.text, n.style.font_size, r.width)
   let lh = n.style.font_size * n.style.line_height
   // 单行文本在高于字号的矩形内垂直居中（按钮/输入框标签的标准形态，
   // 修 login-demo「按钮文字贴顶」证据）；多行保持顶部排版流
@@ -287,6 +288,107 @@ fn split_lines(s : String) -> Array[String] {
     }
   }
   out.push(cur.to_string())
+  out
+}
+
+///|
+/// 单字符宽度估算（em 比例，乘以 font_size 得 px）
+/// CJK ≈ 1.0em、大写拉丁 ≈ 0.65em、小写 ≈ 0.52em、数字 ≈ 0.55em、空格 ≈ 0.28em
+fn char_em_width(c : Char) -> Double {
+  let code = c.to_int()
+  if code >= 0x4E00 && code <= 0x9FFF { 1.0
+  } else if code >= 0x3000 && code <= 0x303F { 1.0
+  } else if code >= 0xFF00 && code <= 0xFFEF { 1.0
+  } else if code >= 65 && code <= 90 { 0.65
+  } else if code >= 97 && code <= 122 { 0.52
+  } else if code >= 48 && code <= 57 { 0.55
+  } else if code == 32 { 0.28
+  } else { 0.5 }
+}
+
+///|
+/// 估算字符串宽度（em 单位，乘以 font_size 得 px）
+fn text_em_width(s : String) -> Double {
+  let mut w = 0.0
+  for c in s.iter() { w = w + char_em_width(c) }
+  w
+}
+
+///|
+/// 宽度感知文本换行：按空格分词逐词贪心（Latin 整词断行）；
+/// 超长词（含无空格的 CJK 整段）按字符硬拆。行内不保留首尾空格。
+fn wrap_line_at_width(line : String, max_em : Double) -> Array[String] {
+  if text_em_width(line) <= max_em { return [line] }
+  let out : Array[String] = []
+  let cur = StringBuilder::new()
+  let mut cur_w = 0.0
+  let word = StringBuilder::new()
+  let mut word_w = 0.0
+  for c in line.iter() {
+    if c == ' ' {
+      // 词结束：并入当前行或换行
+      if word_w > 0.0 {
+        if cur_w <= 0.0 || cur_w + word_w <= max_em {
+          if cur_w > 0.0 { cur.write_char(' ') }
+          cur.write_string(word.to_string())
+          cur_w = cur_w + (if cur_w > 0.0 { 0.28 } else { 0.0 }) + word_w
+        } else {
+          out.push(cur.to_string())
+          cur.reset()
+          cur.write_string(word.to_string())
+          cur_w = word_w
+        }
+        word.reset()
+        word_w = 0.0
+      }
+      continue
+    }
+    let cw = char_em_width(c)
+    // 词内字符将超宽：当前词是不可断的长词（CJK 整段/长 URL）——先冲行再冲词
+    if word_w + cw > max_em && word_w > 0.0 {
+      if cur_w > 0.0 {
+        out.push(cur.to_string())
+        cur.reset()
+        cur_w = 0.0
+      }
+      out.push(word.to_string())
+      word.reset()
+      word_w = 0.0
+    }
+    word.write_char(c)
+    word_w = word_w + cw
+  }
+  // 收尾：残余词并入
+  if word_w > 0.0 {
+    if cur_w <= 0.0 || cur_w + word_w <= max_em {
+      if cur_w > 0.0 { cur.write_char(' ') }
+      cur.write_string(word.to_string())
+    } else {
+      out.push(cur.to_string())
+      cur.reset()
+      cur.write_string(word.to_string())
+    }
+  }
+  if cur.to_string().length() > 0 { out.push(cur.to_string()) }
+  if out.length() == 0 { out.push(line) }
+  out
+}
+
+///|
+/// 宽度感知文本换行入口：先按 \n 硬拆，再逐段做宽度测量换行
+fn wrap_text_lines(text : String, font_size : Double, max_width : Double) -> Array[String] {
+  let hard_lines = split_lines(text)
+  let max_em = max_width / font_size
+  let out : Array[String] = []
+  for hl in hard_lines.iter() {
+    if text_em_width(hl) <= max_em {
+      out.push(hl)
+    } else {
+      for wl in wrap_line_at_width(hl, max_em).iter() {
+        out.push(wl)
+      }
+    }
+  }
   out
 }
 
