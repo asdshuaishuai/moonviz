@@ -7,6 +7,11 @@
 - **overlay 层叠声明** — `update <ab> <node> overlay=true`：声明的装饰层
   不再触发兄弟重叠门禁。
 - **elevation 阶梯 e0–e5** — 含品牌色调阴影（`shadow="e4"`）。
+- **宽度感知文本换行** — 文本每次渲染都按盒子宽度重新测量：拉丁文按词断行、
+  中文逐字断行；Fill 宽文本随画板 resize 自动重排。
+- **字号自适应** — `update <画板> <节点> fit=auto|shrink`：溢出自动缩小
+  （下限 8px），`auto` 还会让单行文本放大填充纵向留白（2 倍封顶）。
+  Text 节点与 rect 载字（按钮/输入框标签）双双生效。
 - **variants 探索 op** — `variants-fork / variants-score / variants-merge`（CLI）。
 
 ## 0.1.7 新特性

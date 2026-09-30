@@ -11,6 +11,8 @@ wasm/                双 wasm 产物：wasm-gc（JS 宿主）+ classic 标准 MV
 cli/ mcp/            行协议 CLI + MCP Server（stdio，含 protest proto DSL）
 core/adaptive.mbt    组件自适应预设注册表（单一事实源）：button 等内容组件=width-fill、
                      fab=anchor:rb；place 无 w/h 时按预设自适应，显式 w/h 优先
+core/svg.mbt         宽度感知换行（拉丁按词/CJK 逐字）+ 字号自适应 fit_font_size
+                     （fit=auto|shrink，下限 8px、auto 单行放大 2 倍封顶）
 site/                官网 + 文档 + playground（GitHub Pages 部署）
 sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
                      → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）

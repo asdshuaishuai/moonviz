@@ -47,12 +47,13 @@
   （`semibold/bold` → 600/700，标题不再 normal）+ CJK fallback 链显式声明；
 - **文本精度**：placeholder 独立色、垂直居中自动基线（按钮/输入框文字自动居中——修证据 #1）、
   字距/行高按 token；
-- **文字自适应缩放与自动换行**：
-  - 自动换行：文本节点在容器宽度内按词/CJK 字符边界自动断行（split_lines 升级为
-    width-aware wrap——当前仅按 `\n` 硬拆，不做宽度测量换行）；
-  - 自适应字号：Hug 模式下文本根据容器约束自动缩放字号（`font-size: auto(min, max, preferred)`），
-    确保不溢出也不留大片空白；
-  - resize 联动：画板 resize 后 Fill 宽文本节点自动重新测量换行；
+- **文字自适应缩放与自动换行** ✅（已落地：wrap 按词/逐字断行、`fit=auto|shrink`
+  双向字号适配、Fill 宽文本 resize 联动重排，契约测试锚定）：
+  - 自动换行 ✅：`wrap_text_lines`——拉丁文按词贪心、CJK 逐字断行，渲染时按节点
+    矩形宽实时测量（Text 节点与 rect 载字两条路径均生效）；
+  - 自适应字号 ✅：`fit=auto|shrink`——溢出等比缩小（下限 8px），auto 单行文本
+    放大填充纵向留白（2× preferred 封顶）；单次比例计算无循环；
+  - resize 联动 ✅：画板 resize 后 Fill 宽文本节点渲染时自动重新测量换行。
 - **阴影规格化**：ShadowSpec（多层叠加 / 彩色阴影 / inset）+ elevation token（e0–e5），
   组件默认按 elevation 取阴影（修证据 #5）；
 - **边框细化**：per-side 宽度、渐变描边、双线。

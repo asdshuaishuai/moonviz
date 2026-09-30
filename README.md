@@ -9,6 +9,12 @@
 - **Overlay declaration** — `update <ab> <node> overlay=true`: declared decorative layers
   no longer trip the sibling-overlap gate.
 - **Elevation ladder e0–e5** — incl. brand-tinted shadows (`shadow="e4"`).
+- **Width-aware text wrapping** — text re-measures against its box on every render:
+  Latin breaks on words, CJK breaks per character; Fill-width text re-wraps when the
+  artboard resizes.
+- **Font auto-fit** — `update <ab> <node> fit=auto|shrink`: text shrinks to stay inside
+  its box (8px floor) and `auto` grows a single line into spare vertical space (2x cap).
+  Both text nodes and rect-carried labels (buttons/inputs) honor it.
 - **variants exploration ops** — `variants-fork / variants-score / variants-merge` (CLI).
 
 ## What's New in 0.1.7
