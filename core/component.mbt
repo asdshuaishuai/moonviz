@@ -62,8 +62,22 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let iv : Map[String, NodePatch] = Map::new()
-  iv.set("default", patch2("surface_variant", 8.0))
-  iv.set("filled", patch2("secondary_container", 4.0))
+  // placeholder 独立色：输入框文字默认取 text_hint 令牌（muted），
+  // instantiate 时 resolve_color 落为主题字面量；显式 text_color 永远可覆盖
+  iv.set(
+    "default",
+    {
+      ..patch2("surface_variant", 8.0),
+      text_color: Some("text_hint"),
+    },
+  )
+  iv.set(
+    "filled",
+    {
+      ..patch2("secondary_container", 4.0),
+      text_color: Some("text_hint"),
+    },
+  )
   m.set("text_input", {
     id: "text_input",
     kind: "rect",
