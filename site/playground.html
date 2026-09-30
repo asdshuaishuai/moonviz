@@ -148,6 +148,49 @@ textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:12px 14px;back
 .tabbar button{transition:color .15s}
 .tabbar button.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 -2px 0 var(--acc)}
 button,.bpSw button,.themes button{transition:all .15s ease}
+/* ===== AI Agent 抽屉 ===== */
+#ai-btn{border-color:color-mix(in srgb,var(--acc) 45%,var(--line));color:var(--acc)}
+#ai-btn:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
+#aidrawer{position:fixed;top:50px;right:0;bottom:0;width:400px;max-width:94vw;background:var(--panel);
+  border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(0,0,0,.14);z-index:60;
+  display:flex;flex-direction:column;transform:translateX(103%);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+#aidrawer.on{transform:translateX(0)}
+.ai-hd{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ai-hd b{font-size:13px}
+.ai-hd .dot{width:8px;height:8px;border-radius:50%;background:var(--tx3);flex:0 0 auto}
+.ai-hd .dot.ok{background:var(--ok);box-shadow:0 0 6px color-mix(in srgb,var(--ok) 60%,transparent)}
+.ai-hd .dot.err{background:var(--err)}
+.ai-hd .dot.busy{background:var(--acc);animation:beat 1.1s ease-in-out infinite}
+.ai-hd span{font-size:11px;color:var(--tx3)}
+.ai-hd .x{margin-left:auto;border:none;background:transparent;color:var(--tx3);font-size:16px;padding:2px 8px}
+.ai-cfg{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:color-mix(in srgb,var(--bg) 45%,transparent)}
+.ai-cfg details summary{cursor:pointer;font-size:11px;color:var(--tx2);font-weight:600;user-select:none}
+.ai-cfg .row{display:flex;gap:6px;align-items:center}
+.ai-cfg label{font-size:11px;color:var(--tx3);width:52px;flex:0 0 auto}
+.ai-cfg input,.ai-cfg select{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:7px;padding:4px 8px;font-size:12px}
+.ai-cfg input:focus,.ai-cfg select:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.ai-cfg .hint{font-size:10px;color:var(--tx3);line-height:1.5}
+#ai-info{font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ai-log{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;min-height:0}
+.ai-u,.ai-a{max-width:92%;border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.ai-u{align-self:flex-end;background:var(--acc);color:#fff;border-bottom-right-radius:3px}
+.ai-a{align-self:flex-start;background:color-mix(in srgb,var(--bg) 70%,var(--panel));border:1px solid var(--line);border-bottom-left-radius:3px}
+.ai-a.thinking{color:var(--tx3);font-style:italic}
+.ai-ops{align-self:flex-start;max-width:96%;font:10.5px/1.6 ui-monospace,Menlo,Consolas,monospace;color:var(--tx3);
+  border-left:2px solid var(--line);padding-left:8px;display:flex;flex-direction:column;gap:1px}
+.ai-ops .ok{color:var(--ok)}.ai-ops .e{color:var(--err)}
+.ai-err{align-self:stretch;font-size:11px;color:var(--err);background:color-mix(in srgb,var(--err) 8%,transparent);border-radius:8px;padding:7px 10px;line-height:1.55;word-break:break-word}
+.ai-note{align-self:center;font-size:10px;color:var(--tx3)}
+.ai-chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 8px}
+.ai-chips button{font-size:11px;padding:3px 9px;border-radius:99px;color:var(--tx2)}
+.ai-in{display:flex;gap:7px;padding:10px 14px;border-top:1px solid var(--line);align-items:flex-end}
+.ai-in textarea{flex:1;min-height:44px;max-height:120px;border:1px solid var(--line);background:var(--panel);color:var(--tx);
+  border-radius:9px;padding:7px 9px;font-size:12px;line-height:1.5;resize:none;white-space:pre-wrap}
+.ai-in textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.ai-in button{flex:0 0 auto}
+.ai-in button.stop{background:var(--err);border-color:var(--err);color:#fff}
+@media (prefers-reduced-motion:reduce){#aidrawer{transition:none}}
+
 .hide{display:none!important}
 #oplog{max-height:120px;overflow:auto;padding:6px 12px;border-top:1px solid var(--line);font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--tx3)}
 #oplog .e{color:var(--err)}
@@ -330,6 +373,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <select id="tpl" title="从模板新建画板（追加到当前文档）"><option value="">📐 从模板新建…</option></select>
   <span class="themes" id="themes" title="主题系统：一键切换全局设计令牌"></span>
   <span class="spacer"></span>
+  <button id="ai-btn" onclick="aiToggle()" title="在线 AI Agent：自选模型厂商（BYOK），Agent 经 AgentGate 直接改画布">✨ AI Agent</button>
   <a href="index.html">首页</a><a href="docs.html">文档</a>
   <a href="https://github.com/asdshuaishuai/moonviz">GitHub</a>
 </header>
@@ -429,8 +473,41 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <button onclick="downloadSvg()">导出 SVG</button>
   <button onclick="downloadHtml()" title="单文件可交互原型：节点级导航 / 状态切换 / toast">导出 HTML 原型</button>
 </div>
+<aside id="aidrawer" aria-label="AI Agent 面板">
+  <div class="ai-hd">
+    <span class="dot" id="ai-dot"></span><b>AI Agent</b>
+    <span id="ai-hdinfo">BYOK · 自选厂商 · 双门纪律不变</span>
+    <button class="x" onclick="aiToggle()" title="收起">✕</button>
+  </div>
+  <div class="ai-cfg">
+    <details open>
+      <summary id="ai-cfg-sum">模型配置（Key 仅存本机浏览器）</summary>
+      <div class="row" style="margin-top:7px"><label>厂商</label>
+        <select id="ai-prov"><option value="">加载 models.dev 目录…</option><option value="__custom__">自定义（手填 baseURL）</option></select>
+      </div>
+      <div class="row"><label>模型</label><input id="ai-model" list="ai-models-dl" placeholder="如 deepseek-chat" autocomplete="off"></div>
+      <datalist id="ai-models-dl"></datalist>
+      <div class="row"><label>BaseURL</label><input id="ai-base" placeholder="https://api.deepseek.com" autocomplete="off"></div>
+      <div class="row"><label>API Key</label><input id="ai-key" type="password" placeholder="sk-…" autocomplete="off"></div>
+      <div class="hint">BYOK：Key 只存在你的浏览器 localStorage，请求由浏览器直连厂商，不经任何中间服务器。目录来自 models.dev（CORS 开放）。本地 Ollama 选「自定义」，填 <code>http://localhost:11434/v1</code>。</div>
+    </details>
+    <span id="ai-info">未配置</span>
+  </div>
+  <div id="ai-log"><div class="ai-note">描述你想要的原型改动——Agent 会经 AgentGate 提交 op，被拒的 op 会连同错误回给自己修正。</div></div>
+  <div class="ai-chips">
+    <button onclick="aiQuick(this)">做一个登录页</button>
+    <button onclick="aiQuick(this)">换成深色主题并调整对比度</button>
+    <button onclick="aiQuick(this)">新增设置页并接上导航</button>
+    <button onclick="aiQuick(this)">给界面来一次精致化打磨</button>
+  </div>
+  <div class="ai-in">
+    <textarea id="ai-input" placeholder="描述改动，Enter 发送 / Shift+Enter 换行"></textarea>
+    <button class="pri" id="ai-send" onclick="aiSend()">发送</button>
+  </div>
+</aside>
 <div id="bootlayer"><div class="bootring"></div><p>MoonViz 引擎启动中 · wasm-gc</p></div>
 <script type="module">
+import * as AIAPI from './assets/agent.mjs';
 const $=id=>document.getElementById(id);
 let engine=null, mbt='', artIndex=0, lastResult=null;
 let mode='design';           // 'design'=设计工作台（默认，墨刀/Axure 式）；'preview'=预览玩家
@@ -905,7 +982,7 @@ function applyOp(){
   try{
     const r=engine.apply_agent_op(mbt,op);
     logOp(op,r);
-    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;setSrc(mbt);artIndex=0;render();$('ops').value='';}
+    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;setSrc(mbt);artIndex=0;render();resyncSession();$('ops').value='';}
     else{
       let hint='';
       const e=r.error||'';
@@ -1297,7 +1374,7 @@ function retryHuman(){
   try{
     const r=engine.apply_human_op(mbt,op);
     logOp(op,r);
-    if(r.ok===true&&r.mbt){mbt=r.mbt;setSrc(mbt);render();$('ops').value='';
+    if(r.ok===true&&r.mbt){mbt=r.mbt;setSrc(mbt);render();resyncSession();$('ops').value='';
       setStatus(true,`同一操作经 HumanGate 通过（视觉债 ${r.debt}）——双门对比完成`);}
     else{history.pop();setStatus(false,'HumanGate 也拒绝：'+(r.error||''));}
   }catch(e){history.pop();setStatus(false,String(e.message||e));}
@@ -1492,7 +1569,7 @@ applyOp=function(){
   try{
     const r=engine.apply_agent_op(mbt,op);
     logOp(op,r);
-    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;setSrc(mbt);artIndex=0;render();$('ops').value='';$('retryBtn').classList.remove('show');lastRejectedOp=null;}
+    if(r.ok===true&&r.mbt){pushHistory();mbt=r.mbt;setSrc(mbt);artIndex=0;render();resyncSession();$('ops').value='';$('retryBtn').classList.remove('show');lastRejectedOp=null;}
     else{
       const err=r.error||'';
       lastRejectedOp=op;
@@ -1504,6 +1581,170 @@ applyOp=function(){
     }
   }catch(e){setStatus(false,String(e.message||e));}
 };
+
+/* ---------- AI Agent（BYOK · models.dev 目录 · ai-sdk 工具环） ----------
+ * 引擎仍在 wasm 里、双门纪律不变：Agent 的 op 与操作台同走 AgentGate，
+ * 被拒的 op 连同引擎错误回灌给模型自纠。编排逻辑在 site/assets/agent.mjs。 */
+let aiCatalogState='idle';       // idle|loading|ok|offline
+let aiRunning=false, aiAbort=null;
+let aiMessages=[];               // 文本历史（工具环在单轮内部，不进这份历史）
+const aiEngine={
+  get sessH(){return sessH;},
+  session_apply_agent:(h,o)=>engine.session_apply_agent(h,o),
+  apply_agent_op:(s,o)=>engine.apply_agent_op(s,o),
+  session_query_nodes:(h,a)=>engine.session_query_nodes(h,a),
+  session_lint:(h,a)=>engine.session_lint(h,a),
+  session_list_artboards:h=>engine.session_list_artboards(h),
+  list_ops:()=>engine.list_ops(),
+  list_components:()=>engine.list_components(),
+};
+
+function aiDot(cls,txt){$('ai-dot').className='dot '+(cls||'');if(txt!==undefined)$('ai-hdinfo').textContent=txt;}
+function aiInfo(t){$('ai-info').textContent=t;}
+function aiRow(cls){const d=document.createElement('div');d.className=cls;const log=$('ai-log');log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
+
+async function aiEnsureCatalog(){
+  if(aiCatalogState==='ok'||aiCatalogState==='loading')return;
+  aiCatalogState='loading';aiDot('busy','目录加载中…');
+  try{
+    await AIAPI.fetchCatalog();
+    const provs=AIAPI.providerOptions();
+    const sel=$('ai-prov');sel.innerHTML='';
+    for(const p of provs){
+      const o=document.createElement('option');o.value=p.id;o.textContent=p.name+' · '+p.id;sel.appendChild(o);
+    }
+    const co=document.createElement('option');co.value='__custom__';co.textContent='自定义（手填 baseURL）';sel.appendChild(co);
+    aiCatalogState='ok';aiDot('ok','目录就绪 · '+provs.length+' 厂商可直连');
+  }catch(e){
+    aiCatalogState='offline';aiDot('err','目录离线 — 仍可选「自定义」手填 baseURL');
+  }
+}
+
+function aiCurProvider(){return AIAPI.findProvider($('ai-prov').value);}
+
+function aiRestoreCfg(){
+  const pid=$('ai-prov').value;if(!pid)return;
+  const cfg=AIAPI.loadCfg(pid);
+  const p=aiCurProvider();
+  $('ai-base').value=cfg.baseURL||(p?p.api:'');
+  $('ai-key').value=cfg.apiKey||'';
+  $('ai-model').value=cfg.model||'';
+  aiRefreshModels();aiSaveCfg();aiUpdateInfo();
+}
+
+function aiRefreshModels(){
+  const dl=$('ai-models-dl');dl.innerHTML='';
+  const p=aiCurProvider();if(!p)return;
+  for(const m of AIAPI.modelOptions(p)){
+    const o=document.createElement('option');
+    o.value=m.id;o.label=m.name+(m.toolCall?'':'（无工具能力）');
+    dl.appendChild(o);
+  }
+}
+
+function aiSaveCfg(){
+  const pid=$('ai-prov').value;if(!pid)return;
+  AIAPI.saveCfg(pid,{apiKey:$('ai-key').value.trim(),baseURL:$('ai-base').value.trim(),model:$('ai-model').value.trim()});
+}
+
+function aiUpdateInfo(){
+  const m=($('ai-model').value||'').trim();
+  if(!m){aiInfo('未配置');return;}
+  const p=aiCurProvider();
+  const mm=p?AIAPI.modelOptions(p).find(x=>x.id===m):null;
+  const bits=[m];
+  if(mm){
+    if(mm.context)bits.push('ctx '+(mm.context>=1000?Math.round(mm.context/1000)+'k':mm.context));
+    if(mm.costIn!==undefined)bits.push('$'+mm.costIn+'/M in');
+    if(mm.toolCall===false)bits.push('⚠ 无工具能力');
+  }
+  aiInfo(bits.join(' · '));
+}
+
+async function aiSend(){
+  if(aiRunning){if(aiAbort)aiAbort.abort();return;}
+  const txt=$('ai-input').value.trim();
+  if(!txt)return;
+  if(!engine){setStatus(false,'引擎未就绪');return;}
+  const cfg={apiKey:$('ai-key').value.trim(),baseURL:$('ai-base').value.trim(),model:$('ai-model').value.trim()};
+  if(!cfg.baseURL){setStatus(false,'先在 AI 面板配置厂商与 baseURL');return;}
+  if(!cfg.model){setStatus(false,'先填写模型 id');return;}
+  if(!cfg.apiKey){
+    if(/localhost|127\.0\.0\.1/.test(cfg.baseURL))cfg.apiKey='local';  // Ollama/LM Studio 免 Key
+    else{setStatus(false,'先填写 API Key（仅存本机浏览器）');return;}
+  }
+  aiMessages.push({role:'user',content:txt});
+  const u=aiRow('ai-u');u.textContent=txt;
+  $('ai-input').value='';
+  const live=aiRow('ai-a thinking');live.textContent='Agent 思考中…';
+  aiRunning=true;aiAbort=new AbortController();
+  const btn=$('ai-send');btn.textContent='■ 停止';btn.classList.add('stop');
+  aiDot('busy','Agent 运行中…');
+  try{
+    const r=await AIAPI.runAgentTurn({
+      engine:aiEngine,
+      providerCfg:cfg,
+      messages:aiMessages.slice(),
+      signal:aiAbort.signal,
+      hooks:{
+        getMbt:()=>mbt,
+        context:()=>({mbt,artboards:artboards()}),
+        onOps:(results,latest)=>{
+          if(latest&&latest!==mbt){pushHistory();mbt=latest;setSrc(mbt);render();}
+          const box=aiRow('ai-ops');
+          for(const rr of results){
+            const d=document.createElement('div');
+            d.className=rr.ok?'ok':'e';
+            d.textContent=(rr.ok?'✓ ':'✗ ')+rr.op+(rr.error?' — '+rr.error:'');
+            box.appendChild(d);
+          }
+          $('ai-log').insertBefore(box,live);
+          $('ai-log').scrollTop=$('ai-log').scrollHeight;
+        },
+        onDelta:d=>{live.classList.remove('thinking');live.textContent+=d;$('ai-log').scrollTop=$('ai-log').scrollHeight;},
+      },
+    });
+    live.classList.remove('thinking');
+    live.textContent=r.text||'（无文本输出——查看上方 op 记录）';
+    if(r.text)aiMessages.push({role:'assistant',content:r.text});
+    const u=r.usage;
+    setStatus(true,'Agent 完成'+(u&&u.totalTokens?` · ${u.totalTokens} tokens`:''));
+  }catch(e){
+    // AI SDK 会把 provider 错误包进 NoOutputGeneratedError 等外壳——展开 cause 链
+    let m=String((e&&e.message)||e), cur=e, depth=0;
+    while(cur&&cur.cause&&depth<3){cur=cur.cause;m+=' '+String(cur.message||cur.statusCode||cur);depth++;}
+    let hint='';
+    if(/401|403|api key|InvalidKey|Incorrect API key/i.test(m))hint='Key 无效或无权限';
+    else if(/Failed to fetch|NetworkError|CORS|Load failed/i.test(m))hint='浏览器直连被拒（CORS/网络）——该厂商可能不允许浏览器调用，可换兼容中转或本地 Ollama';
+    else if(/404|not found|No such model/i.test(m))hint='模型 id 或 baseURL 可能不对';
+    else if(/abort/i.test(m))hint='已停止';
+    live.classList.remove('thinking');
+    live.remove();
+    aiRow('ai-err').textContent='✗ '+m+(hint?' — '+hint:'');
+    setStatus(false,'Agent 失败'+(hint?'：'+hint:''));
+  }finally{
+    aiRunning=false;aiAbort=null;
+    const btn2=$('ai-send');btn2.textContent='发送';btn2.classList.remove('stop');
+    if(aiCatalogState==='ok')aiDot('ok','目录就绪');else aiDot('','');
+  }
+}
+
+window.aiSend=aiSend;
+window.aiToggle=()=>{
+  const d=$('aidrawer');const on=!d.classList.contains('on');
+  d.classList.toggle('on',on);
+  if(on){aiEnsureCatalog().then(()=>{if($('ai-prov').value&&$('ai-base').value==='')aiRestoreCfg();});$('ai-input').focus();}
+};
+window.aiQuick=btn=>{$('ai-input').value=btn.textContent;aiSend();};
+
+$('ai-prov').addEventListener('change',()=>{aiRestoreCfg();});
+// input 直存（fill/粘贴即持久化，不依赖失焦）；写入廉价，无需防抖
+$('ai-key').addEventListener('input',aiSaveCfg);
+$('ai-base').addEventListener('input',aiSaveCfg);
+$('ai-model').addEventListener('input',()=>{aiSaveCfg();aiUpdateInfo();});
+$('ai-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();}
+});
 
 async function boot(){
   if(!(typeof WebAssembly==='object')||!WebAssembly.instantiate){

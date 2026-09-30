@@ -15,6 +15,13 @@
 - **Font auto-fit** — `update <ab> <node> fit=auto|shrink`: text shrinks to stay inside
   its box (8px floor) and `auto` grows a single line into spare vertical space (2x cap).
   Both text nodes and rect-carried labels (buttons/inputs) honor it.
+- **Online AI Agent playground** — the web Playground gains an AI Agent drawer
+  (BYOK): provider catalog from models.dev, calls via Vercel AI SDK
+  (`ai@5` + `@ai-sdk/openai-compatible`, esm.sh CDN, lazy-loaded), a 5-tool
+  loop (`apply_ops` / `query_nodes` / `lint` / `list_artboards` / `get_source`)
+  driving the same wasm engine through AgentGate — rejected ops and engine
+  errors feed back to the model for self-correction. Human editing untouched;
+  keys stay in the browser's localStorage.
 - **variants exploration ops** — `variants-fork / variants-score / variants-merge` (CLI).
 
 ## What's New in 0.1.7
@@ -712,3 +719,48 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
 8. [08-roadmap-risks.md](docs/08-roadmap-risks.md) — Implementation path and risks
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit rendering ecosystem survey
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **Complete technical notes on the rendering scheme and pipeline** (declaration parsing → layout → predicates → SVG/PNG/terminal backends + tech stack + binary distribution and toolchain risk)
+
+<!-- deepgit:begin progress -->
+## 项目进度
+
+> 本区域由 **deepGit** 自动维护（浅更新）· 更新于 2026-09-30 11:58
+> 追踪 3 个分支
+
+### `release/1.0`（当前）
+
+- **状态**：活跃 · 最近提交 37 分钟前（`3359219b` feat(1.0): placeholder 独立色——text_input 默认…）
+- **摘要**：最近 30 个提交：文档×9、新增×7、修复×5
+- **近期进展**
+  - 新增：“placeholder 独立色——text_input 默认取 text_hint 令牌…
+  - 文档：“同步文本能力到 README×2/AGENTS/RENDER-1.0 进度——R1 …
+  - 新增：“font auto-fit (fit=auto|shrink) — 双向字号适配 + Fil…
+  - 新增：“width-aware text wrapping — greedy word/CJK split re…
+  - 文档：“增补文字自适应缩放与自动换行——渲染精致化核心能力”
+- 本次记录 30 个提交
+
+### `main`（默认分支）
+
+- **状态**：活跃 · 最近提交 12 小时前（`cfae45ea` chore: 移除参赛材料文件（保留在 git 历史中可随…）
+- **摘要**：最近 30 个提交：文档×8、修复×8、构建/依赖×7
+- **近期进展**
+  - 构建/依赖：“移除参赛材料文件（保留在 git 历史中可随时找回）”
+  - 文档：“参赛材料——项目介绍文档（MD + 打印就绪 HTML）”
+  - CI：“新增 mooncakes.io 发布工作流（GitHub Actions 环境执行 …
+  - 文档：“docs+fix: 收编同步 agent 的计数与结构修正（stash@{0}…
+  - 文档：“AGENTS.md/README/官网同步 mooncakes 原生包与 SDK 门…
+- 本次记录 30 个提交
+
+### `feat/mooncakes-sdk`
+
+- **状态**：已合并 · 最近提交 1 天前（`9ec378b1` chore: 移除误入版本库的本地工具配置（.commandco…）
+- **摘要**：最近 30 个提交：修复×10、构建/依赖×7、文档×6
+- **近期进展**
+  - 构建/依赖：“移除误入版本库的本地工具配置（.commandcode/），…
+  - 新增：“MoonBit 原生包改造——mooncakes.io 可发布 + SDK 门面”
+  - 文档：“0.1.6-moon 全链同步——README 新特性小节、官网新能力区…
+  - 构建/依赖：“升级语言工具链适配——0.1.6-moon 版本基线”
+  - CI：“ci+docs: 补 CI 全流程工作流 + README Quick Start 可复…
+- **下一步**
+  - 推进该分支的收尾与验证，考虑合并回默认分支
+- 本次记录 30 个提交 · 已合入默认分支
+<!-- deepgit:end progress -->

@@ -14,6 +14,10 @@ core/adaptive.mbt    组件自适应预设注册表（单一事实源）：butto
 core/svg.mbt         宽度感知换行（拉丁按词/CJK 逐字）+ 字号自适应 fit_font_size
                      （fit=auto|shrink，下限 8px、auto 单行放大 2 倍封顶）
 site/                官网 + 文档 + playground（GitHub Pages 部署）
+site/assets/agent.mjs  Playground AI Agent 运行时（BYOK）：models.dev 目录 +
+                       ai-sdk(ai@5/openai-compatible, esm.sh CDN 懒加载) +
+                       5 工具环接 wasm 引擎 AgentGate；引擎 facade 注入，可
+                       Node 侧测试（scripts/e2e-agent-*.mjs）
 sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
                      → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）
 npm/                 npm 全家族（mcp / skill / engine-sdk / engine-wasm / moonviz-bin-*）
@@ -89,3 +93,18 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 # 发布渠道以 GitHub Releases 为准（npm 仓库暂不入驻，
 # scripts/publish-all.sh 仅在用户显式要求发 npm 时使用，浏览器 passkey）
 ```
+
+<!-- deepgit:begin progress -->
+## 当前进度（deepGit 维护）
+
+> 浅更新 · 2026-09-30 11:58 · 追踪 3 个分支
+
+- **`release/1.0`**（当前）：活跃 · head `3359219b`（37 分钟前） —— 最近 30 个提交：文档×9、新增×7、修复×5
+- **`main`**（默认）：活跃 · head `cfae45ea`（12 小时前） —— 最近 30 个提交：文档×8、修复×8、构建/依赖×7
+- **`feat/mooncakes-sdk`**：已合并 · head `9ec378b1`（1 天前） · 已合并 —— 最近 30 个提交：修复×10、构建/依赖×7、文档×6
+
+**最近提交**
+- `3359219b` feat(1.0): placeholder 独立色——text_input 默认取 text_hint 令牌（R1 文本精度收尾）（2026-09-30）
+- `439a456f` docs(1.0): 同步文本能力到 README×2/AGENTS/RENDER-1.0 进度——R1 文本精度落地勾选（2026-09-30）
+- `ea98716c` feat(1.0): font auto-fit (fit=auto|shrink) — 双向字号适配 + Fill 宽文本 resize 重排验证（2026-09-30）
+<!-- deepgit:end progress -->

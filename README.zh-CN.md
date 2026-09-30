@@ -12,6 +12,12 @@
 - **字号自适应** — `update <画板> <节点> fit=auto|shrink`：溢出自动缩小
   （下限 8px），`auto` 还会让单行文本放大填充纵向留白（2 倍封顶）。
   Text 节点与 rect 载字（按钮/输入框标签）双双生效。
+- **在线 AI Agent 实验场** — 网页 Playground 新增 AI Agent 抽屉（BYOK）：
+  models.dev 目录选厂商（199+ 可直连），Vercel AI SDK 调用（`ai@5` +
+  `@ai-sdk/openai-compatible`，esm.sh CDN 懒加载），5 工具环
+  （`apply_ops` / `query_nodes` / `lint` / `list_artboards` / `get_source`）
+  经 AgentGate 驱动同一 wasm 引擎——被拒的 op 连引擎错误回灌给模型自纠。
+  人类编辑原样保留；Key 只存浏览器 localStorage。
 - **variants 探索 op** — `variants-fork / variants-score / variants-merge`（CLI）。
 
 ## 0.1.7 新特性
