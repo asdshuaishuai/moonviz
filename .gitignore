@@ -4,7 +4,8 @@ ddp/target/
 .mooncakes/
 .DS_Store
 node_modules/
-site/assets/
+site/assets/*
+!site/assets/agent.mjs
 .commandcode/
 
 # 本地产物（非引擎资产）：模型缓存 / 工作日志 / 一次性脚本
