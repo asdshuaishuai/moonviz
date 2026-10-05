@@ -166,6 +166,18 @@ pub fn session_open(mbt : String) -> Int {
 }
 
 ///|
+/// 从属不变式（issue #21）：注册表 ⊆ 现存画板。删板即清注册——同 id
+/// 重建后 init 的幂等保留才不会复活死板的历史栈。原地清，返回原记录。
+fn prune_session_histories(cur : WasmSession) -> WasmSession {
+  for k in cur.histories.keys() {
+    if !cur.project.artboards.contains(k) {
+      cur.histories.remove(k)
+    }
+  }
+  cur
+}
+
+///|
 /// 会话 history 的 revision 解析（对齐 cli parse_rev：非负十进制）。
 fn history_rev(text : String) -> Int? {
   let t = text.trim().to_string()
@@ -222,6 +234,18 @@ pub fn session_history(handle : Int, line : String) -> String {
   }
   let sub = if parts.length() > 0 { parts[0] } else { "" }
   let cur = s[handle].val
+  // 从属不变式（issue #21 审查补充）：注册表 ⊆ 现存画板。删板后同 id
+  // 重建时，init 的幂等保留绝不能复活死板的历史栈。
+  let mut pruned = false
+  for k in cur.histories.keys() {
+    if !cur.project.artboards.contains(k) {
+      cur.histories.remove(k)
+      pruned = true
+    }
+  }
+  if pruned {
+    s[handle].val = { ..cur, histories: cur.histories }
+  }
   match sub {
     "init" => {
       if parts.length() < 2 {
@@ -243,10 +267,8 @@ pub fn session_history(handle : Int, line : String) -> String {
       }
     }
     "commit" => {
-      if parts.length() < 2 {
-        return "{\"ok\":false,\"error\":\"mbt_operation_usage:history commit <msg> [artboard]\"}"
-      }
-      let msg = parts[1]
+      // 兼容裸 commit（msg 缺省 "commit"，与历史行为一致）
+      let msg = if parts.length() >= 2 { parts[1] } else { "commit" }
       let ab = if parts.length() >= 3 { parts[2] } else { cur.history_board }
       match cur.histories.get(ab) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
@@ -462,6 +484,8 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(_) => {
                   p.replace_with(snapshot)
+                  // 从属不变式：apply 成功后清掉已删画板的历史注册
+                  let _ = prune_session_histories(session_store()[handle].val)
                   match @decl.project_to_mbt(p) {
                     Err(e) =>
                       "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
@@ -500,6 +524,8 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(debt) => {
                   p.replace_with(snapshot)
+                  // 从属不变式：apply 成功后清掉已删画板的历史注册
+                  let _ = prune_session_histories(session_store()[handle].val)
                   match @decl.project_to_mbt(p) {
                     Err(e) =>
                       "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"

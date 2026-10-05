@@ -512,3 +512,27 @@ test "契约：锚定板被删后批注降级文末——原文不丢（issue #2
   assert_true(d.contains("deepdesign:keepme"), msg="板删除后批注必须降级保留: " + d)
   let _ = session_close(h)
 }
+
+///|
+test "契约：history 裸 commit 兼容 + 删板不复活旧栈（issue #21 审查）" {
+  let h = session_open(SEED_H21)
+  let _ = session_apply_human(h, "template login wl 390 844")
+  let _ = session_history(h, "init wl")
+  // 裸 commit（无 msg）必须保持旧行为：默认 msg="commit"
+  let r1 = session_history(h, "commit")
+  assert_true(r1.contains("\"rev\":1") && r1.contains("\"msg\":\"commit\""), msg=r1)
+  // 删板 → 同 id 重建 → init 必须重基线（kept:false），undo 不得回退到死板内容
+  let _ = session_apply_human(h, "create tmp2 100 100")
+  let d = session_apply_human(h, "delete-artboard wl")
+  assert_true(d.contains("\"ok\":true"), msg=d)
+  let rc = session_apply_human(h, "template login wl 390 844")
+  assert_true(rc.contains("\"ok\":true"), msg=rc)
+  let ri = session_history(h, "init wl")
+  assert_true(ri.contains("\"kept\":false"), msg="重建板的 init 应重基线: " + ri)
+  let c2 = session_history(h, "commit fresh")
+  assert_true(c2.contains("\"rev\":1"), msg="重建板栈应从 rev1 重新开始: " + c2)
+  let u = session_history(h, "undo")
+  assert_true(u.contains("\"rev\":0"), msg="undo 应回到重建后的基线: " + u)
+  assert_false(u.contains("rev1内容") , msg="sanity")
+  let _ = session_close(h)
+}

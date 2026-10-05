@@ -83,6 +83,12 @@ let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
 /// history 子命令族（CLI 侧薄分发；状态在 g_history）。
 fn cli_history(p : @core.Project, parts : Array[String]) -> String {
   let sub = if parts.length() >= 2 { parts[1] } else { "" }
+  // 从属不变式（issue #21 审查补充）：注册表 ⊆ 现存画板
+  for k in g_histories.val.keys() {
+    if !p.artboards.contains(k) {
+      let _ = g_histories.val.remove(k)
+    }
+  }
   match sub {
     "init" =>
       if parts.length() < 3 {
@@ -829,7 +835,11 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         cli_err("usage: delete-artboard <artboard>")
       } else {
         match p.delete_artboard(id=parts[1]) {
-          Ok(json) => json
+          Ok(json) => {
+            // 从属不变式（issue #21）：删板即清历史注册，同 id 重建不复活旧栈
+            let _ = g_histories.val.remove(parts[1])
+            json
+          }
           Err(e) => cli_err(e)
         }
       }
