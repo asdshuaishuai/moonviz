@@ -723,24 +723,26 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
 <!-- deepgit:begin progress -->
 ## 项目进度
 
-> 本区域由 **deepGit** 自动维护（浅更新）· 更新于 2026-09-30 11:58
+> 本区域由 **deepGit** 自动维护（深度更新）· 更新于 2026-10-01 02:42
 > 追踪 3 个分支
+
+### 工程脉搏
+
+- 提交构成：`feat` ×10 · `fix` ×15 · `perf` ×1 · `docs` ×16 · `chore` ×8 · `other` ×10
+- 热点文件：`site/playground.html` ×27、`.github/workflows/binaries.yml` ×26、`site/docs.html` ×24、`README.md` ×21、`SKILL.md` ×20
+- 注意：`release/1.0` 领先 20 / 落后 4，需三方合并
 
 ### `release/1.0`（当前）
 
-- **状态**：活跃 · 最近提交 37 分钟前（`3359219b` feat(1.0): placeholder 独立色——text_input 默认…）
-- **摘要**：最近 30 个提交：文档×9、新增×7、修复×5
+- **状态**：活跃 · 最近提交 8 小时前（`efe3ba57` docs(1.0): DSL 完善纪律写入规划——七步流程 + Pai…）
+- **摘要**：新增 1 个提交（文档×1），涉及 (根目录)（2 文件）
 - **近期进展**
-  - 新增：“placeholder 独立色——text_input 默认取 text_hint 令牌…
-  - 文档：“同步文本能力到 README×2/AGENTS/RENDER-1.0 进度——R1 …
-  - 新增：“font auto-fit (fit=auto|shrink) — 双向字号适配 + Fil…
-  - 新增：“width-aware text wrapping — greedy word/CJK split re…
-  - 文档：“增补文字自适应缩放与自动换行——渲染精致化核心能力”
-- 本次记录 30 个提交
+  - 文档：“DSL 完善纪律写入规划——七步流程 + PaintSpec 细则 + 引…
+- 本次记录 1 个提交 · 领先默认分支 1 个提交
 
 ### `main`（默认分支）
 
-- **状态**：活跃 · 最近提交 12 小时前（`cfae45ea` chore: 移除参赛材料文件（保留在 git 历史中可随…）
+- **状态**：活跃 · 最近提交 1 天前（`cfae45ea` chore: 移除参赛材料文件（保留在 git 历史中可随…）
 - **摘要**：最近 30 个提交：文档×8、修复×8、构建/依赖×7
 - **近期进展**
   - 构建/依赖：“移除参赛材料文件（保留在 git 历史中可随时找回）”
@@ -752,7 +754,7 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
 
 ### `feat/mooncakes-sdk`
 
-- **状态**：已合并 · 最近提交 1 天前（`9ec378b1` chore: 移除误入版本库的本地工具配置（.commandco…）
+- **状态**：已合并 · 最近提交 2 天前（`9ec378b1` chore: 移除误入版本库的本地工具配置（.commandco…）
 - **摘要**：最近 30 个提交：修复×10、构建/依赖×7、文档×6
 - **近期进展**
   - 构建/依赖：“移除误入版本库的本地工具配置（.commandcode/），…
@@ -760,7 +762,46 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
   - 文档：“0.1.6-moon 全链同步——README 新特性小节、官网新能力区…
   - 构建/依赖：“升级语言工具链适配——0.1.6-moon 版本基线”
   - CI：“ci+docs: 补 CI 全流程工作流 + README Quick Start 可复…
-- **下一步**
-  - 推进该分支的收尾与验证，考虑合并回默认分支
 - 本次记录 30 个提交 · 已合入默认分支
 <!-- deepgit:end progress -->
+
+<!-- deepgit:begin overview -->
+## 项目概览
+
+- **构建清单**：`moon.mod.json`
+- **技术构成**：`MoonBit` 105 文件、`Markdown` 31 文件、`其他` 20 文件、`JavaScript` 14 文件
+- **工程规模**：189 个跟踪文件 · 135 个提交 · 始于 2026-09-14
+- **远端**：https://github.com/asdshuaishuai/moonviz.git
+- **分支**：`release/1.0`、`main`、`feat/mooncakes-sdk`
+
+_（本节由 deepGit 依据仓库事实生成，可运行 `deepgit update --mode deep` 用 AI 深化）_
+<!-- deepgit:end overview -->
+
+<!-- deepgit:begin history -->
+## 里程碑与历史
+
+**版本标签**
+- `engine-v0.1.7`
+- `engine-v0.1.6-moon`
+- `engine-v0.1.6-fix`
+- `engine-v0.1.6`
+- `engine-v0.1.5-fix-2`
+- `engine-v0.1.5-fix`
+- `engine-v0.1.5`
+- `engine-v0.1.4`
+- `engine-v0.1.3`
+- `engine-v0.1.2`
+
+**提交活跃度（按月）**
+
+2026-09: 135
+
+**进度记录**
+- 2026-09-30 11:56 · `release/1.0` · 最近 30 个提交：文档×9、新增×7、修复×5；最近 30 个提交：文档×8、修复×8、构建/依…
+- 2026-09-30 11:58 · `release/1.0` · 最近 30 个提交：文档×9、新增×7、修复×5；最近 30 个提交：文档×8、修复×8、构建/依…
+- 2026-09-30 17:43 · `release/1.0` · 新增 2 个提交（修复×1、新增×1），涉及 (根目录)（4 文件）、site（3 文件）、scrip…
+- 2026-10-01 00:05 · `release/1.0` · 新增 1 个提交（文档×1），涉及 (根目录)（2 文件）；最近 30 个提交：文档×8、修复×…
+
+**最初提交**
+- `b3837350` MoonViz v0.3: MoonBit prototype design engine — .mbt.md single source, dual-gate editing, CLI/MCP/Node SDK, DDP codec, docs site（2026-09-14）
+<!-- deepgit:end history -->

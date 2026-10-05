@@ -97,14 +97,90 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 <!-- deepgit:begin progress -->
 ## 当前进度（deepGit 维护）
 
-> 浅更新 · 2026-09-30 11:58 · 追踪 3 个分支
+> 深度更新 · 2026-10-01 02:42 · 追踪 3 个分支
 
-- **`release/1.0`**（当前）：活跃 · head `3359219b`（37 分钟前） —— 最近 30 个提交：文档×9、新增×7、修复×5
-- **`main`**（默认）：活跃 · head `cfae45ea`（12 小时前） —— 最近 30 个提交：文档×8、修复×8、构建/依赖×7
-- **`feat/mooncakes-sdk`**：已合并 · head `9ec378b1`（1 天前） · 已合并 —— 最近 30 个提交：修复×10、构建/依赖×7、文档×6
+### 工程脉搏
+
+- 提交构成：`feat` ×10 · `fix` ×15 · `perf` ×1 · `docs` ×16 · `chore` ×8 · `other` ×10
+- 热点文件：`site/playground.html` ×27、`.github/workflows/binaries.yml` ×26、`site/docs.html` ×24、`README.md` ×21、`SKILL.md` ×20
+- 注意：`release/1.0` 领先 20 / 落后 4，需三方合并
+
+- **`release/1.0`**（当前）：活跃 · head `efe3ba57`（8 小时前） · 领先默认 1 —— 新增 1 个提交（文档×1），涉及 (根目录)（2 文件）
+- **`main`**（默认）：活跃 · head `cfae45ea`（1 天前） —— 最近 30 个提交：文档×8、修复×8、构建/依赖×7
+- **`feat/mooncakes-sdk`**：已合并 · head `9ec378b1`（2 天前） · 已合并 —— 最近 30 个提交：修复×10、构建/依赖×7、文档×6
 
 **最近提交**
-- `3359219b` feat(1.0): placeholder 独立色——text_input 默认取 text_hint 令牌（R1 文本精度收尾）（2026-09-30）
-- `439a456f` docs(1.0): 同步文本能力到 README×2/AGENTS/RENDER-1.0 进度——R1 文本精度落地勾选（2026-09-30）
-- `ea98716c` feat(1.0): font auto-fit (fit=auto|shrink) — 双向字号适配 + Fill 宽文本 resize 重排验证（2026-09-30）
+- `efe3ba57` docs(1.0): DSL 完善纪律写入规划——七步流程 + PaintSpec 细则 + 引用语义 + 行为声明 + 门分层（2026-09-30）
+- `33daf250` fix(playground): 补齐 AI Agent 提交漏件——agent.mjs（gitignore 例外）+ 双层 E2E 脚本（2026-09-30）
+- `999809fb` feat(playground): 在线 AI Agent——BYOK 自选厂商，ai-sdk 工具环驱动 wasm 引擎（双门纪律不变）（2026-09-30）
 <!-- deepgit:end progress -->
+
+<!-- deepgit:begin overview -->
+## 项目概览
+
+- **构建清单**：`moon.mod.json`
+- **技术构成**：`MoonBit` 105 文件、`Markdown` 31 文件、`其他` 20 文件、`JavaScript` 14 文件
+- **工程规模**：189 个跟踪文件 · 135 个提交 · 始于 2026-09-14
+- **远端**：https://github.com/asdshuaishuai/moonviz.git
+- **分支**：`release/1.0`、`main`、`feat/mooncakes-sdk`
+
+_（本节由 deepGit 依据仓库事实生成，可运行 `deepgit update --mode deep` 用 AI 深化）_
+<!-- deepgit:end overview -->
+
+<!-- deepgit:begin architecture -->
+## 架构与目录
+
+**目录结构（跟踪文件聚合）**：
+
+```
+(根目录 10 个文件)
+.github/ (3)
+  workflows/ (3)
+cli/ (5)
+core/ (75)
+ddp/ (4)
+  src/ (2)
+    bin/ (1)
+decl/ (10)
+docs/ (12)
+examples/ (4)
+mcp/ (3)
+npm/ (17)
+  moonviz-bin-darwin-arm64/ (6)
+    bin/ (2)
+  moonviz-mcp/ (6)
+    test/ (1)
+  moonviz-skill/ (5)
+playground/ (13)
+scripts/ (6)
+sdk/ (19)
+  node/ (10)
+    src/ (5)
+    test/ (1)
+  wasm/ (7)
+    dist/ (1)
+    test/ (1)
+site/ (5)
+  assets/ (1)
+wasm/ (3)
+```
+
+**构建清单**
+- `moon.mod.json`
+
+**版本标签**
+- `engine-v0.1.7`（2026-09-28）
+- `engine-v0.1.6-moon`（2026-09-28）
+- `engine-v0.1.6-fix`（2026-09-25）
+- `engine-v0.1.6`（2026-09-24）
+- `engine-v0.1.5-fix-2`（2026-09-24）
+- `engine-v0.1.5-fix`（2026-09-23）
+- `engine-v0.1.5`（2026-09-23）
+- `engine-v0.1.4`（2026-09-23）
+<!-- deepgit:end architecture -->
+
+<!-- deepgit:begin commands -->
+## 常用命令
+
+MoonBit 项目：`moon check` · `moon test` · `moon build --release`
+<!-- deepgit:end commands -->
