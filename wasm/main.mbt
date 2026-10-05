@@ -135,8 +135,10 @@ pub fn apply_human_op(mbt : String, op : String) -> String {
 struct WasmSession {
   project : @core.Project
   /// 会话级设计历史（issue #11）：CLI `history` 子命令族的 wasm 对应面。
-  /// CLI 版状态在进程全局（g_history），wasm 多会话并发，故挂在本结构上。
-  history : @core.DesignHistory?
+  /// CLI 版状态在进程全局，wasm 多会话并发，故挂在本结构上。
+  /// 按板注册表（issue #21）：apply 不会使注册失效；init 对已注册板幂等
+  /// （不重基线，宿主「重开 + init-all」模式才能跨 apply 累积多级撤销）。
+  histories : Map[String, @core.DesignHistory]
   history_board : String
   /// 存活标记：close 置 false（tombstone，槽位不复用以保句柄稳定）。
   /// session_get 对已关槽位返回 None——宿主得到 invalid_session_handle
@@ -157,7 +159,7 @@ pub fn session_open(mbt : String) -> Int {
     Err(_) => -1
     Ok(model) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: model.project, history: None, history_board: "", alive: true }))
+      s.push(Ref::new({ project: model.project, histories: Map::new(), history_board: "", alive: true }))
       s.length() - 1
     }
   }
@@ -229,21 +231,26 @@ pub fn session_history(handle : Int, line : String) -> String {
       match cur.project.artboards.get(ab) {
         None => "{\"ok\":false,\"error\":\"unknown_artboard: \{ab}\"}"
         Some(board) => {
-          s[handle].val = {
-            ..cur,
-            history: Some(@core.DesignHistory::new(board.doc.clone())),
-            history_board: ab,
+          // 幂等（issue #21）：对已注册板 init 不重基线——宿主每 op 后重 init
+          // 或「重开 + init-all」都不会静默摧毁已累积的历史栈。
+          let kept = cur.histories.contains(ab)
+          if !kept {
+            cur.histories.set(ab, @core.DesignHistory::new(board.doc.clone()))
           }
-          "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{@core.json_escape(ab)}\"}"
+          s[handle].val = { ..cur, history_board: ab }
+          "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{@core.json_escape(ab)}\",\"kept\":\{kept}}"
         }
       }
     }
-    "commit" =>
-      match cur.history {
+    "commit" => {
+      if parts.length() < 2 {
+        return "{\"ok\":false,\"error\":\"mbt_operation_usage:history commit <msg> [artboard]\"}"
+      }
+      let msg = parts[1]
+      let ab = if parts.length() >= 3 { parts[2] } else { cur.history_board }
+      match cur.histories.get(ab) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
-        Some(h) => {
-          let msg = if parts.length() >= 2 { parts[1] } else { "commit" }
-          let ab = if parts.length() >= 3 { parts[2] } else { cur.history_board }
+        Some(h) =>
           match cur.project.artboards.get(ab) {
             None => "{\"ok\":false,\"error\":\"unknown_artboard: \{ab}\"}"
             Some(board) => {
@@ -251,16 +258,16 @@ pub fn session_history(handle : Int, line : String) -> String {
               "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{rev},\"msg\":\"\{@core.json_escape(msg)}\"}"
             }
           }
-        }
       }
+    }
     "log" =>
-      match cur.history {
+      match cur.histories.get(cur.history_board) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) =>
           "{\"ok\":true,\"op\":\"history-log\",\"board\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
       }
     "undo" | "redo" =>
-      match cur.history {
+      match cur.histories.get(cur.history_board) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) => {
           let result = if sub == "undo" { h.undo() } else { h.redo() }
@@ -283,7 +290,7 @@ pub fn session_history(handle : Int, line : String) -> String {
       if parts.length() < 2 {
         return "{\"ok\":false,\"error\":\"mbt_operation_usage:history checkout <rev>\"}"
       }
-      match cur.history {
+      match cur.histories.get(cur.history_board) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) =>
           match history_rev(parts[1]) {
@@ -309,7 +316,7 @@ pub fn session_history(handle : Int, line : String) -> String {
       if parts.length() < 3 {
         return "{\"ok\":false,\"error\":\"mbt_operation_usage:history diff <from> <to>\"}"
       }
-      match cur.history {
+      match cur.histories.get(cur.history_board) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) => {
           let from = history_rev(parts[1])
@@ -342,7 +349,7 @@ pub fn session_history_in(handle : Int) -> String {
 pub fn session_close(handle : Int) -> Bool {
   let s = session_store()
   if handle >= 0 && handle < s.length() && s[handle].val.alive {
-    s[handle] = Ref::new({ project: @core.Project::new(), history: None, history_board: "", alive: false })
+    s[handle] = Ref::new({ project: @core.Project::new(), histories: Map::new(), history_board: "", alive: false })
     true
   } else {
     false
@@ -365,7 +372,7 @@ pub fn session_open_project_json(project_json : String) -> Int {
     Err(_) => -1
     Ok(_) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: p, history: None, history_board: "", alive: true }))
+      s.push(Ref::new({ project: p, histories: Map::new(), history_board: "", alive: true }))
       s.length() - 1
     }
   }

@@ -74,7 +74,9 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 ///|
 /// 设计版本历史（会话级）：init 时绑定目标画板，undo/redo/checkout 一律
 /// 落回该画板——此前用 keys().next() 取第一个画板，多画板项目会静默写错。
-let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+// 按板历史注册表（issue #21）：apply 不会使注册失效；init 幂等不重基线，
+// 「重开 + init-all」宿主模式可跨 apply 累积多级撤销。
+let g_histories : @ref.Ref[Map[String, @core.DesignHistory]] = @ref.Ref::new(Map::new())
 let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
 
 ///|
@@ -89,35 +91,43 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
         match p.artboards.get(parts[2]) {
           None => cli_err("unknown_artboard: " + parts[2])
           Some(ab) => {
-            g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+            // 幂等（issue #21）：已注册板 init 不重基线，保留已累积历史栈
+            let kept = g_histories.val.contains(parts[2])
+            if !kept {
+              g_histories.val.set(parts[2], @core.DesignHistory::new(ab.doc.clone()))
+            }
             g_history_board.val = parts[2]
-            "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{parts[2]}\"}"
+            "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{parts[2]}\",\"kept\":\{kept}}"
           }
         }
       }
-    "commit" =>
-      match g_history.val {
-        None => cli_err("history_not_initialized: 先 history init <artboard>")
-        Some(h) => {
-          let msg = if parts.length() >= 3 { parts[2] } else { "commit" }
-          let target = if parts.length() >= 4 { parts[4 - 1] } else { "" }
+    "commit" => {
+      if parts.length() < 3 {
+        return cli_err("usage: history commit <msg> [artboard]")
+      }
+      let msg = parts[2]
+      let target = if parts.length() >= 4 { parts[3] } else { g_history_board.val }
+      match g_histories.val.get(target) {
+        None =>
+          cli_err("history_not_initialized: 先 history init <artboard>")
+        Some(h) =>
           match p.artboards.get(target) {
-            None => cli_err("usage: history commit <msg> <artboard>")
+            None => cli_err("unknown_artboard: " + target)
             Some(ab) => {
               let _ = h.commit("cli", msg, [], ab.doc.clone())
               "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{h.rev()},\"msg\":\"\{@core.json_escape(msg)}\"}"
             }
           }
-        }
       }
+    }
     "log" =>
-      match g_history.val {
+      match g_histories.val.get(g_history_board.val) {
         None => cli_err("history_not_initialized")
         Some(h) =>
           "{\"ok\":true,\"op\":\"history-log\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
       }
     "undo" | "redo" | "checkout" =>
-      match g_history.val {
+      match g_histories.val.get(g_history_board.val) {
         None => cli_err("history_not_initialized")
         Some(h) => {
           let want_rev = if sub == "checkout" && parts.length() >= 3 {
@@ -157,7 +167,7 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
       if parts.length() < 4 {
         cli_err("usage: history diff <revA> <revB>")
       } else {
-        match g_history.val {
+        match g_histories.val.get(g_history_board.val) {
           None => cli_err("history_not_initialized")
           Some(h) =>
             match (parse_rev(parts[2]), parse_rev(parts[3])) {

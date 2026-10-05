@@ -427,3 +427,58 @@ test "契约：place 一步最终尺寸——门在最终 bbox 评估（issue #1
   assert_true(r4.contains("\"ok\":true"), msg="最终尺寸 place 应过门: " + r4)
   let _ = session_close(h)
 }
+
+///|
+const SEED_H21 : String = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+
+///|
+test "契约：history 跨 apply 累积——apply 后不重 init 直接 commit + 逐级 undo（issue #21）" {
+  let h = session_open(SEED_H21)
+  let r0 = session_apply_human(h, "template login wl 390 844")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  let r1 = session_history(h, "init wl")
+  assert_true(r1.contains("\"ok\":true") && r1.contains("\"kept\":false"), msg=r1)
+  let r2 = session_history(h, "commit base")
+  assert_true(r2.contains("\"rev\":1"), msg="commit1 应 rev1: " + r2)
+  // apply 之后不重 init 直接 commit——历史注册必须存活（issue #21 失败路径 1）
+  let r3 = session_apply_human(h, "update wl welcome_title text_color=#007aff")
+  assert_true(r3.contains("\"ok\":true"), msg=r3)
+  let r4 = session_history(h, "commit colored")
+  assert_true(r4.contains("\"rev\":2"), msg="apply 后 commit 应 rev2: " + r4)
+  // 逐级 undo：颜色回退 → 模板仍在 → 再 undo 空转（栈底）
+  let u1 = session_history(h, "undo")
+  assert_true(u1.contains("\"rev\":1") && !u1.contains("#007aff"), msg="undo1 应回退颜色: " + u1)
+  let u2 = session_history(h, "undo")
+  assert_true(u2.contains("\"rev\":0"), msg="undo2 应到基线 rev0: " + u2)
+  let u3 = session_history(h, "undo")
+  assert_true(u3.contains("\"ok\":false"), msg="栈底再 undo 应拒绝: " + u3)
+  // redo 恢复
+  let d1 = session_history(h, "redo")
+  assert_true(d1.contains("\"rev\":1") && !d1.contains("#007aff"), msg="redo1 应回 rev1: " + d1)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：history init 幂等——重 init 不重基线（issue #21 失败路径 2）" {
+  let h = session_open(SEED_H21)
+  let _ = session_apply_human(h, "template login wl 390 844")
+  let _ = session_history(h, "init wl")
+  let _ = session_history(h, "commit base")
+  let _ = session_apply_human(h, "update wl welcome_title text_color=#007aff")
+  let _ = session_history(h, "commit colored")
+  // 宿主「init-all」模式：重复 init 必须保留既有栈（kept:true），而非重基线
+  let ri = session_history(h, "init wl")
+  assert_true(ri.contains("\"kept\":true"), msg="重 init 应幂等: " + ri)
+  let c = session_history(h, "commit third")
+  assert_true(c.contains("\"rev\":3"), msg="重 init 后 commit 应继续累积 rev3: " + c)
+  let u = session_history(h, "undo")
+  assert_true(u.contains("\"rev\":2") && u.contains("#007aff"), msg="undo 应回 rev2（含颜色版）: " + u)
+  // 多板并存：init 另一板不摧毁当前板注册，切回仍可用
+  let _ = session_history(h, "init w")
+  let cw = session_history(h, "commit boardw")
+  assert_true(cw.contains("\"rev\":1"), msg="板 w 独立栈: " + cw)
+  let _ = session_history(h, "init wl")
+  let back = session_history(h, "log")
+  assert_true(back.contains("\"rev\":2"), msg="切回 wl 应看到自己的栈（rev2）: " + back)
+  let _ = session_close(h)
+}
