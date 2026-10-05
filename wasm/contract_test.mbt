@@ -482,3 +482,33 @@ test "契约：history init 幂等——重 init 不重基线（issue #21 失败
   assert_true(back.contains("\"rev\":2"), msg="切回 wl 应看到自己的栈（rev2）: " + back)
   let _ = session_close(h)
 }
+
+///|
+test "契约：canonical 透传宿主批注注释——写路径往返不丢（issue #20）" {
+  // 板前注释锚定到后续节；文末注释为文档级。两者都必须跨写路径存活。
+  let doc = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- deepdesign:ink {\"strokes\":3,\"color\":\"#ff0044\"} -->\n\n## w\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n\n<!-- host:footer-note 文档级尾注 -->\n"
+  let r = apply_agent_op(doc, "update w btn label=改")
+  assert_true(r.contains("\"ok\":true"), msg=r)
+  assert_true(r.contains("deepdesign:ink"), msg="板前批注必须透传: " + r)
+  assert_true(r.contains("host:footer-note"), msg="文档级尾注必须透传: " + r)
+  // 二次写路径幂等——批注各恰好一份
+  let h2 = session_open(doc)
+  let r2 = session_apply_human(h2, "update w btn label=再改")
+  assert_true(r2.contains("\"ok\":true"), msg=r2)
+  assert_true(r2.contains("deepdesign:ink") && r2.contains("host:footer-note"), msg="会话路径批注也须透传: " + r2)
+  assert_true(r2.split("deepdesign:ink").length() == 2, msg="批注应恰好一份（不翻倍）: " + r2)
+  let _ = session_close(h2)
+}
+
+///|
+test "契约：锚定板被删后批注降级文末——原文不丢（issue #20）" {
+  let doc = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- deepdesign:keepme 注释正文 -->\n\n## w\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n"
+  let h = session_open(doc)
+  assert_true(h >= 0)
+  // 删除唯一画板被拒（至少保留一个），改成先建后删：锚定注释随 w 消失后降级文末
+  let _ = session_apply_human(h, "create second 100 100")
+  let d = session_apply_human(h, "delete-artboard w")
+  assert_true(d.contains("\"ok\":true"), msg=d)
+  assert_true(d.contains("deepdesign:keepme"), msg="板删除后批注必须降级保留: " + d)
+  let _ = session_close(h)
+}

@@ -34,6 +34,17 @@ pub(all) struct Project {
   /// 决定渲染层画布底色等 tokens 派生视觉。节点 fill 已是字面量，
   /// 由 apply_theme 的角色重着色负责，加载路径只恢复 tokens 不再重着色。
   mut active_theme : String
+  /// 宿主批注透传（issue #20）：canonical 扫描时收集的非 moonviz 顶层
+  /// HTML 注释。写路径再生 canonical 时原样回写；clone/replace_with 随行。
+  mut doc_comments : Array[DocComment]
+}
+
+///|
+/// 文档级宿主批注（issue #20）：引擎零语义，原文透传。
+/// anchor 为其后最近的画板 id/name（None = 文档级，序列化在文末）。
+pub(all) struct DocComment {
+  text : String
+  anchor : String?
 }
 
 ///|
@@ -48,6 +59,7 @@ pub fn Project::new() -> Project {
     revision: 1,
     active_theme: "light",
     token_overrides: None,
+    doc_comments: [],
   }
 }
 
@@ -145,6 +157,12 @@ pub fn Project::clone(self : Project) -> Project {
     }
     None => copy.token_overrides = None
   }
+  // 宿主批注随快照深拷贝（issue #20）：apply 失败回滚语义下，注释与
+  // 文档状态同生共死——克隆上不带注释会让通过门检查的替换悄悄丢批注。
+  copy.doc_comments = []
+  for cm in self.doc_comments.iter() {
+    copy.doc_comments.push({ text: cm.text, anchor: cm.anchor })
+  }
   copy
 }
 
@@ -165,6 +183,7 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.revision = source.revision
   self.active_theme = source.active_theme
   self.token_overrides = source.token_overrides
+  self.doc_comments = source.doc_comments
 }
 
 // ---------------------------------------------------------------------------
