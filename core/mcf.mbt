@@ -60,7 +60,7 @@ fn mcf_crc32(bytes : Array[Byte], start : Int, len : Int) -> Int {
 ///|
 /// LE u32 写入
 fn push_le32(out : Array[Byte], v : Int) -> Unit {
-  out.push(((v) & 0xFF).to_byte())
+  out.push((v & 0xFF).to_byte())
   out.push(((v >> 8) & 0xFF).to_byte())
   out.push(((v >> 16) & 0xFF).to_byte())
   out.push(((v >> 24) & 0xFF).to_byte())
@@ -76,9 +76,11 @@ fn push_le64(out : Array[Byte], v : Int64) -> Unit {
 
 ///|
 fn read_le32(bytes : Array[Byte], at : Int) -> Int {
-  let b = (i : Int) => match bytes.get(at + i) {
-    Some(x) => x.to_int() & 0xFF
-    None => 0
+  let b = (i : Int) => {
+    match bytes.get(at + i) {
+      Some(x) => x.to_int() & 0xFF
+      None => 0
+    }
   }
   b(0) | (b(1) << 8) | (b(2) << 16) | (b(3) << 24)
 }
@@ -119,12 +121,16 @@ fn mcf_unwrap_header(bytes : Array[Byte]) -> Result[String, String] {
     return Err("mcf_header_type")
   }
   let len = (match bytes.get(1) {
-    Some(b) => b.to_int() & 0xFF
-    None => 0
-  }) | ((match bytes.get(2) {
-    Some(b) => b.to_int() & 0xFF
-    None => 0
-  }) << 8)
+      Some(b) => b.to_int() & 0xFF
+      None => 0
+    }) |
+    (
+      (match bytes.get(2) {
+        Some(b) => b.to_int() & 0xFF
+        None => 0
+      }) <<
+      8
+    )
   if bytes.length() < 3 + len {
     return Err("mcf_header_truncated")
   }
@@ -146,10 +152,7 @@ fn bytes_of(arr : Array[Byte]) -> Bytes {
 ///|
 /// PCG 式 xor 流（自逆）：state 种子由 header 字节派生——不是密码，
 /// 是格式内生的可逆变换（规范的一部分）。
-fn mcf_xor_stream(
-  payload : Array[Byte],
-  header : Array[Byte],
-) -> Array[Byte] {
+fn mcf_xor_stream(payload : Array[Byte], header : Array[Byte]) -> Array[Byte] {
   let mut state : Int64 = fnv1a64(MCF_FINGERPRINT_INPUT)
   for i = 0; i < header.length() && i < 16; i = i + 1 {
     match header.get(i) {
@@ -251,9 +254,7 @@ pub fn mcf_pack(
 
 ///|
 /// 解包：严格校验 magic/version/长度/双 crc/指纹，任一不符即拒绝。
-pub fn mcf_unpack(
-  bytes : Bytes,
-) -> Result[(String, String), String] { // (header_json, mbt_source)
+pub fn mcf_unpack(bytes : Bytes) -> Result[(String, String), String] { // (header_json, mbt_source)
   let arr : Array[Byte] = []
   for i = 0; i < bytes.length(); i = i + 1 {
     match bytes.get(i) {
@@ -278,9 +279,10 @@ pub fn mcf_unpack(
     return Err("mcf_magic_invalid")
   }
   match arr.get(4) {
-    Some(b) => if (b.to_int() & 0xFF) != MCF_VERSION {
-      return Err("mcf_version_unsupported")
-    }
+    Some(b) =>
+      if (b.to_int() & 0xFF) != MCF_VERSION {
+        return Err("mcf_version_unsupported")
+      }
     None => return Err("mcf_version_unsupported")
   }
   let header_len = read_le32(arr, 6)

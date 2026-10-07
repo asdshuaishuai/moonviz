@@ -152,7 +152,7 @@ pub(all) struct AnimationClip {
 
 ///|
 pub fn AnimationClip::new(node_id : String) -> AnimationClip {
-  { node_id, keyframes: [], easing: EaseOut, duration: 0.3, delay: 0.0 }
+  { node_id, keyframes: [], easing: EaseOut, duration: 0.3, delay: 0.0, }
 }
 
 ///|
@@ -161,7 +161,7 @@ pub fn AnimationClip::add_keyframe(
   time : Double,
   props : Array[AnimatableProperty],
 ) -> Unit {
-  self.keyframes.push({ time, properties: props })
+  self.keyframes.push({ time, properties: props, })
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ pub(all) struct Timeline {
 
 ///|
 pub fn Timeline::new() -> Timeline {
-  { clips: [], total_duration: 0.0 }
+  { clips: [], total_duration: 0.0, }
 }
 
 ///|
@@ -207,7 +207,7 @@ pub fn Timeline::add_sequence(
 ) -> Unit {
   let mut offset = self.total_duration
   for c in clips.iter() {
-    let adjusted : AnimationClip = { ..c, delay: offset }
+    let adjusted : AnimationClip = { ..c, delay: offset, }
     self.add(adjusted)
     offset = offset + c.duration
   }
@@ -376,7 +376,9 @@ pub fn pop_animation(node_id : String) -> AnimationClip {
 ///|
 /// 预设动画清单（anim-list / animation_presets）。
 pub fn animation_presets_json() -> String {
-  let names = ["press", "fade_in", "slide_in_right", "modal_present", "shake", "pop"]
+  let names = [
+    "press", "fade_in", "slide_in_right", "modal_present", "shake", "pop",
+  ]
   let items : Array[String] = []
   for n in names.iter() {
     items.push("\"\{n}\"")

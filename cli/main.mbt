@@ -74,13 +74,25 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 ///|
 /// 设计版本历史（会话级）：init 时绑定目标画板，undo/redo/checkout 一律
 /// 落回该画板——此前用 keys().next() 取第一个画板，多画板项目会静默写错。
-let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+// 按板历史注册表（issue #21）：apply 不会使注册失效；init 幂等不重基线，
+// 「重开 + init-all」宿主模式可跨 apply 累积多级撤销。
+let g_histories : @ref.Ref[Map[String, @core.DesignHistory]] = @ref.Ref::new(
+  Map::new(),
+)
+
+///|
 let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
 
 ///|
 /// history 子命令族（CLI 侧薄分发；状态在 g_history）。
 fn cli_history(p : @core.Project, parts : Array[String]) -> String {
   let sub = if parts.length() >= 2 { parts[1] } else { "" }
+  // 从属不变式（issue #21 审查补充）：注册表 ⊆ 现存画板
+  for k in g_histories.val.keys() {
+    if !p.artboards.contains(k) {
+      let _ = g_histories.val.remove(k)
+    }
+  }
   match sub {
     "init" =>
       if parts.length() < 3 {
@@ -89,35 +101,49 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
         match p.artboards.get(parts[2]) {
           None => cli_err("unknown_artboard: " + parts[2])
           Some(ab) => {
-            g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+            // 幂等（issue #21）：已注册板 init 不重基线，保留已累积历史栈
+            let kept = g_histories.val.contains(parts[2])
+            if !kept {
+              g_histories.val.set(
+                parts[2],
+                @core.DesignHistory::new(ab.doc.clone()),
+              )
+            }
             g_history_board.val = parts[2]
-            "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{parts[2]}\"}"
+            "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{parts[2]}\",\"kept\":\{kept}}"
           }
         }
       }
-    "commit" =>
-      match g_history.val {
+    "commit" => {
+      if parts.length() < 3 {
+        return cli_err("usage: history commit <msg> [artboard]")
+      }
+      let msg = parts[2]
+      let target = if parts.length() >= 4 {
+        parts[3]
+      } else {
+        g_history_board.val
+      }
+      match g_histories.val.get(target) {
         None => cli_err("history_not_initialized: 先 history init <artboard>")
-        Some(h) => {
-          let msg = if parts.length() >= 3 { parts[2] } else { "commit" }
-          let target = if parts.length() >= 4 { parts[4 - 1] } else { "" }
+        Some(h) =>
           match p.artboards.get(target) {
-            None => cli_err("usage: history commit <msg> <artboard>")
+            None => cli_err("unknown_artboard: " + target)
             Some(ab) => {
               let _ = h.commit("cli", msg, [], ab.doc.clone())
               "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{h.rev()},\"msg\":\"\{@core.json_escape(msg)}\"}"
             }
           }
-        }
       }
+    }
     "log" =>
-      match g_history.val {
+      match g_histories.val.get(g_history_board.val) {
         None => cli_err("history_not_initialized")
         Some(h) =>
           "{\"ok\":true,\"op\":\"history-log\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
       }
     "undo" | "redo" | "checkout" =>
-      match g_history.val {
+      match g_histories.val.get(g_history_board.val) {
         None => cli_err("history_not_initialized")
         Some(h) => {
           let want_rev = if sub == "checkout" && parts.length() >= 3 {
@@ -157,7 +183,7 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
       if parts.length() < 4 {
         cli_err("usage: history diff <revA> <revB>")
       } else {
-        match g_history.val {
+        match g_histories.val.get(g_history_board.val) {
           None => cli_err("history_not_initialized")
           Some(h) =>
             match (parse_rev(parts[2]), parse_rev(parts[3])) {
@@ -175,6 +201,7 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
   }
 }
 
+///|
 fn parse_rev(text : String) -> Int? {
   let t = text.trim().to_string()
   if t.length() == 0 {
@@ -250,7 +277,8 @@ fn mbt_has_cmd_prefix(operation : String, prefix : String) -> Bool {
     return true
   }
   let head = prefix + " "
-  op.length() > head.length() && op.substring(start=0, end=head.length()) == head
+  op.length() > head.length() &&
+  op.substring(start=0, end=head.length()) == head
 }
 
 ///|
@@ -261,7 +289,7 @@ fn mbt_trim_ws(s : String) -> String {
   let mut ended = s.length()
   let mut trimming = true
   while trimming && start < ended {
-    let c = s.substring(start=start, end=start + 1)
+    let c = s.substring(start~, end=start + 1)
     if ws.contains(c) {
       start = start + 1
     } else {
@@ -277,7 +305,7 @@ fn mbt_trim_ws(s : String) -> String {
       trimming2 = false
     }
   }
-  s.substring(start=start, end=ended)
+  s.substring(start~, end=ended)
 }
 
 ///|
@@ -292,7 +320,6 @@ fn project_total_violations(project : @core.Project) -> Int {
   }
   total
 }
-
 
 ///|
 /// 执行一条 CLI 命令，返回 JSON 结果
@@ -536,7 +563,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "place" =>
       if parts.length() < 4 {
-        cli_err("usage: place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]")
+        cli_err(
+          "usage: place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]",
+        )
       } else {
         let ab = parts[1]
         let comp = parts[2]
@@ -819,7 +848,11 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         cli_err("usage: delete-artboard <artboard>")
       } else {
         match p.delete_artboard(id=parts[1]) {
-          Ok(json) => json
+          Ok(json) => {
+            // 从属不变式（issue #21）：删板即清历史注册，同 id 重建不复活旧栈
+            let _ = g_histories.val.remove(parts[1])
+            json
+          }
           Err(e) => cli_err(e)
         }
       }
@@ -1133,7 +1166,10 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
     "history" => cli_history(p, parts)
     "protest" =>
       match line.find(" ") {
-        None => cli_err("usage: protest <artboard> <script>（tap:x:y>board; back>board; noviol; render）")
+        None =>
+          cli_err(
+            "usage: protest <artboard> <script>（tap:x:y>board; back>board; noviol; render）",
+          )
         Some(sp) => {
           let rest = line.substring(start=sp + 1).trim().to_string()
           let sp2 = match rest.find(" ") {
@@ -1154,7 +1190,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
     // 多 Agent 协作：collab-merge <base_rev> <agent>=<op>[+op...] ...
     "collab-merge" =>
       match line.find(" ") {
-        None => cli_err("usage: collab-merge <base_rev> <agent>=<op>[+op...] ...")
+        None =>
+          cli_err("usage: collab-merge <base_rev> <agent>=<op>[+op...] ...")
         Some(sp) => {
           let rest = line.substring(start=sp + 1).trim().to_string()
           @core.merge_sessions_from_spec(rest)
@@ -1176,13 +1213,15 @@ fn index_of_str(s : String, sub : String) -> Int {
 }
 
 ///|
+
 ///|
 /// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）
 fn place_token_is_number(t : String) -> Bool {
-  t.length() > 0 && {
+  t.length() > 0 &&
+  ({
     let c0 = t.substring(start=0, end=1)
     c0 >= "0" && c0 <= "9"
-  }
+  })
 }
 
 ///|
@@ -1281,7 +1320,6 @@ fn cli_err(msg : String) -> String {
   "{\"error\":\"\{msg}\"}"
 }
 
-
 ///|
 /// 把 StateChange.describe 输出（"type:value"）拆成两段
 fn split_change(d : String) -> (String, String) {
@@ -1300,9 +1338,6 @@ fn split_change(d : String) -> (String, String) {
 fn char_at_str(s : String, i : Int) -> String {
   s.substring(start=i, end=i + 1)
 }
-
-
-
 
 ///|
 /// JSON 字符串转义（export-svg 内嵌完整 SVG 用）

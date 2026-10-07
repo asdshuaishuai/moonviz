@@ -48,7 +48,7 @@ pub fn Document::new(viewport : Size) -> Document {
   }
   let nodes : Map[String, Node] = Map::new()
   nodes.set("root", root)
-  { root_id: "root", nodes, revision: 1, journal: [] }
+  { root_id: "root", nodes, revision: 1, journal: [], }
 }
 
 ///|
@@ -76,7 +76,7 @@ pub fn Document::insert_node(
     Some(parent) => {
       let kids = parent.children.copy()
       kids.push(node.id)
-      self.nodes.set(parent_id, { ..parent, children: kids })
+      self.nodes.set(parent_id, { ..parent, children: kids, })
       true
     }
     None => false
@@ -141,7 +141,7 @@ pub fn Document::clone(self : Document) -> Document {
   let nodes : Map[String, Node] = Map::new()
   for id in self.nodes.keys() {
     match self.nodes.get(id) {
-      Some(n) => nodes.set(id, { ..n, children: n.children.copy() })
+      Some(n) => nodes.set(id, { ..n, children: n.children.copy(), })
       None => ()
     }
   }
@@ -149,20 +149,20 @@ pub fn Document::clone(self : Document) -> Document {
   for e in self.journal.iter() {
     journal.push(e)
   }
-  { root_id: self.root_id, nodes, revision: self.revision, journal }
+  { root_id: self.root_id, nodes, revision: self.revision, journal, }
 }
 
 ///|
 /// 示例：登录页（栈布局 + Fill/Hug），与 docs/05 的 Agent 工作流示例一致。
 pub fn Document::sample_login() -> Document {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   let root_layout : StackLayout = {
     dir: Vertical,
     gap: 16.0,
     justify: Start,
     padding: Padding::uniform(24.0),
   }
-  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some(root_layout) } })
+  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some(root_layout), } })
   let title = {
     ..Node::make("title", Text),
     name: "标题",
@@ -171,7 +171,7 @@ pub fn Document::sample_login() -> Document {
     height: Hug,
     x: AlignStart(0.0),
     y: AlignStart(0.0),
-    style: { ..NodeStyle::default(), font_size: 28.0, font_weight: "bold" },
+    style: { ..NodeStyle::default(), font_size: 28.0, font_weight: "bold", },
   }
   let input_user = {
     ..Node::make("input-user", Rect),
@@ -180,7 +180,7 @@ pub fn Document::sample_login() -> Document {
     height: Fixed(44.0),
     x: AlignStart(0.0),
     y: AlignStart(0.0),
-    style: { ..NodeStyle::default(), fill: "#F2F3F5", corner_radius: 8.0 },
+    style: { ..NodeStyle::default(), fill: "#F2F3F5", corner_radius: 8.0, },
   }
   let input_pass = {
     ..Node::make("input-pass", Rect),
@@ -189,7 +189,7 @@ pub fn Document::sample_login() -> Document {
     height: Fixed(44.0),
     x: AlignStart(0.0),
     y: AlignStart(0.0),
-    style: { ..NodeStyle::default(), fill: "#F2F3F5", corner_radius: 8.0 },
+    style: { ..NodeStyle::default(), fill: "#F2F3F5", corner_radius: 8.0, },
   }
   let btn = {
     ..Node::make("btn-login", Frame),
@@ -204,7 +204,7 @@ pub fn Document::sample_login() -> Document {
       justify: Center,
       padding: Padding::uniform(0.0),
     }),
-    style: { ..NodeStyle::default(), fill: "#4B6BFB", corner_radius: 10.0 },
+    style: { ..NodeStyle::default(), fill: "#4B6BFB", corner_radius: 10.0, },
   }
   let btn_text = {
     ..Node::make("text-btn", Text),

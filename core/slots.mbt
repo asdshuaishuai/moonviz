@@ -76,9 +76,13 @@ pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
       dir: Vertical,
       gap: 8.0,
       justify: Start,
-      padding: { top: 16.0, right: 16.0, bottom: 16.0, left: 16.0 },
+      padding: { top: 16.0, right: 16.0, bottom: 16.0, left: 16.0, },
     },
-    base_style: { ..NodeStyle::default(), fill: "#FFFFFF", corner_radius: 12.0 },
+    base_style: {
+      ..NodeStyle::default(),
+      fill: "#FFFFFF",
+      corner_radius: 12.0,
+    },
   })
 
   // ── List：可变数量 item 槽 ──
@@ -115,9 +119,9 @@ pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
       dir: Vertical,
       gap: 4.0,
       justify: Start,
-      padding: { top: 8.0, right: 8.0, bottom: 8.0, left: 8.0 },
+      padding: { top: 8.0, right: 8.0, bottom: 8.0, left: 8.0, },
     },
-    base_style: { ..NodeStyle::default(), fill: "#FFFFFF" },
+    base_style: { ..NodeStyle::default(), fill: "#FFFFFF", },
   })
 
   // ── Form：label + input + error ──
@@ -148,7 +152,7 @@ pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
       dir: Vertical,
       gap: 4.0,
       justify: Start,
-      padding: { top: 0.0, right: 0.0, bottom: 0.0, left: 0.0 },
+      padding: { top: 0.0, right: 0.0, bottom: 0.0, left: 0.0, },
     },
     base_style: NodeStyle::default(),
   })
@@ -181,9 +185,13 @@ pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
       dir: Vertical,
       gap: 16.0,
       justify: Start,
-      padding: { top: 24.0, right: 24.0, bottom: 24.0, left: 24.0 },
+      padding: { top: 24.0, right: 24.0, bottom: 24.0, left: 24.0, },
     },
-    base_style: { ..NodeStyle::default(), fill: "#FFFFFF", corner_radius: 16.0 },
+    base_style: {
+      ..NodeStyle::default(),
+      fill: "#FFFFFF",
+      corner_radius: 16.0,
+    },
   })
 
   // ── App Bar：leading + title + trailing ──
@@ -214,9 +222,9 @@ pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
       dir: Horizontal,
       gap: 12.0,
       justify: Start,
-      padding: { top: 16.0, right: 16.0, bottom: 16.0, left: 16.0 },
+      padding: { top: 16.0, right: 16.0, bottom: 16.0, left: 16.0, },
     },
-    base_style: { ..NodeStyle::default(), fill: "#FFFFFF" },
+    base_style: { ..NodeStyle::default(), fill: "#FFFFFF", },
   })
 
   // ── Tab Bar：可变 tab 槽 ──
@@ -253,9 +261,9 @@ pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
       dir: Horizontal,
       gap: 0.0,
       justify: Start,
-      padding: { top: 8.0, right: 0.0, bottom: 8.0, left: 0.0 },
+      padding: { top: 8.0, right: 0.0, bottom: 8.0, left: 0.0, },
     },
-    base_style: { ..NodeStyle::default(), fill: "#FFFFFF" },
+    base_style: { ..NodeStyle::default(), fill: "#FFFFFF", },
   })
 
   m
@@ -383,7 +391,7 @@ pub fn Project::fill_slot(
       if !ab.doc.has(slot_node_id) {
         return Err("slot_not_found: " + slot_node_id)
       }
-      let _ = ab.doc.update_node(slot_node_id, fn(n) { { ..n, text: content } })
+      let _ = ab.doc.update_node(slot_node_id, fn(n) { { ..n, text: content, } })
       Ok("{\"ok\":true,\"slot\":\"\{slot_name}\",\"content\":\"\{content}\"}")
     }
   }

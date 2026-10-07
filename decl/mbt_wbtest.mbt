@@ -62,7 +62,7 @@ test "human gate records visual debt while agent gate blocks the same MBT" {
   match model.project.artboards.get("login") {
     Some(artboard) => {
       let _ = artboard.doc.update_node("submit", fn(node) {
-        { ..node, x: @core.AlignStart(999.0) }
+        { ..node, x: @core.AlignStart(999.0), }
       })
     }
     None => assert_true(false)
@@ -216,7 +216,8 @@ test "standalone signup template exports a valid single-file MBT" {
 /// adaptive_landing 导出即 duplicate_id 损坏。
 test "structural templates round-trip without duplicating container children" {
   let project = @core.Project::new()
-  let ab = match project.apply_template(
+  let ab = match
+    project.apply_template(
       template_id="adaptive_landing",
       name="landing",
       width=1280.0,
@@ -284,7 +285,12 @@ test "往返：name 与 layout 经 MBT 存活" {
       return
     }
   }
-  match p.edit_node(artboard=ab, node_id="login_btn", kvs=[("name", "main_cta"), ("layout", "vertical"), ("gap", "8")]) {
+  match
+    p.edit_node(artboard=ab, node_id="login_btn", kvs=[
+      ("name", "main_cta"),
+      ("layout", "vertical"),
+      ("gap", "8"),
+    ]) {
     Ok(_) => ()
     Err(_) => assert_true(false)
   }

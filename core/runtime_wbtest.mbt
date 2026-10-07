@@ -115,13 +115,15 @@ test "嵌入式运行时：输入值管理 + 热重载" {
       let all = rt.get_all_inputs()
       assert_eq(all.size(), 1)
       // 热重载：真实替换文档内容（旧实现仅校验非空即返回成功）
-      let layout_before = solve(match rt.project.artboards.get("form") {
-        Some(ab) => ab.doc
-        None => {
-          assert_true(false)
-          return
-        }
-      })
+      let layout_before = solve(
+        match rt.project.artboards.get("form") {
+          Some(ab) => ab.doc
+          None => {
+            assert_true(false)
+            return
+          }
+        },
+      )
       let rect_before = match layout_before.rect_of("email") {
         Some(r) => r
         None => {
@@ -138,19 +140,21 @@ test "嵌入式运行时：输入值管理 + 热重载" {
       }
       // 同一文档结构，但把 email 移开；重载后几何必须随之改变
       let _ = doc.update_node("email", fn(n) {
-        { ..n, x: AlignStart(rect_before.x + 40.0) }
+        { ..n, x: AlignStart(rect_before.x + 40.0), }
       })
       match rt.hot_reload_doc(doc) {
         Ok(json) => assert_true(json.contains("\"hot_reloaded\":true"))
         Err(_) => assert_true(false)
       }
-      let layout_after = solve(match rt.project.artboards.get("form") {
-        Some(ab) => ab.doc
-        None => {
-          assert_true(false)
-          return
-        }
-      })
+      let layout_after = solve(
+        match rt.project.artboards.get("form") {
+          Some(ab) => ab.doc
+          None => {
+            assert_true(false)
+            return
+          }
+        },
+      )
       match layout_after.rect_of("email") {
         Some(r) => assert_true(r.x != rect_before.x)
         None => assert_true(false)
@@ -250,10 +254,24 @@ test "交互标记：无 flow 时由标记驱动导航" {
   let p = Project::new()
   let a1 = p.create_artboard(name="ix_a1")
   let a2 = p.create_artboard(name="ix_a2")
-  let _ = p.place_component(artboard=a1, component_id="button", instance_id="cta")
-  let _ = p.place_component(artboard=a2, component_id="button", instance_id="cta")
+  let _ = p.place_component(
+    artboard=a1,
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.place_component(
+    artboard=a2,
+    component_id="button",
+    instance_id="cta",
+  )
   // 仅注册标记，不建 flow
-  match p.attach_interaction(artboard=a1, node_id="cta", trigger="tap", action_spec="navigate_to:ix_a2") {
+  match
+    p.attach_interaction(
+      artboard=a1,
+      node_id="cta",
+      trigger="tap",
+      action_spec="navigate_to:ix_a2",
+    ) {
     Ok(_) => ()
     Err(_) => assert_true(false)
   }
@@ -276,13 +294,15 @@ test "交互标记：无 flow 时由标记驱动导航" {
   let stray = rt.handle_event(KeyEvent("escape"))
   assert_eq(stray.length(), 0)
   // a1 的 cta 命中 → 导航到 a2
-  let layout = solve(match rt.project.artboards.get(a1) {
-    Some(ab) => ab.doc
-    None => {
-      assert_true(false)
-      return
-    }
-  })
+  let layout = solve(
+    match rt.project.artboards.get(a1) {
+      Some(ab) => ab.doc
+      None => {
+        assert_true(false)
+        return
+      }
+    },
+  )
   let rect = match layout.rect_of("cta") {
     Some(r) => r
     None => {
@@ -302,8 +322,17 @@ test "交互标记：无 flow 时由标记驱动导航" {
 test "交互标记：解绑后不再导航" {
   let p = Project::new()
   let ab = p.create_artboard(name="ix_off")
-  let _ = p.place_component(artboard=ab, component_id="button", instance_id="btn")
-  let _ = p.attach_interaction(artboard=ab, node_id="btn", trigger="tap", action_spec="show_toast:\"hi\"")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="btn",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="btn",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
   let _ = p.detach_interaction(artboard=ab, node_id="btn")
   let rt = match MoonVizRT::create(p, initial_artboard=ab) {
     Ok(r) => r
@@ -312,13 +341,15 @@ test "交互标记：解绑后不再导航" {
       return
     }
   }
-  let layout = solve(match rt.project.artboards.get(ab) {
-    Some(x) => x.doc
-    None => {
-      assert_true(false)
-      return
-    }
-  })
+  let layout = solve(
+    match rt.project.artboards.get(ab) {
+      Some(x) => x.doc
+      None => {
+        assert_true(false)
+        return
+      }
+    },
+  )
   let rect = match layout.rect_of("btn") {
     Some(r) => r
     None => {
@@ -348,23 +379,25 @@ test "交互标记：解绑后不再导航" {
 test "组件状态：补丁真实应用且可切换" {
   let p = Project::new()
   let ab = p.create_artboard(name="st_ab")
-  let _ = p.place_component(artboard=ab, component_id="button", instance_id="cta")
-  // default 基准 + pressed 覆盖（改填充色）
-  match p.define_component_state(
+  let _ = p.place_component(
     artboard=ab,
-    node_id="cta",
-    state_name="default",
-    patch={ ..NodePatch::empty(), fill: Some("#4B6BFB") },
-  ) {
+    component_id="button",
+    instance_id="cta",
+  )
+  // default 基准 + pressed 覆盖（改填充色）
+  match
+    p.define_component_state(artboard=ab, node_id="cta", state_name="default", patch={
+      ..NodePatch::empty(),
+      fill: Some("#4B6BFB"),
+    }) {
     Ok(_) => ()
     Err(_) => assert_true(false)
   }
-  match p.define_component_state(
-    artboard=ab,
-    node_id="cta",
-    state_name="pressed",
-    patch={ ..NodePatch::empty(), fill: Some("#1E3FA8") },
-  ) {
+  match
+    p.define_component_state(artboard=ab, node_id="cta", state_name="pressed", patch={
+      ..NodePatch::empty(),
+      fill: Some("#1E3FA8"),
+    }) {
     Ok(_) => ()
     Err(_) => assert_true(false)
   }

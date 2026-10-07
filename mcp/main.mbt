@@ -66,8 +66,11 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 /// 全局项目状态（跨请求保持）
 let g_project : @core.Project = @core.Project::new()
 
+///|
 /// 设计版本历史（会话级）：history_init 后随 commit/checkout/undo/redo 演进。
 let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+
+///|
 let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
 
 ///|
@@ -251,13 +254,13 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       match p.user_components.get(component_id) {
         None => err_json("unknown_component:" + component_id)
-        Some(def) => {
+        Some(def) =>
           // header 构造收敛到 core（与 CLI 同一 schema）
           match @core.mcf_pack(@core.mcf_header_json(def), def.source) {
             Err(e) => err_json(e)
-            Ok(bytes) => "{\"ok\":true,\"component\":\"\{@core.json_escape(component_id)}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
+            Ok(bytes) =>
+              "{\"ok\":true,\"component\":\"\{@core.json_escape(component_id)}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
           }
-        }
       }
     }
     "component_import" => {
@@ -284,9 +287,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let items : Array[String] = []
       for id in p.user_components.keys() {
         match p.user_components.get(id) {
-          Some(def) => {
-            items.push("{\"id\":\"\{@core.json_escape(id)}\",\"source_b64\":\"\{@base64.encode(@utf8.encode(def.source))}\"}")
-          }
+          Some(def) =>
+            items.push(
+              "{\"id\":\"\{@core.json_escape(id)}\",\"source_b64\":\"\{@base64.encode(@utf8.encode(def.source))}\"}",
+            )
           None => ()
         }
       }
@@ -315,18 +319,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           continue
         }
         match decode_b64_text(part) {
-          Err(e) => {
-            if first_error == "" {
-              first_error = e
-            }
-          }
+          Err(e) => if first_error == "" { first_error = e }
           Ok(text) =>
             match @decl.parse_user_component(text) {
-              Err(e) => {
-                if first_error == "" {
-                  first_error = e
-                }
-              }
+              Err(e) => if first_error == "" { first_error = e }
               Ok(def) => {
                 p.user_components.set(def.id, def)
                 ok_count = ok_count + 1
@@ -510,7 +506,9 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
     "history" => {
       let cmd = extract_arg_string(request_line, "command")
       if cmd == "" {
-        return err_json("missing command (init|commit|log|undo|redo|checkout|diff)")
+        return err_json(
+          "missing command (init|commit|log|undo|redo|checkout|diff)",
+        )
       }
       match cmd {
         "init" =>
@@ -597,7 +595,9 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let script = extract_arg_string(request_line, "script")
       if script == "" {
-        return err_json("missing script (tap:x:y>board; back>board; noviol; render)")
+        return err_json(
+          "missing script (tap:x:y>board; back>board; noviol; render)",
+        )
       }
       @core.run_protest_script(p, artboard, script)
     }
@@ -607,7 +607,9 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let preset = extract_arg_string(request_line, "preset")
       if preset == "" {
-        return err_json("missing preset (press/fade_in/slide_in_right/modal_present/shake/pop)")
+        return err_json(
+          "missing preset (press/fade_in/slide_in_right/modal_present/shake/pop)",
+        )
       }
       @core.animation_css(node_id, preset)
     }
@@ -1080,9 +1082,6 @@ fn json_escape_text(s : String) -> String {
   sb.to_string()
 }
 
-
-
-
 ///|
 fn mcp_join(items : Array[String]) -> String {
   let sb = StringBuilder::new()
@@ -1102,7 +1101,11 @@ fn decode_b64_text(payload : String) -> Result[String, String] {
   let bytes = @base64.decode(payload) catch {
     _ => return Err("mbt_transport_invalid_base64")
   }
-  Ok(@utf8.decode(bytes) catch { _ => return Err("mbt_transport_invalid_utf8") })
+  Ok(
+    @utf8.decode(bytes) catch {
+      _ => return Err("mbt_transport_invalid_utf8")
+    },
+  )
 }
 
 ///|

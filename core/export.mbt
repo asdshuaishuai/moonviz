@@ -54,17 +54,11 @@ pub fn Project::export_html(self : Project) -> String {
         Some(patch) => {
           let rules : Array[String] = []
           match patch.fill {
-            Some(f) =>
-              rules.push(
-                "fill:\{self.tokens.resolve_color(f)}",
-              )
+            Some(f) => rules.push("fill:\{self.tokens.resolve_color(f)}")
             None => ()
           }
           match patch.text_color {
-            Some(c) =>
-              rules.push(
-                "fill:\{self.tokens.resolve_color(c)}",
-              )
+            Some(c) => rules.push("fill:\{self.tokens.resolve_color(c)}")
             None => ()
           }
           match patch.font_size {
@@ -119,7 +113,8 @@ pub fn Project::export_html(self : Project) -> String {
   // ⚡trigger→action 词汇表在导出层合并为同一张绑定表。
   let acts : Array[String] = []
   for e in self.flows.iter() {
-    let node = if e.trigger.length() > 4 && e.trigger.substring(start=0, end=4) == "tap:" {
+    let node = if e.trigger.length() > 4 &&
+      e.trigger.substring(start=0, end=4) == "tap:" {
       e.trigger.substring(start=4)
     } else {
       ""
@@ -137,7 +132,7 @@ pub fn Project::export_html(self : Project) -> String {
           match ab.doc.nodes.get(nid) {
             Some(n) =>
               match parse_interaction_marker(n.name) {
-                Some((trig, spec)) => {
+                Some((trig, spec)) =>
                   if trig == "tap" {
                     match action_from_spec(spec) {
                       Some(NavigateTo(t)) =>
@@ -167,7 +162,6 @@ pub fn Project::export_html(self : Project) -> String {
                       _ => ()
                     }
                   }
-                }
                 None => ()
               }
             None => ()
@@ -189,9 +183,7 @@ pub fn Project::export_html(self : Project) -> String {
         }
         if names.length() > 0 {
           let joined = names.join(",")
-          state_defs.push(
-            "\"\{json_escape(node_id)}\":\"\{joined}\"",
-          )
+          state_defs.push("\"\{json_escape(node_id)}\":\"\{joined}\"")
         }
       }
       None => ()

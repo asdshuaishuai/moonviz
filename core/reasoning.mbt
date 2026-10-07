@@ -260,7 +260,7 @@ pub fn Project::apply_intent(
                   padding: Padding::uniform(0.0),
                 }
             }
-            { ..n, layout: Some({ ..base, padding: Padding::uniform(v) }) }
+            { ..n, layout: Some({ ..base, padding: Padding::uniform(v), }), }
           })
           Ok("{\"intent\":\"set_padding\",\"value\":\{v}}")
         }
@@ -276,11 +276,14 @@ pub fn Project::apply_intent(
                   padding: Padding::uniform(0.0),
                 }
             }
-            { ..n, layout: Some({ ..base, gap: v }) }
+            { ..n, layout: Some({ ..base, gap: v, }), }
           })
           Ok("{\"intent\":\"set_gap\",\"value\":\{v}}")
         }
-        Unknown => Err("cannot_parse_intent（支持：居中 | 垂直居中 | 垂直排列 | 水平排列 | 等宽 | 等高 | 等间距 | 网格 N | 顶部 | 底部 | 放大 N | 缩小 N | 边距 N | 间距 N）")
+        Unknown =>
+          Err(
+            "cannot_parse_intent（支持：居中 | 垂直居中 | 垂直排列 | 水平排列 | 等宽 | 等高 | 等间距 | 网格 N | 顶部 | 底部 | 放大 N | 缩小 N | 边距 N | 间距 N）",
+          )
       }
   }
 }
@@ -323,7 +326,7 @@ fn equalize_width(doc : Document, parent_id : String) -> Int {
   match doc.nodes.get(parent_id) {
     Some(parent) =>
       for cid in parent.children.iter() {
-        let _ = doc.update_node(cid, fn(n) { { ..n, width: Fill } })
+        let _ = doc.update_node(cid, fn(n) { { ..n, width: Fill, } })
         count = count + 1
       }
     None => ()
@@ -337,7 +340,7 @@ fn equalize_height(doc : Document, parent_id : String) -> Int {
   match doc.nodes.get(parent_id) {
     Some(parent) =>
       for cid in parent.children.iter() {
-        let _ = doc.update_node(cid, fn(n) { { ..n, height: Fill } })
+        let _ = doc.update_node(cid, fn(n) { { ..n, height: Fill, } })
         count = count + 1
       }
     None => ()
@@ -353,7 +356,7 @@ fn move_to_edge(doc : Document, parent_id : String, top : Bool) -> Int {
       for cid in parent.children.iter() {
         let _ = doc.update_node(cid, fn(n) {
           let y = if top { 0.0 } else { 700.0 } // 简化：底边距 700
-          { ..n, y: AlignStart(y) }
+          { ..n, y: AlignStart(y), }
         })
         count = count + 1
       }
@@ -381,7 +384,7 @@ fn center_all(doc : Document, parent_id : String, layout : SolvedLayout) -> Int 
       let start_y = (pr.height - total_with_gap) / 2.0
       let mut y = if start_y > 0.0 { start_y } else { 0.0 }
       for cid in parent.children.iter() {
-        let _ = doc.update_node(cid, fn(c) { { ..c, y: AlignStart(y) } })
+        let _ = doc.update_node(cid, fn(c) { { ..c, y: AlignStart(y), } })
         match layout.rect_of(cid) {
           Some(r) => y = y + r.height + gap
           None => ()
@@ -402,7 +405,7 @@ fn scale_all(doc : Document, factor : Double) -> Int {
       let _ = doc.update_node(id, fn(n) {
         let w = scale_spec(n.width, factor)
         let h = scale_spec(n.height, factor)
-        { ..n, width: w, height: h }
+        { ..n, width: w, height: h, }
       })
       count = count + 1
     }

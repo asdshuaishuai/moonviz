@@ -24,6 +24,10 @@ pub(all) struct MbtDocument {
   theme : String
   blocks : Array[MbtCodeBlock]
   visual_blocks : Array[MbtCodeBlock]
+  /// 非 `moonviz:` 引擎标记的顶层 HTML 注释（issue #20）：canonical 透传，
+  /// 宿主侧文档级批注（deepdesign:ink 等）的持久化通道。anchor 为其后
+  /// 最近的画板 id（无 → None = 文档级，序列化在文末）。
+  comments : Array[@core.DocComment]
 }
 
 ///|
@@ -208,10 +212,45 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
   }
   let blocks : Array[MbtCodeBlock] = []
   let visual_blocks : Array[MbtCodeBlock] = []
+  let comments : Array[@core.DocComment] = []
   let mut i = body_start
   while i < lines.length() {
     let fence = mbt_trim(lines[i])
     if !mbt_has_prefix(fence, "```") {
+      // 代码块之外：收集非引擎标记的 HTML 注释（issue #20 透传通道）。
+      // 注释可跨行；`<!-- moonviz:...` 是引擎锚标记，不属宿主数据。
+      let t = mbt_trim(lines[i])
+      if mbt_has_prefix(t, "<!--") {
+        let raw = StringBuilder::new()
+        raw.write_string(t)
+        let mut close = t.find("-->") is Some(_)
+        let mut j = i
+        while !close && j + 1 < lines.length() {
+          j = j + 1
+          let tj = mbt_trim(lines[j])
+          raw.write_string("\n")
+          raw.write_string(tj)
+          close = tj.find("-->") is Some(_)
+        }
+        let text = raw.to_string()
+        if !mbt_has_prefix(text, "<!--moonviz:") &&
+          !mbt_has_prefix(text, "<!-- moonviz:") {
+          // 锚定：其后最近的一个画板节（`## <id>`）；无 → 文档级
+          let mut anchor : String? = None
+          let mut k = j + 1
+          while k < lines.length() && !(anchor is Some(_)) {
+            let l = mbt_trim(lines[k])
+            if mbt_has_prefix(l, "## ") {
+              anchor = Some(mbt_trim(l.substring(start=3)))
+              break
+            }
+            k = k + 1
+          }
+          comments.push({ text, anchor, })
+        }
+        i = j + 1
+        continue
+      }
       i = i + 1
       continue
     }
@@ -272,6 +311,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
     theme,
     blocks,
     visual_blocks,
+    comments,
   })
 }
 
@@ -407,11 +447,10 @@ fn mbt_root_size(root : @core.Node) -> (Double, Double) {
 }
 
 ///|
+
 ///|
 /// frontmatter `tokens:` 段解析：`  <role>: "<value>"` 两空格缩进键值对。
-fn mbt_parse_token_overrides(
-  front : String,
-) -> Map[String, String] {
+fn mbt_parse_token_overrides(front : String) -> Map[String, String] {
   let out : Map[String, String] = Map::new()
   let lines = mbt_lines(front)
   let mut in_tokens = false
@@ -435,7 +474,8 @@ fn mbt_parse_token_overrides(
         let mut value = mbt_trim(line.substring(start=idx + 1))
         if value.length() >= 2 {
           let q = value.substring(start=0, end=1)
-          if (q == "\"" || q == "'") && value.substring(start=value.length() - 1) == q {
+          if (q == "\"" || q == "'") &&
+            value.substring(start=value.length() - 1) == q {
             value = value.substring(start=1, end=value.length() - 1)
           }
         }
@@ -535,6 +575,7 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
         return Err("mbt_no_visual_blocks")
       }
       let project = @core.Project::new()
+      project.doc_comments = document.comments
       for block in document.visual_blocks.iter() {
         let artboard_id = match block.artboard_id {
           Some(id) => id
@@ -608,7 +649,7 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       }
       match mbt_validate_flows(project) {
         Err(error) => Err(error)
-        Ok(_) => Ok({ project, document, entry })
+        Ok(_) => Ok({ project, document, entry, })
       }
     }
   }
@@ -720,8 +761,9 @@ pub fn project_to_mbt(
     theme: project.active_theme,
     blocks: [],
     visual_blocks: [],
+    comments: project.doc_comments,
   }
-  Ok({ project, document, entry: actual_entry })
+  Ok({ project, document, entry: actual_entry, })
 }
 
 ///|
@@ -781,8 +823,7 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         out.write_string("  tokens:\n")
         for role in ov.keys() {
           match ov.get(role) {
-            Some(v) =>
-              out.write_string("    " + role + ": \"" + v + "\"\n")
+            Some(v) => out.write_string("    " + role + ": \"" + v + "\"\n")
             None => ()
           }
         }
@@ -822,10 +863,24 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
     match self.project.artboards.get(id) {
       None => ()
       Some(artboard) => {
+        // 宿主批注透传（issue #20）：锚定本板的注释写在本板节之前（保序）。
+        // 锚匹配 id 或 name（canonical 节标题写 name）；两者都对不上视为
+        // 已失锚（板被删/改名），随文档级注释写文末，原文不丢。
+        for cm in self.document.comments.iter() {
+          match cm.anchor {
+            Some(ab) =>
+              if ab == id || ab == artboard.name {
+                out.write_string(cm.text + "\n\n")
+              } else {
+                ()
+              }
+            None => ()
+          }
+        }
         // 序列化前把根节点名对齐 ArtboardMeta.name，否则 from_document 会
         // 永远输出 Document::new 的默认名「画布」，canonical 往返丢失真实名。
         let proto = from_document(artboard.doc)
-        proto.root = { ..proto.root, name: artboard.name }
+        proto.root = { ..proto.root, name: artboard.name, }
         let declaration = proto.to_decl_text()
         let function_name = mbt_function_name(id)
         // debt 快照：HumanGate 允许视觉债落盘，验收断言必须反映被接受的
@@ -856,6 +911,25 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         out.write_string("}\n")
         out.write_string("```\n\n")
       }
+    }
+  }
+  // 文档级注释（无锚 / 锚定板已失）写文末（issue #20）
+  for cm in self.document.comments.iter() {
+    let anchored_live = match cm.anchor {
+      None => false
+      Some(ab) => {
+        let mut live = false
+        for id2 in ids.iter() {
+          match self.project.artboards.get(id2) {
+            Some(a) => if ab == id2 || ab == a.name { live = true }
+            None => ()
+          }
+        }
+        live
+      }
+    }
+    if !anchored_live {
+      out.write_string(cm.text + "\n\n")
     }
   }
   out.to_string()

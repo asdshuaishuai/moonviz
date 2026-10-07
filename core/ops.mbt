@@ -35,18 +35,11 @@ fn unescape_decl(s : String) -> String {
         }
         esc = false
       }
-      false => {
-        if c == '\\' {
-          esc = true
-        } else {
-          sb.write_char(c)
-        }
-      }
+      false => if c == '\\' { esc = true } else { sb.write_char(c) }
     }
   }
   sb.to_string()
 }
-
 
 ///|
 pub fn split_cmd(line : String) -> Array[String] {
@@ -134,14 +127,16 @@ pub fn parse_op_double(s : String) -> Double {
 ///
 /// 这个函数不负责持久化。调用方随后必须经 commit_and_render() 把变更写成
 /// canonical MBT，再从 MBT 重建画布，避免 Project/命令日志成为第二事实源。
+
 ///|
 /// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）。
 /// 与 cli_exec 的 place_token_is_number 同规则——双路线解析必须一致。
 fn place_token_is_number(t : String) -> Bool {
-  t.length() > 0 && {
+  t.length() > 0 &&
+  ({
     let c0 = t.substring(start=0, end=1)
     c0 >= "0" && c0 <= "9"
-  }
+  })
 }
 
 ///|
@@ -206,8 +201,16 @@ pub fn apply_operation(
       if parts.length() < 4 {
         Err("mbt_operation_usage:copy <artboard> <node> <new_id> [dx] [dy]")
       } else {
-        let dx = if parts.length() >= 5 { parse_op_double(parts[4]) } else { 24.0 }
-        let dy = if parts.length() >= 6 { parse_op_double(parts[5]) } else { 24.0 }
+        let dx = if parts.length() >= 5 {
+          parse_op_double(parts[4])
+        } else {
+          24.0
+        }
+        let dy = if parts.length() >= 6 {
+          parse_op_double(parts[5])
+        } else {
+          24.0
+        }
         match
           project.copy_node(
             artboard=parts[1],
@@ -218,7 +221,7 @@ pub fn apply_operation(
           ) {
           Ok(_) => Ok(())
           Err(error) => Err(error)
-          }
+        }
       }
     "duplicate" =>
       if parts.length() < 3 {
@@ -266,8 +269,16 @@ pub fn apply_operation(
       if parts.length() < 2 {
         Err("mbt_operation_usage:create <name> [width] [height]")
       } else {
-        let width = if parts.length() >= 3 { parse_op_double(parts[2]) } else { 390.0 }
-        let height = if parts.length() >= 4 { parse_op_double(parts[3]) } else { 844.0 }
+        let width = if parts.length() >= 3 {
+          parse_op_double(parts[2])
+        } else {
+          390.0
+        }
+        let height = if parts.length() >= 4 {
+          parse_op_double(parts[3])
+        } else {
+          844.0
+        }
         let _ = project.create_artboard(name=parts[1], width~, height~)
         Ok(())
       }
@@ -275,8 +286,16 @@ pub fn apply_operation(
       if parts.length() < 3 {
         Err("mbt_operation_usage:template <template> <name> [width] [height]")
       } else {
-        let width = if parts.length() >= 4 { parse_op_double(parts[3]) } else { 0.0 }
-        let height = if parts.length() >= 5 { parse_op_double(parts[4]) } else { 0.0 }
+        let width = if parts.length() >= 4 {
+          parse_op_double(parts[3])
+        } else {
+          0.0
+        }
+        let height = if parts.length() >= 5 {
+          parse_op_double(parts[4])
+        } else {
+          0.0
+        }
         match
           project.apply_template(
             template_id=parts[1],
@@ -299,8 +318,16 @@ pub fn apply_operation(
         } else {
           ""
         }
-        let x = if parts.length() >= 6 { parse_op_double(parts[5]) } else { 0.0 }
-        let y = if parts.length() >= 7 { parse_op_double(parts[6]) } else { 0.0 }
+        let x = if parts.length() >= 6 {
+          parse_op_double(parts[5])
+        } else {
+          0.0
+        }
+        let y = if parts.length() >= 7 {
+          parse_op_double(parts[6])
+        } else {
+          0.0
+        }
         // 位置参数 w/h（issue #18）：place 一步到位指定最终尺寸，
         // AgentGate 在最终 bbox 上评估，消除中间态拒绝
         let mut w = 0.0
@@ -370,7 +397,9 @@ pub fn apply_operation(
       }
     "group" =>
       if parts.length() < 5 {
-        Err("mbt_operation_usage:group <artboard> <group_id> <n1> <n2> [n3 ...]")
+        Err(
+          "mbt_operation_usage:group <artboard> <group_id> <n1> <n2> [n3 ...]",
+        )
       } else {
         let ids : Array[String] = []
         let mut i = 3
@@ -378,7 +407,12 @@ pub fn apply_operation(
           ids.push(parts[i])
           i = i + 1
         }
-        match project.group_nodes(artboard=parts[1], node_ids=ids, group_id=parts[2]) {
+        match
+          project.group_nodes(
+            artboard=parts[1],
+            node_ids=ids,
+            group_id=parts[2],
+          ) {
           Ok(_) => Ok(())
           Err(error) => Err(error)
         }
@@ -402,7 +436,8 @@ pub fn apply_operation(
           ids.push(parts[i])
           i = i + 1
         }
-        match project.align_nodes(artboard=parts[1], mode=parts[2], node_ids=ids) {
+        match
+          project.align_nodes(artboard=parts[1], mode=parts[2], node_ids=ids) {
           Ok(_) => Ok(())
           Err(error) => Err(error)
         }
@@ -411,9 +446,12 @@ pub fn apply_operation(
       if parts.length() < 4 {
         Err("mbt_operation_usage:resize-canvas <artboard> <width> <height>")
       } else {
-        match project.resize_canvas(
-          artboard=parts[1], width=parse_op_double(parts[2]), height=parse_op_double(parts[3]),
-        ) {
+        match
+          project.resize_canvas(
+            artboard=parts[1],
+            width=parse_op_double(parts[2]),
+            height=parse_op_double(parts[3]),
+          ) {
           Ok(_) => Ok(())
           Err(error) => Err(error)
         }
@@ -429,24 +467,33 @@ pub fn apply_operation(
       }
     "restyle" =>
       if parts.length() < 4 {
-        Err("mbt_operation_usage:restyle <artboard> <component_id> k=v [k=v ...]")
+        Err(
+          "mbt_operation_usage:restyle <artboard> <component_id> k=v [k=v ...]",
+        )
       } else {
         let kvs : Array[(String, String)] = []
         let mut i = 3
         while i < parts.length() {
           let eq = index_of_str(parts[i], "=")
           if eq > 0 {
-            kvs.push((
-              parts[i].substring(start=0, end=eq),
-              unescape_value(parts[i].substring(start=eq + 1)),
-            ))
+            kvs.push(
+              (
+                parts[i].substring(start=0, end=eq),
+                unescape_value(parts[i].substring(start=eq + 1)),
+              ),
+            )
           }
           i = i + 1
         }
         if kvs.length() == 0 {
           Err("mbt_operation_no_kv_pairs")
         } else {
-          match project.restyle_component(artboard=parts[1], component_id=parts[2], kvs~) {
+          match
+            project.restyle_component(
+              artboard=parts[1],
+              component_id=parts[2],
+              kvs~,
+            ) {
             Ok(_) => Ok(())
             Err(error) => Err(error)
           }
@@ -534,7 +581,8 @@ pub fn apply_operation(
         Err("mbt_operation_usage:set-state <node> <state_name> [toggle]")
       } else {
         let toggle = parts.length() >= 4 && parts[3] == "toggle"
-        match project.set_node_state(node_id=parts[1], state_name=parts[2], toggle~) {
+        match
+          project.set_node_state(node_id=parts[1], state_name=parts[2], toggle~) {
           Ok(_) => Ok(())
           Err(error) => Err(error)
         }
@@ -551,7 +599,12 @@ pub fn apply_operation(
       if parts.length() < 4 {
         Err("mbt_operation_usage:unflow <from> <to> <node>")
       } else {
-        match project.remove_flow(from=parts[1], to=parts[2], trigger="tap:" + parts[3]) {
+        match
+          project.remove_flow(
+            from=parts[1],
+            to=parts[2],
+            trigger="tap:" + parts[3],
+          ) {
           Ok(_) => {
             project.revision = project.revision + 1
             Ok(())

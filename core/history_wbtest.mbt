@@ -3,7 +3,13 @@
 test "history：commit/checkout 落回画板文档" {
   let p = Project::new()
   let ab = p.create_artboard(name="a", width=390.0, height=844.0)
-  let _ = p.place_component(artboard="a", component_id="button", instance_id="b", x=20.0, y=20.0)
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="b",
+    x=20.0,
+    y=20.0,
+  )
   let doc0 = match p.artboards.get(ab) {
     Some(x) => x.doc.clone()
     None => {
@@ -26,7 +32,7 @@ test "history：commit/checkout 落回画板文档" {
   // 时间旅行回 rev1 并落回画板
   match h.checkout(1) {
     Err(e) => fail(e)
-    Ok(doc) => {
+    Ok(doc) =>
       match p.set_artboard_doc(artboard=ab, doc) {
         Err(e) => fail(e)
         Ok(_) => {
@@ -38,6 +44,5 @@ test "history：commit/checkout 落回画板文档" {
           assert_false(q.contains("第二版"))
         }
       }
-    }
   }
 }

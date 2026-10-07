@@ -84,23 +84,23 @@ fn render_node(
                   )
                 }
               } else {
-              // 图片占位：浅灰底 + 山形/太阳图标 + 细边框，任何尺寸下可辨识
-              sb.write_string(
-                "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\" fill=\"#EEF0F4\" stroke=\"#D5DAE3\" stroke-width=\"1\"/>",
-              )
-              let ic = r.width / 6.0
-              if ic > 2.0 {
-                let cx = r.x + r.width / 2.0
-                let cy = r.y + r.height / 2.0
-                let iw = ic * 2.4
-                let ih = ic * 1.5
+                // 图片占位：浅灰底 + 山形/太阳图标 + 细边框，任何尺寸下可辨识
                 sb.write_string(
-                  "<path d=\"M\{cx - iw / 2.0} \{cy + ih / 2.0 - ih * 0.2} L\{cx - iw * 0.22} \{cy - ih / 2.0 + ih * 0.15} L\{cx + iw * 0.05} \{cy + ih * 0.1} L\{cx + iw * 0.35} \{cy - ih * 0.35} L\{cx + iw / 2.0} \{cy + ih / 2.0 - ih * 0.2}\" fill=\"#C3CAD6\"/>",
+                  "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\" fill=\"#EEF0F4\" stroke=\"#D5DAE3\" stroke-width=\"1\"/>",
                 )
-                sb.write_string(
-                  "<circle cx=\"\{cx + iw * 0.28}\" cy=\"\{cy - ih * 0.42}\" r=\"\{ic * 0.32}\" fill=\"#C3CAD6\"/>",
-                )
-              }
+                let ic = r.width / 6.0
+                if ic > 2.0 {
+                  let cx = r.x + r.width / 2.0
+                  let cy = r.y + r.height / 2.0
+                  let iw = ic * 2.4
+                  let ih = ic * 1.5
+                  sb.write_string(
+                    "<path d=\"M\{cx - iw / 2.0} \{cy + ih / 2.0 - ih * 0.2} L\{cx - iw * 0.22} \{cy - ih / 2.0 + ih * 0.15} L\{cx + iw * 0.05} \{cy + ih * 0.1} L\{cx + iw * 0.35} \{cy - ih * 0.35} L\{cx + iw / 2.0} \{cy + ih / 2.0 - ih * 0.2}\" fill=\"#C3CAD6\"/>",
+                  )
+                  sb.write_string(
+                    "<circle cx=\"\{cx + iw * 0.28}\" cy=\"\{cy - ih * 0.42}\" r=\"\{ic * 0.32}\" fill=\"#C3CAD6\"/>",
+                  )
+                }
               }
             }
             _ => {
@@ -114,7 +114,9 @@ fn render_node(
                 } else {
                   1.0
                 }
-                sb.write_string(" stroke=\"\{n.style.stroke}\" stroke-width=\"\{sw}\"")
+                sb.write_string(
+                  " stroke=\"\{n.style.stroke}\" stroke-width=\"\{sw}\"",
+                )
                 match dash_array(n.style.stroke_dash) {
                   Some(da) => sb.write_string(" stroke-dasharray=\"\{da}\"")
                   None => ()
@@ -281,18 +283,22 @@ fn paint_ref_t(color : String, node_id : String) -> String {
 
 ///|
 /// 节点 id → SVG id 安全 tag
+
 ///|
 /// 图片 src 判定：http(s)/data URL 才渲染真 <image>，其余（含空）走占位
 fn has_url_prefix(s : String) -> Bool {
   let http = "http://"
   let https = "https://"
   let data = "data:"
-  if s.length() >= http.length() && s.substring(start=0, end=http.length()) == http {
+  if s.length() >= http.length() &&
+    s.substring(start=0, end=http.length()) == http {
     true
-  } else if s.length() >= https.length() && s.substring(start=0, end=https.length()) == https {
+  } else if s.length() >= https.length() &&
+    s.substring(start=0, end=https.length()) == https {
     true
   } else {
-    s.length() >= data.length() && s.substring(start=0, end=data.length()) == data
+    s.length() >= data.length() &&
+    s.substring(start=0, end=data.length()) == data
   }
 }
 

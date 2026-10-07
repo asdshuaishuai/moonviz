@@ -1,8 +1,8 @@
 ///|
 test "usercomp: consecutive places on same document" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   // 手工构造组件 doc：root -> icon_bg -> icon
-  let cdoc = Document::new({ width: 64.0, height: 64.0 })
+  let cdoc = Document::new({ width: 64.0, height: 64.0, })
   let icon_bg = {
     ..Node::make("icon_bg", Rect),
     width: Fixed(64.0),
@@ -25,7 +25,7 @@ test "usercomp: consecutive places on same document" {
     id: "mini",
     description: "test",
     category: "user",
-    params: [{ name: "label", kind: "text", default_value: "X" }],
+    params: [{ name: "label", kind: "text", default_value: "X", }],
     variants: Map::new(),
     default_variant: "default",
     width: 64.0,
@@ -48,7 +48,7 @@ test "usercomp: consecutive places on same document" {
 
 ///|
 test "doc: insert child under just-inserted parent" {
-  let d = Document::new({ width: 300.0, height: 300.0 })
+  let d = Document::new({ width: 300.0, height: 300.0, })
   let n1 = {
     ..Node::make("x1", Rect),
     width: Fixed(10.0),
@@ -93,5 +93,8 @@ fn two_inserts_wrapped(d : Document) -> Bool {
 
 ///|
 test "doc: wrapped two-insert" {
-  inspect(two_inserts_wrapped(Document::new({ width: 100.0, height: 100.0 })), content="true")
+  inspect(
+    two_inserts_wrapped(Document::new({ width: 100.0, height: 100.0, })),
+    content="true",
+  )
 }

@@ -225,7 +225,7 @@ pub fn MoonVizArtifact::add_note(
   note : String,
   priority : String,
 ) -> Unit {
-  self.notes.push({ artboard, note, priority })
+  self.notes.push({ artboard, note, priority, })
 }
 
 ///|

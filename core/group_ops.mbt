@@ -95,10 +95,10 @@ pub fn Project::group_nodes(
         let _ = ab.doc.update_node(nid, fn(x) {
           let nx = pos_offset_v(x.x) - (min_x - parent_rect.x)
           let ny = pos_offset_v(x.y) - (min_y - parent_rect.y)
-          { ..x, x: Fixed(nx), y: Fixed(ny) }
+          { ..x, x: Fixed(nx), y: Fixed(ny), }
         })
         let _ = ab.doc.update_node(parent, fn(p) {
-          { ..p, children: p.children.filter(c => c != nid) }
+          { ..p, children: p.children.filter(c => c != nid), }
         })
         match ab.doc.get(group_id) {
           Some(g) => g.children.push(nid)
@@ -165,7 +165,7 @@ pub fn Project::ungroup_node(
         }
       }
       let _ = ab.doc.update_node(parent, fn(p) {
-        { ..p, children: p.children.filter(c => c != group_id) }
+        { ..p, children: p.children.filter(c => c != group_id), }
       })
       ab.doc.nodes.remove(group_id)
       self.revision = self.revision + 1
@@ -269,7 +269,7 @@ pub fn Project::flip_node(
         return Err("unknown_node: \{node_id}")
       }
       let _ = ab.doc.update_node(node_id, fn(n) {
-        { ..n, style: { ..n.style, flip: axis } }
+        { ..n, style: { ..n.style, flip: axis, }, }
       })
       self.revision = self.revision + 1
       Ok(

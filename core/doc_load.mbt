@@ -14,15 +14,15 @@ pub fn Document::from_json(text : String) -> Result[Document, String] {
     None => return Err("json_missing_nodes")
   }
   let body = text.substring(start=idx)
-  let store : JsonNodeStore = { nodes: Map::new() }
+  let store : JsonNodeStore = { nodes: Map::new(), }
   match parse_node_obj(body, 0, store) {
     ParseFail(msg) => Err(msg)
     ParseOk(root, _end) => {
       let w = root_fixed(root.width, 390.0)
       let h = root_fixed(root.height, 844.0)
-      let doc = Document::new({ width: w, height: h })
+      let doc = Document::new({ width: w, height: h, })
       // 树中已注册全部节点（含 root 原id），统一改挂到 "root"
-      let rn = { ..root, id: "root", x: Fixed(0.0), y: Fixed(0.0) }
+      let rn = { ..root, id: "root", x: Fixed(0.0), y: Fixed(0.0), }
       // 先把 store 里 root 原id 的 children 转移过来
       doc.nodes.set("root", rn)
       remap_children(doc, store, root.id, "root")
@@ -281,7 +281,7 @@ fn parse_node_obj(
   for c in kids.iter() {
     final_kids.push(c.id)
   }
-  node = { ..node, children: final_kids }
+  node = { ..node, children: final_kids, }
   store.nodes.set(real_id, node)
   ParseOk(node, pos)
 }
@@ -332,14 +332,14 @@ fn parse_value(s : String, start : Int) -> (ScalarOrSpec, Int) {
     let kind = unescape_json(kind_s)
     let value = load_number(s.substring(start~, end~), "value")
     let r : ScalarOrSpec = match kind {
-      "fixed" => { num: value, str: "", spec: Fixed(value), pos: Fixed(value) }
-      "fill" => { num: 0.0, str: "", spec: Fill, pos: Fixed(0.0) }
-      "hug" => { num: 0.0, str: "", spec: Hug, pos: Fixed(0.0) }
+      "fixed" => { num: value, str: "", spec: Fixed(value), pos: Fixed(value), }
+      "fill" => { num: 0.0, str: "", spec: Fill, pos: Fixed(0.0), }
+      "hug" => { num: 0.0, str: "", spec: Hug, pos: Fixed(0.0), }
       "align_start" =>
-        { num: value, str: "", spec: Fixed(value), pos: AlignStart(value) }
+        { num: value, str: "", spec: Fixed(value), pos: AlignStart(value), }
       "align_end" =>
-        { num: value, str: "", spec: Fixed(value), pos: AlignEnd(value) }
-      "center" => { num: 0.0, str: "", spec: Fixed(0.0), pos: CenterInParent }
+        { num: value, str: "", spec: Fixed(value), pos: AlignEnd(value), }
+      "center" => { num: 0.0, str: "", spec: Fixed(0.0), pos: CenterInParent, }
       _ => out
     }
     (r, end)

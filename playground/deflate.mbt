@@ -251,7 +251,7 @@ struct BitWriter {
 
 ///|
 fn BitWriter::new() -> BitWriter {
-  { buf: [], bit_buf: 0, bit_count: 0 }
+  { buf: [], bit_buf: 0, bit_count: 0, }
 }
 
 //

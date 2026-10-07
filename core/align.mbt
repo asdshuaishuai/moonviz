@@ -114,7 +114,7 @@ pub fn Project::snap_to_grid(
                   let new_y = snap_val(old_y, grid)
                   if new_x != old_x || new_y != old_y {
                     let _ = ab.doc.update_node(id, fn(c) {
-                      { ..c, x: AlignStart(new_x), y: AlignStart(new_y) }
+                      { ..c, x: AlignStart(new_x), y: AlignStart(new_y), }
                     })
                     snapped.push(
                       "{\"id\":\"\{id}\",\"from\":\"\{old_x.to_int()},\{old_y.to_int()}\",\"to\":\"\{new_x.to_int()},\{new_y.to_int()}\"}",
@@ -166,7 +166,7 @@ pub fn Project::center_in_parent(
             (Some(nr), Some(pr)) => {
               let centered_x = pr.x + (pr.width - nr.width) / 2.0
               let _ = ab.doc.update_node(node_id, fn(c) {
-                { ..c, x: AlignStart(centered_x - pr.x) }
+                { ..c, x: AlignStart(centered_x - pr.x), }
               })
               Ok(
                 "{\"ok\":true,\"id\":\"\{node_id}\",\"x\":\{centered_x.to_int()}}",

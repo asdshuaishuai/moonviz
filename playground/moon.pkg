@@ -4,8 +4,9 @@ import {
   "moonbitlang/core/encoding/base64",
 }
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: {
     "main_load.mbt": [ "not", "native" ],
     "main_repl.mbt": [ "native" ],

@@ -6,8 +6,9 @@ import {
   "moonbitlang/core/encoding/utf8",
 }
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: {
     "main.mbt": [ "native" ],
     "main_stub.mbt": [ "not", "native" ],

@@ -41,14 +41,14 @@ pub fn Project::fork_variants(
                 match base_ab.doc.nodes.get(cid) {
                   Some(n) => {
                     let _ = new_ab.doc.insert_node(
-                      { ..n, children: [] },
+                      { ..n, children: [], },
                       "root",
                     )
                     // 重建子关系
                     match base_ab.doc.nodes.get(cid) {
                       Some(src) => {
                         let _ = new_ab.doc.update_node(cid, fn(x) {
-                          { ..x, children: src.children.copy() }
+                          { ..x, children: src.children.copy(), }
                         })
                       }
                       None => ()
@@ -115,7 +115,7 @@ pub fn Project::merge_variant(
       tgt.doc.root_id = "root"
       // 复制源
       let root_node = match src.doc.nodes.get(src.doc.root_id) {
-        Some(r) => { ..r, children: r.children.copy() }
+        Some(r) => { ..r, children: r.children.copy(), }
         None => Node::make("root", Frame)
       }
       tgt.doc.nodes.set("root", root_node)
@@ -123,7 +123,7 @@ pub fn Project::merge_variant(
         if id != "root" {
           match src.doc.nodes.get(id) {
             Some(n) =>
-              tgt.doc.nodes.set(id, { ..n, children: n.children.copy() })
+              tgt.doc.nodes.set(id, { ..n, children: n.children.copy(), })
             None => ()
           }
         }

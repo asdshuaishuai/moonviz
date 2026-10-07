@@ -102,7 +102,7 @@ pub fn rect(
     height,
     x: @core.AlignStart(0.0),
     y: @core.AlignStart(0.0),
-    style: { ..@core.NodeStyle::default(), fill, corner_radius: radius },
+    style: { ..@core.NodeStyle::default(), fill, corner_radius: radius, },
   }
 }
 
@@ -149,7 +149,11 @@ pub fn generic_node(
   }
   {
     ..@core.Node::make(id, node_kind),
-    name: if name == "" { id } else { name },
+    name: if name == "" {
+      id
+    } else {
+      name
+    },
     component,
     width,
     height,
@@ -244,7 +248,7 @@ pub fn flex(
   padding? : Double = 0.0,
   justify? : @core.Justify = @core.Start,
 ) -> @core.StackLayout {
-  { dir: direction, gap, justify, padding: @core.Padding::uniform(padding) }
+  { dir: direction, gap, justify, padding: @core.Padding::uniform(padding), }
 }
 
 ///|
@@ -299,13 +303,13 @@ pub fn prototype(
   }
   let index : Map[String, @core.Node] = Map::new()
   index.set("root", root)
-  { name, root, index }
+  { name, root, index, }
 }
 
 ///|
 /// 设置根容器的栈布局
 pub fn Prototype::set_layout(self : Prototype, l : @core.StackLayout) -> Unit {
-  self.root = { ..self.root, layout: Some(l) }
+  self.root = { ..self.root, layout: Some(l), }
   self.index.set("root", self.root)
 }
 
@@ -330,7 +334,7 @@ pub fn Prototype::add_to(
     Some(p) => {
       let kids = p.children.copy()
       kids.push(node.id)
-      let updated = { ..p, children: kids }
+      let updated = { ..p, children: kids, }
       self.index.set(parent_id, updated)
       if parent_id == self.root.id {
         self.root = updated
@@ -352,11 +356,11 @@ pub fn Prototype::build(self : Prototype) -> @core.Document {
     @core.Fixed(v) => v
     _ => 844.0
   }
-  let doc = @core.Document::new({ width: w, height: h })
+  let doc = @core.Document::new({ width: w, height: h, })
   let nodes : Map[String, @core.Node] = Map::new()
   for id in self.index.keys() {
     match self.index.get(id) {
-      Some(n) => nodes.set(id, { ..n, children: n.children.copy() })
+      Some(n) => nodes.set(id, { ..n, children: n.children.copy(), })
       None => ()
     }
   }
@@ -393,7 +397,7 @@ fn doc_walk(doc : @core.Document, page : Prototype, pid : String) -> Unit {
             // children 必须清空：add_to 入库后由子节点的 add_to 重新累积。
             // 若保留 doc 侧 children，容器节点的子级会被计入两次，
             // canonical 声明文本随之翻倍（结构式模板导出即损坏）。
-            let clean = { ..cn, children: [] }
+            let clean = { ..cn, children: [], }
             page.add_to(parent_id=pid, node=clean)
             doc_walk(doc, page, cid)
           }

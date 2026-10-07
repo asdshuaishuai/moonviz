@@ -1,5 +1,14 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.8
+
+- **Manifest migration to `moon.mod`** — `moon fmt` across the repo (deprecated
+  `moon.mod.json` removed). Root cause fix for mooncakes.io docs generation:
+  `moon doc` rejects the deprecated manifest, so 0.1.7 shipped with
+  "Documentation failed to generate" on the registry while installs worked.
+  All package configs migrated; full three-target regression + ABI assertion green.
+- Code formatting pass (`moon fmt`) — behavior-neutral, 210 tests green.
+
 ## What's New in 0.1.7
 
 - **Official MoonBit native package — LIVE on [mooncakes.io](https://mooncakes.io)**:

@@ -245,7 +245,7 @@ pub fn Project::benchmark(self : Project) -> ProjectBenchmark {
     "D"
   }
 
-  { artboards: benchmarks, total_nodes, total_memory, avg_score: avg, grade }
+  { artboards: benchmarks, total_nodes, total_memory, avg_score: avg, grade, }
 }
 
 // ---------------------------------------------------------------------------

@@ -97,7 +97,7 @@ fn fix_overflow(doc : Document, node_id : String) -> String? {
                   }
                   if new_w != nr.width || new_h != nr.height {
                     let _ = doc.update_node(node_id, fn(x) {
-                      { ..x, width: Fixed(new_w), height: Fixed(new_h) }
+                      { ..x, width: Fixed(new_w), height: Fixed(new_h), }
                     })
                     Some(
                       "{\"node\":\"\{node_id}\",\"action\":\"resize\",\"before\":\"\{nr.width.to_int()}×\{nr.height.to_int()}\",\"after\":\"\{new_w.to_int()}×\{new_h.to_int()}\"}",
@@ -135,7 +135,7 @@ fn fix_overlap(doc : Document, node_id : String) -> String? {
                   for cid in parent.children.iter() {
                     if cid != node_id {
                       match layout.rect_of(cid) {
-                        Some(cr) => {
+                        Some(cr) =>
                           // 全包含对＝有意分层（背景压内容），与谓词层豁免
                           // 同语义同容差——背景不参与 max_bottom 推挤，否则
                           // 内容会被推到画板之外（review 5a5641a）
@@ -151,7 +151,6 @@ fn fix_overlap(doc : Document, node_id : String) -> String? {
                               max_bottom = b
                             }
                           }
-                        }
                         None => ()
                       }
                     }
@@ -162,7 +161,7 @@ fn fix_overlap(doc : Document, node_id : String) -> String? {
                     let new_y = max_bottom + 8.0 - parent_y
                     let old_y = pos_to_str(n.y)
                     let _ = doc.update_node(node_id, fn(x) {
-                      { ..x, y: AlignStart(new_y) }
+                      { ..x, y: AlignStart(new_y), }
                     })
                     Some(
                       "{\"node\":\"\{node_id}\",\"action\":\"move_y\",\"before\":\"\{old_y}\",\"after\":\"\{new_y}\"}",

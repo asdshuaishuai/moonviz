@@ -9,7 +9,7 @@ struct RgbaBuf {
 
 ///|
 fn rgba_new(width : Int, height : Int) -> RgbaBuf {
-  { width, height, pixels: FixedArray::make(width * height, 0xFF000000) }
+  { width, height, pixels: FixedArray::make(width * height, 0xFF000000), }
 }
 
 ///|

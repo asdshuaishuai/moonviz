@@ -356,7 +356,7 @@ fn infer_spacing_tokens(usage : Map[Double, Int]) -> Array[ExtractedSpacing] {
             break
           }
         }
-        tokens.push({ value: v, usage_count: cnt, suggested_name: best_name })
+        tokens.push({ value: v, usage_count: cnt, suggested_name: best_name, })
       }
       None => ()
     }
@@ -392,7 +392,7 @@ fn infer_font_tokens(usage : Map[Double, Int]) -> Array[ExtractedFontSize] {
             break
           }
         }
-        tokens.push({ value: v, usage_count: cnt, suggested_name: best_name })
+        tokens.push({ value: v, usage_count: cnt, suggested_name: best_name, })
       }
       None => ()
     }

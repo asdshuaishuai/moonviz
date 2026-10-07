@@ -92,7 +92,7 @@ pub fn Project::resize_canvas(
       let d_h = height - old_h
       // 根节点尺寸
       let _ = ab.doc.update_node(ab.doc.root_id, fn(n) {
-        { ..n, width: Fixed(width), height: Fixed(height) }
+        { ..n, width: Fixed(width), height: Fixed(height), }
       })
       // 非根节点按 constraint 调整（相对其父内容盒的尺寸变化近似 = 画板变化，
       // 对嵌套栈布局，栈主轴由布局决定不受影响；cross 轴与绝对定位节点按约束适配）
@@ -107,17 +107,17 @@ pub fn Project::resize_canvas(
           match h_c {
             "r" => {
               let off = pos_offset(out.x)
-              out = { ..out, x: Fixed(off + d_w) }
+              out = { ..out, x: Fixed(off + d_w), }
             }
             "c" => {
               let off = pos_offset(out.x)
-              out = { ..out, x: Fixed(off + d_w / 2.0) }
+              out = { ..out, x: Fixed(off + d_w / 2.0), }
             }
             "stretch" => {
               let off = pos_offset(out.x)
               let w = size_val(out.width)
               if w > 0.0 {
-                out = { ..out, x: Fixed(off), width: Fixed(w + d_w) }
+                out = { ..out, x: Fixed(off), width: Fixed(w + d_w), }
               }
             }
             "hscale" => {
@@ -125,7 +125,7 @@ pub fn Project::resize_canvas(
               let w = size_val(out.width)
               if w > 0.0 && old_w > 0.0 {
                 let k = width / old_w
-                out = { ..out, x: Fixed(off * k), width: Fixed(w * k) }
+                out = { ..out, x: Fixed(off * k), width: Fixed(w * k), }
               }
             }
             _ => ()
@@ -134,17 +134,17 @@ pub fn Project::resize_canvas(
           match v_c {
             "r" => {
               let off = pos_offset(out.y)
-              out = { ..out, y: Fixed(off + d_h) }
+              out = { ..out, y: Fixed(off + d_h), }
             }
             "c" => {
               let off = pos_offset(out.y)
-              out = { ..out, y: Fixed(off + d_h / 2.0) }
+              out = { ..out, y: Fixed(off + d_h / 2.0), }
             }
             "stretch" => {
               let off = pos_offset(out.y)
               let h = size_val(out.height)
               if h > 0.0 {
-                out = { ..out, y: Fixed(off), height: Fixed(h + d_h) }
+                out = { ..out, y: Fixed(off), height: Fixed(h + d_h), }
               }
             }
             "hscale" => {
@@ -152,7 +152,7 @@ pub fn Project::resize_canvas(
               let h = size_val(out.height)
               if h > 0.0 && old_h > 0.0 {
                 let k = height / old_h
-                out = { ..out, y: Fixed(off * k), height: Fixed(h * k) }
+                out = { ..out, y: Fixed(off * k), height: Fixed(h * k), }
               }
             }
             _ => ()
@@ -163,7 +163,7 @@ pub fn Project::resize_canvas(
       // 更新画板元数据
       let meta = self.artboards.get(artboard)
       match meta {
-        Some(m) => self.artboards.set(artboard, { ..m, width, height })
+        Some(m) => self.artboards.set(artboard, { ..m, width, height, })
         None => ()
       }
       self.revision = self.revision + 1
@@ -234,7 +234,7 @@ pub fn Project::reorder_node(
             }
             out.push(item)
             moved = true
-            { ..pn, children: out }
+            { ..pn, children: out, }
           }
           "back" => {
             out.push(item)
@@ -242,7 +242,7 @@ pub fn Project::reorder_node(
               out.push(c)
             }
             moved = true
-            { ..pn, children: out }
+            { ..pn, children: out, }
           }
           "up" =>
             if idx < kids.length() - 1 {
@@ -258,7 +258,7 @@ pub fn Project::reorder_node(
                 }
               }
               moved = true
-              { ..pn, children: out }
+              { ..pn, children: out, }
             } else {
               pn
             }
@@ -275,7 +275,7 @@ pub fn Project::reorder_node(
                 }
               }
               moved = true
-              { ..pn, children: out }
+              { ..pn, children: out, }
             } else {
               pn
             }

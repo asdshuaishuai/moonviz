@@ -44,7 +44,7 @@ test "diff：检测新增/移动/样式变更" {
   let after = Document::sample_login()
   // 修改按钮位置和颜色
   let _ = after.update_node("btn-login", fn(n) {
-    { ..n, x: AlignStart(50.0), style: { ..n.style, fill: "#FF0000" } }
+    { ..n, x: AlignStart(50.0), style: { ..n.style, fill: "#FF0000", }, }
   })
   let d = diff_docs(before, after)
   // 应有 moved + restyled
@@ -110,7 +110,7 @@ test "Agent 完整工作流：创建→放置→lint→修复→diff→导出" {
   // 2) 快照 before
   let before_doc = match p.artboards.get("checkout") {
     Some(x) => x.doc.clone()
-    None => Document::new({ width: 390.0, height: 844.0 })
+    None => Document::new({ width: 390.0, height: 844.0, })
   }
 
   // 3) 放置组件
@@ -159,7 +159,7 @@ test "Agent 完整工作流：创建→放置→lint→修复→diff→导出" {
   // 6) diff（before vs after）
   let after_doc = match p.artboards.get("checkout") {
     Some(x) => x.doc
-    None => Document::new({ width: 390.0, height: 844.0 })
+    None => Document::new({ width: 390.0, height: 844.0, })
   }
   let d = diff_docs(before_doc, after_doc)
   assert_true(d.added.length() >= 4) // 至少加了 4 个组件
@@ -181,17 +181,23 @@ test "envelope 合法性：无违规/空集合路径 detail 与 missing 必须�
   let _ = p.create_artboard(name="clean", width=390.0, height=844.0)
   // auto_fix：无违规 → fixes=0，detail 必须是 []（此前 "detail":}}）
   match p.auto_fix(artboard="clean") {
-    Ok(json) => assert_true(json.contains("\"fixes\":0,\"detail\":[]"), msg=json)
+    Ok(json) =>
+      assert_true(json.contains("\"fixes\":0,\"detail\":[]"), msg=json)
     Err(_) => assert_true(false)
   }
   // snap_to_grid：空画板 → snapped=0，detail 必须是 []
   match p.snap_to_grid(artboard="clean", grid=8.0) {
-    Ok(json) => assert_true(json.contains("\"snapped\":0") && json.contains("\"detail\":[]"), msg=json)
+    Ok(json) =>
+      assert_true(
+        json.contains("\"snapped\":0") && json.contains("\"detail\":[]"),
+        msg=json,
+      )
     Err(_) => assert_true(false)
   }
   // suggest_alignment：空画板 → hints=0，detail 必须是 []
   match p.suggest_alignment(artboard="clean") {
-    Ok(json) => assert_true(json.contains("\"hints\":0,\"detail\":[]"), msg=json)
+    Ok(json) =>
+      assert_true(json.contains("\"hints\":0,\"detail\":[]"), msg=json)
     Err(_) => assert_true(false)
   }
   // infer_missing / suggest_improvements：数组键必须带括号起始
@@ -209,8 +215,18 @@ test "envelope 合法性：无违规/空集合路径 detail 与 missing 必须�
     Err(_) => assert_true(false)
   }
   // ≥2 子元素走 detail 数组臂
-  let _ = p.place_component(artboard="clean", component_id="button", instance_id="ax1", y=40.0)
-  let _ = p.place_component(artboard="clean", component_id="button", instance_id="ax2", y=120.0)
+  let _ = p.place_component(
+    artboard="clean",
+    component_id="button",
+    instance_id="ax1",
+    y=40.0,
+  )
+  let _ = p.place_component(
+    artboard="clean",
+    component_id="button",
+    instance_id="ax2",
+    y=120.0,
+  )
   match p.auto_arrange(artboard="clean") {
     Ok(json) => {
       assert_true(json.contains("\"arranged\":2"), msg=json)

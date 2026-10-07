@@ -52,7 +52,7 @@ test "声明文本往返：flex 布局 + 嵌套卡片语义保持" {
     x: @core.AlignStart(16.0),
     y: @core.AlignStart(0.0),
     text: "标签",
-    style: { ..@core.NodeStyle::default(), fill: "#CCFBF1" },
+    style: { ..@core.NodeStyle::default(), fill: "#CCFBF1", },
   }
   page.add_to(parent_id="card", node=chip)
 

@@ -18,12 +18,12 @@ pub(all) struct ComponentDef {
 
 ///|
 fn patch1(f : String) -> NodePatch {
-  { ..NodePatch::empty(), fill: Some(f) }
+  { ..NodePatch::empty(), fill: Some(f), }
 }
 
 ///|
 fn patch2(f : String, r : Double) -> NodePatch {
-  { ..NodePatch::empty(), fill: Some(f), corner_radius: Some(r) }
+  { ..NodePatch::empty(), fill: Some(f), corner_radius: Some(r), }
 }
 
 ///|
@@ -38,7 +38,7 @@ fn patch3(f : String, tc : String, r : Double) -> NodePatch {
 
 ///|
 fn patch_font(size : Double, tc : String) -> NodePatch {
-  { ..NodePatch::empty(), font_size: Some(size), text_color: Some(tc) }
+  { ..NodePatch::empty(), font_size: Some(size), text_color: Some(tc), }
 }
 
 ///|
@@ -88,7 +88,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
       dir: Vertical,
       gap: 8.0,
       justify: Start,
-      padding: { top: 16.0, right: 16.0, bottom: 16.0, left: 16.0 },
+      padding: { top: 16.0, right: 16.0, bottom: 16.0, left: 16.0, },
     }),
     category: "layout",
   })
@@ -387,29 +387,29 @@ pub fn instantiate_component(
       match p.fill {
         Some(f) => {
           let hex = tokens.resolve_color(f)
-          n = { ..n, style: { ..n.style, fill: hex } }
+          n = { ..n, style: { ..n.style, fill: hex, }, }
         }
         None => ()
       }
       match p.stroke {
         Some(s) => {
           let hex = tokens.resolve_color(s)
-          n = { ..n, style: { ..n.style, stroke: hex } }
+          n = { ..n, style: { ..n.style, stroke: hex, }, }
         }
         None => ()
       }
       match p.corner_radius {
-        Some(r) => n = { ..n, style: { ..n.style, corner_radius: r } }
+        Some(r) => n = { ..n, style: { ..n.style, corner_radius: r, }, }
         None => ()
       }
       match p.font_size {
-        Some(f) => n = { ..n, style: { ..n.style, font_size: f } }
+        Some(f) => n = { ..n, style: { ..n.style, font_size: f, }, }
         None => ()
       }
       match p.text_color {
         Some(tc) => {
           let hex = tokens.resolve_color(tc)
-          n = { ..n, style: { ..n.style, text_color: hex } }
+          n = { ..n, style: { ..n.style, text_color: hex, }, }
         }
         None => ()
       }

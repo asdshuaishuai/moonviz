@@ -10,7 +10,9 @@ test "collab：merge_sessions_from_spec 无冲突自动合并" {
 
 ///|
 test "collab：同节点同字段不同值 → 冲突检出" {
-  let json = merge_sessions_from_spec("1 a=fill:btn:#000:#111 b=fill:btn:#000:#222")
+  let json = merge_sessions_from_spec(
+    "1 a=fill:btn:#000:#111 b=fill:btn:#000:#222",
+  )
   assert_true(json.contains("\"ok\":true"))
   assert_true(json.contains("conflicts"))
 }
@@ -18,9 +20,15 @@ test "collab：同节点同字段不同值 → 冲突检出" {
 ///|
 test "collab：非法规格返回错误信封" {
   assert_true(merge_sessions_from_spec("garbage").contains("\"error\""))
-  assert_true(merge_sessions_from_spec("1 a=bogus:1:2 b=gap:btn:8:16").contains("collab_spec_bad_op"))
+  assert_true(
+    merge_sessions_from_spec("1 a=bogus:1:2 b=gap:btn:8:16").contains(
+      "collab_spec_bad_op",
+    ),
+  )
   // 只有一个 agent 段（词数 < 3）→ 用法错误
-  assert_true(merge_sessions_from_spec("1 onlyone=x").contains("collab_spec_usage"))
+  assert_true(
+    merge_sessions_from_spec("1 onlyone=x").contains("collab_spec_usage"),
+  )
 }
 
 // 多 Agent 协作系统测试

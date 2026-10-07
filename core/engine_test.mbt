@@ -201,15 +201,31 @@ test "门语义：兄弟全包含＝有意分层豁免，部分相交仍违规�
   let p = Project::new()
   let _ = p.create_artboard(name="m", width=375.0, height=812.0)
   // 顺序 1：先背景（fill 全屏）后内容——内容完整包含于背景
-  let _ = p.place_component(artboard="m", component_id="rect", instance_id="bg", y=0.0)
-  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[("width", "375"), ("height", "812"), ("fill", "#112233")])
-  let _ = p.place_component(artboard="m", component_id="button", instance_id="cta", y=100.0)
+  let _ = p.place_component(
+    artboard="m",
+    component_id="rect",
+    instance_id="bg",
+    y=0.0,
+  )
+  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[
+    ("width", "375"),
+    ("height", "812"),
+    ("fill", "#112233"),
+  ])
+  let _ = p.place_component(
+    artboard="m",
+    component_id="button",
+    instance_id="cta",
+    y=100.0,
+  )
   match p.artboards.get("m") {
     Some(ab) => {
       let vs = validate(ab.doc)
       let mut n_overlap = 0
       for v in vs.iter() {
-        if v.predicate is NoSiblingOverlap { n_overlap = n_overlap + 1 }
+        if v.predicate is NoSiblingOverlap {
+          n_overlap = n_overlap + 1
+        }
       }
       assert_eq(n_overlap, 0, msg="全包含层叠不应记 no_sibling_overlap")
     }
@@ -217,7 +233,10 @@ test "门语义：兄弟全包含＝有意分层豁免，部分相交仍违规�
   }
   // 顺序 2：部分相交必须仍然记违规。背景改为非全屏（300×600），
   // 内容放在其右下角外——place 的内容盒钳制不会把它推进背景内
-  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[("w", "300"), ("h", "600")])
+  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[
+    ("w", "300"),
+    ("h", "600"),
+  ])
   let _ = p.place_component(
     artboard="m",
     component_id="button",
@@ -230,9 +249,14 @@ test "门语义：兄弟全包含＝有意分层豁免，部分相交仍违规�
       let vs = validate(ab.doc)
       let mut n_overlap = 0
       for v in vs.iter() {
-        if v.predicate is NoSiblingOverlap { n_overlap = n_overlap + 1 }
+        if v.predicate is NoSiblingOverlap {
+          n_overlap = n_overlap + 1
+        }
       }
-      assert_true(n_overlap > 0, msg="部分相交必须仍记 no_sibling_overlap")
+      assert_true(
+        n_overlap > 0,
+        msg="部分相交必须仍记 no_sibling_overlap",
+      )
     }
     None => assert_true(false)
   }
@@ -253,7 +277,11 @@ test "unflow：单条导航边删除（issue #12）" {
     Err(e) => assert_true(false, msg=e)
   }
   let fj = p.flow_json()
-  assert_eq(fj.contains("\"to\":\"detail\""), false, msg="detail 边应已删除")
+  assert_eq(
+    fj.contains("\"to\":\"detail\""),
+    false,
+    msg="detail 边应已删除",
+  )
   assert_eq(fj.contains("\"to\":\"about\""), true, msg="about 边应保留")
   // 不存在的边报 unknown_flow
   match p.remove_flow(from="home", to="detail", trigger="tap:card") {
@@ -266,15 +294,41 @@ test "unflow：单条导航边删除（issue #12）" {
 test "query_nodes：节点条目带 parent 字段（issue #13）" {
   let p = Project::new()
   let _ = p.create_artboard(name="tree", width=390.0, height=844.0)
-  let _ = p.place_component(artboard="tree", component_id="card", instance_id="grp1", y=20.0)
-  let _ = p.place_component(artboard="tree", component_id="button", instance_id="b1", y=40.0)
-  let _ = p.place_component(artboard="tree", component_id="button", instance_id="b2", y=120.0)
-  let _ = p.group_nodes(artboard="tree", node_ids=["b1", "b2"], group_id="demo1")
+  let _ = p.place_component(
+    artboard="tree",
+    component_id="card",
+    instance_id="grp1",
+    y=20.0,
+  )
+  let _ = p.place_component(
+    artboard="tree",
+    component_id="button",
+    instance_id="b1",
+    y=40.0,
+  )
+  let _ = p.place_component(
+    artboard="tree",
+    component_id="button",
+    instance_id="b2",
+    y=120.0,
+  )
+  let _ = p.group_nodes(
+    artboard="tree",
+    node_ids=["b1", "b2"],
+    group_id="demo1",
+  )
   match p.query_nodes(artboard="tree") {
     Ok(json) => {
       // 顶层节点 parent=root；组员 parent=组节点
-      assert_true(json.contains("\"id\":\"grp1\",\"parent\":\"\"" ) || json.contains("\"id\":\"grp1\",\"parent\":\"root\""), msg=json)
-      assert_true(json.contains("\"parent\":\"demo1\""), msg="组员应带 parent=demo1: " + json)
+      assert_true(
+        json.contains("\"id\":\"grp1\",\"parent\":\"\"") ||
+        json.contains("\"id\":\"grp1\",\"parent\":\"root\""),
+        msg=json,
+      )
+      assert_true(
+        json.contains("\"parent\":\"demo1\""),
+        msg="组员应带 parent=demo1: " + json,
+      )
       // render 载荷复用 query_nodes，自动获得 parent
       match p.export_svg(artboard="tree") {
         Ok(_) => ()
@@ -289,11 +343,31 @@ test "query_nodes：节点条目带 parent 字段（issue #13）" {
 test "auto_fix：背景层不参与重叠推挤（review 5a5641a）" {
   let p = Project::new()
   let _ = p.create_artboard(name="m", width=375.0, height=812.0)
-  let _ = p.place_component(artboard="m", component_id="rect", instance_id="bg", y=0.0)
-  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[("w", "375"), ("h", "812")])
+  let _ = p.place_component(
+    artboard="m",
+    component_id="rect",
+    instance_id="bg",
+    y=0.0,
+  )
+  let _ = p.edit_node(artboard="m", node_id="bg", kvs=[
+    ("w", "375"),
+    ("h", "812"),
+  ])
   // a 与 b 部分相交（真实视觉债）
-  let _ = p.place_component(artboard="m", component_id="button", instance_id="a", x=0.0, y=100.0)
-  let _ = p.place_component(artboard="m", component_id="button", instance_id="b", x=60.0, y=120.0)
+  let _ = p.place_component(
+    artboard="m",
+    component_id="button",
+    instance_id="a",
+    x=0.0,
+    y=100.0,
+  )
+  let _ = p.place_component(
+    artboard="m",
+    component_id="button",
+    instance_id="b",
+    x=60.0,
+    y=120.0,
+  )
   match p.auto_fix(artboard="m") {
     Ok(json) => assert_true(json.contains("\"ok\""), msg=json)
     Err(e) => assert_true(false, msg=e)
@@ -306,7 +380,9 @@ test "auto_fix：背景层不参与重叠推挤（review 5a5641a）" {
       let layout = solve(ab.doc)
       let mut n_overlap = 0
       for v in vs.iter() {
-        if v.predicate is NoSiblingOverlap { n_overlap = n_overlap + 1 }
+        if v.predicate is NoSiblingOverlap {
+          n_overlap = n_overlap + 1
+        }
       }
       assert_eq(n_overlap, 0, msg="部分相交应被修复")
       for id in ["a", "b"] {
@@ -326,7 +402,7 @@ test "auto_fix：背景层不参与重叠推挤（review 5a5641a）" {
 
 ///|
 test "history：撤销后新提交截断 redo 分支（review 5a5641a）" {
-  let h = DesignHistory::new(Document::new({ width: 390.0, height: 844.0 }))
+  let h = DesignHistory::new(Document::new({ width: 390.0, height: 844.0, }))
   let doc1 = Document::sample_login()
   let _ = h.commit("t", "e1", [], doc1)
   assert_eq(h.rev(), 1)
@@ -335,7 +411,7 @@ test "history：撤销后新提交截断 redo 分支（review 5a5641a）" {
   // 撤销后编辑再提交：旧 redo 分支（rev1 旧快照）被截断，新提交复用 rev1
   // ——checkout 线性扫描必须命中新快照而非被旧条目遮蔽（review 5a5641a）
   let doc2 = Document::sample_login()
-  let marker = { ..Node::make("marker", Rect), name: "added-after-undo" }
+  let marker = { ..Node::make("marker", Rect), name: "added-after-undo", }
   let _ = doc2.insert_node(marker, "root")
   let _ = h.commit("t", "e2", [], doc2)
   assert_eq(h.rev(), 1)
@@ -343,7 +419,11 @@ test "history：撤销后新提交截断 redo 分支（review 5a5641a）" {
     Ok(d) =>
       match d.nodes.get("marker") {
         Some(_) => ()
-        None => assert_true(false, msg="checkout(1) 应命中新提交（含 marker），而非被旧 rev1 快照遮蔽")
+        None =>
+          assert_true(
+            false,
+            msg="checkout(1) 应命中新提交（含 marker），而非被旧 rev1 快照遮蔽",
+          )
       }
     Err(e) => assert_true(false, msg=e)
   }
@@ -361,13 +441,17 @@ test "constrain：cannot_parse 错误自描述语法（issue #17）" {
   match p.apply_constraint("bg 是全屏背景层 允许重叠", artboard="a") {
     Err(e) => {
       assert_true(e.contains("cannot_parse"), msg=e)
-      assert_true(e.contains("布局意图"), msg="错误应声明这是布局意图: " + e)
+      assert_true(
+        e.contains("布局意图"),
+        msg="错误应声明这是布局意图: " + e,
+      )
       assert_true(
         e.contains("垂直排列") && e.contains("网格 N"),
         msg="错误应自带语法清单: " + e,
       )
     }
-    Ok(json) => assert_true(false, msg="层级自由文本不应被误解析: " + json)
+    Ok(json) =>
+      assert_true(false, msg="层级自由文本不应被误解析: " + json)
   }
   // 合法意图照常执行
   match p.apply_constraint("等间距", artboard="a") {
@@ -380,17 +464,24 @@ test "constrain：cannot_parse 错误自描述语法（issue #17）" {
 test "place：w/h 一步到位，门在最终 bbox 评估（issue #18）" {
   let p = Project::new()
   let _ = p.create_artboard(name="m", width=375.0, height=812.0)
-  let _ = p.place_component(artboard="m", component_id="button", instance_id="b1", x=150.0, y=20.0)
-  // 最终尺寸直设：bg(375×812) 完全包含 b1 → 豁免 → 零违规
-  match p.place_component(
+  let _ = p.place_component(
     artboard="m",
-    component_id="rect",
-    instance_id="bg",
-    x=0.0,
-    y=0.0,
-    w=375.0,
-    h=812.0,
-  ) {
+    component_id="button",
+    instance_id="b1",
+    x=150.0,
+    y=20.0,
+  )
+  // 最终尺寸直设：bg(375×812) 完全包含 b1 → 豁免 → 零违规
+  match
+    p.place_component(
+      artboard="m",
+      component_id="rect",
+      instance_id="bg",
+      x=0.0,
+      y=0.0,
+      w=375.0,
+      h=812.0,
+    ) {
     Ok(_) => ()
     Err(e) => assert_true(false, msg=e)
   }
@@ -399,7 +490,9 @@ test "place：w/h 一步到位，门在最终 bbox 评估（issue #18）" {
       let vs = validate(ab.doc)
       let mut n = 0
       for v in vs.iter() {
-        if v.predicate is NoSiblingOverlap { n = n + 1 }
+        if v.predicate is NoSiblingOverlap {
+          n = n + 1
+        }
       }
       assert_eq(n, 0, msg="最终尺寸 bg 应完全包含 b1（豁免）")
       let layout = solve(ab.doc)
@@ -416,14 +509,28 @@ test "place：w/h 一步到位，门在最终 bbox 评估（issue #18）" {
   // 对照：默认尺寸 place（200×100）与 b1 部分相交 → 违规（中间态拒绝真实存在）
   let p2 = Project::new()
   let _ = p2.create_artboard(name="m", width=375.0, height=812.0)
-  let _ = p2.place_component(artboard="m", component_id="button", instance_id="b1", x=150.0, y=20.0)
-  let _ = p2.place_component(artboard="m", component_id="rect", instance_id="bg", x=0.0, y=0.0)
+  let _ = p2.place_component(
+    artboard="m",
+    component_id="button",
+    instance_id="b1",
+    x=150.0,
+    y=20.0,
+  )
+  let _ = p2.place_component(
+    artboard="m",
+    component_id="rect",
+    instance_id="bg",
+    x=0.0,
+    y=0.0,
+  )
   match p2.artboards.get("m") {
     Some(ab) => {
       let vs = validate(ab.doc)
       let mut n = 0
       for v in vs.iter() {
-        if v.predicate is NoSiblingOverlap { n = n + 1 }
+        if v.predicate is NoSiblingOverlap {
+          n = n + 1
+        }
       }
       assert_true(n > 0, msg="默认尺寸 bg 应与 b1 部分相交违规")
     }

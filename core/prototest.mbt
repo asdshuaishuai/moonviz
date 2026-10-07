@@ -22,7 +22,7 @@ pub fn ProtoTest::create(
   initial? : String = "",
 ) -> Result[ProtoTest, String] {
   match MoonVizRT::create(project, initial_artboard=initial) {
-    Ok(rt) => Ok({ rt, passed: 0, failed: 0, failures: [] })
+    Ok(rt) => Ok({ rt, passed: 0, failed: 0, failures: [], })
     Err(e) => Err(e)
   }
 }
@@ -238,7 +238,9 @@ pub fn run_protest_script(
           }
           if nums.length() >= 2 {
             let _ = pt.tap_and_expect_navigate(
-              parse_double(nums[0]), parse_double(nums[1]), expect,
+              parse_double(nums[0]),
+              parse_double(nums[1]),
+              expect,
             )
           } else {
             let _ = pt.reject_invalid("tap 断言缺少 >期望画板：\{cmd}")
