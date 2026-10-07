@@ -1,4 +1,12 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.8 新特性
+
+- **清单迁移到 `moon.mod`**——全仓 `moon fmt`（移除废弃的 `moon.mod.json`）。
+  修复 mooncakes.io 文档构建失败的根因：`moon doc` 拒绝废弃清单格式，
+  0.1.7 因此在注册表上「Documentation failed to generate」（安装不受影响）。
+  全部包配置完成迁移；三目标回归 + ABI 断言全绿。
+- `moon fmt` 代码格式化全仓过一遍——行为无变化，210 测试全绿。
+
 ## 0.1.7 新特性
 
 - **正式 MoonBit 原生包——已上架 [mooncakes.io](https://mooncakes.io)**：

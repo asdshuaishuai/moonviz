@@ -32,7 +32,7 @@ pub fn Prototype::move_node(
 ) -> Result[Unit, String] {
   match self.index.get(id) {
     Some(n) => {
-      let updated = { ..n, x: @core.AlignStart(x), y: @core.AlignStart(y) }
+      let updated = { ..n, x: @core.AlignStart(x), y: @core.AlignStart(y), }
       self.index.set(id, updated)
       if id == self.root.id {
         self.root = updated
@@ -327,17 +327,17 @@ fn pos_val(v : String, line : Int) -> Result[@core.PosSpec, DeclParseError] {
   } else if has_prefix_str(body, "end(") && body.length() > 5 {
     match parse_number(body.substring(start=4, end=body.length() - 1)) {
       Some(d) => Ok(@core.AlignEnd(d))
-      None => Err({ line, message: "无法解析 end 位置 \{body}" })
+      None => Err({ line, message: "无法解析 end 位置 \{body}", })
     }
   } else if has_prefix_str(body, "start(") && body.length() > 7 {
     match parse_number(body.substring(start=6, end=body.length() - 1)) {
       Some(d) => Ok(@core.AlignStart(d))
-      None => Err({ line, message: "无法解析 start 位置 \{body}" })
+      None => Err({ line, message: "无法解析 start 位置 \{body}", })
     }
   } else {
     match parse_number(body) {
       Some(d) => Ok(@core.AlignStart(d))
-      None => Err({ line, message: "无法解析位置规格 \{body}" })
+      None => Err({ line, message: "无法解析位置规格 \{body}", })
     }
   }
 }
@@ -490,7 +490,7 @@ fn parse_params(
           let value = trim_spaces(raw.substring(start=eq + 1))
           out.push((key, value))
         }
-        None => return Err({ line, message: "参数缺少 '='：\{raw}" })
+        None => return Err({ line, message: "参数缺少 '='：\{raw}", })
       }
     }
   }
@@ -531,9 +531,9 @@ fn num_req(
     Some(v) =>
       match parse_number(v) {
         Some(d) => Ok(d)
-        None => Err({ line, message: "无法解析数值 \{v}" })
+        None => Err({ line, message: "无法解析数值 \{v}", })
       }
-    None => Err({ line, message: "缺少参数 \{key}" })
+    None => Err({ line, message: "缺少参数 \{key}", })
   }
 }
 
@@ -547,7 +547,7 @@ fn num_opt(
     Some(v) =>
       match parse_number(v) {
         Some(d) => Ok(Some(d))
-        None => Err({ line, message: "无法解析数值 \{v}" })
+        None => Err({ line, message: "无法解析数值 \{v}", })
       }
     None => Ok(None)
   }
@@ -568,12 +568,12 @@ fn size_val(v : String, line : Int) -> Result[@core.SizeSpec, DeclParseError] {
   } else if has_prefix_str(body, "fixed(") && body.length() > 7 {
     match parse_number(body.substring(start=6, end=body.length() - 1)) {
       Some(d) => Ok(@core.Fixed(d))
-      None => Err({ line, message: "无法解析 fixed 尺寸 \{body}" })
+      None => Err({ line, message: "无法解析 fixed 尺寸 \{body}", })
     }
   } else {
     match parse_number(body) {
       Some(d) => Ok(@core.Fixed(d))
-      None => Err({ line, message: "无法解析尺寸规格 \{body}" })
+      None => Err({ line, message: "无法解析尺寸规格 \{body}", })
     }
   }
 }
@@ -588,7 +588,7 @@ fn dir_val(v : String, line : Int) -> Result[@core.StackDir, DeclParseError] {
   match body {
     "vertical" => Ok(@core.Vertical)
     "horizontal" => Ok(@core.Horizontal)
-    other => Err({ line, message: "未知方向 \{other}" })
+    other => Err({ line, message: "未知方向 \{other}", })
   }
 }
 
@@ -603,7 +603,7 @@ fn justify_val(v : String, line : Int) -> Result[@core.Justify, DeclParseError] 
     "justify_start" => Ok(@core.Start)
     "justify_center" => Ok(@core.Center)
     "justify_end" => Ok(@core.End)
-    other => Err({ line, message: "未知对齐 \{other}" })
+    other => Err({ line, message: "未知对齐 \{other}", })
   }
 }
 
@@ -620,7 +620,7 @@ fn parse_flex(
   }
   if !(has_prefix_str(body, FLEX_MARKER) &&
     body.length() > FLEX_MARKER.length() + 1) {
-    return Err({ line, message: "layout 须为 @decl.flex(...)" })
+    return Err({ line, message: "layout 须为 @decl.flex(...)", })
   }
   let args = body.substring(start=FLEX_MARKER.length(), end=body.length() - 1)
   match parse_params(args, line) {
@@ -680,9 +680,9 @@ fn with_xy(
     None => None
   }
   match (px, py) {
-    (Some(x), Some(y)) => add_layout({ ..n, x, y }, params, line)
-    (Some(x), None) => add_layout({ ..n, x }, params, line)
-    (None, Some(y)) => add_layout({ ..n, y }, params, line)
+    (Some(x), Some(y)) => add_layout({ ..n, x, y, }, params, line)
+    (Some(x), None) => add_layout({ ..n, x, }, params, line)
+    (None, Some(y)) => add_layout({ ..n, y, }, params, line)
     (None, None) => add_layout(n, params, line)
   }
 }
@@ -700,7 +700,7 @@ fn add_layout(
     None => Ok(n)
     Some(v) =>
       match parse_flex(v, line) {
-        Ok(l) => Ok({ ..n, layout: Some(l) })
+        Ok(l) => Ok({ ..n, layout: Some(l), })
         Err(e) => Err(e)
       }
   }
@@ -718,7 +718,7 @@ fn with_wh(
         Ok(s) => s
         Err(err) => return Err(err)
       }
-    None => return Err({ line, message: "缺少 width" })
+    None => return Err({ line, message: "缺少 width", })
   }
   let h : @core.SizeSpec = match opt_param(params, "height") {
     Some(v) =>
@@ -726,9 +726,9 @@ fn with_wh(
         Ok(s) => s
         Err(err) => return Err(err)
       }
-    None => return Err({ line, message: "缺少 height" })
+    None => return Err({ line, message: "缺少 height", })
   }
-  Ok({ ..n, width: w, height: h })
+  Ok({ ..n, width: w, height: h, })
 }
 
 ///|
@@ -738,7 +738,7 @@ fn require_id(
 ) -> Result[String, DeclParseError] {
   match opt_param(params, "id") {
     Some(v) => Ok(str_val(v))
-    None => Err({ line, message: "缺少 id" })
+    None => Err({ line, message: "缺少 id", })
   }
 }
 
@@ -751,87 +751,89 @@ fn apply_decl_style(
 ) -> Result[@core.Node, DeclParseError] {
   let mut cur = node
   match opt_param(params, "fill") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, fill: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, fill: str_val(v), }, }
     None => ()
   }
   match opt_param(params, "stroke") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, stroke: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, stroke: str_val(v), }, }
     None => ()
   }
   match num_opt(params, "stroke_width", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, stroke_width: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, stroke_width: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match opt_param(params, "text_align") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, text_align: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, text_align: str_val(v), }, }
     None => ()
   }
   match opt_param(params, "font_style") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, font_style: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, font_style: str_val(v), }, }
     None => ()
   }
   match opt_param(params, "stroke_dash") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, stroke_dash: str_val(v) } }
+    Some(v) =>
+      cur = { ..cur, style: { ..cur.style, stroke_dash: str_val(v), }, }
     None => ()
   }
   match opt_param(params, "visible") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, visible: str_val(v) != "false" } }
+    Some(v) =>
+      cur = { ..cur, style: { ..cur.style, visible: str_val(v) != "false", }, }
     None => ()
   }
   match num_opt(params, "radius", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, corner_radius: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, corner_radius: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match num_opt(params, "opacity", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, opacity: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, opacity: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match num_opt(params, "font_size", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, font_size: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, font_size: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match opt_param(params, "text_color") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, text_color: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, text_color: str_val(v), }, }
     None => ()
   }
   match opt_param(params, "shadow") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, shadow: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, shadow: str_val(v), }, }
     None => ()
   }
   match num_opt(params, "rotate", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, rotate: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, rotate: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match num_opt(params, "blur", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, blur: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, blur: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match opt_param(params, "blend") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, blend: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, blend: str_val(v), }, }
     None => ()
   }
   match num_opt(params, "line", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, line_height: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, line_height: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match num_opt(params, "tracking", line) {
-    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, tracking: v } }
+    Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, tracking: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
   }
   match opt_param(params, "flip") {
-    Some(v) => cur = { ..cur, style: { ..cur.style, flip: str_val(v) } }
+    Some(v) => cur = { ..cur, style: { ..cur.style, flip: str_val(v), }, }
     None => ()
   }
   match opt_param(params, "constraint") {
-    Some(v) => cur = { ..cur, constraint: str_val(v) }
+    Some(v) => cur = { ..cur, constraint: str_val(v), }
     None => ()
   }
   Ok(cur)
@@ -851,7 +853,7 @@ fn build_node(
       }
       let component_name = match opt_param(params, "component") {
         Some(v) => str_val(v)
-        None => return Err({ line, message: "generic_node 缺少 component" })
+        None => return Err({ line, message: "generic_node 缺少 component", })
       }
       let kind_name = match opt_param(params, "kind") {
         Some(v) => str_val(v)
@@ -863,7 +865,7 @@ fn build_node(
             Ok(s) => s
             Err(e) => return Err(e)
           }
-        None => return Err({ line, message: "generic_node 缺少 width" })
+        None => return Err({ line, message: "generic_node 缺少 width", })
       }
       let height = match opt_param(params, "height") {
         Some(v) =>
@@ -871,7 +873,7 @@ fn build_node(
             Ok(s) => s
             Err(e) => return Err(e)
           }
-        None => return Err({ line, message: "generic_node 缺少 height" })
+        None => return Err({ line, message: "generic_node 缺少 height", })
       }
       let x_pos = match opt_param(params, "x") {
         Some(v) =>
@@ -1030,7 +1032,7 @@ fn build_node(
           params,
           line,
         ) {
-        Ok(node) => Ok({ ..node, x: x_pos, y: y_pos })
+        Ok(node) => Ok({ ..node, x: x_pos, y: y_pos, })
         Err(e) => Err(e)
       }
     }
@@ -1045,18 +1047,18 @@ fn build_node(
       }
       let mut cur = text(id~, content~)
       match num_opt(params, "size", line) {
-        Ok(Some(d)) => cur = { ..cur, style: { ..cur.style, font_size: d } }
+        Ok(Some(d)) => cur = { ..cur, style: { ..cur.style, font_size: d, }, }
         Ok(None) => ()
         Err(err) => return Err(err)
       }
       match opt_param(params, "weight") {
         Some(v) =>
-          cur = { ..cur, style: { ..cur.style, font_weight: str_val(v) } }
+          cur = { ..cur, style: { ..cur.style, font_weight: str_val(v), }, }
         None => ()
       }
       match opt_param(params, "color") {
         Some(v) =>
-          cur = { ..cur, style: { ..cur.style, text_color: str_val(v) } }
+          cur = { ..cur, style: { ..cur.style, text_color: str_val(v), }, }
         None => ()
       }
       with_xy(cur, params, line)
@@ -1138,16 +1140,16 @@ fn build_node(
       }
       let base = rect(id~, width=w, height=h)
       let f : @core.Node = match opt_param(params, "fill") {
-        Some(v) => { ..base, style: { ..base.style, fill: str_val(v) } }
+        Some(v) => { ..base, style: { ..base.style, fill: str_val(v), }, }
         None => base
       }
       let rf : @core.Node = match num_opt(params, "radius", line) {
-        Ok(Some(d)) => { ..f, style: { ..f.style, corner_radius: d } }
+        Ok(Some(d)) => { ..f, style: { ..f.style, corner_radius: d, }, }
         Ok(None) => f
         Err(err) => return Err(err)
       }
       let lb : @core.Node = match opt_param(params, "text") {
-        Some(v) => { ..rf, text: str_val(v) }
+        Some(v) => { ..rf, text: str_val(v), }
         None => rf
       }
       with_xy(lb, params, line)
@@ -1177,7 +1179,7 @@ fn build_node(
       // 的 text= 字段，往返闭环
       let im = image(id~, width=w, height=h)
       let im2 = match opt_param(params, "text") {
-        Some(v) => { ..im, text: str_val(v) }
+        Some(v) => { ..im, text: str_val(v), }
         None => im
       }
       with_xy(im2, params, line)
@@ -1200,7 +1202,7 @@ fn build_node(
             Ok(s) => s
             Err(err) => return Err(err)
           }
-        None => return Err({ line, message: "frame 缺少 width" })
+        None => return Err({ line, message: "frame 缺少 width", })
       }
       let h : @core.SizeSpec = match opt_param(params, "height") {
         Some(v) =>
@@ -1208,17 +1210,17 @@ fn build_node(
             Ok(s) => s
             Err(err) => return Err(err)
           }
-        None => return Err({ line, message: "frame 缺少 height" })
+        None => return Err({ line, message: "frame 缺少 height", })
       }
       // layout 由 with_xy → add_layout 统一解析（覆盖所有组件类型）
       let base = frame(id~, width=w, height=h)
       let fd : @core.Node = match opt_param(params, "fill") {
-        Some(v) => { ..base, style: { ..base.style, fill: str_val(v) } }
+        Some(v) => { ..base, style: { ..base.style, fill: str_val(v), }, }
         None => base
       }
       with_xy(fd, params, line)
     }
-    other => Err({ line, message: "未知组件 \{other}" })
+    other => Err({ line, message: "未知组件 \{other}", })
   }
   match n {
     Ok(node) => apply_decl_style(node, params, line)
@@ -1243,15 +1245,15 @@ fn apply_call(
   let body = call_src.substring(start=DECL_MARKER.length())
   let lp : Int = match body.find("(") {
     Some(i) => i
-    None => return Err({ line, message: "组件调用缺少括号" })
+    None => return Err({ line, message: "组件调用缺少括号", })
   }
   if body.length() < lp + 3 {
-    return Err({ line, message: "组件调用参数不完整" })
+    return Err({ line, message: "组件调用参数不完整", })
   }
   let component = body.substring(start=0, end=lp)
   let args = body.substring(start=lp + 1, end=body.length() - 1)
   if is_blank(component) {
-    return Err({ line, message: "组件名缺失" })
+    return Err({ line, message: "组件名缺失", })
   }
   match parse_params(args, line) {
     Err(e) => Err(e)
@@ -1260,7 +1262,7 @@ fn apply_call(
         Err(e) => Err(e)
         Ok(n) =>
           if page.index.contains(n.id) {
-            Err({ line, message: "duplicate_id: \{n.id}" })
+            Err({ line, message: "duplicate_id: \{n.id}", })
           } else {
             match pid_opt {
               Some(pid) =>
@@ -1268,7 +1270,7 @@ fn apply_call(
                   p_add(page, pid, n)
                   Ok(())
                 } else {
-                  Err({ line, message: "unknown_parent: \{pid}" })
+                  Err({ line, message: "unknown_parent: \{pid}", })
                 }
               None => {
                 p_add(page, "root", n)
@@ -1341,7 +1343,10 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
         let pid : String = match inner.find("\"") {
           Some(q) => inner.substring(start=0, end=q)
           None =>
-            return Err({ line: line_no, message: "add_to 缺少 parent_id 值" })
+            return Err({
+              line: line_no,
+              message: "add_to 缺少 parent_id 值",
+            })
         }
         // 提取 node=@decl.<call>)（剥掉 add_to 的收尾括号）
         match inner.find(NODE_MARKER) {

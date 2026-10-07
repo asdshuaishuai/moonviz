@@ -647,13 +647,21 @@ fn Project::template_settings(self : Project, name : String) -> String {
   ab
 }
 
-
 // ---------------------------------------------------------------------------
 // 列表-详情模板（微信/IM 类社交应用的核心结构）
 // ---------------------------------------------------------------------------
+
+///|
 fn Project::template_list_detail(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
-  let _ = self.place_comp(ab, "app_bar", "top_bar", variant="surface", x=0.0, y=0.0)
+  let _ = self.place_comp(
+    ab,
+    "app_bar",
+    "top_bar",
+    variant="surface",
+    x=0.0,
+    y=0.0,
+  )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Chats")
   // 会话列表（头像 + 标题 + 预览）
@@ -667,13 +675,27 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
   let mut y = 68.0
   for ci in 0..<chats.length() {
     let (who, msg) = chats[ci]
-    let _ = self.place_comp(ab, "card", "chat_\{ci}", variant="default", x=12.0, y~)
+    let _ = self.place_comp(
+      ab,
+      "card",
+      "chat_\{ci}",
+      variant="default",
+      x=12.0,
+      y~,
+    )
     self.resize_node(ab, "chat_\{ci}", 366.0, 64.0, 10.0)
     self.set_text(ab, "chat_\{ci}", who + " — " + msg)
     y = y + 72.0
   }
   // 底部详情卡（占位内容区）
-  let _ = self.place_comp(ab, "card", "detail_card", variant="outlined", x=12.0, y=y + 8.0)
+  let _ = self.place_comp(
+    ab,
+    "card",
+    "detail_card",
+    variant="outlined",
+    x=12.0,
+    y=y + 8.0,
+  )
   self.resize_node(ab, "detail_card", 366.0, 120.0, 12.0)
   self.set_text(ab, "detail_card", "Select a chat to view details")
   ab
@@ -682,18 +704,50 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
 // ---------------------------------------------------------------------------
 // 引导页模板（onboarding 轮播页）
 // ---------------------------------------------------------------------------
+
+///|
 fn Project::template_onboarding(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
-  let _ = self.place_comp(ab, "heading", "ob_title", variant="h2", x=24.0, y=180.0)
+  let _ = self.place_comp(
+    ab,
+    "heading",
+    "ob_title",
+    variant="h2",
+    x=24.0,
+    y=180.0,
+  )
   self.set_text(ab, "ob_title", "Welcome aboard")
   self.resize_node(ab, "ob_title", 342.0, 40.0, 0.0)
-  let _ = self.place_comp(ab, "body_text", "ob_sub", variant="default", x=24.0, y=236.0)
-  self.set_text(ab, "ob_sub", "Design together with your agent — one plain-text source of truth for humans and AI.")
+  let _ = self.place_comp(
+    ab,
+    "body_text",
+    "ob_sub",
+    variant="default",
+    x=24.0,
+    y=236.0,
+  )
+  self.set_text(
+    ab, "ob_sub", "Design together with your agent — one plain-text source of truth for humans and AI.",
+  )
   self.resize_node(ab, "ob_sub", 342.0, 72.0, 0.0)
-  let _ = self.place_comp(ab, "button", "ob_next", variant="primary", x=24.0, y=720.0)
+  let _ = self.place_comp(
+    ab,
+    "button",
+    "ob_next",
+    variant="primary",
+    x=24.0,
+    y=720.0,
+  )
   self.set_text(ab, "ob_next", "Get Started")
   self.resize_node(ab, "ob_next", 342.0, 48.0, 12.0)
-  let _ = self.place_comp(ab, "button", "ob_skip", variant="secondary", x=24.0, y=780.0)
+  let _ = self.place_comp(
+    ab,
+    "button",
+    "ob_skip",
+    variant="secondary",
+    x=24.0,
+    y=780.0,
+  )
   self.set_text(ab, "ob_skip", "Skip")
   self.resize_node(ab, "ob_skip", 342.0, 40.0, 8.0)
   ab
@@ -798,7 +852,7 @@ fn Project::resize_node(
           ..n,
           width: Fixed(w),
           height: Fixed(h),
-          style: { ..n.style, corner_radius: radius },
+          style: { ..n.style, corner_radius: radius, },
         }
       })
     }
@@ -935,18 +989,18 @@ pub fn Project::normalize_nesting(self : Project, artboard_id : String) -> Unit 
     }
     // 从旧父摘除
     let _ = doc.update_node(old_parent, fn(p) {
-      { ..p, children: p.children.filter(c => c != child_id) }
+      { ..p, children: p.children.filter(c => c != child_id), }
     })
     // 相对坐标 + 挂到新父
     let nx = rc.x - rp.x
     let ny = rc.y - rp.y
     let _ = doc.update_node(child_id, fn(c) {
-      { ..c, x: Fixed(nx), y: Fixed(ny) }
+      { ..c, x: Fixed(nx), y: Fixed(ny), }
     })
     let _ = doc.update_node(parent_id, fn(p) {
       let cs = p.children.copy()
       cs.push(child_id)
-      { ..p, children: cs }
+      { ..p, children: cs, }
     })
   }
   if moves.length() > 0 {

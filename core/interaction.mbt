@@ -142,13 +142,13 @@ pub fn Project::add_interaction(
       if !ab.doc.has(node_id) {
         return Err("unknown_node: \{node_id}")
       }
-      let inter : InteractionDef = { node_id, trigger, action, transition }
+      let inter : InteractionDef = { node_id, trigger, action, transition, }
       match ab.doc.nodes.get(node_id) {
         Some(n) => {
           // 把交互信息序列化到节点的 metadata（v1：存 text 前缀标记）
           let marker = "⚡\{trigger.name()}→\{action.describe()}"
           let _ = ab.doc.update_node(node_id, fn(x) {
-            { ..x, name: "\{x.name} \{marker}" }
+            { ..x, name: "\{x.name} \{marker}", }
           })
           Ok(
             "{\"ok\":true,\"interaction\":\"\{node_id}:\{trigger.name()}→\{action.describe()}\"}",
@@ -182,7 +182,7 @@ pub fn Project::define_component_state(
   }
   let def = match self.node_states.get(node_id) {
     Some(d) => d
-    None => { node_id, states: Map::new(), current: "default" }
+    None => { node_id, states: Map::new(), current: "default", }
   }
   def.states.set(state_name, patch)
   self.node_states.set(node_id, def)
@@ -190,12 +190,16 @@ pub fn Project::define_component_state(
   // 仅存内存会在每次 load-mbt-b64 重建 Project 时静默丢失。
   let count = def.states.size().to_string()
   let markers = states_to_markers(def)
-  let cur = if def.current != "default" { ["[cur:" + def.current + "]"] } else { [] }
+  let cur = if def.current != "default" {
+    ["[cur:" + def.current + "]"]
+  } else {
+    []
+  }
   for m in cur {
     markers.push(m)
   }
   let _ = ab.doc.update_node(node_id, fn(n) {
-    { ..n, name: rebuild_name(n.name, markers) }
+    { ..n, name: rebuild_name(n.name, markers), }
   })
   self.revision = self.revision + 1
   Ok(
@@ -314,10 +318,10 @@ pub fn strip_all_markers(name : String) -> String {
   }
   let head = name.substring(start=0, end=cut)
   let mut end = head.length()
-  while end > 0 && head.substring(start=end - 1, end=end) == " " {
+  while end > 0 && head.substring(start=end - 1, end~) == " " {
     end = end - 1
   }
-  head.substring(start=0, end=end)
+  head.substring(start=0, end~)
 }
 
 ///|
@@ -335,7 +339,7 @@ pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit 
           Some(states) => {
             let def = match self.node_states.get(id) {
               Some(d) => d
-              None => { node_id: id, states: Map::new(), current: "default" }
+              None => { node_id: id, states: Map::new(), current: "default", }
             }
             for kv in states.iter() {
               let (sname, patch) = kv
@@ -470,8 +474,6 @@ fn double_text(d : Double) -> String {
   }
 }
 
-
-
 ///|
 /// 切换/设置节点当前状态并返回变更后的节点。
 /// ToggleState：在 default 与目标状态间切换；SetState：直接设为目标状态。
@@ -507,7 +509,7 @@ pub fn Project::set_node_state(
             markers.push("[cur:" + next + "]")
           }
           let _ = ab.doc.update_node(node_id, fn(n) {
-            { ..n, name: rebuild_name(n.name, markers) }
+            { ..n, name: rebuild_name(n.name, markers), }
           })
         }
         None => ()
@@ -532,7 +534,10 @@ fn Project::find_node_artboard(self : Project, node_id : String) -> String? {
 
 ///|
 /// 当前状态下节点应有的补丁（default 缺省则返回空补丁）。
-pub fn Project::active_state_patch(self : Project, node_id : String) -> NodePatch? {
+pub fn Project::active_state_patch(
+  self : Project,
+  node_id : String,
+) -> NodePatch? {
   match self.node_states.get(node_id) {
     None => None
     Some(def) =>
@@ -549,7 +554,10 @@ pub fn Project::active_state_patch(self : Project, node_id : String) -> NodePatc
 
 ///|
 /// 结构化回读：节点的全部已定义状态与其当前值。
-pub fn Project::node_states_json(self : Project, artboard~ : String) -> Result[String, String] {
+pub fn Project::node_states_json(
+  self : Project,
+  artboard~ : String,
+) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard: \{artboard}")
     Some(ab) => {
@@ -585,7 +593,7 @@ pub(all) struct NavigationState {
 
 ///|
 pub fn NavigationState::new(initial : String) -> NavigationState {
-  { stack: [initial], current: initial }
+  { stack: [initial], current: initial, }
 }
 
 ///|
@@ -752,20 +760,41 @@ pub fn action_from_spec(spec : String) -> Action? {
           let head = spec.substring(start=0, end=i)
           let rest = spec.substring(start=i + 1, end=spec.length())
           match head {
-            "navigate_to" => if rest == "" { None } else { Some(NavigateTo(rest)) }
+            "navigate_to" =>
+              if rest == "" {
+                None
+              } else {
+                Some(NavigateTo(rest))
+              }
             "show_toast" =>
-              if rest == "" { None } else { Some(ShowToast(unquote_spec(rest))) }
+              if rest == "" {
+                None
+              } else {
+                Some(ShowToast(unquote_spec(rest)))
+              }
             "play_sound" =>
-              if rest == "" { None } else { Some(PlaySound(rest)) }
+              if rest == "" {
+                None
+              } else {
+                Some(PlaySound(rest))
+              }
             "toggle_state" =>
-              if rest == "" { None } else { Some(ToggleState(rest, "")) }
+              if rest == "" {
+                None
+              } else {
+                Some(ToggleState(rest, ""))
+              }
             "set_text" =>
               match rest.find(":") {
                 None => None
                 Some(j) => {
                   let id = rest.substring(start=0, end=j)
                   let txt = rest.substring(start=j + 1, end=rest.length())
-                  if id == "" { None } else { Some(SetText(id, unquote_spec(txt))) }
+                  if id == "" {
+                    None
+                  } else {
+                    Some(SetText(id, unquote_spec(txt)))
+                  }
                 }
               }
             "set_state" =>
@@ -774,7 +803,11 @@ pub fn action_from_spec(spec : String) -> Action? {
                 Some(j) => {
                   let id = rest.substring(start=0, end=j)
                   let st = rest.substring(start=j + 1, end=rest.length())
-                  if id == "" { None } else { Some(SetState(id, st)) }
+                  if id == "" {
+                    None
+                  } else {
+                    Some(SetState(id, st))
+                  }
                 }
               }
             _ => None
@@ -819,12 +852,8 @@ pub fn Project::attach_interaction(
   }
   // 先清理旧标记，保证一个节点只有一个生效交互且标记不累积
   let base = strip_markers(node.name)
-  let updated = if base == "" {
-    marker
-  } else {
-    base + " " + marker
-  }
-  let _ = ab.doc.update_node(node_id, fn(n) { { ..n, name: updated } })
+  let updated = if base == "" { marker } else { base + " " + marker }
+  let _ = ab.doc.update_node(node_id, fn(n) { { ..n, name: updated, } })
   self.revision = self.revision + 1
   Ok(
     "{\"ok\":true,\"node\":\"\{node_id}\",\"trigger\":\"\{trigger}\",\"action\":\"\{action_spec}\"}",
@@ -847,7 +876,7 @@ pub fn Project::detach_interaction(
     None => return Err("unknown_node: \{node_id}")
   }
   let base = strip_markers(node.name)
-  let _ = ab.doc.update_node(node_id, fn(n) { { ..n, name: base } })
+  let _ = ab.doc.update_node(node_id, fn(n) { { ..n, name: base, } })
   self.revision = self.revision + 1
   Ok("{\"ok\":true,\"node\":\"\{node_id}\",\"cleared\":true}")
 }
@@ -862,10 +891,10 @@ pub fn strip_markers(name : String) -> String {
       let head = name.substring(start=0, end=i)
       // 修剪标记前遗留的尾随空格
       let mut end = head.length()
-      while end > 0 && head.substring(start=end - 1, end=end) == " " {
+      while end > 0 && head.substring(start=end - 1, end~) == " " {
         end = end - 1
       }
-      head.substring(start=0, end=end)
+      head.substring(start=0, end~)
     }
   }
 }

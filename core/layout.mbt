@@ -60,7 +60,7 @@ pub fn solve(doc : Document) -> SolvedLayout {
       solve_node(doc, root, Rect::new(0.0, 0.0, w, h), rects, failures)
     }
   }
-  { rects, failures }
+  { rects, failures, }
 }
 
 ///|
@@ -95,7 +95,7 @@ fn intrinsic_size(node : Node, failures : Array[SolveFailure]) -> Size {
       )
     _ => {
       failures.push(UnsupportedSpec(node.id))
-      { width: 0.0, height: 0.0 }
+      { width: 0.0, height: 0.0, }
     }
   }
 }

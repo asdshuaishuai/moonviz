@@ -23,10 +23,7 @@ pub fn new() -> @core.Project {
 /// 应用一条 mutating op（与 CLI/MCP/WASM 四面同源分发，26 条）。
 /// 典型：`create` / `template` / `place` / `update` / `flow` / `unflow` /
 /// `reorder` / `theme` / `token` / `fix`。
-pub fn apply(
-  p : @core.Project,
-  op : String,
-) -> Result[Unit, String] {
+pub fn apply(p : @core.Project, op : String) -> Result[Unit, String] {
   @core.apply_operation(p, op)
 }
 
@@ -79,6 +76,9 @@ pub fn list_components(p : @core.Project) -> String {
 
 ///|
 /// 自动修复可修复违规（contained_in_parent / no_sibling_overlap）。
-pub fn auto_fix(p : @core.Project, artboard~ : String) -> Result[String, String] {
+pub fn auto_fix(
+  p : @core.Project,
+  artboard~ : String,
+) -> Result[String, String] {
   p.auto_fix(artboard~)
 }

@@ -53,7 +53,7 @@ pub(all) struct Padding {
 
 ///|
 pub fn Padding::uniform(v : Double) -> Padding {
-  { top: v, right: v, bottom: v, left: v }
+  { top: v, right: v, bottom: v, left: v, }
 }
 
 ///|
@@ -211,5 +211,5 @@ pub fn text_intrinsic(
   }
   lines = lines + 1
   let w = if max_w == 0.0 { font_size * ASCII_ADVANCE_RATIO } else { max_w }
-  { width: w, height: font_size * line_height * lines.to_double() }
+  { width: w, height: font_size * line_height * lines.to_double(), }
 }

@@ -16,7 +16,7 @@ pub(all) struct Camera {
 
 ///|
 pub fn Camera::new() -> Camera {
-  { pan_x: 0.0, pan_y: 0.0, zoom: 1.0 }
+  { pan_x: 0.0, pan_y: 0.0, zoom: 1.0, }
 }
 
 ///|
@@ -47,7 +47,7 @@ struct CamView {
 
 ///|
 fn to_screen_f(c : Camera, wx : Double, wy : Double) -> CamView {
-  { sx: (wx - c.pan_x) * c.zoom, sy: (wy - c.pan_y) * c.zoom / 2.0 }
+  { sx: (wx - c.pan_x) * c.zoom, sy: (wy - c.pan_y) * c.zoom / 2.0, }
 }
 
 ///|
@@ -79,10 +79,10 @@ fn screen_new(cols : Int, rows : Int) -> ScreenBuf {
   let mut i = 0
   let total = cols * rows
   while i < total {
-    cells.push({ ch: ' ', color: "" })
+    cells.push({ ch: ' ', color: "", })
     i = i + 1
   }
-  { cols, rows, cells }
+  { cols, rows, cells, }
 }
 
 ///|
@@ -94,7 +94,7 @@ fn screen_set(
   color : String,
 ) -> Unit {
   if col >= 0 && col < s.cols && row >= 0 && row < s.rows {
-    s.cells[row * s.cols + col] = { ch, color }
+    s.cells[row * s.cols + col] = { ch, color, }
   }
 }
 

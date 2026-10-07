@@ -75,7 +75,7 @@ fn ensure_free_layer(doc : Document) -> Bool {
       }
     None => (Fill, Fill)
   }
-  let free = { ..Node::make(FREE_LAYER_ID, Group), width: w, height: h }
+  let free = { ..Node::make(FREE_LAYER_ID, Group), width: w, height: h, }
   doc.insert_node(free, doc.root_id)
 }
 
@@ -185,157 +185,168 @@ pub fn Project::edit_node(
           match k {
             // w/h 接受数字（Fixed）或 "fill"/"hug" 简写（与 @decl.fill/@decl.hug 同义）
             "w" => {
-              cur = { ..cur, width: match v {
-                "fill" => Fill
-                "hug" => Hug
-                _ => Fixed(d)
-              } }
+              cur = {
+                ..cur,
+                width: match v {
+                  "fill" => Fill
+                  "hug" => Hug
+                  _ => Fixed(d)
+                },
+              }
               applied.push("w")
             }
             "h" => {
-              cur = { ..cur, height: match v {
-                "fill" => Fill
-                "hug" => Hug
-                _ => Fixed(d)
-              } }
+              cur = {
+                ..cur,
+                height: match v {
+                  "fill" => Fill
+                  "hug" => Hug
+                  _ => Fixed(d)
+                },
+              }
               applied.push("h")
             }
             "text" => {
-              cur = { ..cur, text: v }
+              cur = { ..cur, text: v, }
               applied.push("text")
             }
             "fill" => {
-              cur = { ..cur, style: { ..cur.style, fill: v } }
+              cur = { ..cur, style: { ..cur.style, fill: v, }, }
               applied.push("fill")
             }
             "text_color" => {
-              cur = { ..cur, style: { ..cur.style, text_color: v } }
+              cur = { ..cur, style: { ..cur.style, text_color: v, }, }
               applied.push("text_color")
             }
             "stroke" => {
-              cur = { ..cur, style: { ..cur.style, stroke: v } }
+              cur = { ..cur, style: { ..cur.style, stroke: v, }, }
               applied.push("stroke")
             }
             "radius" => {
-              cur = { ..cur, style: { ..cur.style, corner_radius: d } }
+              cur = { ..cur, style: { ..cur.style, corner_radius: d, }, }
               applied.push("radius")
             }
             "opacity" => {
               let o = if d < 0.0 { 0.0 } else if d > 1.0 { 1.0 } else { d }
-              cur = { ..cur, style: { ..cur.style, opacity: o } }
+              cur = { ..cur, style: { ..cur.style, opacity: o, }, }
               applied.push("opacity")
             }
             "font_size" => {
-              cur = { ..cur, style: { ..cur.style, font_size: d } }
+              cur = { ..cur, style: { ..cur.style, font_size: d, }, }
               applied.push("font_size")
             }
             "weight" => {
-              cur = { ..cur, style: { ..cur.style, font_weight: v } }
+              cur = { ..cur, style: { ..cur.style, font_weight: v, }, }
               applied.push("weight")
             }
             "shadow" => {
-              cur = { ..cur, style: { ..cur.style, shadow: v } }
+              cur = { ..cur, style: { ..cur.style, shadow: v, }, }
               applied.push("shadow")
             }
             "rotate" => {
-              cur = { ..cur, style: { ..cur.style, rotate: d } }
+              cur = { ..cur, style: { ..cur.style, rotate: d, }, }
               applied.push("rotate")
             }
             "blur" => {
               let b = if d < 0.0 { 0.0 } else { d }
-              cur = { ..cur, style: { ..cur.style, blur: b } }
+              cur = { ..cur, style: { ..cur.style, blur: b, }, }
               applied.push("blur")
             }
             "blend" => {
-              cur = { ..cur, style: { ..cur.style, blend: v } }
+              cur = { ..cur, style: { ..cur.style, blend: v, }, }
               applied.push("blend")
             }
             "line" => {
               let lh = if d < 1.0 { 1.0 } else { d }
-              cur = { ..cur, style: { ..cur.style, line_height: lh } }
+              cur = { ..cur, style: { ..cur.style, line_height: lh, }, }
               applied.push("line")
             }
             "tracking" => {
-              cur = { ..cur, style: { ..cur.style, tracking: d } }
+              cur = { ..cur, style: { ..cur.style, tracking: d, }, }
               applied.push("tracking")
             }
             "constraint" => {
-              cur = { ..cur, constraint: v }
+              cur = { ..cur, constraint: v, }
               applied.push("constraint")
             }
             // 节点显示名（交互标记的载体；仅当偏离 id 时写入 canonical MBT）
             "name" => {
-              cur = { ..cur, name: v }
+              cur = { ..cur, name: v, }
               applied.push("name")
             }
             "stroke_width" => {
               let sw = if d < 0.0 { 0.0 } else { d }
-              cur = { ..cur, style: { ..cur.style, stroke_width: sw } }
+              cur = { ..cur, style: { ..cur.style, stroke_width: sw, }, }
               applied.push("stroke_width")
             }
             "align" => {
               let a = if v == "center" || v == "right" { v } else { "left" }
-              cur = { ..cur, style: { ..cur.style, text_align: a } }
+              cur = { ..cur, style: { ..cur.style, text_align: a, }, }
               applied.push("align")
             }
             "italic" => {
-              let f = if v == "true" || v == "1" || v == "italic" { "italic" } else { "normal" }
-              cur = { ..cur, style: { ..cur.style, font_style: f } }
+              let f = if v == "true" || v == "1" || v == "italic" {
+                "italic"
+              } else {
+                "normal"
+              }
+              cur = { ..cur, style: { ..cur.style, font_style: f, }, }
               applied.push("italic")
             }
             "dash" => {
               let ds = if v == "dashed" || v == "dotted" { v } else { "solid" }
-              cur = { ..cur, style: { ..cur.style, stroke_dash: ds } }
+              cur = { ..cur, style: { ..cur.style, stroke_dash: ds, }, }
               applied.push("dash")
             }
             "visible" => {
-              let vis = !(v == "false" || v == "0" || v == "off" || v == "hidden")
-              cur = { ..cur, style: { ..cur.style, visible: vis } }
+              let vis = !(v == "false" ||
+                v == "0" ||
+                v == "off" ||
+                v == "hidden")
+              cur = { ..cur, style: { ..cur.style, visible: vis, }, }
               applied.push("visible")
             }
             // 尺寸模式：hug（包裹内容）/ fill（撑满父容器）——布局引擎早已支持，
             // 此前只能通过 w/h 写死 Fixed。
             "width_mode" => {
               match v {
-                "hug" => cur = { ..cur, width: Hug }
-                "fill" => cur = { ..cur, width: Fill }
+                "hug" => cur = { ..cur, width: Hug, }
+                "fill" => cur = { ..cur, width: Fill, }
                 _ => ()
               }
               applied.push("width_mode")
             }
             "height_mode" => {
               match v {
-                "hug" => cur = { ..cur, height: Hug }
-                "fill" => cur = { ..cur, height: Fill }
+                "hug" => cur = { ..cur, height: Hug, }
+                "fill" => cur = { ..cur, height: Fill, }
                 _ => ()
               }
               applied.push("height_mode")
             }
             // 位置模式：center（父容器居中）/ end（贴 end 边，offset 由 dx/dy 语义另给）
-            "x_mode" => {
+            "x_mode" =>
               if v == "center" {
-                cur = { ..cur, x: CenterInParent }
+                cur = { ..cur, x: CenterInParent, }
                 applied.push("x_mode")
               } else if v == "start" {
-                cur = { ..cur, x: AlignStart(pos_offset_x(cur.x)) }
+                cur = { ..cur, x: AlignStart(pos_offset_x(cur.x)), }
                 applied.push("x_mode")
               }
-            }
-            "y_mode" => {
+            "y_mode" =>
               if v == "center" {
-                cur = { ..cur, y: CenterInParent }
+                cur = { ..cur, y: CenterInParent, }
                 applied.push("y_mode")
               } else if v == "start" {
-                cur = { ..cur, y: AlignStart(pos_offset_y(cur.y)) }
+                cur = { ..cur, y: AlignStart(pos_offset_y(cur.y)), }
                 applied.push("y_mode")
               }
-            }
             // 容器栈布局：layout=vertical|horizontal 启用/切换；none 还原为绝对定位。
             // 此前 StackLayout 只能由模板或 place 产生，update 完全无法设置。
-            "layout" => {
+            "layout" =>
               match v {
                 "none" => {
-                  cur = { ..cur, layout: None }
+                  cur = { ..cur, layout: None, }
                   applied.push("layout")
                 }
                 "vertical" | "horizontal" => {
@@ -349,24 +360,26 @@ pub fn Project::edit_node(
                         padding: Padding::uniform(0.0),
                       }
                   }
-                  let dir = if v == "horizontal" { Horizontal } else { Vertical }
-                  cur = { ..cur, layout: Some({ ..base, dir }) }
+                  let dir = if v == "horizontal" {
+                    Horizontal
+                  } else {
+                    Vertical
+                  }
+                  cur = { ..cur, layout: Some({ ..base, dir, }), }
                   applied.push("layout")
                 }
                 _ => ()
               }
-            }
-            "gap" => {
+            "gap" =>
               match cur.layout {
                 Some(l) => {
                   let g = if d < 0.0 { 0.0 } else { d }
-                  cur = { ..cur, layout: Some({ ..l, gap: g }) }
+                  cur = { ..cur, layout: Some({ ..l, gap: g, }), }
                   applied.push("gap")
                 }
                 None => ()
               }
-            }
-            "justify" => {
+            "justify" =>
               match cur.layout {
                 Some(l) => {
                   let j = match v {
@@ -374,23 +387,24 @@ pub fn Project::edit_node(
                     "end" => End
                     _ => Start
                   }
-                  cur = { ..cur, layout: Some({ ..l, justify: j }) }
+                  cur = { ..cur, layout: Some({ ..l, justify: j, }), }
                   applied.push("justify")
                 }
                 None => ()
               }
-            }
             // 统一内边距（四边同值）；细分方向由模板/组件承担
-            "padding" => {
+            "padding" =>
               match cur.layout {
                 Some(l) => {
                   let p = if d < 0.0 { 0.0 } else { d }
-                  cur = { ..cur, layout: Some({ ..l, padding: Padding::uniform(p) }) }
+                  cur = {
+                    ..cur,
+                    layout: Some({ ..l, padding: Padding::uniform(p), }),
+                  }
                   applied.push("padding")
                 }
                 None => ()
               }
-            }
             _ => ()
           }
         }

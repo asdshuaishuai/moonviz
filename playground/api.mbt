@@ -94,7 +94,7 @@ fn split_first_line(request : String) -> FirstLine {
         op: trim_line(request.substring(start=0, end=i)),
         rest: request.substring(start=i + 1),
       }
-    None => { op: trim_line(request), rest: "" }
+    None => { op: trim_line(request), rest: "", }
   }
 }
 
@@ -131,7 +131,7 @@ fn move_payload(rest : String) -> Result[MovePayload, String] {
     Some(v) => v
     None => return Err("无法解析 y 数值")
   }
-  Ok({ id: trim_line(lines[0]), x, y, rest: join_from(lines, 3) })
+  Ok({ id: trim_line(lines[0]), x, y, rest: join_from(lines, 3), })
 }
 
 ///|

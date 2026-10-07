@@ -302,7 +302,7 @@ fn MoonVizRT::run_marker(
         SetText(id, text) =>
           match self.project.artboards.get(self.nav.current) {
             Some(ab) =>
-              if ab.doc.update_node(id, fn(n) { { ..n, text } }) {
+              if ab.doc.update_node(id, fn(n) { { ..n, text, } }) {
                 changes.push(NodeUpdated(id))
                 true
               } else {
@@ -335,9 +335,11 @@ fn MoonVizRT::run_marker(
                 return false
               }
               match
-                self
-                .project
-                .set_node_state(node_id=id, state_name=target, toggle=true) {
+                self.project.set_node_state(
+                  node_id=id,
+                  state_name=target,
+                  toggle=true,
+                ) {
                 Ok(_) => {
                   self.apply_active_state(id)
                   changes.push(NodeUpdated(id))
@@ -483,10 +485,7 @@ pub fn MoonVizRT::hot_reload_doc(
   let kept : Map[String, String] = Map::new()
   for k in self.input_values.keys() {
     match self.input_values.get(k) {
-      Some(v) =>
-        if ab.doc.nodes.contains(k) {
-          kept.set(k, v)
-        }
+      Some(v) => if ab.doc.nodes.contains(k) { kept.set(k, v) }
       None => ()
     }
   }
@@ -559,14 +558,23 @@ pub fn MoonVizRT::can_go_back(self : MoonVizRT) -> Bool {
 // ---------------------------------------------------------------------------
 
 ///|
-fn pick_node(doc : Document, layout : SolvedLayout, x : Double, y : Double) -> String? {
+fn pick_node(
+  doc : Document,
+  layout : SolvedLayout,
+  x : Double,
+  y : Double,
+) -> String? {
   let mut best : String? = None
   let mut best_area : Double = 1000000000000000000.0
   for id in layout.rects.keys() {
     match layout.rect_of(id) {
       Some(r) =>
         match doc.nodes.get(id) {
-          Some(n) if n.style.visible && x >= r.x && y >= r.y && x < r.x + r.width && y < r.y + r.height => {
+          Some(n) if n.style.visible &&
+            x >= r.x &&
+            y >= r.y &&
+            x < r.x + r.width &&
+            y < r.y + r.height => {
             let area = r.width * r.height
             if area < best_area && id != "root" {
               best = Some(id)

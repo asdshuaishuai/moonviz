@@ -40,7 +40,7 @@ pub fn builtin_themes() -> Array[Theme] {
 ///|
 pub fn Theme::light() -> Theme {
   let t = DesignTokens::default()
-  { name: "light", display_name: "浅色", tokens: t, is_dark: false }
+  { name: "light", display_name: "浅色", tokens: t, is_dark: false, }
 }
 
 ///|
@@ -64,7 +64,7 @@ pub fn Theme::dark() -> Theme {
   t.colors.set("text_primary", "#E0E0E0")
   t.colors.set("text_secondary", "#A0A5AD")
   t.colors.set("text_hint", "#6B7078")
-  { name: "dark", display_name: "深色", tokens: t, is_dark: true }
+  { name: "dark", display_name: "深色", tokens: t, is_dark: true, }
 }
 
 ///|
@@ -104,7 +104,7 @@ pub fn Theme::sepia() -> Theme {
   t.colors.set("text_secondary", "#5D4037")
   t.colors.set("text_hint", "#8D6E63")
   t.colors.set("outline", "#BCAAA4")
-  { name: "sepia", display_name: "复古棕", tokens: t, is_dark: false }
+  { name: "sepia", display_name: "复古棕", tokens: t, is_dark: false, }
 }
 
 ///|
@@ -126,7 +126,7 @@ pub fn Theme::nord() -> Theme {
   t.colors.set("text_primary", "#ECEFF4")
   t.colors.set("text_secondary", "#D8DEE9")
   t.colors.set("text_hint", "#7B88A1")
-  { name: "nord", display_name: "Nord 极地", tokens: t, is_dark: true }
+  { name: "nord", display_name: "Nord 极地", tokens: t, is_dark: true, }
 }
 
 ///|
@@ -147,7 +147,7 @@ pub fn Theme::sunset() -> Theme {
   t.colors.set("text_primary", "#3E2723")
   t.colors.set("text_secondary", "#5D4037")
   t.colors.set("text_hint", "#8D6E63")
-  { name: "sunset", display_name: "落日暖", tokens: t, is_dark: false }
+  { name: "sunset", display_name: "落日暖", tokens: t, is_dark: false, }
 }
 
 // ---------------------------------------------------------------------------
@@ -268,7 +268,7 @@ pub(all) struct ThemeRegistry {
 
 ///|
 pub fn ThemeRegistry::new() -> ThemeRegistry {
-  let r : ThemeRegistry = { themes: Map::new(), current: "light" }
+  let r : ThemeRegistry = { themes: Map::new(), current: "light", }
   for t in builtin_themes().iter() {
     r.themes.set(t.name, t)
   }
@@ -378,7 +378,10 @@ fn role_rank_for_text(role : String) -> Int {
     1
   } else if role_has_prefix(role, "on_") {
     2
-  } else if role == "surface" || role == "surface_variant" || role == "surface_alt" || role == "background" {
+  } else if role == "surface" ||
+    role == "surface_variant" ||
+    role == "surface_alt" ||
+    role == "background" {
     3
   } else if role_has_suffix(role, "_container") {
     4
@@ -410,7 +413,10 @@ fn role_rank_for_text_on(role : String) -> Int {
 /// fill 语境的角色分级：底/容器优先，文字角色殿后（同一字面量被用作
 /// 面色时几乎总是 surface/container 语义）。
 fn role_rank_for_fill(role : String) -> Int {
-  if role == "surface" || role == "surface_variant" || role == "surface_alt" || role == "background" {
+  if role == "surface" ||
+    role == "surface_variant" ||
+    role == "surface_alt" ||
+    role == "background" {
     1
   } else if role_has_suffix(role, "_container") {
     2
@@ -427,11 +433,13 @@ fn role_rank_for_fill(role : String) -> Int {
   }
 }
 
+///|
 fn role_has_prefix(s : String, prefix : String) -> Bool {
   s.length() >= prefix.length() &&
   s.substring(start=0, end=prefix.length()) == prefix
 }
 
+///|
 fn role_has_suffix(s : String, suffix : String) -> Bool {
   s.length() >= suffix.length() &&
   s.substring(start=s.length() - suffix.length()) == suffix
@@ -517,7 +525,7 @@ fn Project::recolor_with(
                 if v != n.style.fill {
                   changed = changed + 1
                 }
-                node = { ..node, style: { ..node.style, fill: v } }
+                node = { ..node, style: { ..node.style, fill: v, }, }
               }
               None => ()
             }
@@ -541,7 +549,7 @@ fn Project::recolor_with(
                 if v != n.style.text_color {
                   changed = changed + 1
                 }
-                node = { ..node, style: { ..node.style, text_color: v } }
+                node = { ..node, style: { ..node.style, text_color: v, }, }
               }
               None => ()
             }
@@ -568,7 +576,7 @@ fn Project::tokens_snapshot(self : Project) -> DesignTokens {
       None => ()
     }
   }
-  { ..self.tokens, colors }
+  { ..self.tokens, colors, }
 }
 
 ///|

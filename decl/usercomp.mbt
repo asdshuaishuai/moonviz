@@ -27,15 +27,15 @@ fn safe_slice(s : String, from : Int, upto : Int) -> String {
 fn parse_component_meta(
   front : String,
 ) -> Result[
-    (
-      String,
-      String,
-      Array[@core.UserParam],
-      Map[String, Map[String, String]],
-      String,
-    ),
+  (
     String,
-  ] {
+    String,
+    Array[@core.UserParam],
+    Map[String, Map[String, String]],
+    String,
+  ),
+  String,
+] {
   let mut id = ""
   let mut description = ""
   let params : Array[@core.UserParam] = []
@@ -92,11 +92,7 @@ fn parse_component_meta(
     if section == 1 {
       if mbt_has_prefix(line, "- name:") {
         cur_param_name = strip_quotes(mbt_trim(safe_slice(line, 7, -1)))
-        params.push({
-          name: cur_param_name,
-          kind: "text",
-          default_value: "",
-        })
+        params.push({ name: cur_param_name, kind: "text", default_value: "", })
         continue
       }
       if mbt_has_prefix(line, "kind:") && params.length() > 0 {
@@ -105,7 +101,7 @@ fn parse_component_meta(
         if kind != "text" && kind != "color" && kind != "number" {
           return Err("usercomp_param_kind:" + kind)
         }
-        params[last] = { ..params[last], kind }
+        params[last] = { ..params[last], kind, }
         continue
       }
       if mbt_has_prefix(line, "default:") && params.length() > 0 {
@@ -175,9 +171,8 @@ pub fn parse_user_component(
   match scan_mbt(text) {
     Err(error) => Err(error)
     Ok(document) => {
-      let (cid, description, params, variants, default_variant) = match parse_component_meta(
-          document.front_matter,
-        ) {
+      let (cid, description, params, variants, default_variant) = match
+        parse_component_meta(document.front_matter) {
         Err(error) => return Err(error)
         Ok(meta) => meta
       }
@@ -204,7 +199,7 @@ pub fn parse_user_component(
                 source: text,
               }
               // 参数闭合：所有 ${name} 引用必须已声明
-              let refs = match(try? @core.collect_param_refs(def)) {
+              let refs = match (try? @core.collect_param_refs(def)) {
                 Ok(rs) => rs
                 Err(_) => return Err("usercomp_ref_scan_failed")
               }
@@ -224,7 +219,14 @@ pub fn parse_user_component(
                 width: def.width + 400.0,
                 height: def.height + 400.0,
               })
-              match(try? @core.place_user_component(probe, def, "__probe", dx=10.0, dy=10.0)) {
+              match
+                (try? @core.place_user_component(
+                  probe,
+                  def,
+                  "__probe",
+                  dx=10.0,
+                  dy=10.0,
+                )) {
                 Ok(r) =>
                   if r.is_ok() == false {
                     return Err("usercomp_probe_failed")

@@ -107,7 +107,7 @@ test "版本控制：版本间 diff" {
   let doc1 = Document::sample_login()
   let doc2 = Document::sample_login()
   let _ = doc2.update_node("btn-login", fn(n) {
-    { ..n, style: { ..n.style, fill: "#FF0000" } }
+    { ..n, style: { ..n.style, fill: "#FF0000", }, }
   })
   let h = DesignHistory::new(doc1)
   let _ = h.commit("a", "change color", [], doc2)

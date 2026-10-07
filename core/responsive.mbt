@@ -77,9 +77,9 @@ pub fn Project::generate_responsive(
               if nid != "root" {
                 match base_ab.doc.nodes.get(nid) {
                   Some(n) => {
-                    let _ = vab.doc.insert_node({ ..n, children: [] }, "root")
+                    let _ = vab.doc.insert_node({ ..n, children: [], }, "root")
                     let _ = vab.doc.update_node(nid, fn(x) {
-                      { ..x, children: n.children.copy() }
+                      { ..x, children: n.children.copy(), }
                     })
                   }
                   None => ()
@@ -263,7 +263,7 @@ fn adapt_tablet(doc : Document) -> Unit {
     if id != "root" {
       let _ = doc.update_node(id, fn(n) {
         let w = scale_size(n.width, scale * 0.6)
-        { ..n, width: w }
+        { ..n, width: w, }
       })
     }
   }
@@ -280,7 +280,7 @@ fn adapt_tablet(doc : Document) -> Unit {
     }
     {
       ..n,
-      layout: Some({ ..base, gap: 16.0, padding: Padding::uniform(32.0) }),
+      layout: Some({ ..base, gap: 16.0, padding: Padding::uniform(32.0), }),
     }
   })
 }
@@ -292,7 +292,7 @@ fn adapt_desktop(doc : Document) -> Unit {
     if id != "root" {
       let _ = doc.update_node(id, fn(n) {
         let w = scale_size(n.width, scale * 0.4)
-        { ..n, width: w }
+        { ..n, width: w, }
       })
     }
   }

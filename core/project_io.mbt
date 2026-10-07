@@ -109,7 +109,7 @@ fn load_one_artboard(obj : String) -> LoadOutcome {
   let dend = skip_object2(obj, dstart)
   let doc_json = obj.substring(start=dstart, end=dend)
   match Document::from_json(doc_json) {
-    Ok(doc) => LoadOk(id, { id, name, width: w, height: h, doc })
+    Ok(doc) => LoadOk(id, { id, name, width: w, height: h, doc, })
     Err(e) => LoadErr(e)
   }
 }

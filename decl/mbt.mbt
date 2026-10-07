@@ -246,7 +246,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
             }
             k = k + 1
           }
-          comments.push({ text, anchor })
+          comments.push({ text, anchor, })
         }
         i = j + 1
         continue
@@ -447,11 +447,10 @@ fn mbt_root_size(root : @core.Node) -> (Double, Double) {
 }
 
 ///|
+
 ///|
 /// frontmatter `tokens:` 段解析：`  <role>: "<value>"` 两空格缩进键值对。
-fn mbt_parse_token_overrides(
-  front : String,
-) -> Map[String, String] {
+fn mbt_parse_token_overrides(front : String) -> Map[String, String] {
   let out : Map[String, String] = Map::new()
   let lines = mbt_lines(front)
   let mut in_tokens = false
@@ -475,7 +474,8 @@ fn mbt_parse_token_overrides(
         let mut value = mbt_trim(line.substring(start=idx + 1))
         if value.length() >= 2 {
           let q = value.substring(start=0, end=1)
-          if (q == "\"" || q == "'") && value.substring(start=value.length() - 1) == q {
+          if (q == "\"" || q == "'") &&
+            value.substring(start=value.length() - 1) == q {
             value = value.substring(start=1, end=value.length() - 1)
           }
         }
@@ -649,7 +649,7 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       }
       match mbt_validate_flows(project) {
         Err(error) => Err(error)
-        Ok(_) => Ok({ project, document, entry })
+        Ok(_) => Ok({ project, document, entry, })
       }
     }
   }
@@ -763,7 +763,7 @@ pub fn project_to_mbt(
     visual_blocks: [],
     comments: project.doc_comments,
   }
-  Ok({ project, document, entry: actual_entry })
+  Ok({ project, document, entry: actual_entry, })
 }
 
 ///|
@@ -823,8 +823,7 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         out.write_string("  tokens:\n")
         for role in ov.keys() {
           match ov.get(role) {
-            Some(v) =>
-              out.write_string("    " + role + ": \"" + v + "\"\n")
+            Some(v) => out.write_string("    " + role + ": \"" + v + "\"\n")
             None => ()
           }
         }
@@ -881,7 +880,7 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         // 序列化前把根节点名对齐 ArtboardMeta.name，否则 from_document 会
         // 永远输出 Document::new 的默认名「画布」，canonical 往返丢失真实名。
         let proto = from_document(artboard.doc)
-        proto.root = { ..proto.root, name: artboard.name }
+        proto.root = { ..proto.root, name: artboard.name, }
         let declaration = proto.to_decl_text()
         let function_name = mbt_function_name(id)
         // debt 快照：HumanGate 允许视觉债落盘，验收断言必须反映被接受的
@@ -922,9 +921,7 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         let mut live = false
         for id2 in ids.iter() {
           match self.project.artboards.get(id2) {
-            Some(a) => if ab == id2 || ab == a.name {
-              live = true
-            }
+            Some(a) => if ab == id2 || ab == a.name { live = true }
             None => ()
           }
         }

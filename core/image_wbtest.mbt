@@ -4,8 +4,15 @@
 test "Image：src 真渲染与往返" {
   let p = Project::new()
   let _ = p.create_artboard(name="a")
-  let _ = p.place_component(artboard="a", component_id="image", instance_id="pic1")
-  let _ = p.edit_node(artboard="a", node_id="pic1", kvs=[("text", "https://example.com/x.png"), ("radius", "12")])
+  let _ = p.place_component(
+    artboard="a",
+    component_id="image",
+    instance_id="pic1",
+  )
+  let _ = p.edit_node(artboard="a", node_id="pic1", kvs=[
+    ("text", "https://example.com/x.png"),
+    ("radius", "12"),
+  ])
   let want_href = "href=\"https://example.com/x.png\""
   let want_clip = "clip-path=\"url(#img_pic1)\""
   match p.export_svg(artboard="a") {
@@ -16,7 +23,11 @@ test "Image：src 真渲染与往返" {
     Err(e) => fail(e)
   }
   // 空 src 的第二个 image：仍是占位渲染
-  let _ = p.place_component(artboard="a", component_id="image", instance_id="pic2")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="image",
+    instance_id="pic2",
+  )
   match p.export_svg(artboard="a") {
     Ok(svg2) => {
       assert_true(svg2.contains("n_pic2"))

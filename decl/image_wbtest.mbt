@@ -7,13 +7,22 @@ test "Image：src 经 canonical MBT 往返" {
     Ok(m) => {
       let ab = match m.project.artboards.get("a") {
         Some(x) => x
-        None => { println("no artboard"); return }
+        None => {
+          println("no artboard")
+          return
+        }
       }
       match ab.doc.get("pic") {
         Some(n) => assert_eq(n.text, "https://example.com/a.png")
-        None => { println("no pic node"); return }
+        None => {
+          println("no pic node")
+          return
+        }
       }
     }
-    Err(e) => { println(e); return }
+    Err(e) => {
+      println(e)
+      return
+    }
   }
 }

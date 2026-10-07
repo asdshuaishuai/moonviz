@@ -175,22 +175,22 @@ test "engine catalog: 65 组件 × 全变体放置渲染冒烟（组件目录回
   let mut y = 20.0
   for id in comps.keys() {
     match comps.get(id) {
-      Some(def) => {
+      Some(def) =>
         // 全变体逐个放置：任何非法 kind/未注册令牌/坏 patch 都会在此暴露
         for vname in def.variants.keys() {
-          match p.place_component(
-            artboard="all",
-            component_id=id,
-            instance_id="\{id}_\{vname}",
-            variant=vname,
-            y=y,
-          ) {
+          match
+            p.place_component(
+              artboard="all",
+              component_id=id,
+              instance_id="\{id}_\{vname}",
+              variant=vname,
+              y~,
+            ) {
             Ok(_) => placed = placed + 1
             Err(e) => assert_true(false, msg="\{id}.\{vname}: \{e}")
           }
           y = y + 80.0
         }
-      }
       None => assert_true(false)
     }
   }

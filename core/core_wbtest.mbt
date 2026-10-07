@@ -27,16 +27,16 @@ test "示例登录页：栈布局求解位置正确" {
 
 ///|
 test "Fill 分配：剩余主轴空间均分给 Fill 子项" {
-  let doc = Document::new({ width: 300.0, height: 100.0 })
+  let doc = Document::new({ width: 300.0, height: 100.0, })
   let lay : StackLayout = {
     dir: Vertical,
     gap: 0.0,
     justify: Start,
     padding: Padding::uniform(0.0),
   }
-  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some(lay) } })
-  let a = { ..Node::make("a", Rect), width: Fill, height: Fixed(40.0) }
-  let b = { ..Node::make("b", Rect), width: Fill, height: Fill }
+  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some(lay), } })
+  let a = { ..Node::make("a", Rect), width: Fill, height: Fixed(40.0), }
+  let b = { ..Node::make("b", Rect), width: Fill, height: Fill, }
   let _ = doc.insert_node(a, "root")
   let _ = doc.insert_node(b, "root")
   let layout = solve(doc)
@@ -53,7 +53,7 @@ test "Fill 分配：剩余主轴空间均分给 Fill 子项" {
 ///|
 test "Agent 路线：越界补丁被硬门槛拒绝，返回结构化违规" {
   let doc = Document::sample_login()
-  let p : NodePatch = { ..NodePatch::empty(), width: Some(Fixed(400.0)) }
+  let p : NodePatch = { ..NodePatch::empty(), width: Some(Fixed(400.0)), }
   let patch : Patch = {
     base_revision: doc.revision,
     message: "把登录按钮宽度改成 400",
@@ -79,7 +79,7 @@ test "Agent 路线：越界补丁被硬门槛拒绝，返回结构化违规" {
 
 ///|
 test "人类路线：同样的重叠状态，人类软提示可合并，Agent 被拒" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   let a = {
     ..Node::make("a", Rect),
     width: Fixed(100.0),
@@ -126,7 +126,7 @@ test "人类路线：同样的重叠状态，人类软提示可合并，Agent �
     _ => assert_true(false)
   }
   // Agent 的正确姿势：连同视觉债一起修复 → 通过
-  let fix : NodePatch = { ..NodePatch::empty(), x: Some(Fixed(200.0)) }
+  let fix : NodePatch = { ..NodePatch::empty(), x: Some(Fixed(200.0)), }
   let patch3 : Patch = {
     base_revision: doc.revision,
     message: "把 b 移开，消除重叠",
@@ -150,7 +150,7 @@ test "revision 乐观锁：过期补丁被拒绝并携带当前值" {
     ops: [],
   }
   let _ = apply_human_op(doc, p1)
-  let stale : Patch = { base_revision: 1, message: "过期补丁", ops: [] }
+  let stale : Patch = { base_revision: 1, message: "过期补丁", ops: [], }
   match apply_agent_patch(doc, stale) {
     Err(StaleBase(2)) => assert_true(true)
     _ => assert_true(false)
@@ -160,7 +160,7 @@ test "revision 乐观锁：过期补丁被拒绝并携带当前值" {
 ///|
 test "补丁错误：目标节点不存在 / 删除根节点" {
   let doc = Document::sample_login()
-  let p : NodePatch = { ..NodePatch::empty(), text: Some("x") }
+  let p : NodePatch = { ..NodePatch::empty(), text: Some("x"), }
   let patch : Patch = {
     base_revision: doc.revision,
     message: "改不存在的节点",
@@ -255,17 +255,17 @@ test "结构谓词：悬空引用使人类提交也被硬阻断（结构硬，�
 
 ///|
 test "约束无解：Fill 子项超出容器" {
-  let doc = Document::new({ width: 100.0, height: 100.0 })
+  let doc = Document::new({ width: 100.0, height: 100.0, })
   let lay : StackLayout = {
     dir: Vertical,
     gap: 0.0,
     justify: Start,
     padding: Padding::uniform(0.0),
   }
-  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some(lay) } })
-  let a = { ..Node::make("a", Rect), width: Fixed(50.0), height: Fixed(80.0) }
-  let b = { ..Node::make("b", Rect), width: Fixed(50.0), height: Fixed(80.0) }
-  let c = { ..Node::make("c", Rect), width: Fixed(50.0), height: Fill }
+  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some(lay), } })
+  let a = { ..Node::make("a", Rect), width: Fixed(50.0), height: Fixed(80.0), }
+  let b = { ..Node::make("b", Rect), width: Fixed(50.0), height: Fixed(80.0), }
+  let c = { ..Node::make("c", Rect), width: Fixed(50.0), height: Fill, }
   let _ = doc.insert_node(a, "root")
   let _ = doc.insert_node(b, "root")
   let _ = doc.insert_node(c, "root")
@@ -282,7 +282,7 @@ test "约束无解：Fill 子项超出容器" {
 ///|
 test "结构化错误 JSON：Agent 可读" {
   let doc = Document::sample_login()
-  let p : NodePatch = { ..NodePatch::empty(), width: Some(Fixed(400.0)) }
+  let p : NodePatch = { ..NodePatch::empty(), width: Some(Fixed(400.0)), }
   let patch : Patch = {
     base_revision: doc.revision,
     message: "越界",

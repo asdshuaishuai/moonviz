@@ -206,27 +206,27 @@ fn apply_op(doc : Document, op : Op) -> Result[Unit, PatchError] {
 ///|
 fn apply_node_patch(n : Node, p : NodePatch) -> Node {
   let n = match p.name {
-    Some(v) => { ..n, name: v }
+    Some(v) => { ..n, name: v, }
     None => n
   }
   let n = match p.width {
-    Some(v) => { ..n, width: v }
+    Some(v) => { ..n, width: v, }
     None => n
   }
   let n = match p.height {
-    Some(v) => { ..n, height: v }
+    Some(v) => { ..n, height: v, }
     None => n
   }
   let n = match p.x {
-    Some(v) => { ..n, x: v }
+    Some(v) => { ..n, x: v, }
     None => n
   }
   let n = match p.y {
-    Some(v) => { ..n, y: v }
+    Some(v) => { ..n, y: v, }
     None => n
   }
   let n = match p.text {
-    Some(v) => { ..n, text: v }
+    Some(v) => { ..n, text: v, }
     None => n
   }
   // 布局字段：任一出现即整块重建（无则按缺省布局初始化）
@@ -260,7 +260,7 @@ fn apply_node_patch(n : Node, p : NodePatch) -> Node {
         Some(pd) => pd
         None => base.padding
       }
-      Some({ dir, gap, justify, padding })
+      Some({ dir, gap, justify, padding, })
     }
   }
   let n = { ..n, layout, }
@@ -287,7 +287,7 @@ fn apply_node_patch(n : Node, p : NodePatch) -> Node {
   }
   {
     ..n,
-    style: { ..style, fill, stroke, corner_radius, font_size, text_color },
+    style: { ..style, fill, stroke, corner_radius, font_size, text_color, },
   }
 }
 
@@ -301,7 +301,7 @@ fn detach_child(doc : Document, parent_id : String, child_id : String) -> Unit {
           kids.push(c)
         }
       }
-      doc.nodes.set(parent_id, { ..p, children: kids })
+      doc.nodes.set(parent_id, { ..p, children: kids, })
     }
     None => ()
   }
@@ -313,7 +313,7 @@ fn append_child(doc : Document, parent_id : String, child_id : String) -> Unit {
     Some(p) => {
       let kids = p.children.copy()
       kids.push(child_id)
-      doc.nodes.set(parent_id, { ..p, children: kids })
+      doc.nodes.set(parent_id, { ..p, children: kids, })
     }
     None => ()
   }

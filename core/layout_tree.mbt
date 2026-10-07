@@ -192,7 +192,7 @@ pub fn lt_dot(id~ : String, fill~ : String, d? : Double = 36.0) -> LT {
       ..Node::make(id, Rect),
       width: Fixed(d),
       height: Fixed(d),
-      style: { ..NodeStyle::default(), fill, corner_radius: 999.0 },
+      style: { ..NodeStyle::default(), fill, corner_radius: 999.0, },
     },
     kids: [],
   }
@@ -232,23 +232,23 @@ pub fn lt_card(
 ///|
 /// 微调：主/副轴规格、cross 居中、文字颜色（声明处链式使用）
 pub fn LT::w(self : LT, spec : SizeSpec) -> LT {
-  { node: { ..self.node, width: spec }, kids: self.kids }
+  { node: { ..self.node, width: spec, }, kids: self.kids, }
 }
 
 ///|
 pub fn LT::h(self : LT, spec : SizeSpec) -> LT {
-  { node: { ..self.node, height: spec }, kids: self.kids }
+  { node: { ..self.node, height: spec, }, kids: self.kids, }
 }
 
 ///|
 pub fn LT::cx(self : LT) -> LT {
-  { node: { ..self.node, x: CenterInParent }, kids: self.kids }
+  { node: { ..self.node, x: CenterInParent, }, kids: self.kids, }
 }
 
 ///|
 pub fn LT::color(self : LT, c : String) -> LT {
   {
-    node: { ..self.node, style: { ..self.node.style, text_color: c } },
+    node: { ..self.node, style: { ..self.node.style, text_color: c, }, },
     kids: self.kids,
   }
 }
@@ -267,7 +267,7 @@ pub fn Project::build_artboard(
     Some(art) => {
       // 树根铺满画布（root 是绝对容器）
       let rooted : LT = {
-        node: { ..tree.node, x: Fixed(0.0), y: Fixed(0.0) },
+        node: { ..tree.node, x: Fixed(0.0), y: Fixed(0.0), },
         kids: tree.kids,
       }
       lt_insert(art.doc, "root", rooted)
@@ -282,7 +282,7 @@ pub fn Project::build_artboard(
 /// 递归插入：先挂本节点，再挂子树
 fn lt_insert(doc : Document, parent : String, tree : LT) -> Unit {
   let n = tree.node
-  let leaf = { ..n, children: [] }
+  let leaf = { ..n, children: [], }
   let _ = doc.insert_node(leaf, parent)
   for k in tree.kids.iter() {
     lt_insert(doc, n.id, k)

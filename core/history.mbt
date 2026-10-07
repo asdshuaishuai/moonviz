@@ -59,8 +59,7 @@ pub fn DesignHistory::commit(
   // 线性扫描命中旧快照、新提交被静默遮蔽（review 5a5641a）。
   // entries 按 revision 升序追加，从尾部弹出即精确截断。
   while self.entries.length() > 0 &&
-        self.entries[self.entries.length() - 1].revision >
-        self.current_revision {
+        self.entries[self.entries.length() - 1].revision > self.current_revision {
     let _ = self.entries.pop()
   }
   self.redo_stack = []

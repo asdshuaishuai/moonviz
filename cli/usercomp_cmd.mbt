@@ -6,6 +6,7 @@
 /// 声明来源不区分 Agent（自然语言翻译）与人类（Studio 沉淀）。
 
 ///|
+
 ///|
 /// 公共注册管线：解析（含内置实例化冒烟）→ 注册（compile 与 import 同一验收）
 fn compile_and_register(
@@ -57,13 +58,13 @@ fn cmd_component_export(p : @core.Project, parts : Array[String]) -> String {
   let id = parts[1]
   match p.user_components.get(id) {
     None => cli_err("unknown_component:" + id)
-    Some(def) => {
+    Some(def) =>
       // header 构造收敛到 core（CLI/MCP 同一 schema）
       match @core.mcf_pack(@core.mcf_header_json(def), def.source) {
         Err(error) => cli_err(error)
-        Ok(bytes) => "{\"ok\":true,\"op\":\"component-export\",\"component\":\"\{@core.json_escape(id)}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
+        Ok(bytes) =>
+          "{\"ok\":true,\"op\":\"component-export\",\"component\":\"\{@core.json_escape(id)}\",\"mcf_b64\":\"\{@base64.encode(bytes)}\"}"
       }
-    }
   }
 }
 
@@ -81,7 +82,8 @@ fn cmd_component_import(p : @core.Project, parts : Array[String]) -> String {
     Ok((header_json, source)) =>
       match compile_and_register(p, source) {
         Err(error) => cli_err(error)
-        Ok(def) => "{\"ok\":true,\"op\":\"component-import\",\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header_json)}"
+        Ok(def) =>
+          "{\"ok\":true,\"op\":\"component-import\",\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header_json)}"
       }
   }
 }
@@ -145,11 +147,10 @@ fn cmd_library_snapshot(p : @core.Project) -> String {
   let items : Array[String] = []
   for id in p.user_components.keys() {
     match p.user_components.get(id) {
-      Some(def) => {
+      Some(def) =>
         items.push(
           "{\"id\":\"\{@core.json_escape(id)}\",\"source_b64\":\"\{encode_mbt_b64(def.source)}\"}",
         )
-      }
       None => ()
     }
   }
@@ -158,10 +159,7 @@ fn cmd_library_snapshot(p : @core.Project) -> String {
 
 ///|
 /// 库恢复：宿主会话开始时把本地库逐项灌回（每个参数一个组件声明 b64）。
-fn cmd_library_restore(
-  p : @core.Project,
-  parts : Array[String],
-) -> String {
+fn cmd_library_restore(p : @core.Project, parts : Array[String]) -> String {
   if parts.length() < 2 {
     return cli_err("usage: library-restore-b64 <b64> [<b64> ...]")
   }
@@ -169,18 +167,10 @@ fn cmd_library_restore(
   let mut first_error = ""
   for i = 1; i < parts.length(); i = i + 1 {
     match decode_mbt_b64(parts[i]) {
-      Err(error) => {
-        if first_error == "" {
-          first_error = error
-        }
-      }
+      Err(error) => if first_error == "" { first_error = error }
       Ok(text) =>
         match @decl.parse_user_component(text) {
-          Err(error) => {
-            if first_error == "" {
-              first_error = error
-            }
-          }
+          Err(error) => if first_error == "" { first_error = error }
           Ok(def) => {
             p.user_components.set(def.id, def)
             ok_count = ok_count + 1

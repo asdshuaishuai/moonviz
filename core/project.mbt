@@ -72,13 +72,14 @@ pub fn Project::clone(self : Project) -> Project {
   let copy = Project::new()
   for k in self.artboards.keys() {
     match self.artboards.get(k) {
-      Some(ab) => copy.artboards.set(k, {
-        id: ab.id,
-        name: ab.name,
-        width: ab.width,
-        height: ab.height,
-        doc: ab.doc.clone(),
-      })
+      Some(ab) =>
+        copy.artboards.set(k, {
+          id: ab.id,
+          name: ab.name,
+          width: ab.width,
+          height: ab.height,
+          doc: ab.doc.clone(),
+        })
       None => ()
     }
   }
@@ -134,10 +135,11 @@ pub fn Project::clone(self : Project) -> Project {
             None => ()
           }
         }
-        copy.node_states.set(
-          nid,
-          { node_id: def.node_id, states: states_copy, current: def.current },
-        )
+        copy.node_states.set(nid, {
+          node_id: def.node_id,
+          states: states_copy,
+          current: def.current,
+        })
       }
       None => ()
     }
@@ -161,7 +163,7 @@ pub fn Project::clone(self : Project) -> Project {
   // 文档状态同生共死——克隆上不带注释会让通过门检查的替换悄悄丢批注。
   copy.doc_comments = []
   for cm in self.doc_comments.iter() {
-    copy.doc_comments.push({ text: cm.text, anchor: cm.anchor })
+    copy.doc_comments.push({ text: cm.text, anchor: cm.anchor, })
   }
   copy
 }
@@ -198,25 +200,39 @@ pub fn Project::create_artboard(
   height? : Double = 844.0,
 ) -> String {
   let id = sanitize_id(name)
-  let doc = Document::new({ width, height })
-  self.artboards.set(id, { id, name, width, height, doc })
+  let doc = Document::new({ width, height, })
+  self.artboards.set(id, { id, name, width, height, doc, })
   self.revision = self.revision + 1
   id
 }
 
 ///|
 /// 在画板上放置组件实例
+
 ///|
 /// place 后尺寸直设（issue #18）：AgentGate 在最终 bbox 上评估，消除
 /// 「默认尺寸 place → update 修正」的中间态拒绝（真实 LLM run 111 次
 /// 拒绝的主根因）。w/h ≤ 0 表示不覆盖（沿用组件默认尺寸）。
-fn apply_place_size(doc : Document, instance_id : String, w : Double, h : Double) -> Unit {
+fn apply_place_size(
+  doc : Document,
+  instance_id : String,
+  w : Double,
+  h : Double,
+) -> Unit {
   if w > 0.0 || h > 0.0 {
     let _ = doc.update_node(instance_id, fn(x) {
       {
         ..x,
-        width: if w > 0.0 { Fixed(w) } else { x.width },
-        height: if h > 0.0 { Fixed(h) } else { x.height },
+        width: if w > 0.0 {
+          Fixed(w)
+        } else {
+          x.width
+        },
+        height: if h > 0.0 {
+          Fixed(h)
+        } else {
+          x.height
+        },
       }
     })
   }
@@ -241,16 +257,17 @@ pub fn Project::place_component(
     Some(ab) =>
       // 用户组件优先：自定义组件与内置同权，同名时自定义遮蔽内置
       match self.user_components.get(component_id) {
-        Some(udef) => {
-          match place_user_component(
-            ab.doc,
-            udef,
-            instance_id,
-            variant~,
-            args~,
-            dx=x,
-            dy=y,
-          ) {
+        Some(udef) =>
+          match
+            place_user_component(
+              ab.doc,
+              udef,
+              instance_id,
+              variant~,
+              args~,
+              dx=x,
+              dy=y,
+            ) {
             Err(error) => Err(error)
             Ok(root_id) => {
               apply_place_size(ab.doc, root_id, w, h)
@@ -262,45 +279,48 @@ pub fn Project::place_component(
               )
             }
           }
-        }
         None =>
           match self.components.get(component_id) {
             None => Err("unknown_component: \{component_id}")
             Some(def) => {
-          let node = instantiate_component(
-            def,
-            instance_id,
-            variant~,
-            tokens=self.tokens,
-          )
-          // 统一边界策略：负坐标夹回 0；右上不夹紧——按默认尺寸夹紧会在
-          // 先 place 后 resize 的流程里留下被夹坏的坐标（模板 2×2 网格因此
-          // 重叠）。越界由 contained_in_parent 谓词显式报告为视觉债。
-          let safe_x = if x < 0.0 { 0.0 } else { x }
-          let safe_y = if y < 0.0 { 0.0 } else { y }
-          let placed = { ..node, x: AlignStart(safe_x), y: AlignStart(safe_y) }
-          let pid = if parent_id == "" { "root" } else { parent_id }
-          match pid {
-            "root" => {
-              let _ = ab.doc.insert_node(placed, "root")
-              apply_place_size(ab.doc, instance_id, w, h)
-              self.revision = self.revision + 1
-              Ok(
-                "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"artboard\":\"\{artboard}\"}",
+              let node = instantiate_component(
+                def,
+                instance_id,
+                variant~,
+                tokens=self.tokens,
               )
-            }
-            _ =>
-              match ab.doc.insert_node(placed, pid) {
-                true => {
+              // 统一边界策略：负坐标夹回 0；右上不夹紧——按默认尺寸夹紧会在
+              // 先 place 后 resize 的流程里留下被夹坏的坐标（模板 2×2 网格因此
+              // 重叠）。越界由 contained_in_parent 谓词显式报告为视觉债。
+              let safe_x = if x < 0.0 { 0.0 } else { x }
+              let safe_y = if y < 0.0 { 0.0 } else { y }
+              let placed = {
+                ..node,
+                x: AlignStart(safe_x),
+                y: AlignStart(safe_y),
+              }
+              let pid = if parent_id == "" { "root" } else { parent_id }
+              match pid {
+                "root" => {
+                  let _ = ab.doc.insert_node(placed, "root")
                   apply_place_size(ab.doc, instance_id, w, h)
                   self.revision = self.revision + 1
                   Ok(
-                    "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"parent\":\"\{pid}\"}",
+                    "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"artboard\":\"\{artboard}\"}",
                   )
                 }
-                false => Err("unknown_parent: \{pid}")
+                _ =>
+                  match ab.doc.insert_node(placed, pid) {
+                    true => {
+                      apply_place_size(ab.doc, instance_id, w, h)
+                      self.revision = self.revision + 1
+                      Ok(
+                        "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"parent\":\"\{pid}\"}",
+                      )
+                    }
+                    false => Err("unknown_parent: \{pid}")
+                  }
               }
-          }
             }
           }
       }
@@ -318,7 +338,10 @@ fn size_value(spec : SizeSpec, fallback : Double) -> Double {
 ///|
 /// 删除画板：至少保留一个画板；同时清理引用该画板的交互流。
 /// 节点随画板 doc 整体移除，无需逐个 delete。
-pub fn Project::delete_artboard(self : Project, id~ : String) -> Result[String, String] {
+pub fn Project::delete_artboard(
+  self : Project,
+  id~ : String,
+) -> Result[String, String] {
   if self.artboards.size() <= 1 {
     return Err("cannot_delete_last_artboard")
   }
@@ -326,7 +349,9 @@ pub fn Project::delete_artboard(self : Project, id~ : String) -> Result[String, 
     None => Err("unknown_artboard: \{id}")
     Some(_) => {
       self.artboards.remove(id)
-      let kept : Array[FlowEdge] = self.flows.filter(f => f.from != id && f.to != id)
+      let kept : Array[FlowEdge] = self.flows.filter(f => {
+        f.from != id && f.to != id
+      })
       let removed_flows = self.flows.length() - kept.length()
       self.flows = kept
       self.revision = self.revision + 1
@@ -368,10 +393,11 @@ pub fn Project::add_flow(
   to~ : String,
   trigger? : String = "tap",
 ) -> Unit {
-  self.flows.push({ from, to, trigger })
+  self.flows.push({ from, to, trigger, })
 }
 
 ///|
+
 ///|
 /// 删除单条导航边（issue #12）：画错一条边不再需要整板删除重建。
 /// trigger 写法与 add_flow 的调用约定对齐（"tap:<node>"）。
@@ -382,9 +408,9 @@ pub fn Project::remove_flow(
   trigger~ : String,
 ) -> Result[Unit, String] {
   let before = self.flows.length()
-  self.flows = self.flows.filter(
-    fn(f) { !(f.from == from && f.to == to && f.trigger == trigger) },
-  )
+  self.flows = self.flows.filter(fn(f) {
+    !(f.from == from && f.to == to && f.trigger == trigger)
+  })
   if self.flows.length() == before {
     Err("unknown_flow: \{from} -> \{to} (\{trigger})")
   } else {
@@ -486,12 +512,7 @@ pub fn Project::query_nodes(
 /// 单个节点的查询 JSON。
 /// 必须与 NodeStyle / Node 的完整字段保持同步：Studio 属性面板、
 /// 图层名与布局控件都从这里取值；漏字段会让引擎已支持的能力在界面上不可达。
-fn query_node_json(
-  id : String,
-  n : Node,
-  r : Rect,
-  parent : String,
-) -> String {
+fn query_node_json(id : String, n : Node, r : Rect, parent : String) -> String {
   let layout_json = match n.layout {
     Some(l) =>
       "{\"dir\":\"" +

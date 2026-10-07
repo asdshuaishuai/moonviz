@@ -95,7 +95,7 @@ pub fn AgentSession::new(
   agent_id : String,
   base_revision : Int,
 ) -> AgentSession {
-  { agent_id, base_revision, ops: [] }
+  { agent_id, base_revision, ops: [], }
 }
 
 ///|
@@ -316,7 +316,7 @@ pub(all) struct CollabManager {
 
 ///|
 pub fn CollabManager::new(base_revision : Int) -> CollabManager {
-  { sessions: Map::new(), base_revision }
+  { sessions: Map::new(), base_revision, }
 }
 
 ///|
@@ -421,49 +421,96 @@ pub fn DesignOp::from_text(spec : String) -> DesignOp? {
       if parts.length() < 4 {
         None
       } else {
-        Some(OpSetFill(parts[1].to_string(), parts[2].to_string(), parts[3].to_string()))
+        Some(
+          OpSetFill(
+            parts[1].to_string(),
+            parts[2].to_string(),
+            parts[3].to_string(),
+          ),
+        )
       }
     "radius" =>
       if parts.length() < 4 {
         None
       } else {
-        Some(OpSetRadius(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3])))
+        Some(
+          OpSetRadius(
+            parts[1].to_string(),
+            parse_op_double(parts[2]),
+            parse_op_double(parts[3]),
+          ),
+        )
       }
     "font" =>
       if parts.length() < 4 {
         None
       } else {
-        Some(OpSetFontSize(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3])))
+        Some(
+          OpSetFontSize(
+            parts[1].to_string(),
+            parse_op_double(parts[2]),
+            parse_op_double(parts[3]),
+          ),
+        )
       }
     "text" =>
       if parts.length() < 4 {
         None
       } else {
-        Some(OpSetText(parts[1].to_string(), parts[2].to_string(), parts[3].to_string()))
+        Some(
+          OpSetText(
+            parts[1].to_string(),
+            parts[2].to_string(),
+            parts[3].to_string(),
+          ),
+        )
       }
     "pos" =>
       if parts.length() < 6 {
         None
       } else {
-        Some(OpSetPosition(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3]), parse_op_double(parts[4]), parse_op_double(parts[5])))
+        Some(
+          OpSetPosition(
+            parts[1].to_string(),
+            parse_op_double(parts[2]),
+            parse_op_double(parts[3]),
+            parse_op_double(parts[4]),
+            parse_op_double(parts[5]),
+          ),
+        )
       }
     "size" =>
       if parts.length() < 6 {
         None
       } else {
-        Some(OpSetSize(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3]), parse_op_double(parts[4]), parse_op_double(parts[5])))
+        Some(
+          OpSetSize(
+            parts[1].to_string(),
+            parse_op_double(parts[2]),
+            parse_op_double(parts[3]),
+            parse_op_double(parts[4]),
+            parse_op_double(parts[5]),
+          ),
+        )
       }
     "gap" =>
       if parts.length() < 4 {
         None
       } else {
-        Some(OpSetGap(parts[1].to_string(), parse_op_double(parts[2]), parse_op_double(parts[3])))
+        Some(
+          OpSetGap(
+            parts[1].to_string(),
+            parse_op_double(parts[2]),
+            parse_op_double(parts[3]),
+          ),
+        )
       }
     _ => None
   }
 }
 
 ///|
+
 ///|
 /// 合并请求规格（CLI `collab-merge` / MCP `collab_merge` 共用）：
 ///   `<base_rev> <agentA>=<op>[+<op>...] <agentB>=<op>[+<op>...] ...`
@@ -512,10 +559,7 @@ pub fn merge_sessions_from_spec(spec : String) -> String {
       }
       match DesignOp::from_text(o) {
         Some(op) => s.add_op(op)
-        None =>
-          if bad == "" {
-            bad = o
-          }
+        None => if bad == "" { bad = o }
       }
     }
     sessions.push(s)

@@ -48,7 +48,8 @@ pub fn apply_agent_op(mbt : String, op : String) -> String {
         Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
         Ok(_) =>
           match model.commit_and_render(@core.AgentGate) {
-            Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
+            Err(error) =>
+              "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
             Ok(rendered) => rendered
           }
       }
@@ -119,7 +120,8 @@ pub fn apply_human_op(mbt : String, op : String) -> String {
         Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
         Ok(_) =>
           match model.commit_and_render(@core.HumanGate) {
-            Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
+            Err(error) =>
+              "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
             Ok(rendered) => rendered
           }
       }
@@ -132,6 +134,7 @@ pub fn apply_human_op(mbt : String, op : String) -> String {
 // 索引方案双目标通用）；生产宿主应配对调用 session_close 回收。
 // ---------------------------------------------------------------------------
 
+///|
 struct WasmSession {
   project : @core.Project
   /// 会话级设计历史（issue #11）：CLI `history` 子命令族的 wasm 对应面。
@@ -146,8 +149,10 @@ struct WasmSession {
   alive : Bool
 }
 
+///|
 let sessions : @ref.Ref[Array[@ref.Ref[WasmSession]]] = Ref::new([])
 
+///|
 fn session_store() -> Array[@ref.Ref[WasmSession]] {
   sessions.val
 }
@@ -159,7 +164,14 @@ pub fn session_open(mbt : String) -> Int {
     Err(_) => -1
     Ok(model) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: model.project, histories: Map::new(), history_board: "", alive: true }))
+      s.push(
+        Ref::new({
+          project: model.project,
+          histories: Map::new(),
+          history_board: "",
+          alive: true,
+        }),
+      )
       s.length() - 1
     }
   }
@@ -209,6 +221,7 @@ fn history_rev(text : String) -> Int? {
 /// 同形——宿主应保存返回文本供下次 session_open 使用，否则时间旅行
 /// 结果在重开后丢失）。undo/redo 恢复的是历史上已过门的状态，不重跑
 /// 门；引入新变更仍必须走 apply_agent/apply_human。
+
 ///|
 /// 全项目 canonical 文本（与 session_apply_* 的 mbt 字段同源）；
 /// 失败时返回空串，信封退化为无 mbt 字段。
@@ -222,7 +235,7 @@ fn session_canonical_mbt(p : @core.Project) -> String {
 ///|
 pub fn session_history(handle : Int, line : String) -> String {
   let s = session_store()
-  if handle < 0 || handle >= s.length() || !(s[handle].val.alive) {
+  if handle < 0 || handle >= s.length() || !s[handle].val.alive {
     return "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
   }
   let parts : Array[String] = []
@@ -244,7 +257,7 @@ pub fn session_history(handle : Int, line : String) -> String {
     }
   }
   if pruned {
-    s[handle].val = { ..cur, histories: cur.histories }
+    s[handle].val = { ..cur, histories: cur.histories, }
   }
   match sub {
     "init" => {
@@ -261,7 +274,7 @@ pub fn session_history(handle : Int, line : String) -> String {
           if !kept {
             cur.histories.set(ab, @core.DesignHistory::new(board.doc.clone()))
           }
-          s[handle].val = { ..cur, history_board: ab }
+          s[handle].val = { ..cur, history_board: ab, }
           "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{@core.json_escape(ab)}\",\"kept\":\{kept}}"
         }
       }
@@ -299,7 +312,8 @@ pub fn session_history(handle : Int, line : String) -> String {
               if cur.history_board == "" {
                 return "{\"ok\":false,\"error\":\"history_board_missing\"}"
               }
-              match cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
+              match
+                cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(_) =>
                   "{\"ok\":true,\"op\":\"history-\{sub}\",\"artboard\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{h.rev()}\{session_canonical_mbt(cur.project)}}"
@@ -324,8 +338,13 @@ pub fn session_history(handle : Int, line : String) -> String {
                   if cur.history_board == "" {
                     return "{\"ok\":false,\"error\":\"history_board_missing\"}"
                   }
-                  match cur.project.set_artboard_doc(artboard=cur.history_board, doc) {
-                    Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+                  match
+                    cur.project.set_artboard_doc(
+                      artboard=cur.history_board,
+                      doc,
+                    ) {
+                    Err(e) =>
+                      "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                     Ok(_) =>
                       "{\"ok\":true,\"op\":\"history-checkout\",\"artboard\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{rev}\{session_canonical_mbt(cur.project)}}"
                   }
@@ -355,7 +374,8 @@ pub fn session_history(handle : Int, line : String) -> String {
         }
       }
     }
-    _ => "{\"ok\":false,\"error\":\"unknown_history_sub: \{@core.json_escape(sub)}\"}"
+    _ =>
+      "{\"ok\":false,\"error\":\"unknown_history_sub: \{@core.json_escape(sub)}\"}"
   }
 }
 
@@ -371,7 +391,12 @@ pub fn session_history_in(handle : Int) -> String {
 pub fn session_close(handle : Int) -> Bool {
   let s = session_store()
   if handle >= 0 && handle < s.length() && s[handle].val.alive {
-    s[handle] = Ref::new({ project: @core.Project::new(), histories: Map::new(), history_board: "", alive: false })
+    s[handle] = Ref::new({
+      project: @core.Project::new(),
+      histories: Map::new(),
+      history_board: "",
+      alive: false,
+    })
     true
   } else {
     false
@@ -394,7 +419,14 @@ pub fn session_open_project_json(project_json : String) -> Int {
     Err(_) => -1
     Ok(_) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
-      s.push(Ref::new({ project: p, histories: Map::new(), history_board: "", alive: true }))
+      s.push(
+        Ref::new({
+          project: p,
+          histories: Map::new(),
+          history_board: "",
+          alive: true,
+        }),
+      )
       s.length() - 1
     }
   }
@@ -413,7 +445,10 @@ fn session_get(handle : Int) -> @core.Project? {
 ///|
 /// 统一信封：只读导出返回 {ok:true, data:<原生 JSON>}，与其它导出的
 /// {ok,...} 形态一致——宿主解析不再逐个特判（issue #4C）。
-fn sess_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> String {
+fn sess_json(
+  handle : Int,
+  f : (@core.Project) -> Result[String, String],
+) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) =>
@@ -433,7 +468,10 @@ fn sess_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> Str
 /// 未动）不回 mbt。
 /// 内层自带 "ok" 即保留全部字段并拼接 mbt；无 ok 的裸 intent 负载包一层
 /// {"ok":true,"moves":<inner>,"mbt":...}。
-fn sess_mut_json(handle : Int, f : (@core.Project) -> Result[String, String]) -> String {
+fn sess_mut_json(
+  handle : Int,
+  f : (@core.Project) -> Result[String, String],
+) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) =>
@@ -474,7 +512,7 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
       let snapshot = p.clone()
       match @core.apply_operation(snapshot, op) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-        Ok(_) => {
+        Ok(_) =>
           // flow 校验必须跑在 apply 之后的新状态上：op 自身可能引入悬空
           // flow（add_flow 零校验），前置校验拦不住（审查 F1）
           match @decl.mbt_validate_flows(snapshot) {
@@ -495,13 +533,10 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
                 }
               }
           }
-        }
       }
     }
   }
 }
-
-
 
 ///|
 /// 应用一条 mutating op（HumanGate，视觉债放行）。
@@ -546,8 +581,7 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
 pub fn session_export_svg(handle : Int, artboard : String) -> String {
   sess_json(handle, fn(p) {
     match p.export_svg(artboard~) {
-      Ok(svg) =>
-        Ok("{\"ok\":true,\"svg\":\"\{@core.json_escape(svg)}\"}")
+      Ok(svg) => Ok("{\"ok\":true,\"svg\":\"\{@core.json_escape(svg)}\"}")
       Err(e) => Err(e)
     }
   })
@@ -608,8 +642,7 @@ pub fn session_states(handle : Int, artboard : String) -> String {
 pub fn session_spec(handle : Int, artboard : String) -> String {
   sess_json(handle, fn(p) {
     match p.generate_spec(artboard~) {
-      Ok(spec) =>
-        Ok("{\"ok\":true,\"spec\":\"\{@core.json_escape(spec)}\"}")
+      Ok(spec) => Ok("{\"ok\":true,\"spec\":\"\{@core.json_escape(spec)}\"}")
       Err(e) => Err(e)
     }
   })
@@ -618,7 +651,11 @@ pub fn session_spec(handle : Int, artboard : String) -> String {
 ///|
 /// 自然语言布局意图（居中对齐/垂直排列/等宽/间距 N…）。成功信封回传
 /// canonical mbt——键控缓存宿主要求（issue #19）。
-pub fn session_constrain(handle : Int, artboard : String, intent : String) -> String {
+pub fn session_constrain(
+  handle : Int,
+  artboard : String,
+  intent : String,
+) -> String {
   sess_mut_json(handle, fn(p) { p.apply_constraint(intent, artboard~) })
 }
 
@@ -664,7 +701,9 @@ pub fn session_benchmark(handle : Int) -> String {
 pub fn session_save(handle : Int) -> String {
   // 统一信封 {ok:true,data:"<project_json 字符串>"}；session_open_project_json
   // 接收 data 里的 project_json 文本
-  sess_json(handle, fn(p) { Ok("\"\{@core.json_escape(p.to_project_json())}\"") })
+  sess_json(handle, fn(p) {
+    Ok("\"\{@core.json_escape(p.to_project_json())}\"")
+  })
 }
 
 ///|
@@ -726,7 +765,12 @@ pub fn session_library_snapshot(handle : Int) -> String {
 /// 交互运行时命中：tap <x> <y> → 状态变更/导航（原型播放语义）。
 /// ⚡ set_text/set_state 会写穿会话文档（运行时直接持有 Project 引用），
 /// 故成功信封同样回传 canonical mbt——与 #19 同一闭环要求。
-pub fn session_tap(handle : Int, artboard : String, x : Double, y : Double) -> String {
+pub fn session_tap(
+  handle : Int,
+  artboard : String,
+  x : Double,
+  y : Double,
+) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) =>
@@ -764,17 +808,15 @@ fn encode_mbt_b64(text : String) -> String {
 // UTF-8 解码失败时槽内字符串为空（宿主应保证 in_len 与预期一致）。
 // ---------------------------------------------------------------------------
 
+///|
 let g_in_bytes : Ref[Array[Byte]] = Ref::new([])
+
+///|
 let g_arg_bytes : Ref[Array[Byte]] = Ref::new([])
 
+///|
 fn slot_push(slot : Ref[Array[Byte]], chunk : Int, n : Int) -> Unit {
-  let count = if n < 1 {
-    1
-  } else if n > 4 {
-    4
-  } else {
-    n
-  }
+  let count = if n < 1 { 1 } else if n > 4 { 4 } else { n }
   let mut i = 0
   while i < count {
     let b = ((chunk >> (i * 8)) & 0xFF).to_byte()
@@ -783,6 +825,7 @@ fn slot_push(slot : Ref[Array[Byte]], chunk : Int, n : Int) -> Unit {
   }
 }
 
+///|
 fn slot_string(slot : Ref[Array[Byte]]) -> String {
   @utf8.decode(Bytes::from_iter(slot.val.iter())) catch {
     _ => ""

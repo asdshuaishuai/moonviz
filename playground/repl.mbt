@@ -11,7 +11,7 @@ struct ReplState {
 
 ///|
 fn repl_state_new(initial : String) -> ReplState {
-  { camera: Camera::new(), decl: initial, highlight: None }
+  { camera: Camera::new(), decl: initial, highlight: None, }
 }
 
 ///|
@@ -277,7 +277,7 @@ fn join_from_idx(toks : Array[String], from : Int) -> String {
 ///agent 子命令的补丁：text / width / height
 fn agent_patch(toks : Array[String]) -> @core.NodePatch? {
   if toks[1] == "text" {
-    Some({ ..@core.NodePatch::empty(), text: Some(join_from_idx(toks, 3)) })
+    Some({ ..@core.NodePatch::empty(), text: Some(join_from_idx(toks, 3)), })
   } else if toks[2] == "width" {
     Some({
       ..@core.NodePatch::empty(),

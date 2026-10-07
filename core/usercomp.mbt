@@ -53,14 +53,13 @@ fn resolve_args(
     return Err("unknown_variant:" + v)
   }
   match def.variants.get(v) {
-    Some(overrides_v) => {
+    Some(overrides_v) =>
       for k in overrides_v.keys() {
         match overrides_v.get(k) {
           Some(value) => out.set(k, value)
           None => ()
         }
       }
-    }
     None => ()
   }
   for k in overrides.keys() {
@@ -146,7 +145,7 @@ fn subst_node(n : Node, args : Map[String, String]) -> Node {
     text_color: subst_str(style.text_color, args),
     stroke: subst_str(style.stroke, args),
   }
-  { ..n, text: subst_str(n.text, args), style }
+  { ..n, text: subst_str(n.text, args), style, }
 }
 
 ///|
@@ -166,7 +165,7 @@ fn rollback_inserted(
             kids.push(k)
           }
         }
-        target.nodes.set(host_parent, { ..parent, children: kids })
+        target.nodes.set(host_parent, { ..parent, children: kids, })
       }
       None => ()
     }
@@ -186,10 +185,10 @@ pub fn place_user_component(
   target : Document,
   def : UserComponentDef,
   instance_id : String,
-  variant~ : String = "",
-  args~ : Map[String, String] = Map::new(),
-  dx~ : Double = 0.0,
-  dy~ : Double = 0.0,
+  variant? : String = "",
+  args? : Map[String, String] = Map::new(),
+  dx? : Double = 0.0,
+  dy? : Double = 0.0,
 ) -> Result[String, String] {
   if target.has(instance_id) {
     return Err("duplicate_node:" + instance_id)
@@ -202,11 +201,10 @@ pub fn place_user_component(
   let queue : Array[(String, String)] = [] // (组件内节点id, 宿主父id)
   match def.doc.nodes.get("root") {
     None => return Err("usercomp_missing_root")
-    Some(root) => {
+    Some(root) =>
       for cid in root.children.iter() {
         queue.push((cid, "root"))
       }
-    }
   }
   // 组件包围盒原点：首个顶层节点的组件内坐标
   let mut origin_x = 0.0
@@ -249,13 +247,13 @@ pub fn place_user_component(
           let abs_y = dy + (base_y - origin_y)
           let safe_x = if abs_x < 0.0 { 0.0 } else { abs_x }
           let safe_y = if abs_y < 0.0 { 0.0 } else { abs_y }
-          n = { ..n, x: AlignStart(safe_x), y: AlignStart(safe_y) }
+          n = { ..n, x: AlignStart(safe_x), y: AlignStart(safe_y), }
           if placed_root_id == "" {
             placed_root_id = host_id
           }
         }
         // 关键：实例节点 id 必须重写为带实例前缀的 host_id（组件内同名隔离）
-        n = { ..n, id: host_id, children: [] } // 子关系在下方按序重建
+        n = { ..n, id: host_id, children: [], } // 子关系在下方按序重建
         if target.insert_node(n, host_parent) == false {
           rollback_inserted(target, inserted)
           return Err("usercomp_insert_failed:" + host_id)
@@ -283,7 +281,7 @@ pub fn collect_param_refs(def : UserComponentDef) -> Array[String] raise {
   for id in def.doc.nodes.keys() {
     match def.doc.nodes.get(id) {
       None => ()
-      Some(n) => {
+      Some(n) =>
         for text in [n.text, n.style.fill, n.style.text_color, n.style.stroke] {
           let mut rest = text
           let mut scanning = true
@@ -307,7 +305,6 @@ pub fn collect_param_refs(def : UserComponentDef) -> Array[String] raise {
             }
           }
         }
-      }
     }
   }
   refs
