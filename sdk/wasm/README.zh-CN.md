@@ -25,6 +25,9 @@ Node 20 及更早版本实例化时会抛错（`Unknown type code 0x50` / `inval
 npm install moonviz-engine-wasm
 ```
 
+> **MoonBit 原生替代**——MoonBit 宿主可用 [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz)
+> 以 `@sdk` 门面进程内嵌同一引擎（无需 JS 胶水层）。
+
 ## 快速上手
 
 ### Node

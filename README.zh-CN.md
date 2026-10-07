@@ -1,9 +1,25 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
 ## 0.1.7 新特性
 
-- **正式 MoonBit 原生包**——引擎上架 [mooncakes.io](https://mooncakes.io)：
-  `moon add asdshuaishuai/moonviz`，经新增的 `sdk/` 门面内嵌
-  （`@sdk.new/apply/validate/render_svg/canonical`）。
+- **正式 MoonBit 原生包——已上架 [mooncakes.io](https://mooncakes.io)**：
+  [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz) 安装 0.1.7，
+  经 `sdk/` 门面内嵌引擎：
+
+  ```moonbit
+  import {
+    "asdshuaishuai/moonviz/sdk" @sdk
+  }
+
+  fn main {
+    let p = @sdk.new()
+    let r = @sdk.apply(p, "create home 390 844")
+    let svg = @sdk.render_svg(p, artboard="home")   // → SVG 字符串
+  }
+  ```
+
+  包元数据齐全（license=MIT / keywords / repository / homepage），
+  「安装 → 编译 → 渲染」闭环已对发布的产物实测验证。
+  发布绕过 moon CLI 的 HTTP/2 上传缺陷（直发 multipart），见 AGENTS.md。
 - 构建工具链 moonc ≥ 0.10.14（CI 版本硬门）。
 
 ## 0.1.6-moon 新特性

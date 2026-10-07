@@ -50,6 +50,14 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
    classic wasm；本次基线含修复但下游未升级时，在汇报中明确标出该缺口（引擎信封修复
    必须先消费侧升级才对宿主可见）。
 
+## 分支策略
+
+- `main` = 发布线（0.x 序列，Release 资产从 main 的 engine-v* tag 构建）
+- `dev` = 0.x 主线开发分支（从 main 切出；issue 修复与新能力先进 dev，
+  验证后合回 main 发布）
+- `release/1.0` = 1.0 长期开发分支（**不发布、暂不并入 main**），
+  分支特有能力的文档随分支走；多分支都成立的能力才双写
+
 ## 红线（不可回退）
 
 - **classic wasm 保持标准 MVP、宿主中立、零 import**，不为任何宿主特殊编译；wasm-gc 走
@@ -74,7 +82,9 @@ curl -X POST https://mooncakes.io/api/v0/publish \
   -F "token=$(python3 -c "import json;print(json.load(open('$HOME/.moon/credentials.json'))['token'])")" \
   -F "file=@_build/publish/asdshuaishuai-moonviz-<ver>.zip;type=application/zip"
 ```
-成功响应 `{"status":"ok"}`；语义化版本每次发布必须递增。工具链底线
+成功响应 `{"status":"ok"}`；语义化版本每次发布必须递增。
+0.1.7 已于 2026-10-07 用此通道上架（[包页](https://mooncakes.io/asdshuaishuai/moonviz)），
+「moon add → 编译 → 渲染」闭环实测通过。工具链底线
 moonc ≥ 0.10.14，ci.yml 有版本硬门。
 
 ## 构建与测试

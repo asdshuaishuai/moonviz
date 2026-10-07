@@ -2,9 +2,26 @@
 
 ## What's New in 0.1.7
 
-- **Official MoonBit native package** — the engine ships on
-  [mooncakes.io](https://mooncakes.io): `moon add asdshuaishuai/moonviz`, then embed the
-  engine via the new `sdk/` facade (`@sdk.new/apply/validate/render_svg/canonical`).
+- **Official MoonBit native package — LIVE on [mooncakes.io](https://mooncakes.io)**:
+  [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz) installs 0.1.7,
+  then embed the engine via the `sdk/` facade:
+
+  ```moonbit
+  import {
+    "asdshuaishuai/moonviz/sdk" @sdk
+  }
+
+  fn main {
+    let p = @sdk.new()
+    let r = @sdk.apply(p, "create home 390 844")
+    let svg = @sdk.render_svg(p, artboard="home")   // → SVG string
+  }
+  ```
+
+  Package metadata is complete (license=MIT, keywords, repository, homepage) and the
+  install → compile → render loop is verified against the published artifact.
+  Publishing bypasses the moon CLI's HTTP/2 upload bug via direct multipart POST —
+  see AGENTS.md.
 - Built with moonc ≥ 0.10.14 (version-gated in CI).
 
 ## What's New in 0.1.6-moon

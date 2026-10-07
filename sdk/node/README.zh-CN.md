@@ -12,6 +12,10 @@ MoonViz 把一份 MoonBit 文学化源文件 —— **`.mbt.md`** —— 作为�
 npm install moonviz-engine-sdk
 ```
 
+> **MoonBit 原生替代**——宿主本身是 MoonBit 项目时，可直接以包形式内嵌引擎：
+> [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz)，
+> 经 `@sdk` 门面（new/apply/validate/render_svg/canonical）调用——无子进程、无传输层。
+
 ## 前置条件
 
 **推荐（零工具链）：** 随 SDK 一起安装平台预编译二进制。引擎以自包含原生可执行文件分发（仅链系统 libc —— 无需 MoonBit 工具链、无需引擎源码）：
