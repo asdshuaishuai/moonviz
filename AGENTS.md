@@ -65,7 +65,16 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 模块名固定为 `asdshuaishuai/moonviz`——**新建 moon 包时 import 必须用此前缀**
 （`"asdshuaishuai/moonviz/core"` 等），改名需全仓同步并跑三目标验证。
 发布：`moon login`（mooncakes.io 账号）→ `moon publish`，由仓库所有者执行；
-版本取自 moon.mod.json，须与 `ENGINE_VERSION` 基线协调。工具链底线
+版本取自 moon.mod.json，须与 `ENGINE_VERSION` 基线协调。
+**已知坑与绕过**（2026-10-07 首次上架验证）：本地网络路径会掐断 mooncake 的
+HTTP/2 上传（`receiver is gone`）。绕过 = 协议直发（FastAPI multipart）：
+```
+moon package    # 产出 _build/publish/<name>-<ver>.zip（尊重 .gitignore！）
+curl -X POST https://mooncakes.io/api/v0/publish \
+  -F "token=$(python3 -c "import json;print(json.load(open('$HOME/.moon/credentials.json'))['token'])")" \
+  -F "file=@_build/publish/asdshuaishuai-moonviz-<ver>.zip;type=application/zip"
+```
+成功响应 `{"status":"ok"}`；语义化版本每次发布必须递增。工具链底线
 moonc ≥ 0.10.14，ci.yml 有版本硬门。
 
 ## 构建与测试
