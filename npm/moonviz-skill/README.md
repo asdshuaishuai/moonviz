@@ -10,4 +10,5 @@ Companion packages:
 
 - `moonviz-mcp` — MCP server (prebuilt binary, `npx moonviz-mcp`)
 - `moonviz-engine-sdk` — Node.js integration SDK
+- MoonBit-native embedding: [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz) (official mooncakes.io package)
 - `moonviz-engine-wasm` — WASM engine for browser/Node

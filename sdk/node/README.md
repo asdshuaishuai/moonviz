@@ -12,6 +12,10 @@ MoonViz treats one MoonBit literate source file — **`.mbt.md`** — as the sin
 npm install moonviz-engine-sdk
 ```
 
+> **MoonBit-native alternative** — if your host is a MoonBit project, embed the engine
+> directly as a package instead: [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz)
+> and use the `@sdk` facade (`new/apply/validate/render_svg/canonical`) — no subprocess, no transport layer.
+
 ## Prerequisites
 
 **Recommended (zero toolchain):** install the prebuilt platform binary alongside the SDK. The engine ships as a self-contained native executable (links only libc — no MoonBit toolchain, no engine sources):

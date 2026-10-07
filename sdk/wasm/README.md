@@ -25,6 +25,9 @@ On Node 20 or older the module instantiation throws (`Unknown type code 0x50` / 
 npm install moonviz-engine-wasm
 ```
 
+> **MoonBit-native alternative** — for MoonBit hosts, [`moon add asdshuaishuai/moonviz`](https://mooncakes.io/asdshuaishuai/moonviz)
+> embeds the same engine in-process via the `@sdk` facade (no JS glue needed).
+
 ## Quick start
 
 ### Node
