@@ -1,6 +1,6 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.7**（moonc ≥ 0.10.14 · mooncakes 原生包） · `moon test` 209/209 · 组件目录 65×115 · 仓库 100+ commits
+> 当前基线：**v0.1.8**（moonc ≥ 0.10.14 · mooncakes 原生包 0.1.8 已上架） · `moon test` 210/210 · 组件目录 65×115 · 仓库 100+ commits
 
 ## 当前基线盘点
 
