@@ -1,0 +1,15 @@
+import {
+  "asdshuaishuai/moonviz/core",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+}
+
+options(
+  "is-main": true,
+  targets: {
+    // golden 生成器落盘需 FS（libc FFI）——仅 native 可运行：
+    //   moon run --target native scripts -- test/golden
+    "gen-golden.mbt": ["native"],
+    "gen-golden_stub.mbt": ["not", "native"],
+  },
+)

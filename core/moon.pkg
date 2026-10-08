@@ -1,4 +1,13 @@
 import {
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
 }
+
+options(
+  targets: {
+    // golden 快照 diff 测试读基线文件需 FS（libc FFI）——仅 native 参与编译，
+    // 快照守护在 `moon test --target native` 下生效（RENDER-1.0 R4）
+    "golden_wbtest.mbt": ["native"],
+  },
+)

@@ -178,6 +178,10 @@ cd ddp && cargo build --release && cd ..
 
 # 4. Full test suite (205 on the default target; 209 with --target native)
 moon test
+
+# 5. Rendering golden snapshots (RENDER-1.0 R4): light/dark × all components
+#    Regenerate the baseline after an intentional SVG change:
+moon run --target native scripts -- test/golden
 ```
 
 ### First Run

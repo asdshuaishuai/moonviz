@@ -89,7 +89,8 @@ moonc ≥ 0.10.14，ci.yml 有版本硬门。
 
 ```bash
 moon check                                              # 类型检查
-moon test --target native                               # 全量测试（含 wasm 契约测试）
+moon test --target native                               # 全量测试（含 wasm 契约测试 + golden 快照比对）
+moon run --target native scripts -- test/golden         # 有意改渲染输出后重生成 golden 基线（test/golden/，SVG 源 diff）
 node scripts/check-wasm-abi.mjs                         # classic ABI 断言（本地）
 moon build --release --target native cli mcp            # 仅本地验证用；产物发布走 CI
 # 发布渠道以 GitHub Releases 为准（npm 仓库暂不入驻，
