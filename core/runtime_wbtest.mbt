@@ -417,3 +417,43 @@ test "组件状态：补丁真实应用且可切换" {
     Err(e) => assert_true(e.contains("unknown_state"))
   }
 }
+
+///|
+/// Smart UX M-S2：collect_actions——flow 边 + ⚡ 标记 → 类型化动作清单；
+/// 未知画板/无动作一律 []（空集合 envelope 红线）；from 校验（入站边不算）。
+test "collect_actions：动作清单整理与空集合红线" {
+  let p = Project::new()
+  let a1 = p.create_artboard(name="ca_a1")
+  let a2 = p.create_artboard(name="ca_a2")
+  let _ = p.place_component(artboard=a1, component_id="button", instance_id="cta")
+  // 未知画板：空集合
+  assert_eq(p.collect_actions(artboard="nope"), "[]")
+  // 无交互画板：空集合
+  assert_eq(p.collect_actions(artboard=a1), "[]")
+  // 出站 flow 边 → navigate_to 动作
+  p.add_flow(from=a1, to=a2, trigger="tap:cta")
+  let j1 = p.collect_actions(artboard=a1)
+  assert_true(
+    j1.contains(
+      "\"from\":\"ca_a1\",\"to\":\"ca_a2\",\"trigger\":\"tap\",\"action\":\"navigate_to:ca_a2\",\"node\":\"cta\"",
+    ),
+    msg=j1,
+  )
+  // ⚡ 交互标记：动作规格原样出栈；非导航动作 to 为空串
+  let _ = p.attach_interaction(
+    artboard=a1,
+    node_id="cta",
+    trigger="long_press",
+    action_spec="show_toast:\"hi\"",
+  )
+  let j2 = p.collect_actions(artboard=a1)
+  assert_true(
+    j2.contains(
+      "\"to\":\"\",\"trigger\":\"long_press\",\"action\":\"show_toast:\\\"hi\\\"\",\"node\":\"cta\"",
+    ),
+    msg=j2,
+  )
+  assert_true(j2.contains("\"action\":\"navigate_to:ca_a2\""), msg=j2)
+  // 入站边不算目标画板的动作（from 校验）
+  assert_eq(p.collect_actions(artboard=a2), "[]")
+}

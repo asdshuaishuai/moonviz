@@ -64,15 +64,17 @@ let ptr = render_mbt_in();
 let json = read_moonstr(ptr);   // §2 判别式读取
 ```
 
-带 `_in` 后缀的入口（当前 21 个）：`render_mbt_in validate_mbt_in
+带 `_in` 后缀的入口（当前 25 个，与 `scripts/check-wasm-abi.mjs` 的
+required 清单同步维护）：`render_mbt_in validate_mbt_in
 export_html_in apply_agent_op_in apply_human_op_in session_open_in
 session_apply_agent_in session_apply_human_in session_export_svg_in
 session_lint_in session_query_nodes_in session_interactions_in
-session_states_in session_spec_in session_infer_page_type_in
-session_infer_missing_in session_extract_design_system_in
-session_generate_responsive_in session_component_compile_b64_in
-session_constrain_in session_tap_in session_critique_in
-session_auto_fix_in session_open_project_json_in`。
+collect_actions_in session_states_in session_spec_in
+session_infer_page_type_in session_infer_missing_in
+session_extract_design_system_in session_generate_responsive_in
+session_component_compile_b64_in session_constrain_in session_tap_in
+session_critique_in session_auto_fix_in session_open_project_json_in
+session_history_in`。
 
 ## 6. 防漂移
 

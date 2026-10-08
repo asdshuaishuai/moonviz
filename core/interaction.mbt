@@ -897,3 +897,66 @@ pub fn Project::interactions_json(
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Smart UX M-S2：事件出栈——画板动作清单（宿主消费 UI 事件）
+// ---------------------------------------------------------------------------
+
+///|
+/// flow trigger 规格 "tap:<node>" → (类型, 节点)；无冒号整体为类型、节点空。
+fn split_flow_trigger(spec : String) -> (String, String) {
+  match spec.find(":") {
+    None => (spec, "")
+    Some(i) => (
+      spec.substring(start=0, end=i),
+      spec.substring(start=i + 1, end=spec.length()),
+    )
+  }
+}
+
+///|
+/// Smart UX M-S2：collect_actions——把画板的出站动作整理为类型化清单
+/// （SMART-UX-1.0.md 支柱 B「事件出栈」：宿主/Agent 据此喂数据、取 UI 事件）。
+///
+/// 两类来源合并罗列（不去重：两类标记各自如实出栈）：
+/// - 出站 flow 边（from == artboard）→ navigate_to 动作；
+/// - 画板节点的 ⚡ 交互标记 → 动作规格原样出栈。
+/// 每条字段：from（源画板）/ to（目标画板；非导航动作为空串）/
+/// trigger（触发类型）/ action（动作规格）/ node（触发节点；flow 边取
+/// trigger "tap:<node>" 的节点段——事件出栈必须可定位到元素）。
+/// 未知画板返回 []：空集合 envelope 一律合法 JSON（红线），宿主零特判。
+pub fn Project::collect_actions(self : Project, artboard~ : String) -> String {
+  let items : Array[String] = []
+  for e in self.flows.iter() {
+    if e.from == artboard {
+      let (kind, node) = split_flow_trigger(e.trigger)
+      items.push(
+        "{\"from\":\"\{json_escape(e.from)}\",\"to\":\"\{json_escape(e.to)}\",\"trigger\":\"\{json_escape(kind)}\",\"action\":\"navigate_to:\{json_escape(e.to)}\",\"node\":\"\{json_escape(node)}\"}",
+      )
+    }
+  }
+  match self.artboards.get(artboard) {
+    Some(ab) =>
+      for id in ab.doc.nodes.keys() {
+        match ab.doc.nodes.get(id) {
+          Some(n) =>
+            match parse_interaction_marker(n.name) {
+              Some((trig, spec)) => {
+                let to = if spec.has_prefix("navigate_to:") {
+                  spec.substring(start=12, end=spec.length())
+                } else {
+                  ""
+                }
+                items.push(
+                  "{\"from\":\"\{json_escape(artboard)}\",\"to\":\"\{json_escape(to)}\",\"trigger\":\"\{json_escape(trig)}\",\"action\":\"\{json_escape(spec)}\",\"node\":\"\{json_escape(id)}\"}",
+                )
+              }
+              None => ()
+            }
+          None => ()
+        }
+      }
+    None => () // 未知画板：空集合（红线：空集合 envelope 一律合法 JSON）
+  }
+  "[\{jstr12(items)}]"
+}

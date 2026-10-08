@@ -44,6 +44,11 @@ sessions by canonical text MUST persist the returned `mbt` and use it for
 the next `session_open` — otherwise the mutation is silently lost on reopen.
 Read-only surfaces keep the `{ok:true,data:...}` envelope.
 
+Smart UX event-out (wasm `collect_actions(handle, artboard)`, classic + wasm-gc):
+returns the board's typed action list — outbound flow edges + node ⚡interactions
+as `from/to/trigger/action/node`; unknown or action-less boards return `[]`
+(empty-collection envelope). Hosts/Agents consume UI events from it.
+
 Structural:
 `create <name> [w] [h]` · `template <id> <name> [w] [h]` ·
 `place <ab> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]` (final-size place — gate evaluates final bbox; omit w/h and adaptive presets apply: button/text_input/body_text/heading/divider/image = width-fill, fab = anchor bottom-right) ·

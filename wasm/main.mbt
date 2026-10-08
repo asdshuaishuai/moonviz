@@ -602,6 +602,15 @@ pub fn session_interactions(handle : Int, artboard : String) -> String {
 }
 
 ///|
+/// Smart UX M-S2：事件出栈——会话画板的类型化动作清单（出站 flow 边 +
+/// 节点 ⚡ 交互标记 → from/to/trigger/action/node）。未知画板与无动作一律
+/// {"ok":true,"data":[]}（空集合 envelope 红线）；非法句柄按 #4A 返回
+/// invalid_session_handle，零崩。
+pub fn collect_actions(handle : Int, artboard : String) -> String {
+  sess_json(handle, fn(p) { Ok(p.collect_actions(artboard~)) })
+}
+
+///|
 /// 组件状态清单。
 pub fn session_states(handle : Int, artboard : String) -> String {
   sess_json(handle, fn(p) { p.node_states_json(artboard~) })
@@ -897,6 +906,12 @@ pub fn session_query_nodes_in(handle : Int) -> String {
 ///|
 pub fn session_interactions_in(handle : Int) -> String {
   session_interactions(handle, slot_string(g_arg_bytes))
+}
+
+///|
+/// 事件出栈 classic 变体（artboard 经辅槽）：与 session_interactions_in 同型。
+pub fn collect_actions_in(handle : Int) -> String {
+  collect_actions(handle, slot_string(g_arg_bytes))
 }
 
 ///|

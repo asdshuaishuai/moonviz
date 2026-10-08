@@ -615,3 +615,48 @@ test "契约：data_schema——非法句柄 invalid_session_handle（零崩，#
   let _ = session_close(h)
   assert_true(data_schema(h).contains("invalid_session_handle"))
 }
+
+///|
+test "契约：collect_actions——flow+⚡ 整理为类型化动作清单（Smart UX M-S2）" {
+  let h = session_open(SEED)
+  // 无交互画板：空集合
+  let r0 = collect_actions(h, "w")
+  assert_true(r0 == "{\"ok\":true,\"data\":[]}", msg=r0)
+  // 建目标画板 + 出站 flow 边 + 节点 ⚡ 交互
+  let r1 = session_apply_human(h, "create login")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  let r2 = session_apply_human(h, "flow w login btn")
+  assert_true(r2.contains("\"ok\":true"), msg=r2)
+  let r3 = session_apply_human(h, "interact w btn tap show_toast:\"hi\"")
+  assert_true(r3.contains("\"ok\":true"), msg=r3)
+  let r4 = collect_actions(h, "w")
+  assert_true(r4.contains("\"ok\":true"), msg=r4)
+  // flow 边 → navigate_to 动作（trigger 拆类型，node 取 tap: 后的节点段）
+  assert_true(
+    r4.contains(
+      "\"from\":\"w\",\"to\":\"login\",\"trigger\":\"tap\",\"action\":\"navigate_to:login\",\"node\":\"btn\"",
+    ),
+    msg=r4,
+  )
+  // ⚡ 交互 → 动作规格原样出栈（非导航动作 to 为空串）
+  // 注：op 语法经 split_cmd 剥引号，动作规格为 show_toast:hi
+  assert_true(
+    r4.contains(
+      "\"to\":\"\",\"trigger\":\"tap\",\"action\":\"show_toast:hi\",\"node\":\"btn\"",
+    ),
+    msg=r4,
+  )
+  let _ = session_close(h)
+}
+
+///|
+test "契约：collect_actions——未知画板空集合 envelope / 非法句柄零崩（Smart UX M-S2）" {
+  let h = session_open(SEED)
+  // 未知画板：空集合 envelope（红线：空集合一律合法 JSON，不是 error）
+  let r1 = collect_actions(h, "nope")
+  assert_true(r1 == "{\"ok\":true,\"data\":[]}", msg=r1)
+  let _ = session_close(h)
+  // 非法/已关句柄：invalid_session_handle（#4A）
+  assert_true(collect_actions(-1, "w").contains("invalid_session_handle"))
+  assert_true(collect_actions(h, "w").contains("invalid_session_handle"))
+}
