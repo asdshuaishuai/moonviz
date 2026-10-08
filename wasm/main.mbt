@@ -524,6 +524,58 @@ pub fn session_set_data(handle : Int, json : String) -> String {
 }
 
 ///|
+/// Smart UX M-S2：读回会话当前数据树（表单回写的取值侧）。按 #4C 只读
+/// 约定走 {ok:true,data:…} 信封；未注入数据 data={}（空对象 envelope），
+/// 非法句柄按 #4A 返回 invalid_session_handle——零崩，宿主零特判。
+pub fn collect_data(handle : Int) -> String {
+  sess_json(handle, fn(p) { Ok(p.collect_data_json()) })
+}
+
+///|
+/// Smart UX M-S2：表单双向闭环的写入侧——输入型组件
+/// （text_input/textarea/search_bar）的 commit/input 事件回写：
+/// - 节点 text 为单一 {{path}} 绑定 → 写穿会话数据树（缺失中间对象
+///   逐段创建；冲突整体拒绝），collect_data 可读回；
+/// - 无绑定 → value 写入节点 text 字面量（文档变更）。
+/// 成功信封回传 canonical mbt（#19 闭环，与 session_tap 同要求——
+/// 字面量分支写穿会话文档）。
+pub fn dispatch_event(
+  handle : Int,
+  artboard : String,
+  node_id : String,
+  event : String,
+  value : String,
+) -> String {
+  match session_get(handle) {
+    None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+    Some(p) =>
+      match p.dispatch_event(artboard~, node_id~, event~, value~) {
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+        Ok(inner) => sess_mut_ok(p, inner)
+      }
+  }
+}
+
+///|
+/// dispatch_event 的槽变体：辅槽承载复合命令
+/// `<artboard> <node> <event> <value>`（与 op 语法同一 split_cmd/转义
+/// 规则，value 含空格用双引号包裹）。classic 宿主无法直传 String 参数，
+/// 一律走此入口（docs/wasm-abi.md §5）。
+pub fn dispatch_event_in(handle : Int) -> String {
+  let parts = @core.split_cmd(slot_string(g_arg_bytes))
+  if parts.length() != 4 {
+    return "{\"ok\":false,\"error\":\"data_dispatch_usage: <artboard> <node> <event> <value>\"}"
+  }
+  dispatch_event(
+    handle,
+    parts[0],
+    parts[1],
+    parts[2],
+    @core.unescape_value(parts[3]),
+  )
+}
+
+///|
 /// Smart UX M-S1：无状态「源码 + 数据 → 渲染」。数据不入 canonical——
 /// 宿主按需注入（同一 .mbt.md 可换多份数据渲染，活界面的最小编译面）。
 pub fn render_mbt_with_data(mbt : String, json : String) -> String {

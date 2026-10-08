@@ -79,6 +79,15 @@ home image info link list lock mail maximize menu mic minimize minus moon
 more-horizontal pin play plus refresh save search search-x send settings share
 star sun tag trash upload user volume wifi
 
+Form loop (Smart UX, wasm host API): bind an input component to data with
+`update <ab> <node> text={{path}}` (text_input/textarea/search_bar), then
+`dispatch_event(handle, ab, node, commit|input, value)` writes the submitted
+value back — `{{path}}`-bound inputs update the session data tree (missing
+intermediate objects are created; scalar/array conflicts are rejected
+whole), plain-text inputs update the node literal. `collect_data(handle)`
+returns the current data tree (`{"ok":true,"data":{…}}`, `{}` when never
+seeded) so hosts read form values back; the next render reflects them.
+
 Multi-agent / versioning / animation / testing:
 `collab-merge <base_rev> <agent>=<op>[+op...]`（OT 三方合并；op: insert/delete/
 move/fill/radius/font/text/pos/size/gap）· `history init|commit|log|undo|redo|

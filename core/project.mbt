@@ -201,6 +201,78 @@ pub fn Project::set_data_json(self : Project, json : String) -> Result[Int, Stri
 }
 
 ///|
+/// Smart UX M-S2：当前数据树 → JSON（collect_data 导出的宿主读面，
+/// 表单回写的取值侧）。从未注入数据（DNull）输出 {}——空集合 envelope
+/// 一律合法 JSON（与 schema_json 同红线）；键按码元字典序，逐字节确定。
+pub fn Project::collect_data_json(self : Project) -> String {
+  match self.data {
+    DNull => "{}"
+    v => data_to_json(v)
+  }
+}
+
+///|
+/// Smart UX M-S2：输入型组件的表单回写（dispatch_event 的核心语义）。
+///
+/// - event ∈ commit|input（其余 data_dispatch_unknown_event 整体拒绝）；
+/// - 组件须为输入型（text_input/textarea/search_bar），否则
+///   data_dispatch_not_input 拒绝——表单回写不碰装饰节点；
+/// - 节点 text 是单一绑定 "{{path}}" → 写穿 project.data 的该路径
+///   （缺失中间对象逐段创建，冲突标量/越界数组 data_path_conflict
+///   整体拒绝，不部分应用）；运行时态，revision 不前进；
+/// - 否则 → value 写入节点 text 字面量（文档变更，revision 前进）。
+///
+/// Ok 返回内层 JSON 信封（target: data|text + 诊断字段），wasm 层负责
+/// 拼 canonical mbt（#19 闭环）。
+pub fn Project::dispatch_event(
+  self : Project,
+  artboard~ : String,
+  node_id~ : String,
+  event~ : String,
+  value~ : String,
+) -> Result[String, String] {
+  if event != "commit" && event != "input" {
+    return Err("data_dispatch_unknown_event: \{event}（commit | input）")
+  }
+  match self.artboards.get(artboard) {
+    None => Err("unknown_artboard: \{artboard}")
+    Some(ab) =>
+      match ab.doc.nodes.get(node_id) {
+        None => Err("unknown_node: \{node_id}")
+        Some(n) => {
+          let comp = n.component
+          if comp != "text_input" && comp != "textarea" && comp != "search_bar" {
+            return Err("data_dispatch_not_input: \{node_id}(\{comp})")
+          }
+          match binding_path(n.text) {
+            Some(path) =>
+              match data_set_path(self.data, path, value) {
+                Err(e) => Err(e)
+                // DNull 起根时返回新根——必须写回，否则落值进了孤儿对象
+                Ok(new_root) => {
+                  self.data = new_root
+                  Ok(
+                    "{\"ok\":true,\"op\":\"dispatch-event\",\"event\":\"\{event}\",\"node\":\"\{node_id}\",\"target\":\"data\",\"path\":\"\{json_escape(path)}\"}",
+                  )
+                }
+              }
+            None => {
+              // 无绑定：字面量回写（与 update text 同一文档变更语义）
+              let _ = ab.doc.update_node(node_id, fn(x) {
+                { ..x, text: value }
+              })
+              self.revision = self.revision + 1
+              Ok(
+                "{\"ok\":true,\"op\":\"dispatch-event\",\"event\":\"\{event}\",\"node\":\"\{node_id}\",\"target\":\"text\"}",
+              )
+            }
+          }
+        }
+      }
+  }
+}
+
+///|
 /// Smart UX M-S1：声明数据契约——k=v 对（schema op 路径）。
 /// 类型词汇 string|number|boolean；任一非法整体拒绝（不部分应用），
 /// 全合法才替换现有 schema；返回字段数（诊断用）。

@@ -64,7 +64,7 @@ let ptr = render_mbt_in();
 let json = read_moonstr(ptr);   // §2 判别式读取
 ```
 
-带 `_in` 后缀的入口（当前 25 个，与 `scripts/check-wasm-abi.mjs` 的
+带 `_in` 后缀的入口（当前 27 个，与 `scripts/check-wasm-abi.mjs` 的
 required 清单同步维护）：`render_mbt_in validate_mbt_in
 export_html_in apply_agent_op_in apply_human_op_in session_open_in
 session_apply_agent_in session_apply_human_in session_export_svg_in
@@ -74,7 +74,13 @@ session_infer_page_type_in session_infer_missing_in
 session_extract_design_system_in session_generate_responsive_in
 session_component_compile_b64_in session_constrain_in session_tap_in
 session_critique_in session_auto_fix_in session_open_project_json_in
-session_history_in`。
+session_history_in dispatch_event_in`。
+
+多文本参数的复合打包：参数个数超过可用槽位时，辅槽承载一条复合命令，
+按引擎 op 语法（`split_cmd` + 转义还原）切分——`dispatch_event_in` 即此
+形态，辅槽格式 `<artboard> <node> <event> <value>`（value 含空格用双引号
+包裹）。无文本参数的入口不设 `_in` 变体（`collect_data`/`data_schema`
+只有句柄一个 i32 参数，classic 宿主可直传）。
 
 ## 6. 防漂移
 

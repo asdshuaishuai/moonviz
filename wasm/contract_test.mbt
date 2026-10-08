@@ -708,3 +708,138 @@ test "契约：collect_actions——未知画板空集合 envelope / 非法句�
   assert_true(collect_actions(-1, "w").contains("invalid_session_handle"))
   assert_true(collect_actions(h, "w").contains("invalid_session_handle"))
 }
+
+///|
+test "契约：dispatch_event × collect_data——输入提交 → 数据回读 → 再渲染（双向闭环，Smart UX M-S2）" {
+  let h = session_open(SEED)
+  // 输入组件绑定到数据路径
+  let r0 = session_apply_agent(h, "place w text_input email - 20 100 280 44")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  let r1 = session_apply_human(h, "update w email text={{user.email}}")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  let _ = session_set_data(h, "{\"user\":{\"email\":\"a@b.c\"}}")
+  let svg0 = session_export_svg(h, "w")
+  assert_true(svg0.contains("a@b.c"), msg="初值应渲染: " + svg0)
+  // 输入提交：写回数据路径
+  let rd = dispatch_event(h, "w", "email", "commit", "new@mail")
+  assert_true(
+    rd.contains("\"ok\":true") && rd.contains("\"target\":\"data\""),
+    msg=rd,
+  )
+  // collect_data 反映新值
+  let cd = collect_data(h)
+  assert_true(cd.contains("new@mail"), msg="collect_data 应反映新值: " + cd)
+  assert_false(cd.contains("a@b.c"), msg="旧值应被覆盖: " + cd)
+  // 再渲染 UI 显示新值（双向闭环闭合）
+  let svg1 = session_export_svg(h, "w")
+  assert_true(svg1.contains("new@mail"), msg="再渲染应显示新值: " + svg1)
+  assert_false(svg1.contains("a@b.c"), msg="旧值不应残留: " + svg1)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：dispatch_event 写穿——未播种路径创建中间对象（Smart UX M-S2，选型锁定）" {
+  let h = session_open(SEED)
+  let r0 = session_apply_agent(h, "place w search_bar q - 20 160 280 38")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  let _ = session_apply_human(h, "update w q text={{profile.query}}")
+  // 数据树从未注入（DNull）：读面为空对象 envelope
+  let cd0 = collect_data(h)
+  assert_true(cd0 == "{\"ok\":true,\"data\":{}}", msg=cd0)
+  // 提交即写穿播种：DNull 起根 + 逐段创建中间对象（不报 data_path_missing）
+  let rd = dispatch_event(h, "w", "q", "commit", "moonbit")
+  assert_true(rd.contains("\"ok\":true"), msg=rd)
+  let cd = collect_data(h)
+  assert_true(
+    cd.contains("\"profile\":{\"query\":\"moonbit\"}"),
+    msg="写穿应创建中间对象: " + cd,
+  )
+  // 渲染侧绑定命中新值
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("moonbit"), msg="写穿后渲染应显示新值: " + svg)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：dispatch_event 字面量回写 + 门卫拒绝（Smart UX M-S2）" {
+  let h = session_open(SEED)
+  // 无绑定输入：commit/input 更新节点 text 字面量（文档变更）
+  let r0 = session_apply_agent(h, "place w textarea note - 20 220 280 60")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  let rd = dispatch_event(h, "w", "note", "input", "hello world")
+  assert_true(
+    rd.contains("\"ok\":true") && rd.contains("\"target\":\"text\""),
+    msg=rd,
+  )
+  let q = session_query_nodes(h, "w")
+  assert_true(q.contains("hello world"), msg="字面量应写入节点: " + q)
+  // 非输入型组件拒绝（表单回写不碰装饰节点）
+  let rb = dispatch_event(h, "w", "btn", "commit", "x")
+  assert_true(
+    rb.contains("\"ok\":false") && rb.contains("data_dispatch_not_input"),
+    msg=rb,
+  )
+  // 未知事件拒绝
+  let re = dispatch_event(h, "w", "note", "swipe", "x")
+  assert_true(re.contains("data_dispatch_unknown_event"), msg=re)
+  // 未知节点 / 画板
+  assert_true(dispatch_event(h, "w", "nope", "commit", "x").contains("unknown_node"))
+  assert_true(dispatch_event(h, "nope", "note", "commit", "x").contains("unknown_artboard"))
+  // 非法句柄零崩（#4A）
+  assert_true(dispatch_event(-1, "w", "note", "commit", "x").contains("invalid_session_handle"))
+  assert_true(collect_data(-1).contains("invalid_session_handle"))
+  let _ = session_close(h)
+}
+
+///|
+test "契约：dispatch_event 末段数组段整体拒绝——成功信封不撒谎（评审 Finding 1 回归锚）" {
+  let h = session_open(SEED)
+  let r0 = session_apply_agent(h, "place w text_input it - 20 360 280 44")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  let _ = session_apply_human(h, "update w it text={{items.0}}")
+  let _ = session_set_data(h, "{\"items\":[\"old\"]}")
+  // 末段数组段：ok:false 拒绝（修复前为 ok:true 但数据树未变——假成功）
+  let r = dispatch_event(h, "w", "it", "commit", "replaced")
+  assert_true(
+    r.contains("\"ok\":false") && r.contains("data_path_conflict"),
+    msg=r,
+  )
+  // 数据树保持旧值：collect_data 读不到提交值
+  let cd = collect_data(h)
+  assert_true(cd.contains("old"), msg=cd)
+  assert_false(cd.contains("replaced"), msg=cd)
+  // 渲染同样保持旧值（双向闭环任一侧都不出现假成功）
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("old"), msg=svg)
+  assert_false(svg.contains("replaced"), msg=svg)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：dispatch_event_in 复合槽与直传等价（classic 写路径，Smart UX M-S2）" {
+  let h = session_open(SEED)
+  let r0 = session_apply_agent(h, "place w text_input t2 - 20 300 280 44")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  let _ = session_apply_human(h, "update w t2 text={{form.name}}")
+  // 辅槽压复合命令（ASCII 用例；UTF-8 分块与既有槽测试同协议）
+  arg_reset()
+  let cmd = "w t2 commit zhang-san"
+  for c in cmd.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+  let r = dispatch_event_in(h)
+  assert_true(r.contains("\"ok\":true"), msg=r)
+  let cd = collect_data(h)
+  assert_true(cd.contains("zhang-san"), msg="槽路径应写穿数据树: " + cd)
+  arg_reset()
+  // 槽内容畸形：arg 不足四段 → usage 错误信封（合法 JSON，不崩）
+  arg_reset()
+  let bad = "w t2 commit"
+  for c in bad.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+  let rb = dispatch_event_in(h)
+  assert_true(rb.contains("data_dispatch_usage"), msg=rb)
+  arg_reset()
+  let _ = session_close(h)
+}

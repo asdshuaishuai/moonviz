@@ -520,6 +520,192 @@ pub fn DataSchema::to_json(self : DataSchema) -> String {
 }
 
 ///|
+/// 数据值 → JSON（collect_data_json 用）。键按码元字典序输出（与
+/// DataSchema::to_json 同一确定性约定，宿主可逐字节 diff）；字符串经
+/// json_escape，非 ASCII 原样保留。
+pub fn data_to_json(v : DataValue) -> String {
+  match v {
+    DNull => "null"
+    DBool(true) => "true"
+    DBool(false) => "false"
+    DNum(n) =>
+      if n == n.floor() && n.abs() < 1000000000000000.0 {
+        n.to_int().to_string()
+      } else {
+        n.to_string()
+      }
+    DStr(s) => "\"\{json_escape(s)}\""
+    DArr(a) => {
+      let parts : Array[String] = []
+      for item in a.iter() {
+        parts.push(data_to_json(item))
+      }
+      "[\{parts.join(",")}]"
+    }
+    DObj(m) => {
+      let keys : Array[String] = []
+      for k in m.keys() {
+        keys.push(k)
+      }
+      data_schema_sort_keys(keys)
+      let parts : Array[String] = []
+      for k in keys {
+        match m.get(k) {
+          Some(v) => parts.push("\"\{json_escape(k)}\":\{data_to_json(v)}")
+          None => ()
+        }
+      }
+      "{\{parts.join(",")}}"
+    }
+  }
+}
+
+///|
+/// 点路径写穿（Smart UX M-S2 表单回写）：把字符串值写到 root 的 path 处，
+/// 返回（可能新建的）根——root 为 DNull（从未注入数据）时以空对象起根，
+/// 调用方必须把返回值写回（Project::dispatch_event 负责赋回 self.data）。
+///
+/// 语义（SMART-UX-1.0 支柱 B 最小闭环，契约测试锁定）：
+/// - 路径不存在 → 逐段创建中间 DObj（写穿播种——表单绑定常指向尚未
+///   喂数据的占位路径，提交即落值，不报错）；
+/// - 根为 DNull（从未注入数据）→ 以空对象起根；显式 null 值仍按标量
+///   冲突拒绝（不静默改写设计者的 null）；
+/// - 中途遇标量/越界数组段 → data_path_conflict 整体拒绝（不部分应用，
+///   与 set_data_json 的整体语义一致）；
+/// - 路径末段为数组段（{{items.0}}）→ data_path_conflict 整体拒绝：
+///   数组只作导航（items.0.title 可写既有元素内的键），元素本身不作
+///   写入落点——评审修复的假成功信封缺口（验证遍放行、落地遍只导航
+///   不写值却返回 Ok）在验证遍即拦下，杜绝任何静默无写入的 Ok；
+/// - 空路径 → data_path_empty。
+/// 原地突变 DObj 内 Map（data 与 artboards 同为引用随行语义，见
+/// Project::clone 注释）；验证遍先整体把关，通过才触碰 Map，无半写状态。
+pub fn data_set_path(
+  root : DataValue,
+  path : String,
+  value : String,
+) -> Result[DataValue, String] {
+  if path.length() == 0 {
+    return Err("data_path_empty")
+  }
+  let base : DataValue = match root {
+    DNull => DObj(Map::new())
+    v => v
+  }
+  // 第一遍：验证全路径可写（缺键可建；标量/越界/末段数组段冲突）
+  let segs : Array[String] = []
+  for seg in path.split(".") {
+    segs.push(seg.to_string())
+  }
+  let mut cur = base
+  let n = segs.length()
+  for i in 0..<n {
+    let seg = segs[i].to_string()
+    let last = i == n - 1
+    match cur {
+      DObj(m) =>
+        match m.get(seg) {
+          Some(v) => cur = v
+          None => cur = DObj(Map::new()) // 将创建：占位继续验证
+        }
+      DArr(a) => {
+        // 末段数组段：无写入落点，整体拒绝（防假成功信封，评审 Finding 1）
+        if last {
+          return Err("data_path_conflict: \{seg}（末段数组元素不作写入落点）")
+        }
+        let idx = data_arr_index(seg)
+        match idx {
+          Some(ix) =>
+            if ix < a.length() {
+              cur = a[ix]
+            } else {
+              return Err("data_path_conflict: \{seg}（数组不越界创建）")
+            }
+          None => return Err("data_path_conflict: \{seg}（数组段须为数字）")
+        }
+      }
+      _ => return Err("data_path_conflict: \{seg}（标量不可再深入）")
+    }
+  }
+  // 第二遍：逐段落地（缺键建 DObj，末段写 DStr）；数组段仅导航——
+  // 末段数组段已在验证遍拒绝，此处遇 DArr 必为非末段
+  let mut cur2 = base
+  for i in 0..<n {
+    let seg = segs[i].to_string()
+    let last = i == n - 1
+    match cur2 {
+      DObj(m) =>
+        if last {
+          m.set(seg, DStr(value))
+        } else {
+          match m.get(seg) {
+            Some(v) => cur2 = v
+            None => {
+              let child : Map[String, DataValue] = Map::new()
+              m.set(seg, DObj(child))
+              cur2 = DObj(child)
+            }
+          }
+        }
+      DArr(a) => {
+        // 验证遍已保证索引合法且非末段
+        let ix = match data_arr_index(seg) {
+          Some(x) => x
+          None => return Err("data_path_conflict: \{seg}")
+        }
+        cur2 = a[ix]
+      }
+      _ => return Err("data_path_conflict: \{seg}")
+    }
+  }
+  Ok(base)
+}
+
+///|
+/// 数组段 → 非负十进制索引（与 data_lookup 同规则）；非法返回 None。
+fn data_arr_index(seg : String) -> Int? {
+  let mut idx = 0
+  let mut ok = seg.length() > 0
+  let mut i = 0
+  while i < seg.length() {
+    match seg.get_char(i) {
+      Some(ch) if ch >= '0' && ch <= '9' => {
+        idx = idx * 10 + (ch.to_int() - 48)
+        i = i + 1
+      }
+      _ => {
+        ok = false
+        i = seg.length()
+      }
+    }
+  }
+  if ok {
+    Some(idx)
+  } else {
+    None
+  }
+}
+
+///|
+/// 节点 text 是否为单一绑定 "{{path}}"（整段恰为一个占位）：是则返回
+/// 路径。与 resolve_bindings 的取段规则对称——占位内文本原样作路径。
+pub fn binding_path(text : String) -> String? {
+  let n = text.length()
+  if n < 5 {
+    return None // 最短 "{{a}}"
+  }
+  if text.substring(start=0, end=2) != "{{" ||
+    text.substring(start=n - 2, end=n) != "}}" {
+    return None
+  }
+  let inner = text.substring(start=2, end=n - 2).to_string()
+  // 内嵌 "{{"/"}}"：不是单一干净绑定，按字面量处理
+  if inner.contains("{{") || inner.contains("}}") {
+    return None
+  }
+  Some(inner)
+}
+
+///|
 /// 绑定解析：把 text 里的 `{{path}}` 替换为数据值显示串；
 /// 未命中的占位保留字面（诚实占位：设计者一眼看到哪个绑定没喂数据），永不崩。
 pub fn resolve_bindings(text : String, data : DataValue) -> String {
