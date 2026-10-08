@@ -460,6 +460,54 @@ test "契约：icon 字段进 canonical 文本（1.0 R2 图标系统往返）" {
 }
 
 ///|
+test "契约：icon 未知名 fail-fast——AgentGate 拒 / HumanGate 视觉债放行（1.0 R2）" {
+  let h = session_open(SEED)
+  // 拼错名：AgentGate 硬拒（fail-fast，不静默无图标），错误携带谓词与节点
+  let ra = session_apply_agent(h, "update w btn icon=usr")
+  assert_true(
+    ra.contains("mbt_gate_block:w:icon_valid:btn"),
+    msg="拼错图标名应被 AgentGate 拒: " + ra,
+  )
+  // 拒绝即整体不落库：坏名不得进节点
+  let q0 = session_query_nodes(h, "w")
+  assert_false(q0.contains("usr"), msg="被拒后坏名不得落库: " + q0)
+  // HumanGate：视觉债放行（debt ≥ 1），坏名进 canonical（人类保留决定权）
+  let rh = session_apply_human(h, "update w btn icon=usr")
+  assert_true(rh.contains("\"ok\":true"), msg="HumanGate 应以视觉债放行: " + rh)
+  assert_true(rh.contains("usr"), msg="放行后 canonical 应携带坏名: " + rh)
+  // 渲染不崩：svg 层对未知名静默跳过
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("\"ok\":true"), msg="未知图标渲染不崩: " + svg)
+  // 正名仍过 AgentGate（无误伤），并清除坏名
+  let rok = session_apply_agent(h, "update w btn icon=user")
+  assert_true(rok.contains("\"ok\":true"), msg="合法图标名应过 AgentGate: " + rok)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：icon 未知名走 doc_load 解析路径同样计违规、不 abort（1.0 R2）" {
+  // canonical 直接携带拼错名：解析层放行（不 abort），门层 fail-fast
+  let seed_bad = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\", icon=\"usr\"))\n  page\n}\n```\n"
+  let h = session_open(seed_bad)
+  assert_true(h >= 0, msg="携带坏图标名的文档应可解析（不 abort）")
+  // 同一文档上任意 agent op 都被门拒——违规来自 doc_load 解析出的节点
+  let r = session_apply_agent(h, "update w btn text=hi")
+  assert_true(
+    r.contains("mbt_gate_block:w:icon_valid:btn"),
+    msg="doc_load 路径的坏名应计违规: " + r,
+  )
+  // 渲染层静默跳过，不崩
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("\"ok\":true"), msg="坏名文档渲染不崩: " + svg)
+  // HumanGate 修正名后恢复正常过门
+  let rf = session_apply_human(h, "update w btn icon=mail")
+  assert_true(rf.contains("\"ok\":true"), msg="HumanGate 应放行修正: " + rf)
+  let r2 = session_apply_agent(h, "update w btn text=hi")
+  assert_true(r2.contains("\"ok\":true"), msg="修正后 agent op 应过门: " + r2)
+  let _ = session_close(h)
+}
+
+///|
 test "契约：fit 自适应字号——溢出缩小渲染 + canonical 往返（1.0 R1）" {
   let h = session_open(SEED)
   let r1 = session_apply_agent(h, "place w body_text fit_txt - 20 20 80 30")

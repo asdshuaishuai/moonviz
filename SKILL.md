@@ -67,7 +67,11 @@ placeholder glyph. The URL lives in the node's `text` field and round-trips thro
 
 Icons: `update <ab> <node> icon=<name>` renders a builtin mono-stroke icon
 (24x24 grid, stroke 2, round cap/join, tinted by the node's text color) centered
-in the node box; `icon=""` clears it. Registry (`icon_names()`, 60 names):
+in the node box; `icon=""` clears it. The name must be one of the registry names
+below — a misspelled name is a gate violation (fail-fast, not silent no-icon):
+agent ops are rejected (`mbt_gate_block:<ab>:icon_valid:<node>`), the human path
+counts it as visual debt, and SVG render skips it without crashing until fixed.
+Registry (`icon_names()`, 60 names):
 arrow-down arrow-left arrow-right arrow-up battery bell bluetooth calendar
 camera check chevron-down chevron-left chevron-right chevron-up clock close
 code copy download edit external-link eye file filter folder globe grid heart

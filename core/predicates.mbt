@@ -12,6 +12,7 @@ pub(all) enum Predicate {
   ContainedInParent // 视觉：栈布局容器的子节点不超出内容盒
   NoSiblingOverlap // 视觉：栈布局容器的兄弟节点两两不重叠
   ConstraintSolvable // 视觉：约束系统有解（求解失败 = 无解）
+  IconValid // 视觉：icon 名必须在内置库内（RENDER-1.0 §7.3 引用失效 fail-fast）
 }
 
 ///|
@@ -22,6 +23,7 @@ pub fn Predicate::name(self : Predicate) -> String {
     ContainedInParent => "contained_in_parent"
     NoSiblingOverlap => "no_sibling_overlap"
     ConstraintSolvable => "constraint_solvable"
+    IconValid => "icon_valid"
   }
 }
 
@@ -30,6 +32,9 @@ pub fn Predicate::is_structural(self : Predicate) -> Bool {
   match self {
     TreeValid => true
     SizeValid => true
+    // IconValid 走双门视觉语义：AgentGate 拒（fail-fast，不静默无图标），
+    // HumanGate 计视觉债放行（渲染层 svg.mbt 对未知名静默跳过，不崩）。
+    IconValid => false
     _ => false
   }
 }
@@ -42,7 +47,7 @@ pub(all) struct Violation {
 }
 
 ///|
-/// 全量校验：结构 + 尺寸 + 视觉 + 可解性
+/// 全量校验：结构 + 尺寸 + 视觉 + 可解性 + 图标引用
 pub fn validate(doc : Document) -> Array[Violation] {
   let out : Array[Violation] = Array::new()
   append_violations(out, check_tree_valid(doc))
@@ -50,6 +55,9 @@ pub fn validate(doc : Document) -> Array[Violation] {
   append_violations(out, check_size_valid(layout))
   append_violations(out, check_visual_frames(doc, layout))
   append_violations(out, check_solvable(doc, layout))
+  // 图标引用检查放最后：既有门错误取 blocking[0]，追加在尾部不改变
+  // 无图标文档的既有报告顺序
+  append_violations(out, check_icon_refs(doc))
   out
 }
 
@@ -281,6 +289,33 @@ fn check_solvable(doc : Document, layout : SolvedLayout) -> Array[Violation] {
           node_id: id,
           detail: "尺寸规格在当前求解器下无定义",
         })
+    }
+  }
+  out
+}
+
+///|
+/// P5：图标引用有效（RENDER-1.0 §7.3「引用失效」）。icon 非空时必须是
+/// 内置库已知名——拼错名记违规（不静默无图标）：update 的 icon= 键与
+/// canonical/doc_load 的 icon 解析路径都汇聚到 style.icon，本纯函数检查
+/// 对两条路径同效；渲染层（svg.mbt）对未知名静默跳过保持不崩。
+fn check_icon_refs(doc : Document) -> Array[Violation] {
+  let out : Array[Violation] = Array::new()
+  for id in doc.nodes.keys() {
+    match doc.nodes.get(id) {
+      Some(n) =>
+        if n.style.icon != "" {
+          match icon_path(n.style.icon) {
+            None =>
+              out.push({
+                predicate: IconValid,
+                node_id: id,
+                detail: "未知图标名 \"\{n.style.icon}\"（不在 icon_names() 清单内）",
+              })
+            Some(_) => ()
+          }
+        }
+      None => ()
     }
   }
   out
