@@ -509,6 +509,35 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
 }
 
 ///|
+/// Smart UX M-S1：注入数据树（{{绑定}} 取值来源）。运行时态：
+/// 随会话存续（clone/replace_with 随行），不入 canonical。根必须是 JSON 对象。
+pub fn session_set_data(handle : Int, json : String) -> String {
+  match session_get(handle) {
+    None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+    Some(p) =>
+      match p.set_data_json(json) {
+        Ok(keys) =>
+          "{\"ok\":true,\"op\":\"set-data\",\"keys\":\{keys}}"
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+      }
+  }
+}
+
+///|
+/// Smart UX M-S1：无状态「源码 + 数据 → 渲染」。数据不入 canonical——
+/// 宿主按需注入（同一 .mbt.md 可换多份数据渲染，活界面的最小编译面）。
+pub fn render_mbt_with_data(mbt : String, json : String) -> String {
+  match @decl.load_mbt_project(mbt) {
+    Err(error) => "{\"ok\":false,\"error\":\"\{@core.json_escape(error)}\"}"
+    Ok(model) =>
+      match model.project.set_data_json(json) {
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+        Ok(_) => model.render_json()
+      }
+  }
+}
+
+///|
 /// 画板级 SVG 导出（含主题 surface/outline）。
 pub fn session_export_svg(handle : Int, artboard : String) -> String {
   sess_json(handle, fn(p) {

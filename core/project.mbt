@@ -34,6 +34,9 @@ pub(all) struct Project {
   /// 决定渲染层画布底色等 tokens 派生视觉。节点 fill 已是字面量，
   /// 由 apply_theme 的角色重着色负责，加载路径只恢复 tokens 不再重着色。
   mut active_theme : String
+  /// Smart UX M-S1：运行期注入的数据树（{{绑定}} 的取值来源）。
+  /// 运行时态，不入 canonical——零兼容风险；clone/replace_with 随行。
+  mut data : DataValue
 }
 
 ///|
@@ -48,6 +51,7 @@ pub fn Project::new() -> Project {
     revision: 1,
     active_theme: "light",
     token_overrides: None,
+    data: DNull,
   }
 }
 
@@ -145,6 +149,9 @@ pub fn Project::clone(self : Project) -> Project {
     }
     None => copy.token_overrides = None
   }
+  // Smart UX：数据树随快照（引用赋值，与 artboards 同模式）——会话
+  // clone→ops→replace_with 流中注入的数据不丢失。
+  copy.data = self.data
   copy
 }
 
@@ -165,6 +172,24 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.revision = source.revision
   self.active_theme = source.active_theme
   self.token_overrides = source.token_overrides
+  self.data = source.data
+}
+
+///|
+/// Smart UX M-S1：注入数据树（{{绑定}} 取值来源）。JSON 非法整体拒绝
+/// （不部分应用）；根必须是对象；返回顶层键数（诊断用）。
+pub fn Project::set_data_json(self : Project, json : String) -> Result[Int, String] {
+  match parse_data_json(json) {
+    Err(e) => Err(e)
+    Ok(v) =>
+      match v {
+        DObj(m) => {
+          self.data = v
+          Ok(m.length())
+        }
+        _ => Err("data_root_must_be_object")
+      }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -849,6 +874,7 @@ pub fn Project::export_svg(
           ab.doc,
           surface=self.tokens.resolve_color("surface"),
           frame=self.tokens.resolve_color("outline"),
+          data=self.data,
         ),
       )
   }

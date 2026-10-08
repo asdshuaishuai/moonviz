@@ -844,6 +844,20 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "data" =>
+      // Smart UX M-S1：data <json…>——注入数据树（{{绑定}} 取值来源）。
+      // JSON 含空格：取原始行首命令之后的整段（不经空格切分）。
+      match line.find(" ") {
+        None => cli_err("mbt_operation_usage:data {\\\"key\\\":value,…}")
+        Some(sp) => {
+          let json = line.substring(start=sp + 1).trim().to_string()
+          match p.set_data_json(json) {
+            Ok(keys) =>
+              "{\"ok\":true,\"op\":\"set-data\",\"keys\":\{keys}}"
+            Err(e) => cli_err(e)
+          }
+        }
+      }
     "delete-artboard" =>
       if parts.length() < 2 {
         cli_err("usage: delete-artboard <artboard>")
@@ -1280,6 +1294,7 @@ fn cli_help() -> String {
   "  ungroup <ab> <group_id>               Ungroup\n" +
   "  align <ab> <mode> <n1> <n2> ...       mode: left|right|top|bottom|hcenter|vcenter\n" +
   "  resize-canvas <ab> <w> <h>            Resize + reflow by constraints\n" +
+  "  data <json>                           Inject runtime data for {{bindings}} (Smart UX)\n" +
   "  responsive <ab>                       Generate _tablet/_desktop variants\n" +
   "  restyle <ab> <component_id> k=v ...   Propagate to component instances\n" +
   "  duplicate <ab> <new_name>             Duplicate artboard\n" +

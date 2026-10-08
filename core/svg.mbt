@@ -13,6 +13,7 @@ pub fn render_svg(
   doc : Document,
   surface? : String = "#F6F7F9",
   frame? : String = "#C9CFDA",
+  data? : DataValue = DNull,
 ) -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
@@ -40,7 +41,7 @@ pub fn render_svg(
   )
   // SVG viewBox 自带裁剪（root rect 与 viewBox 同尺寸），不再用 clipPath 包裹：
   // WebKit 对 clip-path 组内元素的 hit-test 会整体失效，原型交互点击会穿透。
-  render_node(sb, doc, doc.root_id, layout, surface~, frame~)
+  render_node(sb, doc, doc.root_id, layout, surface~, frame~, data~)
   sb.write_string("</svg>")
   sb.to_string()
 }
@@ -53,6 +54,7 @@ fn render_node(
   layout : SolvedLayout,
   surface~ : String,
   frame~ : String,
+  data~ : DataValue,
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
@@ -65,7 +67,7 @@ fn render_node(
           // 每个节点包一层 <g id>：编辑器据此把 DOM 元素与场景图节点关联
           sb.write_string("<g id=\"n_\{id}\" data-kind=\"\{svg_kind_of(n)}\">")
           match n.kind {
-            Text => render_text_node(sb, n, r)
+            Text => render_text_node(sb, n, r, data~)
             Image => {
               // text 承载 src：http(s)/data URL → 真 <image>（圆角裁剪）；
               // 空/非 URL → 占位渲染（浅灰底 + 山形/太阳图标）
@@ -174,9 +176,11 @@ fn render_node(
               // 带文字的形状（按钮 / 输入框占位符）：默认水平垂直居中，
               // align=left/right 时改为左/右对齐到内边距；font_fit 同样生效
               if n.text != "" {
+                // Smart UX M-S1：rect 载字（按钮/输入框标签）同样解析 {{绑定}}
+                let text2 = resolve_bindings(n.text, data)
                 let fs2 = if n.style.font_fit == "auto" || n.style.font_fit == "shrink" {
                   fit_font_size(
-                    n.text,
+                    text2,
                     n.style.font_size,
                     r.width - 24.0,
                     r.height,
@@ -200,13 +204,13 @@ fn render_node(
                   sb.write_string(" font-style=\"italic\"")
                 }
                 sb.write_string(
-                  " fill=\"\{n.style.text_color}\">\{xml_escape(n.text)}</text>",
+                  " fill=\"\{n.style.text_color}\">\{xml_escape(text2)}</text>",
                 )
               }
             }
           }
           for cid in n.children.iter() {
-            render_node(sb, doc, cid, layout, surface~, frame~)
+            render_node(sb, doc, cid, layout, surface~, frame~, data~)
           }
           sb.write_string("</g>")
         }
@@ -274,11 +278,18 @@ fn fit_font_size(
 }
 
 ///|
-fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
+fn render_text_node(
+  sb : StringBuilder,
+  n : Node,
+  r : Rect,
+  data~ : DataValue,
+) -> Unit {
+  // Smart UX M-S1：{{绑定}} 在测量/换行之前解析——fit 与换行都基于显示文本
+  let text = resolve_bindings(n.text, data)
   // 1.0 R1：自适应字号（font_fit 开启时）+ 宽度感知换行
   let fs = if n.style.font_fit == "auto" || n.style.font_fit == "shrink" {
     fit_font_size(
-      n.text,
+      text,
       n.style.font_size,
       r.width,
       r.height,
@@ -288,7 +299,7 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
   } else {
     n.style.font_size
   }
-  let lines = wrap_text_lines(n.text, fs, r.width)
+  let lines = wrap_text_lines(text, fs, r.width)
   let lh = fs * n.style.line_height
   // 单行文本在高于字号的矩形内垂直居中（按钮/输入框标签的标准形态，
   // 修 login-demo「按钮文字贴顶」证据）；多行保持顶部排版流

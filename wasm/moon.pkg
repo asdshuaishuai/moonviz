@@ -137,6 +137,8 @@ options(
         "session_auto_fix",
         "session_benchmark",
         "session_close",
+        "session_set_data",
+        "render_mbt_with_data",
         "session_count",
         "session_open_project_json",
         "session_component_compile_b64",

@@ -471,6 +471,24 @@ pub fn apply_operation(
           Err(error) => Err(error)
         }
       }
+    "data" =>
+      // Smart UX M-S1：data <json…>——注入数据树（{{绑定}} 取值来源）。
+      // parts 重组兼容值内空格（单空格语义保持）；根必须是 JSON 对象。
+      if parts.length() < 2 {
+        Err("mbt_operation_usage:data {\"key\":value,…}")
+      } else {
+        let sb = StringBuilder::new()
+        for i in 1..<parts.length() {
+          if i > 1 {
+            sb.write_string(" ")
+          }
+          sb.write_string(parts[i])
+        }
+        match project.set_data_json(sb.to_string()) {
+          Ok(_) => Ok(())
+          Err(e) => Err(e)
+        }
+      }
     "restyle" =>
       if parts.length() < 4 {
         Err("mbt_operation_usage:restyle <artboard> <component_id> k=v [k=v ...]")

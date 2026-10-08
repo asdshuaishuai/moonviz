@@ -505,3 +505,51 @@ test "契约：resize 联动——Fill 宽文本随画板宽度重新换行（1.
     msg="Fill 宽文本应在画板收窄后重新换行: before=\{before} after=\{after}")
   let _ = session_close(h)
 }
+
+
+///|
+test "契约：data 注入——{{绑定}} 渲染解析 + 未命中保字面（Smart UX M-S1）" {
+  let h = session_open(SEED)
+  // 占位文本：按钮上写绑定
+  let r0 = session_apply_human(h, "update w btn text={{user.name}}")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  // 未注入数据：字面占位可见
+  let svg0 = session_export_svg(h, "w")
+  assert_true(svg0.contains("{{user.name}}"), msg="未注入应保字面: " + svg0)
+  // 注入数据：渲染解析
+  let r1 = session_set_data(h, "{\"user\":{\"name\":\"林一\"}}")
+  assert_true(r1.contains("\"ok\":true") && r1.contains("\"keys\":1"), msg=r1)
+  let svg1 = session_export_svg(h, "w")
+  assert_true(svg1.contains("林一"), msg="注入后应解析绑定: " + svg1)
+  assert_false(svg1.contains("{{user.name}}"), msg="解析后不应残留占位: " + svg1)
+  // 数据随会话 ops 存续（clone/replace_with 随行）
+  let _ = session_apply_human(h, "update w btn \"text={{user.name}} 已登录\"")
+  let svg2 = session_export_svg(h, "w")
+  assert_true(svg2.contains("林一 已登录"), msg="op 后数据应存续: " + svg2)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：data 注入——坏 JSON / 非对象根 整体拒绝不崩（Smart UX M-S1）" {
+  let h = session_open(SEED)
+  let r1 = session_set_data(h, "{broken")
+  assert_true(r1.contains("\"ok\":false"), msg="坏 JSON 应拒绝: " + r1)
+  let r2 = session_set_data(h, "[1,2]")
+  assert_true(r2.contains("data_root_must_be_object"), msg="非对象根应拒绝: " + r2)
+  // 拒绝后原数据不受影响
+  let _ = session_set_data(h, "{\"a\":\"b\"}")
+  let _ = session_set_data(h, "{bad")
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("\"ok\":true"), msg="拒绝后渲染不崩: " + svg)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：render_mbt_with_data——无状态同源码换数据多渲（Smart UX M-S1）" {
+  let r1 = render_mbt_with_data(SEED, "{\"x\":\"甲\"}")
+  let r2 = render_mbt_with_data(SEED, "{\"x\":\"乙\"}")
+  assert_true(r1.contains("\"ok\":true") && r2.contains("\"ok\":true"), msg=r1 + r2)
+  // 非法数据信封错误
+  let r3 = render_mbt_with_data(SEED, "nope")
+  assert_true(r3.contains("\"ok\":false"), msg=r3)
+}
