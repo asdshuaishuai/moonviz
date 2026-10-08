@@ -65,6 +65,16 @@ Images: `place <ab> image <id>` then `update <ab> <id> text=<https://...|data:im
 a non-empty URL renders a real `<image>` (rounded clip, cover-fit); empty text falls back to the
 placeholder glyph. The URL lives in the node's `text` field and round-trips through canonical MBT.
 
+Icons: `update <ab> <node> icon=<name>` renders a builtin mono-stroke icon
+(24x24 grid, stroke 2, round cap/join, tinted by the node's text color) centered
+in the node box; `icon=""` clears it. Registry (`icon_names()`, 60 names):
+arrow-down arrow-left arrow-right arrow-up battery bell bluetooth calendar
+camera check chevron-down chevron-left chevron-right chevron-up clock close
+code copy download edit external-link eye file filter folder globe grid heart
+home image info link list lock mail maximize menu mic minimize minus moon
+more-horizontal pin play plus refresh save search search-x send settings share
+star sun tag trash upload user volume wifi
+
 Multi-agent / versioning / animation / testing:
 `collab-merge <base_rev> <agent>=<op>[+op...]`（OT 三方合并；op: insert/delete/
 move/fill/radius/font/text/pos/size/gap）· `history init|commit|log|undo|redo|

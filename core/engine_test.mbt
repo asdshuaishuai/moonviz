@@ -628,6 +628,39 @@ test "elevation：e4/e5 品牌阴影阶梯出图（1.0 R1）" {
 
 ///|
 test "icons：注册表 + 节点图标渲染与序列化往返（1.0 R2）" {
+  // 数量锚：R2 前半 25→60
+  assert_eq(icon_names().length(), 60)
+  // 字母序守卫（清单约定：保持字母序便于人读与 diff）。
+  // 不用 String 的 < 运算符——当前工具链为长度序（"b"<"aaaa" 实测），
+  // 黑盒测试也无法触达包内 data_schema_key_lt，就地定义逐码元内容序比较。
+  fn key_lt(a : String, b : String) -> Bool {
+    let la = a.length()
+    let lb = b.length()
+    let n = if la < lb { la } else { lb }
+    let mut i = 0
+    while i < n {
+      let ca = match a.get_char(i) {
+        Some(c) => c.to_int()
+        None => 0
+      }
+      let cb = match b.get_char(i) {
+        Some(c) => c.to_int()
+        None => 0
+      }
+      if ca != cb {
+        return ca < cb
+      }
+      i = i + 1
+    }
+    la < lb
+  }
+  let names = icon_names()
+  for i in 1..<names.length() {
+    assert_true(
+      key_lt(names[i - 1], names[i]),
+      msg="icon_names 应保持字母序: \{names[i - 1]} !< \{names[i]}",
+    )
+  }
   // 注册表完整性：icon_names 与 icon_path 一致
   for name in icon_names() {
     assert_true(icon_path(name) is Some(_), msg="icon_path 缺少已注册图标: \{name}")
@@ -648,6 +681,28 @@ test "icons：注册表 + 节点图标渲染与序列化往返（1.0 R2）" {
       assert_true(svg.contains("stroke-linejoin=\"round\""), msg="图标应为 round join 风格")
     }
     None => assert_true(false)
+  }
+}
+
+///|
+/// R2 前半冒烟：60 枚逐一放置渲染——不崩且 SVG 含图标 <path>。
+test "icons：60 枚逐一放置渲染冒烟（R2）" {
+  for name in icon_names() {
+    let p = Project::new()
+    let _ = p.create_artboard(name="i", width=120.0, height=120.0)
+    let _ = p.place_component(artboard="i", component_id="button", instance_id="b", x=10.0, y=10.0, w=100.0, h=100.0)
+    match p.edit_node(artboard="i", node_id="b", kvs=[("icon", name), ("text", "")]) {
+      Ok(_) => ()
+      Err(e) => assert_true(false, msg="icon=\{name} 编辑失败: \{e}")
+    }
+    match p.export_svg(artboard="i") {
+      Ok(svg) =>
+        assert_true(
+          svg.contains("<path d="),
+          msg="icon=\{name} 渲染应包含图标 <path>",
+        )
+      Err(e) => assert_true(false, msg="icon=\{name} 渲染崩溃: \{e}")
+    }
   }
 }
 
