@@ -631,8 +631,9 @@ test "icons：注册表 + 节点图标渲染与序列化往返（1.0 R2）" {
   // 数量锚：R2 前半 25→60
   assert_eq(icon_names().length(), 60)
   // 字母序守卫（清单约定：保持字母序便于人读与 diff）。
-  // 不用 String 的 < 运算符——当前工具链为长度序（"b"<"aaaa" 实测），
-  // 黑盒测试也无法触达包内 data_schema_key_lt，就地定义逐码元内容序比较。
+  // 刻意不复用包内 data_schema_key_lt，而是就地独立重写同一语义：
+  // 若实现（含当前工具链 String < 为长度序的坑）回归，这里以独立副本交叉验证。
+  // 本文件为包内编译，直接调用实现亦可——独立副本是有意选择，非能力限制。
   fn key_lt(a : String, b : String) -> Bool {
     let la = a.length()
     let lb = b.length()
