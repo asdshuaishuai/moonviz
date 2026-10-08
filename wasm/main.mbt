@@ -95,7 +95,7 @@ pub fn list_tokens() -> String {
 }
 
 ///|
-/// 机器可读 op 面字典：27 条 mutating op（usage/category/gates），
+/// 机器可读 op 面字典：29 条 mutating op（usage/category/gates），
 /// 与 CLI list-ops / MCP list_ops 同源（core/agent_api.mbt）。
 pub fn list_ops() -> String {
   @core.list_ops_json()
@@ -535,6 +535,14 @@ pub fn render_mbt_with_data(mbt : String, json : String) -> String {
         Ok(_) => model.render_json()
       }
   }
+}
+
+///|
+/// Smart UX M-S1：读取会话已声明的 DataSchema（schema op 写入）。
+/// 按 #4C 只读约定走 {ok:true,data:…} 信封：未声明 data={}（空对象），
+/// 句柄非法/已关返回 invalid_session_handle——零崩，宿主零特判。
+pub fn data_schema(handle : Int) -> String {
+  sess_json(handle, fn(p) { Ok(p.schema_json()) })
 }
 
 ///|

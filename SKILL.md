@@ -53,7 +53,8 @@ Structural:
 `flip <ab> <node> h|v|both|none` ·
 `group <ab> <group_id> <n1> <n2> ...` · `ungroup <ab> <group_id>` ·
 `align <ab> <mode> <n1> <n2> ...` · `resize-canvas <ab> <w> <h>` ·
-`data {json}` (inject runtime data for {{bindings}}; compact JSON, root=object) · `responsive <ab>` · `restyle <ab> <component_id> k=v ...`
+`data {json}` (inject runtime data for {{bindings}}; compact JSON, root=object) ·
+`schema <field>=<type> [field=type ...]` (declare the DataSchema contract this UI expects — type ∈ `string|number|boolean`; hosts read it back via wasm `data_schema(handle)`; runtime state, not canonical) · `responsive <ab>` · `restyle <ab> <component_id> k=v ...`
 
 Images: `place <ab> image <id>` then `update <ab> <id> text=<https://...|data:image/...> radius=<n>` —
 a non-empty URL renders a real `<image>` (rounded clip, cover-fit); empty text falls back to the

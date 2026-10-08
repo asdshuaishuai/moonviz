@@ -489,6 +489,37 @@ pub fn apply_operation(
           Err(e) => Err(e)
         }
       }
+    "schema" =>
+      // Smart UX M-S1：schema <field>=<type> …——声明 DataSchema 契约
+      // （type ∈ string|number|boolean）。k=v 形态无需引号即可安全穿过
+      // split_cmd；运行时态不入 canonical，wasm data_schema(handle) 读取。
+      if parts.length() < 2 {
+        Err("mbt_operation_usage:schema <field>=<type> [field=type ...]")
+      } else {
+        let kvs : Array[(String, String)] = []
+        let mut bad = ""
+        let mut i = 1
+        while i < parts.length() && bad == "" {
+          let eq = index_of_str(parts[i], "=")
+          if eq > 0 {
+            kvs.push((
+              parts[i].substring(start=0, end=eq),
+              unescape_value(parts[i].substring(start=eq + 1)),
+            ))
+          } else {
+            bad = parts[i]
+          }
+          i = i + 1
+        }
+        if bad != "" {
+          Err("schema_kv_expected: \{bad}")
+        } else {
+          match project.set_schema_fields(kvs) {
+            Ok(_) => Ok(())
+            Err(e) => Err(e)
+          }
+        }
+      }
     "restyle" =>
       if parts.length() < 4 {
         Err("mbt_operation_usage:restyle <artboard> <component_id> k=v [k=v ...]")

@@ -396,6 +396,129 @@ pub fn data_to_display(v : DataValue) -> String {
   walk(v, sb)
   sb.to_string()
 }
+// ---------------------------------------------------------------------------
+// Smart UX M-S1：DataSchema——UI 期望的数据契约（data_schema 导出读取）
+// ---------------------------------------------------------------------------
+
+///|
+/// 轻量 DataSchema：字段名 → 类型名的类型化契约。类型词汇刻意收窄为
+/// string|number|boolean（SMART-UX-1.0 支柱 B 最小实现；array/object/
+/// 必填/枚举留给后续里程碑）。与 data 同为运行时态——不入 canonical。
+pub(all) struct DataSchema {
+  fields : Map[String, String]
+}
+
+///|
+/// schema 合法类型词汇：string | number | boolean
+fn data_schema_valid_type(t : String) -> Bool {
+  t == "string" || t == "number" || t == "boolean"
+}
+
+///|
+/// 键内容序比较（UTF-16 码元字典序）。不使用 String::compare——当前
+/// 工具链的该实现按长度序而非内容序（"b" < "aaaa"），Array::sort 同染；
+/// schema JSON 的逐字节确定性必须建立在真内容序上（白盒测试锁定）。
+fn data_schema_key_lt(a : String, b : String) -> Bool {
+  let la = a.length()
+  let lb = b.length()
+  let n = if la < lb { la } else { lb }
+  let mut i = 0
+  while i < n {
+    let ca = match a.get_char(i) {
+      Some(c) => c.to_int()
+      None => 0
+    }
+    let cb = match b.get_char(i) {
+      Some(c) => c.to_int()
+      None => 0
+    }
+    if ca != cb {
+      return ca < cb
+    }
+    i = i + 1
+  }
+  la < lb
+}
+
+///|
+/// 码元字典序插入排序（小数组 n≤键数，O(n²) 足够；绕开工具链
+/// String::compare 长度序缺陷，见 data_schema_key_lt）。
+fn data_schema_sort_keys(keys : Array[String]) -> Unit {
+  for i in 1..<keys.length() {
+    let k = keys[i]
+    let mut j = i - 1
+    while j >= 0 && data_schema_key_lt(k, keys[j]) {
+      keys[j + 1] = keys[j]
+      j = j - 1
+    }
+    keys[j + 1] = k
+  }
+}
+
+///|
+/// 从 JSON 样例推断：顶层字段 DStr→string、DNum→number、DBool→boolean；
+/// 数组/对象/null 字段跳过（词汇外类型宁缺勿错）。非对象样例得空 schema。
+pub fn DataSchema::infer(sample : DataValue) -> DataSchema {
+  let fields : Map[String, String] = Map::new()
+  match sample {
+    DObj(m) =>
+      for k in m.keys() {
+        match m.get(k) {
+          Some(DStr(_)) => fields.set(k, "string")
+          Some(DNum(_)) => fields.set(k, "number")
+          Some(DBool(_)) => fields.set(k, "boolean")
+          _ => () // 数组/对象/null：词汇外，跳过
+        }
+      }
+    _ => ()
+  }
+  { fields, }
+}
+
+///|
+/// 显式声明：spec 必须是对象且每个值都是合法类型名字符串；任何非法
+/// 项整体拒绝（不部分应用），返回首个错误（不崩纪律：Err 而非 abort）。
+pub fn DataSchema::from_spec(spec : DataValue) -> Result[DataSchema, String] {
+  match spec {
+    DObj(m) => {
+      let fields : Map[String, String] = Map::new()
+      for k in m.keys() {
+        match m.get(k) {
+          Some(DStr(t)) =>
+            if data_schema_valid_type(t) {
+              fields.set(k, t)
+            } else {
+              return Err("schema_unknown_type: \{k}=\{t}")
+            }
+          _ => return Err("schema_type_must_be_string: \{k}")
+        }
+      }
+      Ok({ fields, })
+    }
+    _ => Err("schema_spec_must_be_object")
+  }
+}
+
+///|
+/// schema → JSON（{"field":"type",…}，键按字典序输出保证逐字节确定性；
+/// 空契约输出 {}——空集合 envelope 一律合法 JSON）。
+pub fn DataSchema::to_json(self : DataSchema) -> String {
+  let keys : Array[String] = []
+  for k in self.fields.keys() {
+    keys.push(k)
+  }
+  data_schema_sort_keys(keys)
+  let parts : Array[String] = []
+  for k in keys {
+    match self.fields.get(k) {
+      Some(t) => parts.push("\"\{json_escape(k)}\":\"\{json_escape(t)}\"")
+      None => ()
+    }
+  }
+  let joined = parts.join(",")
+  "{\{joined}}"
+}
+
 ///|
 /// 绑定解析：把 text 里的 `{{path}}` 替换为数据值显示串；
 /// 未命中的占位保留字面（诚实占位：设计者一眼看到哪个绑定没喂数据），永不崩。

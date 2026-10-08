@@ -149,7 +149,7 @@ export class MoonViz {
     return this.last(['list-tools']);
   }
 
-  /** 引擎 op 面字典（27 条 mutating op：usage/category/gates）。 */
+  /** 引擎 op 面字典（29 条 mutating op：usage/category/gates）。 */
   async ops() {
     return this.last(['list-ops']);
   }

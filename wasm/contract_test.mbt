@@ -553,3 +553,65 @@ test "契约：render_mbt_with_data——无状态同源码换数据多渲（Sma
   let r3 = render_mbt_with_data(SEED, "nope")
   assert_true(r3.contains("\"ok\":false"), msg=r3)
 }
+
+///|
+test "契约：data_schema——未声明空对象 / schema op 声明后字典序读回（Smart UX M-S1）" {
+  let h = session_open(SEED)
+  // 未声明：空对象（空集合 envelope 一律合法 JSON）
+  let r0 = data_schema(h)
+  assert_true(r0 == "{\"ok\":true,\"data\":{}}", msg=r0)
+  // 经 schema op 声明契约（k=v 免引号，split_cmd 安全）
+  let r1 = session_apply_human(h, "schema name=string age=number ok=boolean")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  // 键按字典序逐字节稳定输出，宿主可 diff
+  let r2 = data_schema(h)
+  assert_true(
+    r2 == "{\"ok\":true,\"data\":{\"age\":\"number\",\"name\":\"string\",\"ok\":\"boolean\"}}",
+    msg=r2,
+  )
+  let _ = session_close(h)
+}
+
+///|
+test "契约：data_schema——未知类型整体拒绝，schema 保持原值（Smart UX M-S1）" {
+  let h = session_open(SEED)
+  let _ = session_apply_human(h, "schema a=string")
+  let bad = session_apply_human(h, "schema a=int32 b=number")
+  assert_true(bad.contains("\"ok\":false"), msg=bad)
+  assert_true(bad.contains("schema_unknown_type"), msg=bad)
+  // 整体拒绝：合法项 b 不得混入
+  let after = data_schema(h)
+  assert_true(after == "{\"ok\":true,\"data\":{\"a\":\"string\"}}", msg=after)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：data_schema——canonical 不携带 schema + 随后续 ops 存续（Smart UX M-S1）" {
+  let h = session_open(SEED)
+  let r1 = session_apply_human(h, "update w btn text=hi")
+  assert_true(r1.contains("\"ok\":true"), msg=r1)
+  let r2 = session_apply_human(h, "schema name=string")
+  assert_true(r2.contains("\"ok\":true"), msg=r2)
+  // schema op 前后 canonical mbt 逐字节一致——契约是运行时态，不入事实源
+  let m1 = r1.split("\"mbt\":\"").to_array()
+  let m2 = r2.split("\"mbt\":\"").to_array()
+  assert_true(m1.length() == 2 && m2.length() == 2, msg=r1 + " ||| " + r2)
+  let s1 = m1[1].to_owned()
+  let s2 = m2[1].to_owned()
+  let v1 = s1.substring(start=0, end=s1.length() - 2)
+  let v2 = s2.substring(start=0, end=s2.length() - 2)
+  assert_true(v1 == v2, msg="schema 不得改写 canonical mbt")
+  // 后续 ops（clone→replace_with 路径）不丢契约
+  let _ = session_apply_human(h, "update w btn text=你好")
+  let r3 = data_schema(h)
+  assert_true(r3 == "{\"ok\":true,\"data\":{\"name\":\"string\"}}", msg=r3)
+  let _ = session_close(h)
+}
+
+///|
+test "契约：data_schema——非法句柄 invalid_session_handle（零崩，#4A）" {
+  assert_true(data_schema(-1).contains("invalid_session_handle"))
+  let h = session_open(SEED)
+  let _ = session_close(h)
+  assert_true(data_schema(h).contains("invalid_session_handle"))
+}

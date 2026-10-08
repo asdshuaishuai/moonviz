@@ -37,6 +37,10 @@ pub(all) struct Project {
   /// Smart UX M-S1：运行期注入的数据树（{{绑定}} 的取值来源）。
   /// 运行时态，不入 canonical——零兼容风险；clone/replace_with 随行。
   mut data : DataValue
+  /// Smart UX M-S1：已声明的数据契约（schema op 写入，wasm data_schema
+  /// 读取）。运行时态，不入 canonical——与 data 同边界；clone/replace_with
+  /// 随行。None = 未声明（读侧输出空对象 {}）。
+  mut schema : DataSchema?
 }
 
 ///|
@@ -52,6 +56,7 @@ pub fn Project::new() -> Project {
     active_theme: "light",
     token_overrides: None,
     data: DNull,
+    schema: None,
   }
 }
 
@@ -150,8 +155,10 @@ pub fn Project::clone(self : Project) -> Project {
     None => copy.token_overrides = None
   }
   // Smart UX：数据树随快照（引用赋值，与 artboards 同模式）——会话
-  // clone→ops→replace_with 流中注入的数据不丢失。
+  // clone→ops→replace_with 流中注入的数据不丢失。schema 同边界随行
+  // （DataSchema 构造后字段只读，共享无别名污染风险）。
   copy.data = self.data
+  copy.schema = self.schema
   copy
 }
 
@@ -173,6 +180,7 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.active_theme = source.active_theme
   self.token_overrides = source.token_overrides
   self.data = source.data
+  self.schema = source.schema
 }
 
 ///|
@@ -189,6 +197,55 @@ pub fn Project::set_data_json(self : Project, json : String) -> Result[Int, Stri
         }
         _ => Err("data_root_must_be_object")
       }
+  }
+}
+
+///|
+/// Smart UX M-S1：声明数据契约——k=v 对（schema op 路径）。
+/// 类型词汇 string|number|boolean；任一非法整体拒绝（不部分应用），
+/// 全合法才替换现有 schema；返回字段数（诊断用）。
+pub fn Project::set_schema_fields(
+  self : Project,
+  kvs : Array[(String, String)],
+) -> Result[Int, String] {
+  let fields : Map[String, String] = Map::new()
+  for kv in kvs {
+    let (k, t) = kv
+    if data_schema_valid_type(t) {
+      fields.set(k, t)
+    } else {
+      return Err("schema_unknown_type: \{k}=\{t}")
+    }
+  }
+  self.schema = Some({ fields })
+  Ok(fields.length())
+}
+
+///|
+/// Smart UX M-S1：声明数据契约——JSON 显式形式（{"field":"type",…}），
+/// 宿主/SDK 侧入口；frontmatter `data:` 段（后续里程碑）复用同一解析。
+/// 整体拒绝语义与 set_schema_fields 一致。
+pub fn Project::set_schema_json(self : Project, spec : String) -> Result[Int, String] {
+  match parse_data_json(spec) {
+    Err(e) => Err(e)
+    Ok(v) =>
+      match DataSchema::from_spec(v) {
+        Err(e) => Err(e)
+        Ok(s) => {
+          self.schema = Some(s)
+          Ok(s.fields.length())
+        }
+      }
+  }
+}
+
+///|
+/// Smart UX M-S1：读取已声明契约。未声明输出空对象 {}（空集合 envelope
+/// 一律合法 JSON，宿主零特判）。
+pub fn Project::schema_json(self : Project) -> String {
+  match self.schema {
+    Some(s) => s.to_json()
+    None => "{}"
   }
 }
 
