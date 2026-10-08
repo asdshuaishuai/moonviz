@@ -1,6 +1,7 @@
 # AGENTS.md — MoonViz 引擎仓库
 
-MoonViz：纯 MoonBit 的 AI-Native 原型设计引擎。`.mbt.md` 是设计项目唯一事实源，
+MoonViz：纯 MoonBit 的 AI-Native **Smart UX/UI 引擎**（1.0 定位跃迁中，原型设计
+引擎 → 智能界面引擎，规划见 SMART-UX-1.0.md）。`.mbt.md` 是设计项目唯一事实源，
 人类画布与 Agent 修改都回写同一份源码；每次预览从源码重建。纯 MoonBit（核心库 +
 链 libc）；周边（Node SDK、DDP 加解密）按职能分别以薄 JS 层 / Rust 编解码器交付。
 
@@ -71,8 +72,9 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ## 分支策略
 
 - `main` = 发布线（0.x 序列，Release 资产从 main tag 构建）
-- `release/1.0` = 1.0 开发分支（**不发布**）：M1 语义补全 ✅、M1.5 渲染精致化 +
-  组件自适应（规划见 RENDER-1.0.md）、M2 稳定化进行中
+- `release/1.0` = 1.0 开发分支（**不发布**）：M1 语义补全 ✅、M1.5 渲染精致化
+  （RENDER-1.0.md，并入 SMART-UX-1.0 为 P0 前置）、
+  **SMART-UX 跃迁进行中**（M-S1 数据绑定基座起步，规划见 SMART-UX-1.0.md）
 - 能力改动在两个分支都成立时才双写；分支特有能力的文档随分支走
 
 ## MoonBit 原生包（mooncakes.io）

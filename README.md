@@ -3,6 +3,13 @@
 
 ## 1.0 Development (release/1.0 branch — not released yet)
 
+> **Positioning upgrade in progress**: prototype/UI design engine → **AI-native
+> Smart UX/UI engine** — data-bound live interfaces rendered at high precision
+> inside webviews by the pure-MoonBit wasm engine, with a typed data-exchange
+> surface (`DataSchema` + `{{bindings}}` + `set_data`/`collect_actions`).
+> Plan: [SMART-UX-1.0.md](SMART-UX-1.0.md). Baseline refs: OpenAI GPT-6
+> "Intelligent UI" (2026-10).
+
 - **Component self-adaptation** — `place` without w/h applies per-component adaptive
   presets (buttons/text/inputs = width-fill, fab = anchor bottom-right); explicit w/h always wins.
   `adaptive <ab> <node> <preset>` op for explicit control.

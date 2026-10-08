@@ -1,6 +1,12 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
 ## 1.0 开发中（release/1.0 分支——不发布）
 
+> **定位跃迁进行中**：原型设计引擎 → **AI-Native Smart UX/UI 引擎**——
+> 数据驱动的活界面，由纯 MoonBit wasm 引擎在 webview 内高精度渲染，
+> 具备类型化数据交换面（DataSchema + `{{绑定}}` + `set_data`/`collect_actions`）。
+> 规划见 [SMART-UX-1.0.md](SMART-UX-1.0.md)。参照系：OpenAI GPT-6
+> 「Intelligent UI」（2026-10）。
+
 - **组件自适应** — `place` 不带 w/h 时按组件自适应预设落位
   （按钮/输入框/正文 = 宽度跟随，fab = 锚定右下）；显式 w/h 永远优先。
   `adaptive <画板> <节点> <预设>` op 显式控制。
