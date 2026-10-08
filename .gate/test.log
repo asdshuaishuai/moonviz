@@ -1,0 +1,6 @@
+-873187034
+163906166
+Total tests: 232, passed: 232, failed: 0.
+
+===STDERR===
+Warning: `moon.mod.json` at '/Volumes/data/dev/coding/deepcodeUI/deepStudio/moonviz' is deprecated. Run `moon fmt` to migrate to `moon.mod`.
