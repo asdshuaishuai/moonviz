@@ -431,8 +431,14 @@ pub fn list_components_json(defs : Map[String, ComponentDef]) -> String {
           vs.push("\"\{v}\"")
         }
         let vj = jstr(vs)
+        // 组件规范随条目下发（component_norm）：Agent 在选组件的瞬间就能看到
+        // 尺寸/圆角规范——事前指导，比 critique 事后纠正省一整轮
+        let norm_j = match component_norm(def.id) {
+          Some(t) => ",\"norm\":\"\{t}\""
+          None => ""
+        }
         parts.push(
-          "{\"id\":\"\{def.id}\",\"kind\":\"\{def.kind}\",\"category\":\"\{def.category}\",\"variants\":[\{vj}],\"default_size\":[\{def.default_size.0.to_string()},\{def.default_size.1.to_string()}]}",
+          "{\"id\":\"\{def.id}\",\"kind\":\"\{def.kind}\",\"category\":\"\{def.category}\",\"variants\":[\{vj}],\"default_size\":[\{def.default_size.0.to_string()},\{def.default_size.1.to_string()}]\{norm_j}}",
         )
       }
       None => ()
