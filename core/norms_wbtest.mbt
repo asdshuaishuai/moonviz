@@ -158,3 +158,204 @@ test "norms：list_components 下发 norm 字段" {
   assert_true(j.contains("\"norm\":\"宽 ≥ 文案宽+24"))
   assert_true(j.contains("全宽顶边条"))
 }
+
+///|
+/// 回归（评审 R1）：norm_fix_pass 的 update 闭包曾无条件写 Fixed(new_w/new_h)，
+/// 圆角-only 路径会把 w=fill 的组件静默降级为定宽（报告还显示宽高不变）。
+test "norms：圆角-only 修复不把 Fill 宽降级为 Fixed" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_fill", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_fill",
+    component_id="button",
+    instance_id="fill_btn",
+    variant="primary",
+    x=20.0,
+    y=100.0,
+    w=350.0,
+    h=40.0,
+  )
+  // h=40：高满足文案底线；radius=24 超 高/2=20 → 只收敛圆角
+  let _ = apply_operation(p, "update norms_fill fill_btn w=fill radius=24")
+  match p.artboards.get("norms_fill") {
+    None => assert_true(false)
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      let fixes = norm_fix_pass(ab.doc, layout)
+      assert_eq(fixes.length(), 1)
+      match ab.doc.nodes.get("fill_btn") {
+        None => assert_true(false)
+        Some(n) => {
+          match n.width {
+            Fill => ()
+            _ => assert_true(false)
+          }
+          match n.height {
+            Fixed(h) => assert_eq(h, 40.0)
+            _ => assert_true(false)
+          }
+          assert_eq(n.style.corner_radius, 20.0)
+        }
+      }
+    }
+  }
+}
+
+///|
+/// 回归（评审 R1）：高度-only 路径同样不得覆写未变化的 Fill 宽。
+test "norms：高度-only 修复不把 Fill 宽降级为 Fixed" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_fill2", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_fill2",
+    component_id="button",
+    instance_id="short_btn",
+    variant="primary",
+    x=20.0,
+    y=100.0,
+    w=200.0,
+    h=24.0,
+  )
+  // 文案 2 字（宽足），h=24 < 34 → 只抬高度；Fill 宽保持
+  let _ = apply_operation(p, "update norms_fill2 short_btn text=发送 w=fill")
+  match p.artboards.get("norms_fill2") {
+    None => assert_true(false)
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      let fixes = norm_fix_pass(ab.doc, layout)
+      assert_eq(fixes.length(), 1)
+      match ab.doc.nodes.get("short_btn") {
+        None => assert_true(false)
+        Some(n) => {
+          match n.width {
+            Fill => ()
+            _ => assert_true(false)
+          }
+          match n.height {
+            Fixed(h) => assert_eq(h, 34.0)
+            _ => assert_true(false)
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
+/// 回归（评审 R3）：chip/tag 有 component_norm 下发的独立高度档
+/// （28~32 / 22~26），通用「字号+20」底线曾把档内合规件抬到 34——
+/// list_components 刚下发的合规尺寸会被自己的 auto_fix 改坏。
+test "norms：chip/tag 档内高度不误报（对齐 component_norm 档位）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_band", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_band",
+    component_id="chip",
+    instance_id="band_chip",
+    x=20.0,
+    y=100.0,
+    w=120.0,
+    h=28.0,
+  )
+  let _ = apply_operation(p, "update norms_band band_chip text=全部")
+  let _ = p.place_component(
+    artboard="norms_band",
+    component_id="tag",
+    instance_id="band_tag",
+    x=20.0,
+    y=150.0,
+    w=100.0,
+    h=24.0,
+  )
+  // radius=8 中和圆角维度（tag 自身 4~6 档与方正圆润 8 档的张力不在本轮范围）
+  let _ = apply_operation(p, "update norms_band band_tag text=新 radius=8")
+  match p.artboards.get("norms_band") {
+    None => assert_true(false)
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      assert_eq(norm_issues(ab.doc, layout).length(), 0)
+      assert_eq(norm_fix_pass(ab.doc, layout).length(), 0)
+    }
+  }
+}
+
+///|
+/// 回归（评审 R5）：need_h 曾只用 font_size+20，双行文案按行数要高度。
+test "norms：多行文案按行数要高度" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_multi", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_multi",
+    component_id="button",
+    instance_id="multi_btn",
+    variant="primary",
+    x=20.0,
+    y=100.0,
+    w=300.0,
+    h=36.0,
+  )
+  // op 层把 \n 还原为真实换行（split_cmd 保留原文，unescape_value 统一还原）
+  let _ = apply_operation(p, "update norms_multi multi_btn text=确认提交\\n并返回")
+  match p.artboards.get("norms_multi") {
+    None => assert_true(false)
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      let issues = norm_issues(ab.doc, layout)
+      assert_eq(issues.length(), 1)
+      // 2 行 × 14 × 1.5 = 42，+ 上下留白 20 → 62（36 高曾误判合规）
+      assert_true(issues[0].contains("×62"))
+      let _ = norm_fix_pass(ab.doc, layout)
+      let layout2 = solve(ab.doc)
+      match layout2.rect_of("multi_btn") {
+        None => assert_true(false)
+        Some(r) => assert_eq(r.height, 62.0)
+      }
+    }
+  }
+}
+
+///|
+/// 回归（评审 R2）：norm_issues 裸嵌 id/文案曾把反斜杠/引号原样带进
+/// critique JSON——响应行 JSON.parse 失败，损坏直达传输信封。
+test "norms：问题串与 critique JSON 对 id/文案转义" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_esc", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_esc",
+    component_id="button",
+    instance_id="esc_btn",
+    variant="primary",
+    x=20.0,
+    y=100.0,
+    w=80.0,
+    h=40.0,
+  )
+  // op 层 \\ → 单个反斜杠：文案 = C:\Users\note（\\n 不会变成换行）
+  let _ = apply_operation(p, "update norms_esc esc_btn text=C:\\\\Users\\\\note")
+  match p.artboards.get("norms_esc") {
+    None => assert_true(false)
+    Some(ab) => {
+      // 直改文档补引号（op 解析器会剥引号）：文案 = 他说"hi"C:\Users\note
+      let _ = ab.doc.update_node("esc_btn", fn(n) {
+        { ..n, text: "他说\"hi\"C:\\Users\\note" }
+      })
+      let layout = solve(ab.doc)
+      let issues = norm_issues(ab.doc, layout)
+      assert_eq(issues.length(), 1)
+      // 问题串内引号必须是转义形状 \"（裸引号会破坏下游 JSON 拼接）
+      assert_true(issues[0].contains("\\\""))
+      match p.critique(artboard="norms_esc") {
+        Ok(json) => {
+          // 转义后形状：\" 与 \\
+          assert_true(json.contains("他说\\\"hi\\\"C:\\\\Users\\\\note"))
+        }
+        Err(_) => assert_true(false)
+      }
+      // 引擎自己的 JSON 消费端（extract_scores）也必须能吃下
+      match p.critique_summary(artboard="norms_esc") {
+        Ok(_) => ()
+        Err(_) => assert_true(false)
+      }
+    }
+  }
+}

@@ -73,6 +73,37 @@ pub fn component_norm(id : String) -> String? {
 }
 
 ///|
+/// 操作组件的高度底线（norm_issues 与 norm_fix_pass 共用，两端不得漂移）：
+/// - chip/tag/fab 有 component_norm 下发的独立档位（高 28~32 / 22~26 / 56×56），
+///   通用「字号+上下留白」底线会把档内合规件抬出档位——按组件取档下限；
+/// - 多行文案按实际行数要高度（文本块高 + 上下留白）——通用档位按单行标签设定。
+fn norm_need_h(
+  component : String,
+  text : String,
+  font_size : Double,
+  ts : Size,
+) -> Double {
+  let band = match component {
+    "chip" => 28.0
+    "tag" => 22.0
+    "fab" => 56.0
+    _ => font_size + NORM_TEXT_PAD_Y * 2.0
+  }
+  let mut lines = 1
+  for c in text.iter() {
+    if c == '\n' {
+      lines = lines + 1
+    }
+  }
+  let multi = ts.height + NORM_TEXT_PAD_Y * 2.0
+  if lines > 1 && multi > band {
+    multi
+  } else {
+    band
+  }
+}
+
+///|
 /// 检测组件规范偏差，返回人可读问题清单（critique 第 9 维 norms）。
 /// 每条自带建议尺寸——Agent 读到就能改，不必自己换算。
 /// 上限 8 条，控制报告体积（deepDesign 侧检视结果有 12KB 截断）。
@@ -100,11 +131,12 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
                 line_height=n.style.line_height,
               )
               let need_w = ts.width + NORM_TEXT_PAD_X * 2.0
-              let need_h = n.style.font_size + NORM_TEXT_PAD_Y * 2.0
+              let need_h = norm_need_h(n.component, n.text, n.style.font_size, ts)
               if r.width < need_w - 0.5 || r.height < need_h - 0.5 {
-                // 问题串会进 critique 的 JSON——用「」不用英文引号，避免破坏 JSON 结构
+                // 问题串会进 critique 的 JSON——id/文案过 json_escape（引号、
+                // 反斜杠与控制符），结构靠「」与转义共同保证
                 issues.push(
-                  "\{id}（\{n.component}「\{n.text}」）现 \{r.width.to_int()}×\{r.height.to_int()}，文案需 ≥\{need_w.to_int()}×\{need_h.to_int()}（左右各留 12）",
+                  "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）现 \{r.width.to_int()}×\{r.height.to_int()}，文案需 ≥\{need_w.to_int()}×\{need_h.to_int()}（左右各留 12）",
                 )
                 continue
               }
@@ -116,13 +148,13 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
               let r_now = n.style.corner_radius
               if r_now < NORM_RADIUS_BASE - 0.5 && NORM_RADIUS_BASE <= r_cap {
                 issues.push(
-                  "\{id}(\{n.component}) 圆角 \{r_now.to_int()} 低于方正圆润档 → radius 8",
+                  "\{json_escape(id)}(\{n.component}) 圆角 \{r_now.to_int()} 低于方正圆润档 → radius 8",
                 )
                 continue
               }
               if r_now > r_cap + 0.5 {
                 issues.push(
-                  "\{id}(\{n.component}) 圆角 \{r_now.to_int()} 超出 高/2=\{r_cap.to_int()} → radius \{r_cap.to_int()}",
+                  "\{json_escape(id)}(\{n.component}) 圆角 \{r_now.to_int()} 超出 高/2=\{r_cap.to_int()} → radius \{r_cap.to_int()}",
                 )
                 continue
               }
@@ -133,7 +165,7 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
               root_w > 0.0 &&
               r.width >= root_w - 0.5 {
               issues.push(
-                "\{id}(\{n.component}) 全宽 \{r.width.to_int()} 带圆角 \{n.style.corner_radius.to_int()} 顶出边缘 → radius 0",
+                "\{json_escape(id)}(\{n.component}) 全宽 \{r.width.to_int()} 带圆角 \{n.style.corner_radius.to_int()} 顶出边缘 → radius 0",
               )
               continue
             }
@@ -175,7 +207,7 @@ pub fn norm_fix_pass(
                 line_height=n.style.line_height,
               )
               let need_w = ts.width + NORM_TEXT_PAD_X * 2.0
-              let need_h = n.style.font_size + NORM_TEXT_PAD_Y * 2.0
+              let need_h = norm_need_h(n.component, n.text, n.style.font_size, ts)
               let w_fixed = match n.width {
                 Fixed(_) => true
                 _ => false
@@ -214,16 +246,27 @@ pub fn norm_fix_pass(
               (new_h != r.height && new_h > 0.0) ||
               new_r != n.style.corner_radius
             if changed && why != "" {
+              // 只覆写真正变化的维度：width 变化必经 w_fixed 守卫（Fixed→Fixed），
+              // 其余维度保持 x.width/x.height 原值——Fill/Hug 尺寸策略不得被
+              // 圆角-only / 高度-only 路径静默降级为 Fixed
               let _ = doc.update_node(id, fn(x) {
                 {
                   ..x,
-                  width: Fixed(new_w),
-                  height: Fixed(new_h),
+                  width: if new_w != r.width && new_w > 0.0 {
+                    Fixed(new_w)
+                  } else {
+                    x.width
+                  },
+                  height: if new_h != r.height && new_h > 0.0 {
+                    Fixed(new_h)
+                  } else {
+                    x.height
+                  },
                   style: { ..x.style, corner_radius: new_r },
                 }
               })
               fixes.push(
-                "{\"node\":\"\{id}\",\"action\":\"component_norm\",\"why\":\"\{why}\",\"before\":\"\{r.width.to_int()}×\{r.height.to_int()} r\{n.style.corner_radius.to_int()}\",\"after\":\"\{new_w.to_int()}×\{new_h.to_int()} r\{new_r.to_int()}\"}",
+                "{\"node\":\"\{json_escape(id)}\",\"action\":\"component_norm\",\"why\":\"\{why}\",\"before\":\"\{r.width.to_int()}×\{r.height.to_int()} r\{n.style.corner_radius.to_int()}\",\"after\":\"\{new_w.to_int()}×\{new_h.to_int()} r\{new_r.to_int()}\"}",
               )
             }
           }
