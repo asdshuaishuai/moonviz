@@ -5,6 +5,8 @@
 /// - contained_in_parent → 缩小尺寸适配父容器（优先缩宽，再缩高）
 /// - no_sibling_overlap  → 沿 Y 轴平移到无重叠位置
 /// - constraint_solvable → Fill→Fixed 降级（取父容器剩余空间）
+/// 另有组件规范预修（norms.mbt：按钮放大到文案+留白 / 圆角归档 8 / 全宽条直角），
+/// 在谓词迭代之前执行——规范修复可能引入新违规，交给后续谓词循环一并清理。
 /// 返回修复操作列表（供 Agent 审阅）+ 修复后的新 Project。
 pub(all) struct AutoFixOp {
   node_id : String
@@ -25,6 +27,13 @@ pub fn Project::auto_fix(
     Some(ab) => {
       let fixes : Array[String] = []
       let mut round = 0
+      // 组件规范先修（按钮卡文案放大/圆角归档/全宽条直角）：放大可能引入新的
+      // 重叠/溢出，所以必须在视觉债迭代**之前**执行，让下面的谓词循环把
+      // 新引入的违规一并清掉。
+      let norm_layout = solve(ab.doc)
+      for f in norm_fix_pass(ab.doc, norm_layout).iter() {
+        fixes.push(f)
+      }
       let mut remaining = validate(ab.doc).length()
       // 迭代修复（修复一处可能引入新违规，最多 5 轮）
       while remaining > 0 && round < 5 {

@@ -187,6 +187,23 @@ Argument passing mirrors the CLI: list-ish arguments are comma-separated
 
 The component catalog is owned by `core/`, not by the Studio shell. `builtin_components()` currently provides **65 unique engine presets** across actions, inputs, selection, display, layout, navigation, feedback, and overlay categories, with variants and default geometry. The shell discovers this catalog through the engine and only renders previews/materializes operations.
 
+### Component norms (read before placing — the engine checks these)
+
+Three failure modes make a prototype "usable but sloppy"; the engine now guards all
+three on every route: `list_components` carries a per-component `norm` hint,
+`critique` reports deviations as its 9th principle (`norms`), and `auto_fix` repairs
+them in one call.
+
+- **Buttons never hug their label.** width ≥ text width + 24 (12 px breathing room each
+  side), height 36–48, radius 8 (方正圆润). A box that exactly fits the text gets
+  flagged and auto-widened.
+- **Radius system:** buttons/chips/selects/search bars 8 (or height/2 for pills);
+  avatars 999 (circle); full-width bars and rows (`app_bar`/`tab_bar`/`list_item`/
+  `divider` spanning the artboard) radius 0 — rounded corners on full-bleed edges
+  read as sloppiness.
+- **Buttons carry short labels** (2–4 CJK chars). Sentence-length labels belong in a
+  different component; the norms dimension will call them out.
+
 ## Rendering
 
 The render path is:

@@ -368,8 +368,45 @@ pub fn Project::critique(
         ),
       )
 
+      // ── 9. 组件规范（norms：按钮不卡文案 · 方正圆润 · 全宽条直角）──
+      // 与 auto_fix 的 norm_fix_pass 同一判据：critique 指出偏差并给出建议尺寸，
+      // Agent 调 auto_fix 一键修复——审查-修复循环的反馈/执行两端共享同一规范。
+      let norm_list = norm_issues(doc, layout)
+      let n_norm = norm_list.length()
+      let norm_score = if n_norm == 0 {
+        9
+      } else if n_norm <= 2 {
+        7
+      } else if n_norm <= 4 {
+        5
+      } else {
+        3
+      }
+      let norm_verdict = if norm_score >= 7 {
+        "good"
+      } else if norm_score >= 5 {
+        "fair"
+      } else {
+        "poor"
+      }
+      let norm_advice = if n_norm == 0 {
+        "组件规范良好（按钮留白 · 圆角档 · 全宽条直角）"
+      } else {
+        let mut acc = ""
+        for i in 0..<norm_list.length() {
+          if i >= 2 {
+            break
+          }
+          acc = acc + norm_list[i] + "；"
+        }
+        acc + "——auto_fix 可一键修复"
+      }
+      results.push(
+        crit_json("norms", norm_score, norm_verdict, "\{n_norm} 处规范偏差", norm_advice),
+      )
+
       let j = jstr19(results)
-      Ok("{\"principles\":8,\"results\":[\{j}]}")
+      Ok("{\"principles\":9,\"results\":[\{j}]}")
     }
   }
 }
