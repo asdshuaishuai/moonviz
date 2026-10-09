@@ -1,4 +1,22 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.9 新特性
+
+- **组件规范（norms）——按钮不卡文案。** 弱模型产出的「能用但不精致」文档有三类
+  根因，norms 以同一判据集检测并修复（`core/norms.mbt`）：
+  - **文案留白** — 操作组件（button/chip/tag/fab）：宽 ≥ 文案宽+24（左右各 12），
+    高 ≥ 字号+20（chip 28 / tag 22 / fab 56 档位；多行文案按行数计高）。
+  - **圆角档** — 方正圆润族（button/chip/tag/select/search_bar/fab）归 8px 档，
+    超出 高/2 收敛（胶囊）；avatar 正圆 radius 999。
+  - **全宽条/全宽行直角** — app_bar/tab_bar/list_item/divider 占满画板宽度时
+    圆角归 0（圆角会顶出屏幕边缘）。
+- **critique 第 9 维 `norms`** —— 偏差计分并自带换算好的建议尺寸；
+  **auto_fix** 规范预修（只覆写真正变化的维度，`fill`/`hug` 尺寸策略不被
+  圆角-only/高度-only 路径静默降级）；**`list_components`** 每条目新增
+  `norm` 字段——Agent 选组件时即可见规范。审查与修复两端共享同一判据集。
+- 定位是指导与规范、不做硬门：不改双门语义，存量文档不产生新视觉债。
+  加固：norm 问题串与修复明细过 JSON 转义（文案里的裸反斜杠/引号曾打穿
+  critique 响应信封）。
+
 ## 0.1.8 新特性
 
 - **清单迁移到 `moon.mod`**——全仓 `moon fmt`（移除废弃的 `moon.mod.json`）。

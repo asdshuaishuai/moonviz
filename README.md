@@ -1,5 +1,29 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.9
+
+- **Component norms — buttons never hug their label.** Weak models produce
+  "works but not polished" documents from three root causes; norms detects and
+  repairs all of them with one shared criteria set (`core/norms.mbt`):
+  - **Label padding** — action components (button/chip/tag/fab): width ≥ text
+    width + 24 (12 per side), height ≥ font size + 20 (band-aware: chip 28,
+    tag 22, fab 56; multi-line labels counted by line).
+  - **Radius bands** — rounded family (button/chip/tag/select/search_bar/fab)
+    snaps to the 8px band, over-tall radii collapse to height/2 (pill); avatars
+    stay circular (radius 999).
+  - **Full-bleed goes square** — app_bar/tab_bar/list_item/divider spanning the
+    artboard drop their corner radius (rounded corners poke past screen edges).
+- **critique dimension 9 `norms`** — deviations scored with ready-to-use
+  suggested sizes; **auto_fix** performs the norm pre-repair (it only rewrites
+  dimensions it actually changes, so `fill`/`hug` size strategies survive
+  radius-only/height-only fixes); **`list_components`** now carries a `norm`
+  field per entry, so the agent sees the band at component-selection time —
+  the review-and-repair loop shares one criteria set.
+- Advisory by design: no gate semantics change, existing documents incur no
+  new visual debt. Hardening: norm issue strings and fix details are
+  JSON-escaped (raw backslashes/quotes in labels used to break the critique
+  response envelope).
+
 ## What's New in 0.1.8
 
 - **Manifest migration to `moon.mod`** — `moon fmt` across the repo (deprecated

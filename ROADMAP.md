@@ -1,6 +1,24 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.8**（moonc ≥ 0.10.14 · mooncakes 原生包 0.1.8 已上架） · `moon test` 210/210 · 组件目录 65×115 · 仓库 100+ commits
+> 当前基线：**v0.1.9**（moonc ≥ 0.10.14 · mooncakes 原生包 0.1.8 已上架，0.1.9 待发布） · `moon test` 220/220 · 组件目录 65×115 · 仓库 100+ commits
+
+## 0.1.9 · 组件规范（norms）——弱模型的"能用但不精致"三类根因
+
+检测与修复共享同一判据（core/norms.mbt），定位是**指导与规范，不做硬门**——不改双门语义，存量文档不产生新视觉债：
+
+- **按钮不卡文案**：操作组件（button/chip/tag/fab）文案必须与边缘留白——
+  宽 ≥ 文案宽+24（左右各 12），高 ≥ 字号+20（chip 28 / tag 22 / fab 56 档位
+  与 component_norm 下发档对齐；多行文案按行数计高）。
+- **圆角档**：方正圆润族（button/chip/tag/select/search_bar/fab）归 8px 档，
+  超出 高/2 收敛（胶囊 高/2）；avatar 正圆 radius 999。
+- **全宽条/全宽行直角**：app_bar/tab_bar/list_item/divider 占满画板宽度时
+  圆角归 0（圆角会顶出屏幕边缘）。
+- **critique 第 9 维 `norms`**：偏差计数给分，建议自带换算好的尺寸——
+  Agent 读到就能改，不必自己算。
+- **auto_fix 规范预修**：`norm_fix_pass` 一键修复；只覆写真正变化的维度，
+  `fill`/`hug` 尺寸策略不被圆角-only/高度-only 路径静默降级。
+- **`list_components` norm 字段**：每条目携带一句话规范——Agent 选组件时
+  即可见规范，不必等 critique 事后纠正。
 
 ## 当前基线盘点
 

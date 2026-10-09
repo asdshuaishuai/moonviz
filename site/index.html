@@ -143,11 +143,11 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
 </div></section>
 
 <section class="alt"><div class="wrap">
-  <h2 class="sec">0.1.6-moon 新能力</h2>
+  <h2 class="sec">0.1.9 新能力：组件规范（norms）</h2>
   <div class="grid3">
-    <div class="card"><h3>⏪ 产品内撤销 / 时间旅行</h3><p><code>session_history</code>（init/commit/log/undo/redo/checkout/diff）——wasm 会话面直接做撤销重做与版本回放，响应回传 canonical MBT 供宿主持久化。</p></div>
-    <div class="card"><h3>📐 place 一步最终尺寸</h3><p><code>place &lt;ab&gt; &lt;comp&gt; &lt;id&gt; - x y w h</code>——AgentGate 在最终 bbox 上评估，消除「默认尺寸被拒 → update 修正」的中间态（真实 LLM run 111 次拒绝的根因）。</p></div>
-    <div class="card"><h3>🧭 constrain 自描述 + unflow</h3><p>constrain 错误就地返回 14 种可用意图；<code>unflow</code> 单条删除交互流边。构建工具链升级 moonc ≥ 0.10.14，CI 覆盖检查+测试+示例复现。</p></div>
+    <div class="card"><h3>🧩 按钮不卡文案</h3><p>操作组件（button/chip/tag/fab）文案必须与边缘留白：宽 ≥ 文案宽+24（左右各 12），高 ≥ 字号+20（chip 28 / tag 22 / fab 56 档位；多行文案按行数计高）。</p></div>
+    <div class="card"><h3>⬜ 圆角档 · 全宽直角</h3><p>方正圆润族归 8px 档、超出 高/2 收敛（胶囊），avatar 正圆 radius 999；app_bar/tab_bar/list_item/divider 占满画板宽度时圆角归 0。</p></div>
+    <div class="card"><h3>🛡 规范闭环</h3><p>critique 第 9 维 <code>norms</code> 偏差计分并自带建议尺寸；<code>auto_fix</code> 一键规范预修（不动 fill/hug 策略）；<code>list_components</code> 每条目携带 norm 字段——指导与规范，不做硬门。</p></div>
   </div>
   <h2 class="sec">六种集成方式</h2>
   <p class="lead">从命令行手动驱动，到 IDE 内 Agent 自动驱动——同一引擎，同一事实源。</p>
