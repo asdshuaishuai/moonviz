@@ -84,6 +84,15 @@ fill/stroke/text changes. Host editors draw tap-target hot zones from these
 bindings as their own overlay — a node must stay a complete, self-contained
 visual whether or not a hot-zone marker is drawn on it.
 
+Back navigation is built in: a tap on a back-like node (id containing
+back/prev/return as a word; text 返回/后退/上一步/back/←/‹/«) with no flow or
+marker returns to the previous artboard on the navigation stack — every host
+gets this for free, no client-side heuristic needed. Back-like nodes are also
+included in the interactions listing (marked `"builtin":"back"`). Validation:
+in multi-artboard documents every non-entry artboard must have an exit — an
+outbound `flow` or a back-like node; a page with neither strands the user and
+is flagged under the norms dimension.
+
 Node properties (`update <ab> <node> k=v ...`):
 `w h text fill text_color stroke stroke_width radius opacity font_size weight
 shadow rotate blur blend line tracking constraint align italic dash visible

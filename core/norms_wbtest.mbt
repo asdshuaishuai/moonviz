@@ -659,3 +659,97 @@ test "norms：品牌绿白字不误撞色（正常设计不受影响）" {
     }
   }
 }
+
+///|
+/// 返回交互测试：runtime 内置返回兜底 + 校验（返回交互是必须的）
+fn norms_make_back_project() -> Project {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="detail", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="btn_open",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = apply_operation(p, "update home btn_open text=打开详情")
+  let _ = apply_operation(p, "flow home detail btn_open")
+  let _ = p.place_component(
+    artboard="detail",
+    component_id="button",
+    instance_id="back_btn",
+    x=20.0,
+    y=72.0,
+    w=88.0,
+    h=44.0,
+  )
+  let _ = apply_operation(p, "update detail back_btn text=返回")
+  p
+}
+
+///|
+test "back：tap 返回类节点强制返回上一层（无 flow 兜底）" {
+  let p = norms_make_back_project()
+  let rt = match MoonVizRT::create(p, initial_artboard="home") {
+    Ok(rt) => rt
+    Err(e) => {
+      println("rt err: " + e)
+      assert_true(false)
+      return
+    }
+  }
+  // home 上点击打开按钮（btn_open 20,100 120×44 → 中心 80,122）→ 推入 detail
+  let _ = rt.handle_event(TapEvent(80.0, 122.0))
+  assert_eq(rt.current_artboard(), "detail")
+  // detail 上点击返回按钮（back_btn 20,72 88×44 → 中心 64,94）——
+  // 无 flow 接管，runtime 内置返回兜底弹栈回 home
+  let _ = rt.handle_event(TapEvent(64.0, 94.0))
+  assert_eq(rt.current_artboard(), "home")
+}
+
+///|
+test "back：校验——无出口画板被判 / 有出边豁免" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="entry", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="dead_end", width=390.0, height=844.0)
+  // 入口给出边 flow（现实场景：首页至少有 tab/CTA 出口）
+  let _ = p.place_component(
+    artboard="entry",
+    component_id="button",
+    instance_id="btn_go",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = apply_operation(p, "flow entry dead_end btn_go")
+  // dead_end：无出边、无返回类节点 → 卡死，必须判
+  let issues = p.norm_back_issues(artboard="dead_end")
+  let mut flagged = false
+  for s in issues.iter() {
+    if s.contains("无任何返回/离开交互") {
+      flagged = true
+    }
+  }
+  assert_true(flagged)
+  // 入口有出边 → 豁免
+  assert_eq(p.norm_back_issues(artboard="entry").length(), 0)
+}
+
+///|
+test "back：校验——出边 flow 豁免 / 返回类节点豁免" {
+  // 出边 flow 豁免
+  let p1 = norms_make_back_project()
+  assert_eq(p1.norm_back_issues(artboard="detail").length(), 0)
+  // 返回类节点豁免：无出边 flow 但有 back 按钮
+  let p2 = Project::new()
+  let _ = p2.create_artboard(name="entry2", width=390.0, height=844.0)
+  let _ = p2.create_artboard(name="leaf", width=390.0, height=844.0)
+  let _ = p2.place_component(
+    artboard="leaf",
+    component_id="button",
+    instance_id="btn_back_leaf",
+    x=20.0,
+    y=72.0,
+  )
+  assert_eq(p2.norm_back_issues(artboard="leaf").length(), 0)
+}

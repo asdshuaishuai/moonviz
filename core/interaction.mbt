@@ -647,6 +647,19 @@ pub fn Project::list_interactions(
           None => ()
         }
       }
+      // 内置返回热区：back-like 节点即使无 ⚡ 标记也导出（runtime 对其 tap
+      // 有内置返回兜底）——宿主据此绘制热区，无需各自维护启发式
+      for id in ab.doc.nodes.keys() {
+        match ab.doc.nodes.get(id) {
+          Some(n) =>
+            if !n.name.contains("⚡") && is_back_like_node(n) {
+              items.push(
+                "{\"node\":\"\{id}\",\"name\":\"\{n.name}\",\"artboard\":\"\{artboard}\",\"builtin\":\"back\"}",
+              )
+            }
+          None => ()
+        }
+      }
       let j = jstr12(items)
       Ok("[\{j}]")
     }

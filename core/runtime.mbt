@@ -158,9 +158,28 @@ pub fn MoonVizRT::handle_event(
                   changes.push(ArtboardChanged(target))
                 }
                 None =>
-                  // 无导航流：尝试节点交互标记（⚡trigger→action）；都没有则报状态更新
+                  // 无导航流：尝试节点交互标记（⚡trigger→action）；再退到内置
+                  // 返回语义——tap 命中形似返回的节点（back/prev/返回/< 等）
+                  // 时强制返回上一层（返回交互是必须的：原型绝不因漏接 flow
+                  // 而无路可退；与宿主端 isBackish 同语义，2026-10-11 下沉引擎）。
+                  // 栈底再返回 = 原地不动；都不是才报状态更新
                   if !self.run_marker(node_id, changes) {
-                    changes.push(NodeUpdated(node_id))
+                    let node = ab.doc.nodes.get(node_id)
+                    let back_like = match node {
+                      Some(n) => is_back_like_node(n)
+                      None => false
+                    }
+                    if back_like {
+                      match self.nav.go_back() {
+                        Some(prev) => {
+                          changes.push(NavigationPopped(prev))
+                          changes.push(ArtboardChanged(prev))
+                        }
+                        None => changes.push(NodeUpdated(node_id))
+                      }
+                    } else {
+                      changes.push(NodeUpdated(node_id))
+                    }
                   }
               }
             }

@@ -679,3 +679,107 @@ fn norm_readable_text(bg_luminance : Double) -> String {
     "#FFFFFF"
   }
 }
+
+///|
+/// 返回类节点判定（与宿主端 isBackish 启发式同语义，双端不再各自维护）：
+/// - id 词边界含 back/prev/return（backdrop 不算）
+/// - 文本为 返回/后退/上一步/back/←/‹/«，或以「返回」开头，或 ≤3 字含左箭头
+/// runtime 对返回类节点的 tap 有内置返回兜底（无 flow/marker 时强制返回
+/// 上一层），热区导出与校验共用本判定。
+pub fn is_back_like_node(n : Node) -> Bool {
+  let idl = n.id.to_lower()
+  if has_word(idl, "back") || has_word(idl, "prev") || has_word(idl, "return") {
+    return true
+  }
+  let t = n.text.trim().to_lower()
+  if t == "返回" ||
+    t == "后退" ||
+    t == "上一步" ||
+    t == "back" ||
+    t == "←" ||
+    t == "‹" ||
+    t == "«" {
+    return true
+  }
+  if t.has_prefix("返回") {
+    return true
+  }
+  if t.length() <= 3 &&
+    (t.contains("←") || t.contains("‹") || t.contains("«")) {
+    return true
+  }
+  false
+}
+
+///|
+/// 词边界子串匹配：出现位置两侧必须是 串边/[_-]（与宿主端正则
+/// (^|[_-])(back|prev|return)([_-]|$) 同语义；backdrop/dashboard 不误判）
+fn has_word(s_lower : String, word : String) -> Bool {
+  let n = s_lower.length()
+  let w = word.length()
+  if w == 0 || n < w {
+    return false
+  }
+  for i in 0..=(n - w) {
+    if s_lower.substring(start=i, end=i + w) == word {
+      let b_ok = if i == 0 {
+        true
+      } else {
+        match s_lower.get_char(i - 1) {
+          Some('_') | Some('-') => true
+          _ => false
+        }
+      }
+      let a_ok = if i + w == n {
+        true
+      } else {
+        match s_lower.get_char(i + w) {
+          Some('_') | Some('-') => true
+          _ => false
+        }
+      }
+      if b_ok && a_ok {
+        return true
+      }
+    }
+  }
+  false
+}
+
+///|
+/// 返回交互校验（返回交互是必须的，用户决策 2026-10-11）：
+/// 非入口画板必须有离开路径——出边 flow，或返回类节点（runtime 对返回类
+/// 节点的 tap 有内置返回兜底）。两者皆无 = 用户会卡死在该页。
+/// 入口画板豁免（导航栈底没有「上一层」）；单画板项目整体豁免。
+pub fn norm_back_issues(self : Project, artboard~ : String) -> Array[String] {
+  let issues : Array[String] = []
+  match self.artboards.get(artboard) {
+    None => ()
+    Some(ab) => {
+      // 单画板项目豁免：没有「上一层」，返回无意义
+      if self.artboards.size() <= 1 {
+        return issues
+      }
+      let mut has_out = false
+      for e in self.flows.iter() {
+        if e.from == artboard {
+          has_out = true
+          break
+        }
+      }
+      if has_out {
+        return issues
+      }
+      for id in ab.doc.nodes.keys() {
+        match ab.doc.nodes.get(id) {
+          Some(n) => if is_back_like_node(n) { return issues }
+          None => ()
+        }
+      }
+      issues.push(
+        "画板「\{json_escape(artboard)}」无任何返回/离开交互——用户会卡死在此页：加返回类节点（back/prev/返回/<，runtime 内置返回兜底）或出边 flow",
+      )
+    }
+  }
+  issues
+}

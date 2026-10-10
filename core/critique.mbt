@@ -372,6 +372,11 @@ pub fn Project::critique(
       // 与 auto_fix 的 norm_fix_pass 同一判据：critique 指出偏差并给出建议尺寸，
       // Agent 调 auto_fix 一键修复——审查-修复循环的反馈/执行两端共享同一规范。
       let norm_list = norm_issues(doc, layout)
+      // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
+      // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
+      for s in self.norm_back_issues(artboard=artboard).iter() {
+        norm_list.push(s)
+      }
       let n_norm = norm_list.length()
       let norm_score = if n_norm == 0 {
         9
