@@ -213,8 +213,17 @@ them in one call.
   row's bottom edge (inset ~16 px), or functional grouping into card `Frame`s.
   `critique` flags naked runs as the norms principle and `auto_fix` inserts the
   row-bottom dividers for you.
+- **Text is always readable — color pairing is a hard rule, not a taste call.**
+  Every text node is checked against its effective background (nearest painted
+  fill up the tree). WCAG contrast below 2.0 is a collision (同色系: black-on-black,
+  white-on-white) — strictly forbidden; `critique` flags it and `auto_fix` flips
+  the text to black or white by background luminance. Aim for ≥ 4.5 on body text;
+  never emit a node whose `text_color` is near its `fill`.
 - **Buttons carry short labels** (2–4 CJK chars). Sentence-length labels belong in a
   different component; the norms dimension will call them out.
+- **Components sit on the grid.** Rotation is limited to 90° steps (anything else
+  is flagged and reset); radius tiers and full-bleed rules above complete the
+  geometry standard.
 
 ## Rendering
 

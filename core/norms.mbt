@@ -1,10 +1,14 @@
 ///|
-/// 组件规范（1.0 规范性强化）：弱模型最常产出「能用但不精致」的文档，四类根因：
+/// 组件规范（1.0 规范性强化）：弱模型最常产出「能用但不精致」的文档，五类根因：
 /// 1. 操作组件宽高刚好卡住文案——没有留白概念，框贴着字
 /// 2. 圆角体系混乱——按钮族该「方正圆润」（8px 档）却给 0，或全宽条带圆角顶出屏幕边缘
 /// 3. 全宽条/全宽列表该直角却带圆角
 /// 4. 齐缝列表行没有行间分割线、没有分组——菜单/设置页十几行裸排下去，
 ///    与成品列表页（行底发丝线、分组卡片）一眼就是两档
+/// 5. **撞色**——文字与背景同色系（黑底黑字/白底白字），完全不可读；
+///    用户决策 2026-10-11：严禁高保真背景色和文字同色系，对比度 < 2.0
+///    零容忍，auto_fix 按背景亮度把文字翻转到黑/白。另：组件必须横平竖直，
+///    rotate 非 90° 倍数归零。
 ///
 /// 定位：**指导与规范，不做硬门**。偏差记入 critique 第 9 维（norms，给 Agent
 /// 事后反馈），auto_fix 一键修复（审查-修复循环的执行手）——不改双门语义，
@@ -139,6 +143,29 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
         match layout.rect_of(id) {
           None => ()
           Some(r) => {
+            // 0) 撞色零容忍（严禁背景色和文字同色系）：文字与有效背景对比度
+            //    < 2.0 即同色系不可读（黑底黑字 ≈1.08 / 白底白字 1.0）。
+            //    品牌色正常设计（微信绿白字 ≈2.4）不误伤。优先级最高——
+            //    不可读比一切样式问题都严重。
+            if n.text.length() > 0 {
+              match norm_text_collision(doc, id, n.style.fill, n.style.text_color, n.text) {
+                Some(cr) => {
+                  let bg = norm_effective_bg(doc, id, n.style.fill)
+                  issues.push(
+                    "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字与背景撞色：\{bg} 底 \{n.style.text_color} 字，对比度仅 \{cr}（同色系严禁）→ auto_fix 翻转文字色",
+                  )
+                  continue
+                }
+                None => ()
+              }
+            }
+            // 0.5) 横平竖直：rotate 必须是 90° 的倍数，任意角度破坏网格
+            if n.style.rotate % 90.0 != 0.0 {
+              issues.push(
+                "\{json_escape(id)}(\{n.component}) rotate \{n.style.rotate.to_int()}° 非直角倍数 → rotate 0（横平竖直，auto_fix 可修）",
+              )
+              continue
+            }
             // 1) 操作组件：文案必须与边缘留白
             if norm_is_action_component(n.component) && n.text.length() > 0 {
               let ts = text_intrinsic(
@@ -214,7 +241,29 @@ pub fn norm_fix_pass(
             let mut new_w = r.width
             let mut new_h = r.height
             let mut new_r = n.style.corner_radius
+            let mut new_text_color = ""
+            let mut new_rot = n.style.rotate
             let mut why = ""
+            // 0) 撞色修复（严禁背景色和文字同色系）：对比度 < 2.0 时文字色按
+            //    背景亮度翻转到黑/白——不可读比任何设计偏好都优先。
+            if n.text.length() > 0 {
+              let bg = norm_effective_bg(doc, id, n.style.fill)
+              if norm_is_hex6(bg) && norm_is_hex6(n.style.text_color) {
+                let cr = norm_contrast_ratio(
+                  norm_luminance(bg),
+                  norm_luminance(n.style.text_color),
+                )
+                if cr < NORM_CONTRAST_MIN {
+                  new_text_color = norm_readable_text(norm_luminance(bg))
+                  why = "撞色修复"
+                }
+              }
+            }
+            // 0.5) 横平竖直：rotate 必须是 90° 的倍数，其余归零
+            if n.style.rotate % 90.0 != 0.0 {
+              new_rot = 0.0
+              if why == "" { why = "rotate 归零（横平竖直）" }
+            }
             // 1) 操作组件放大到文案 + 留白（Fill 宽不动——它由父容器决定）
             if norm_is_action_component(n.component) && n.text.length() > 0 {
               let ts = text_intrinsic(
@@ -260,7 +309,9 @@ pub fn norm_fix_pass(
             }
             let changed = (new_w != r.width && new_w > 0.0) ||
               (new_h != r.height && new_h > 0.0) ||
-              new_r != n.style.corner_radius
+              new_r != n.style.corner_radius ||
+              (new_text_color != "" && new_text_color != n.style.text_color) ||
+              new_rot != n.style.rotate
             if changed && why != "" {
               // 只覆写真正变化的维度：width 变化必经 w_fixed 守卫（Fixed→Fixed），
               // 其余维度保持 x.width/x.height 原值——Fill/Hug 尺寸策略不得被
@@ -278,7 +329,16 @@ pub fn norm_fix_pass(
                   } else {
                     x.height
                   },
-                  style: { ..x.style, corner_radius: new_r },
+                  style: {
+                    ..x.style,
+                    corner_radius: new_r,
+                    text_color: if new_text_color != "" {
+                      new_text_color
+                    } else {
+                      x.style.text_color
+                    },
+                    rotate: if new_rot != x.style.rotate { new_rot } else { x.style.rotate },
+                  },
                 }
               })
               fixes.push(
@@ -487,3 +547,135 @@ pub fn norms_list_runs(
   runs
 }
 
+
+///|
+/// 颜色搭配标准（用户决策 2026-10-11：严禁高保真背景色和文字同色系）：
+/// 文字与**有效背景**（自身实底，透明则向上找最近实底祖先，兜底白底）的
+/// WCAG 对比度 < 2.0 即撞色——黑底黑字（≈1.08）、白底白字（1.0）一类，
+/// 完全不可读。品牌色正常设计（微信绿白字 ≈2.4）不受影响。
+/// 判不了的形态（非 #RRGGBB）一律不判，绝不误报。
+
+///|
+pub const NORM_CONTRAST_MIN : Double = 2.0
+
+///|
+fn norm_is_hex6(color : String) -> Bool {
+  if color.length() != 7 {
+    return false
+  }
+  if color.get_char(0) != Some('#') {
+    return false
+  }
+  for i in 1..<7 {
+    match color.get_char(i) {
+      Some(ch) => {
+        let code = ch.to_int()
+        let ok = (code >= 48 && code <= 57) || (code >= 97 && code <= 102) || (code >= 65 && code <= 70)
+        if not(ok) {
+          return false
+        }
+      }
+      None => return false
+    }
+  }
+  true
+}
+
+///|
+/// sRGB 通道 → 线性亮度分量
+fn norm_srgb_lin(c : Double) -> Double {
+  let v = c / 255.0
+  if v <= 0.03928 {
+    v / 12.92
+  } else {
+    Double::pow((v + 0.055) / 1.055, 2.4)
+  }
+}
+
+///|
+/// WCAG 相对亮度（仅接受 #RRGGBB；调用方先用 norm_is_hex6 把关）
+fn norm_luminance(color : String) -> Double {
+  let (r, g, b) = parse_hex_rgb(color)
+  0.2126 * norm_srgb_lin(r) + 0.7152 * norm_srgb_lin(g) + 0.0722 * norm_srgb_lin(b)
+}
+
+///|
+/// WCAG 对比度比
+fn norm_contrast_ratio(a : Double, b : Double) -> Double {
+  let hi = if a > b { a } else { b }
+  let lo = if a > b { b } else { a }
+  (hi + 0.05) / (lo + 0.05)
+}
+
+///|
+/// 有效背景色：自身实底优先；透明（none）向上找最近的实底祖先；
+/// 全透明按白底收尾。
+fn norm_effective_bg(
+  doc : Document,
+  node_id : String,
+  own_fill : String,
+) -> String {
+  if own_fill != "none" && norm_is_hex6(own_fill) {
+    return own_fill
+  }
+  let mut cur = node_id
+  let mut walking = true
+  while walking {
+    match doc.find_parent(cur) {
+      None => walking = false
+      Some(p) => {
+        cur = p
+        match doc.nodes.get(p) {
+          None => walking = false
+          Some(pn) =>
+            if pn.style.fill != "none" && norm_is_hex6(pn.style.fill) {
+              walking = false
+              return pn.style.fill
+            }
+        }
+      }
+    }
+  }
+  "#FFFFFF"
+}
+
+///|
+/// 撞色判定：文字与有效背景对比度 < NORM_CONTRAST_MIN。
+/// 返回 Some(对比度) 表示撞色。
+fn norm_text_collision(
+  doc : Document,
+  node_id : String,
+  fill : String,
+  text_color : String,
+  text : String,
+) -> Double? {
+  if text.length() == 0 {
+    return None
+  }
+  if !norm_is_hex6(text_color) || !norm_is_hex6(fill) {
+    let bg = norm_effective_bg(doc, node_id, fill)
+    if !norm_is_hex6(text_color) || !norm_is_hex6(bg) {
+      return None
+    }
+  }
+  let bg = norm_effective_bg(doc, node_id, fill)
+  if !norm_is_hex6(bg) || !norm_is_hex6(text_color) {
+    return None
+  }
+  let cr = norm_contrast_ratio(norm_luminance(bg), norm_luminance(text_color))
+  if cr < NORM_CONTRAST_MIN {
+    Some(cr)
+  } else {
+    None
+  }
+}
+
+///|
+/// 撞色修复的文字色：按背景亮度翻转到黑/白
+fn norm_readable_text(bg_luminance : Double) -> String {
+  if bg_luminance > 0.35 {
+    "#1A1C1E"
+  } else {
+    "#FFFFFF"
+  }
+}

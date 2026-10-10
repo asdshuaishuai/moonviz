@@ -516,3 +516,146 @@ test "norms：两行列表不误报（run 下限 3）" {
     }
   }
 }
+
+///|
+/// 撞色/横平竖直测试：复刻真实弱模型产出的事故形态
+/// （用户 2026-10-10 文档：discover 黑底黑字 list_item、conversation 黑底黑字
+/// 与白底白字 chat_bubble）。
+fn norms_make_color_project() -> Project {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_color", width=390.0, height=844.0)
+  // 黑底黑字：fill #000000 + text #111111
+  let _ = p.place_component(
+    artboard="norms_color",
+    component_id="list_item",
+    instance_id="dark_row",
+    y=72.0,
+    w=390.0,
+    h=56.0,
+  )
+  let _ = apply_operation(p, "update norms_color dark_row text=朋友圈")
+  let _ = apply_operation(p, "update norms_color dark_row fill=#000000")
+  let _ = apply_operation(p, "update norms_color dark_row text_color=#111111")
+  // 白底白字
+  let _ = p.place_component(
+    artboard="norms_color",
+    component_id="chat_bubble",
+    instance_id="white_bubble",
+    x=170.0,
+    y=160.0,
+    w=120.0,
+    h=40.0,
+  )
+  let _ = apply_operation(p, "update norms_color white_bubble text=好啊几点")
+  let _ = apply_operation(p, "update norms_color white_bubble fill=#FFFFFF")
+  let _ = apply_operation(p, "update norms_color white_bubble text_color=#FFFFFF")
+  // 斜置组件
+  let _ = p.place_component(
+    artboard="norms_color",
+    component_id="button",
+    instance_id="tilted_btn",
+    x=20.0,
+    y=300.0,
+  )
+  let _ = apply_operation(p, "update norms_color tilted_btn rotate=15")
+  p
+}
+
+///|
+test "norms：撞色检测（黑底黑字 / 白底白字）" {
+  let p = norms_make_color_project()
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      let mut dark_hit = false
+      let mut white_hit = false
+      for s in issues.iter() {
+        if s.contains("dark_row") && s.contains("撞色") {
+          dark_hit = true
+        }
+        if s.contains("white_bubble") && s.contains("撞色") {
+          white_hit = true
+        }
+      }
+      assert_true(dark_hit)
+      assert_true(white_hit)
+    }
+  }
+}
+
+///|
+test "norms：撞色修复——文字色按背景亮度翻转" {
+  let p = norms_make_color_project()
+  let _ = p.auto_fix(artboard="norms_color")
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) => {
+      // 黑底 → 文字翻白
+      match ab.doc.nodes.get("dark_row") {
+        None => assert_true(false)
+        Some(n) => assert_eq(n.style.text_color, "#FFFFFF")
+      }
+      // 白底 → 文字翻黑
+      match ab.doc.nodes.get("white_bubble") {
+        None => assert_true(false)
+        Some(n) => assert_eq(n.style.text_color, "#1A1C1E")
+      }
+      // 修复后零偏差
+      assert_eq(norm_issues(ab.doc, solve(ab.doc)).length(), 0)
+      // 不引入新视觉债
+      assert_eq(validate(ab.doc).length(), 0)
+    }
+  }
+}
+
+///|
+test "norms：rotate 非 90° 倍数归零（横平竖直）" {
+  let p = norms_make_color_project()
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) => {
+      let mut tilted = false
+      for s in norm_issues(ab.doc, solve(ab.doc)).iter() {
+        if s.contains("非直角倍数") {
+          tilted = true
+        }
+      }
+      assert_true(tilted)
+    }
+  }
+  let _ = p.auto_fix(artboard="norms_color")
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) =>
+      match ab.doc.nodes.get("tilted_btn") {
+        None => assert_true(false)
+        Some(n) => assert_eq(n.style.rotate, 0.0)
+      }
+  }
+}
+
+///|
+test "norms：品牌绿白字不误撞色（正常设计不受影响）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_brand", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_brand",
+    component_id="button",
+    instance_id="brand_btn",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = apply_operation(p, "update norms_brand brand_btn text=登录")
+  let _ = apply_operation(p, "update norms_brand brand_btn fill=#07C160")
+  let _ = apply_operation(p, "update norms_brand brand_btn text_color=#FFFFFF")
+  match p.artboards.get("norms_brand") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("撞色"))
+      }
+    }
+  }
+}
