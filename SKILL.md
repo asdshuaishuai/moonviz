@@ -201,6 +201,11 @@ them in one call.
   avatars 999 (circle); full-width bars and rows (`app_bar`/`tab_bar`/`list_item`/
   `divider` spanning the artboard) radius 0 — rounded corners on full-bleed edges
   read as sloppiness.
+- **Lists are never naked stacks.** Three or more flush-stacked `list_item` rows
+  (menu pages, settings pages) need hairline separation: a 1 px `divider` at each
+  row's bottom edge (inset ~16 px), or functional grouping into card `Frame`s.
+  `critique` flags naked runs as the norms principle and `auto_fix` inserts the
+  row-bottom dividers for you.
 - **Buttons carry short labels** (2–4 CJK chars). Sentence-length labels belong in a
   different component; the norms dimension will call them out.
 

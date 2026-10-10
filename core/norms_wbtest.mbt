@@ -359,3 +359,160 @@ test "norms：问题串与 critique JSON 对 id/文案转义" {
     }
   }
 }
+
+///|
+/// 构造齐缝菜单列表（无分割线）：app_bar + n×56 list_item 齐缝堆叠 + tab_bar
+fn norms_make_menu_project(row_count : Int) -> Project {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_menu", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_menu",
+    component_id="app_bar",
+    instance_id="bar",
+    y=0.0,
+    h=44.0,
+  )
+  for i in 0..<row_count {
+    let _ = p.place_component(
+      artboard="norms_menu",
+      component_id="list_item",
+      instance_id="row_" + i.to_string(),
+      y=44.0 + i.to_double() * 56.0,
+      w=390.0,
+      h=56.0,
+    )
+    let _ = apply_operation(
+      p,
+      "update norms_menu row_" + i.to_string() + " text=菜单项" + i.to_string(),
+    )
+  }
+  let _ = p.place_component(
+    artboard="norms_menu",
+    component_id="tab_bar",
+    instance_id="tabs",
+    y=788.0,
+    h=56.0,
+  )
+  p
+}
+
+///|
+test "norms：齐缝列表无分割线被判偏差" {
+  let p = norms_make_menu_project(4)
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      let mut flagged = false
+      for s in issues.iter() {
+        if s.contains("行间无分割线") {
+          flagged = true
+        }
+      }
+      assert_true(flagged)
+      // 建议里给出修复路径（divider / 分组 / auto_fix）
+      let mut actionable = false
+      for s in issues.iter() {
+        if s.contains("1px divider") && s.contains("auto_fix") {
+          actionable = true
+        }
+      }
+      assert_true(actionable)
+    }
+  }
+}
+
+///|
+test "norms：auto_fix 为列表行插入行底分割线" {
+  let p = norms_make_menu_project(4)
+  let before_debt = match p.artboards.get("norms_menu") {
+    Some(ab) => validate(ab.doc).length()
+    None => 0
+  }
+  match p.auto_fix(artboard="norms_menu") {
+    Ok(json) => assert_true(json.contains("list_divider"))
+    Err(_) => assert_true(false)
+  }
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      // 前 3 行行底各有一条 divider 子节点；最后一行没有
+      for i in 0..<3 {
+        match ab.doc.nodes.get("row_" + i.to_string()) {
+          None => assert_true(false)
+          Some(row) => {
+            let mut has = false
+            for cid in row.children.iter() {
+              match ab.doc.nodes.get(cid) {
+                Some(c) => if c.component == "divider" { has = true }
+                None => ()
+              }
+            }
+            assert_true(has)
+          }
+        }
+      }
+      match ab.doc.nodes.get("row_3") {
+        None => assert_true(false)
+        Some(row) => {
+          let mut has = false
+          for cid in row.children.iter() {
+            match ab.doc.nodes.get(cid) {
+              Some(c) => if c.component == "divider" { has = true }
+              None => ()
+            }
+          }
+          assert_false(has)
+        }
+      }
+      // 修复后不再判偏差
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("行间无分割线"))
+      }
+      // 不引入新视觉债
+      assert_eq(validate(ab.doc).length(), before_debt)
+    }
+  }
+}
+
+///|
+test "norms：已有分割线的列表不误报" {
+  let p = norms_make_menu_project(4)
+  // 每行行底放 divider 子节点（上一轮修复后的形态）
+  for i in 0..<3 {
+    let _ = p.place_component(
+      artboard="norms_menu",
+      component_id="divider",
+      instance_id="row_" + i.to_string() + "_sep",
+      parent_id="row_" + i.to_string(),
+      x=16.0,
+      y=55.0,
+      w=358.0,
+      h=1.0,
+    )
+  }
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("行间无分割线"))
+      }
+    }
+  }
+}
+
+///|
+test "norms：两行列表不误报（run 下限 3）" {
+  let p = norms_make_menu_project(2)
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("行间无分割线"))
+      }
+    }
+  }
+}
