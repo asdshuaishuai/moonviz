@@ -77,6 +77,13 @@ An override recolors immediately, persists in the document's frontmatter
 `tokens:` section, and setting the default value back removes it) ·
 `fix <ab>` (commits only when violations strictly decrease)
 
+Interaction targets are a data layer, never a styling layer: bind `flow` to
+the container the user actually taps (the row, the button, the card), never to
+an inner text fragment, and never model interaction state through
+fill/stroke/text changes. Host editors draw tap-target hot zones from these
+bindings as their own overlay — a node must stay a complete, self-contained
+visual whether or not a hot-zone marker is drawn on it.
+
 Node properties (`update <ab> <node> k=v ...`):
 `w h text fill text_color stroke stroke_width radius opacity font_size weight
 shadow rotate blur blend line tracking constraint align italic dash visible
