@@ -27,11 +27,14 @@ pub fn Project::auto_fix(
     Some(ab) => {
       let fixes : Array[String] = []
       let mut round = 0
-      // 组件规范先修（按钮卡文案放大/圆角归档/全宽条直角）：放大可能引入新的
-      // 重叠/溢出，所以必须在视觉债迭代**之前**执行，让下面的谓词循环把
-      // 新引入的违规一并清掉。
+      // 组件规范先修（按钮卡文案放大/圆角归档/全宽条直角/列表行间分割线）：
+      // 放大可能引入新的重叠/溢出，所以必须在视觉债迭代**之前**执行，让下面
+      // 的谓词循环把新引入的违规一并清掉。
       let norm_layout = solve(ab.doc)
       for f in norm_fix_pass(ab.doc, norm_layout).iter() {
+        fixes.push(f)
+      }
+      for f in self.norm_list_divider_fix(artboard=artboard).iter() {
         fixes.push(f)
       }
       let mut remaining = validate(ab.doc).length()
@@ -214,4 +217,62 @@ fn pos_to_str(p : PosSpec) -> String {
     AlignEnd(v) => "end(\{v})"
     CenterInParent => "center"
   }
+}
+
+///|
+/// 列表分割线修复：给齐缝 list_item 连排（norms_list_runs）的每一行——
+/// 除最后一行——行底插入 1px divider 子节点。走 place_component 真实
+/// 实例化路径（divider 变体的 outline_variant 色随主题解析）；子节点挂在
+/// 行内，不参与兄弟重叠检查（v1 只查 Frame 子节点），包含检查也只对
+/// Frame 生效——零门风险，不引入视觉债。行内已有 divider 则跳过（幂等）。
+fn Project::norm_list_divider_fix(
+  self : Project,
+  artboard~ : String,
+) -> Array[String] {
+  let fixes : Array[String] = []
+  match self.artboards.get(artboard) {
+    None => ()
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      for run in norms_list_runs(ab.doc, layout).iter() {
+        let n = run.row_ids.length()
+        for idx in 0..<(n - 1) {
+          let row_id = run.row_ids[idx]
+          match (ab.doc.nodes.get(row_id), layout.rect_of(row_id)) {
+            (Some(row), Some(rr)) => {
+              let mut has = false
+              for cid in row.children.iter() {
+                match ab.doc.nodes.get(cid) {
+                  Some(c) => if c.component == "divider" { has = true }
+                  None => ()
+                }
+              }
+              if has {
+                continue
+              }
+              let sep_id = row_id + "_sep"
+              match self.place_component(
+                artboard=artboard,
+                component_id="divider",
+                instance_id=sep_id,
+                parent_id=row_id,
+                x=16.0,
+                y=rr.height - 1.0,
+                w=rr.width - 32.0,
+                h=1.0,
+              ) {
+                Ok(_) =>
+                  fixes.push(
+                    "{\"node\":\"\{json_escape(row_id)}\",\"action\":\"list_divider\",\"why\":\"列表行间分割线\",\"after\":\"行底 1px divider（\{json_escape(sep_id)}）\"}",
+                  )
+                Err(_) => ()
+              }
+            }
+            _ => ()
+          }
+        }
+      }
+    }
+  }
+  fixes
 }

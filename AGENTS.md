@@ -96,3 +96,23 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 # 发布渠道以 GitHub Releases 为准（npm 仓库暂不入驻，
 # scripts/publish-all.sh 仅在用户显式要求发 npm 时使用，浏览器 passkey）
 ```
+## 组件规范（norms，0.1.9 起随版生效）
+
+`core/norms.mbt` 是组件质量规范的单一定义点，五类根因各有检测 + auto_fix 修复，
+ critique 第 9 维（norms）给 Agent 反馈；**只走软路径**（critique/fix），不改双门：
+
+1. 按钮不卡文案：宽 ≥ 文案宽+24（左右各留 12），高 ≥ 字号+20（chip/tag/fab 有独立档位）
+2. 圆角档：按钮族 8、胶囊 高/2、avatar 999、全宽条/全宽行直角
+3. 齐缝列表行（≥3 行 list_item 连排）行间必须有 1px divider 子节点或 Frame 分组；
+   auto_fix 在行底插入（Rect 子节点不参与 v1 重叠/包含检查，零门风险）
+4. 撞色零容忍：文字与**有效背景**（自身实底 → 最近实底祖先 → 白底）的 WCAG
+   对比度 < 2.0 即同色系严禁；auto_fix 按背景亮度把文字翻转到黑/白；
+   非 #RRGGBB 形态不判不报。品牌色正常设计（微信绿白字 ≈2.4）不误伤
+5. 横平竖直：rotate 非 90° 倍数归零
+
+交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中
+返回类节点（id 词边界 back/prev/return；文本 返回/后退/上一步/back/←/‹/«）
+且无 flow/marker 时强制返回上一层（导航栈弹出，栈底原地不动）；
+`list_interactions`/`interactions_json` 导出返回类节点（`"builtin":"back"`），
+宿主热区直接消费；`norm_back_issues` 校验非入口画板必须有出边 flow 或返回类
+节点（卡死页判入 norms 维度）。测试锚点全在 `core/norms_wbtest.mbt`。

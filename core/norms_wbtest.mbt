@@ -359,3 +359,397 @@ test "norms：问题串与 critique JSON 对 id/文案转义" {
     }
   }
 }
+
+///|
+/// 构造齐缝菜单列表（无分割线）：app_bar + n×56 list_item 齐缝堆叠 + tab_bar
+fn norms_make_menu_project(row_count : Int) -> Project {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_menu", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_menu",
+    component_id="app_bar",
+    instance_id="bar",
+    y=0.0,
+    h=44.0,
+  )
+  for i in 0..<row_count {
+    let _ = p.place_component(
+      artboard="norms_menu",
+      component_id="list_item",
+      instance_id="row_" + i.to_string(),
+      y=44.0 + i.to_double() * 56.0,
+      w=390.0,
+      h=56.0,
+    )
+    let _ = apply_operation(
+      p,
+      "update norms_menu row_" + i.to_string() + " text=菜单项" + i.to_string(),
+    )
+  }
+  let _ = p.place_component(
+    artboard="norms_menu",
+    component_id="tab_bar",
+    instance_id="tabs",
+    y=788.0,
+    h=56.0,
+  )
+  p
+}
+
+///|
+test "norms：齐缝列表无分割线被判偏差" {
+  let p = norms_make_menu_project(4)
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      let mut flagged = false
+      for s in issues.iter() {
+        if s.contains("行间无分割线") {
+          flagged = true
+        }
+      }
+      assert_true(flagged)
+      // 建议里给出修复路径（divider / 分组 / auto_fix）
+      let mut actionable = false
+      for s in issues.iter() {
+        if s.contains("1px divider") && s.contains("auto_fix") {
+          actionable = true
+        }
+      }
+      assert_true(actionable)
+    }
+  }
+}
+
+///|
+test "norms：auto_fix 为列表行插入行底分割线" {
+  let p = norms_make_menu_project(4)
+  let before_debt = match p.artboards.get("norms_menu") {
+    Some(ab) => validate(ab.doc).length()
+    None => 0
+  }
+  match p.auto_fix(artboard="norms_menu") {
+    Ok(json) => assert_true(json.contains("list_divider"))
+    Err(_) => assert_true(false)
+  }
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      // 前 3 行行底各有一条 divider 子节点；最后一行没有
+      for i in 0..<3 {
+        match ab.doc.nodes.get("row_" + i.to_string()) {
+          None => assert_true(false)
+          Some(row) => {
+            let mut has = false
+            for cid in row.children.iter() {
+              match ab.doc.nodes.get(cid) {
+                Some(c) => if c.component == "divider" { has = true }
+                None => ()
+              }
+            }
+            assert_true(has)
+          }
+        }
+      }
+      match ab.doc.nodes.get("row_3") {
+        None => assert_true(false)
+        Some(row) => {
+          let mut has = false
+          for cid in row.children.iter() {
+            match ab.doc.nodes.get(cid) {
+              Some(c) => if c.component == "divider" { has = true }
+              None => ()
+            }
+          }
+          assert_false(has)
+        }
+      }
+      // 修复后不再判偏差
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("行间无分割线"))
+      }
+      // 不引入新视觉债
+      assert_eq(validate(ab.doc).length(), before_debt)
+    }
+  }
+}
+
+///|
+test "norms：已有分割线的列表不误报" {
+  let p = norms_make_menu_project(4)
+  // 每行行底放 divider 子节点（上一轮修复后的形态）
+  for i in 0..<3 {
+    let _ = p.place_component(
+      artboard="norms_menu",
+      component_id="divider",
+      instance_id="row_" + i.to_string() + "_sep",
+      parent_id="row_" + i.to_string(),
+      x=16.0,
+      y=55.0,
+      w=358.0,
+      h=1.0,
+    )
+  }
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("行间无分割线"))
+      }
+    }
+  }
+}
+
+///|
+test "norms：两行列表不误报（run 下限 3）" {
+  let p = norms_make_menu_project(2)
+  match p.artboards.get("norms_menu") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("行间无分割线"))
+      }
+    }
+  }
+}
+
+///|
+/// 撞色/横平竖直测试：复刻真实弱模型产出的事故形态
+/// （用户 2026-10-10 文档：discover 黑底黑字 list_item、conversation 黑底黑字
+/// 与白底白字 chat_bubble）。
+fn norms_make_color_project() -> Project {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_color", width=390.0, height=844.0)
+  // 黑底黑字：fill #000000 + text #111111
+  let _ = p.place_component(
+    artboard="norms_color",
+    component_id="list_item",
+    instance_id="dark_row",
+    y=72.0,
+    w=390.0,
+    h=56.0,
+  )
+  let _ = apply_operation(p, "update norms_color dark_row text=朋友圈")
+  let _ = apply_operation(p, "update norms_color dark_row fill=#000000")
+  let _ = apply_operation(p, "update norms_color dark_row text_color=#111111")
+  // 白底白字
+  let _ = p.place_component(
+    artboard="norms_color",
+    component_id="chat_bubble",
+    instance_id="white_bubble",
+    x=170.0,
+    y=160.0,
+    w=120.0,
+    h=40.0,
+  )
+  let _ = apply_operation(p, "update norms_color white_bubble text=好啊几点")
+  let _ = apply_operation(p, "update norms_color white_bubble fill=#FFFFFF")
+  let _ = apply_operation(p, "update norms_color white_bubble text_color=#FFFFFF")
+  // 斜置组件
+  let _ = p.place_component(
+    artboard="norms_color",
+    component_id="button",
+    instance_id="tilted_btn",
+    x=20.0,
+    y=300.0,
+  )
+  let _ = apply_operation(p, "update norms_color tilted_btn rotate=15")
+  p
+}
+
+///|
+test "norms：撞色检测（黑底黑字 / 白底白字）" {
+  let p = norms_make_color_project()
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      let mut dark_hit = false
+      let mut white_hit = false
+      for s in issues.iter() {
+        if s.contains("dark_row") && s.contains("撞色") {
+          dark_hit = true
+        }
+        if s.contains("white_bubble") && s.contains("撞色") {
+          white_hit = true
+        }
+      }
+      assert_true(dark_hit)
+      assert_true(white_hit)
+    }
+  }
+}
+
+///|
+test "norms：撞色修复——文字色按背景亮度翻转" {
+  let p = norms_make_color_project()
+  let _ = p.auto_fix(artboard="norms_color")
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) => {
+      // 黑底 → 文字翻白
+      match ab.doc.nodes.get("dark_row") {
+        None => assert_true(false)
+        Some(n) => assert_eq(n.style.text_color, "#FFFFFF")
+      }
+      // 白底 → 文字翻黑
+      match ab.doc.nodes.get("white_bubble") {
+        None => assert_true(false)
+        Some(n) => assert_eq(n.style.text_color, "#1A1C1E")
+      }
+      // 修复后零偏差
+      assert_eq(norm_issues(ab.doc, solve(ab.doc)).length(), 0)
+      // 不引入新视觉债
+      assert_eq(validate(ab.doc).length(), 0)
+    }
+  }
+}
+
+///|
+test "norms：rotate 非 90° 倍数归零（横平竖直）" {
+  let p = norms_make_color_project()
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) => {
+      let mut tilted = false
+      for s in norm_issues(ab.doc, solve(ab.doc)).iter() {
+        if s.contains("非直角倍数") {
+          tilted = true
+        }
+      }
+      assert_true(tilted)
+    }
+  }
+  let _ = p.auto_fix(artboard="norms_color")
+  match p.artboards.get("norms_color") {
+    None => assert_true(false)
+    Some(ab) =>
+      match ab.doc.nodes.get("tilted_btn") {
+        None => assert_true(false)
+        Some(n) => assert_eq(n.style.rotate, 0.0)
+      }
+  }
+}
+
+///|
+test "norms：品牌绿白字不误撞色（正常设计不受影响）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_brand", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="norms_brand",
+    component_id="button",
+    instance_id="brand_btn",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = apply_operation(p, "update norms_brand brand_btn text=登录")
+  let _ = apply_operation(p, "update norms_brand brand_btn fill=#07C160")
+  let _ = apply_operation(p, "update norms_brand brand_btn text_color=#FFFFFF")
+  match p.artboards.get("norms_brand") {
+    None => assert_true(false)
+    Some(ab) => {
+      let issues = norm_issues(ab.doc, solve(ab.doc))
+      for s in issues.iter() {
+        assert_false(s.contains("撞色"))
+      }
+    }
+  }
+}
+
+///|
+/// 返回交互测试：runtime 内置返回兜底 + 校验（返回交互是必须的）
+fn norms_make_back_project() -> Project {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="detail", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="btn_open",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = apply_operation(p, "update home btn_open text=打开详情")
+  let _ = apply_operation(p, "flow home detail btn_open")
+  let _ = p.place_component(
+    artboard="detail",
+    component_id="button",
+    instance_id="back_btn",
+    x=20.0,
+    y=72.0,
+    w=88.0,
+    h=44.0,
+  )
+  let _ = apply_operation(p, "update detail back_btn text=返回")
+  p
+}
+
+///|
+test "back：tap 返回类节点强制返回上一层（无 flow 兜底）" {
+  let p = norms_make_back_project()
+  let rt = match MoonVizRT::create(p, initial_artboard="home") {
+    Ok(rt) => rt
+    Err(e) => {
+      println("rt err: " + e)
+      assert_true(false)
+      return
+    }
+  }
+  // home 上点击打开按钮（btn_open 20,100 120×44 → 中心 80,122）→ 推入 detail
+  let _ = rt.handle_event(TapEvent(80.0, 122.0))
+  assert_eq(rt.current_artboard(), "detail")
+  // detail 上点击返回按钮（back_btn 20,72 88×44 → 中心 64,94）——
+  // 无 flow 接管，runtime 内置返回兜底弹栈回 home
+  let _ = rt.handle_event(TapEvent(64.0, 94.0))
+  assert_eq(rt.current_artboard(), "home")
+}
+
+///|
+test "back：校验——无出口画板被判 / 有出边豁免" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="entry", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="dead_end", width=390.0, height=844.0)
+  // 入口给出边 flow（现实场景：首页至少有 tab/CTA 出口）
+  let _ = p.place_component(
+    artboard="entry",
+    component_id="button",
+    instance_id="btn_go",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = apply_operation(p, "flow entry dead_end btn_go")
+  // dead_end：无出边、无返回类节点 → 卡死，必须判
+  let issues = p.norm_back_issues(artboard="dead_end")
+  let mut flagged = false
+  for s in issues.iter() {
+    if s.contains("无任何返回/离开交互") {
+      flagged = true
+    }
+  }
+  assert_true(flagged)
+  // 入口有出边 → 豁免
+  assert_eq(p.norm_back_issues(artboard="entry").length(), 0)
+}
+
+///|
+test "back：校验——出边 flow 豁免 / 返回类节点豁免" {
+  // 出边 flow 豁免
+  let p1 = norms_make_back_project()
+  assert_eq(p1.norm_back_issues(artboard="detail").length(), 0)
+  // 返回类节点豁免：无出边 flow 但有 back 按钮
+  let p2 = Project::new()
+  let _ = p2.create_artboard(name="entry2", width=390.0, height=844.0)
+  let _ = p2.create_artboard(name="leaf", width=390.0, height=844.0)
+  let _ = p2.place_component(
+    artboard="leaf",
+    component_id="button",
+    instance_id="btn_back_leaf",
+    x=20.0,
+    y=72.0,
+  )
+  assert_eq(p2.norm_back_issues(artboard="leaf").length(), 0)
+}

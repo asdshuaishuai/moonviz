@@ -77,6 +77,22 @@ An override recolors immediately, persists in the document's frontmatter
 `tokens:` section, and setting the default value back removes it) ·
 `fix <ab>` (commits only when violations strictly decrease)
 
+Interaction targets are a data layer, never a styling layer: bind `flow` to
+the container the user actually taps (the row, the button, the card), never to
+an inner text fragment, and never model interaction state through
+fill/stroke/text changes. Host editors draw tap-target hot zones from these
+bindings as their own overlay — a node must stay a complete, self-contained
+visual whether or not a hot-zone marker is drawn on it.
+
+Back navigation is built in: a tap on a back-like node (id containing
+back/prev/return as a word; text 返回/后退/上一步/back/←/‹/«) with no flow or
+marker returns to the previous artboard on the navigation stack — every host
+gets this for free, no client-side heuristic needed. Back-like nodes are also
+included in the interactions listing (marked `"builtin":"back"`). Validation:
+in multi-artboard documents every non-entry artboard must have an exit — an
+outbound `flow` or a back-like node; a page with neither strands the user and
+is flagged under the norms dimension.
+
 Node properties (`update <ab> <node> k=v ...`):
 `w h text fill text_color stroke stroke_width radius opacity font_size weight
 shadow rotate blur blend line tracking constraint align italic dash visible
@@ -201,8 +217,22 @@ them in one call.
   avatars 999 (circle); full-width bars and rows (`app_bar`/`tab_bar`/`list_item`/
   `divider` spanning the artboard) radius 0 — rounded corners on full-bleed edges
   read as sloppiness.
+- **Lists are never naked stacks.** Three or more flush-stacked `list_item` rows
+  (menu pages, settings pages) need hairline separation: a 1 px `divider` at each
+  row's bottom edge (inset ~16 px), or functional grouping into card `Frame`s.
+  `critique` flags naked runs as the norms principle and `auto_fix` inserts the
+  row-bottom dividers for you.
+- **Text is always readable — color pairing is a hard rule, not a taste call.**
+  Every text node is checked against its effective background (nearest painted
+  fill up the tree). WCAG contrast below 2.0 is a collision (同色系: black-on-black,
+  white-on-white) — strictly forbidden; `critique` flags it and `auto_fix` flips
+  the text to black or white by background luminance. Aim for ≥ 4.5 on body text;
+  never emit a node whose `text_color` is near its `fill`.
 - **Buttons carry short labels** (2–4 CJK chars). Sentence-length labels belong in a
   different component; the norms dimension will call them out.
+- **Components sit on the grid.** Rotation is limited to 90° steps (anything else
+  is flagged and reset); radius tiers and full-bleed rules above complete the
+  geometry standard.
 
 ## Rendering
 
