@@ -144,10 +144,21 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
 
 <section class="alt"><div class="wrap">
   <h2 class="sec">0.1.9 新能力：组件规范（norms）</h2>
-  <div class="grid3">
-    <div class="card"><h3>🧩 按钮不卡文案</h3><p>操作组件（button/chip/tag/fab）文案必须与边缘留白：宽 ≥ 文案宽+24（左右各 12），高 ≥ 字号+20（chip 28 / tag 22 / fab 56 档位；多行文案按行数计高）。</p></div>
+  <p class="lead">弱模型最常产出「能用但不精致」的原型——五类根因各有检测 + <code>auto_fix</code> 修复，critique 第 9 维（<code>norms</code>）给 Agent 反馈。规范走 critique/fix 软路径，不改双门。</p>
+  <div class="grid c3">
+    <div class="card"><h3>🧩 按钮不卡文案</h3><p>操作组件（button/chip/tag/fab）文案必须与边缘留白：宽 ≥ 文案宽+24（左右各 12），高按组件档位（chip 28 / tag 22 / fab 56；多行文案按行数计高）。</p></div>
     <div class="card"><h3>⬜ 圆角档 · 全宽直角</h3><p>方正圆润族归 8px 档、超出 高/2 收敛（胶囊），avatar 正圆 radius 999；app_bar/tab_bar/list_item/divider 占满画板宽度时圆角归 0。</p></div>
-    <div class="card"><h3>🛡 规范闭环</h3><p>critique 第 9 维 <code>norms</code> 偏差计分并自带建议尺寸；<code>auto_fix</code> 一键规范预修（不动 fill/hug 策略）；<code>list_components</code> 每条目携带 norm 字段——指导与规范，不做硬门。</p></div>
+    <div class="card"><h3>📏 列表必须有分割线</h3><p>≥3 行 list_item 齐缝连排且整段无 divider = 裸列表。auto_fix 在每行行底插入 1px divider 子节点——不参与 v1 重叠/包含检查，零门风险。</p></div>
+    <div class="card"><h3>🎨 撞色零容忍</h3><p>文字对有效背景（自身实底 → 最近实底祖先 → 白底）的 WCAG 对比度 &lt; 2.0 即同色系严禁（黑底黑字 / 白底白字）；auto_fix 按背景亮度把文字翻转到黑/白。品牌绿白字（≈2.4）不误伤。</p></div>
+    <div class="card"><h3>📐 横平竖直</h3><p>rotate 非 90° 倍数归零——圆角档与对齐网格共同构成几何标准。</p></div>
+    <div class="card"><h3>🛡 规范闭环</h3><p>critique 偏差计分并自带建议尺寸；auto_fix 一键规范预修（不动 fill/hug 策略）；list_components 每条目携带 norm 字段——指导与规范，不做硬门。</p></div>
+  </div>
+  <h2 class="sec">内置返回导航 + 交互校验</h2>
+  <p class="lead">返回交互是必须的——不再由各宿主自发实现，而是引擎内置语义，CLI / SDK / MCP / 嵌入 runtime 全部免费获得。</p>
+  <div class="grid c3">
+    <div class="card"><h3>↩ 返回类节点 tap 兜底</h3><p>tap 解析链 flow → marker → 内置返回：命中 back/prev/返回/← 类节点且无 flow/marker 时，弹导航栈返回上一层（栈底原地不动）。</p></div>
+    <div class="card"><h3>📍 返回热区随清单导出</h3><p>interactions 导出包含返回类节点（<code>"builtin":"back"</code>）——宿主热区直接消费引擎数据，无需自带启发式词表。</p></div>
+    <div class="card"><h3>✅ 卡死页校验</h3><p>多画板文档中非入口画板无出边 flow 且无返回类节点 = 用户会卡死——norms 维度直接判偏差。</p></div>
   </div>
   <h2 class="sec">六种集成方式</h2>
   <p class="lead">从命令行手动驱动，到 IDE 内 Agent 自动驱动——同一引擎，同一事实源。</p>

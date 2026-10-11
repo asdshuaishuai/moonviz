@@ -305,6 +305,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
   <li><b>操作入口</b>：优先 MCP 工具；无 MCP 环境时退回 CLI 行协议；Node 宿主用 SDK。</li>
   <li><b>渲染即验证</b>：每次修改后用 <code>render_mbt</code> / <code>render-mbt-b64</code> 重建视觉并比对预期。</li>
   <li><b>红线</b>：不缓存渲染结果、不绕过 Gate 导出、不直接改 DDP 二进制。</li>
+  <li><b>组件规范与返回</b>：五类规范（按钮留白 / 圆角档 / 列表分割线 / 撞色零容忍 / 横平竖直）由 critique + auto_fix 闭环；返回类节点 tap 内置返回上一层，非入口画板须有出边 flow 或返回节点。</li>
 </ul>
 <pre><code># 在 Agent 技能目录中挂载（示例：软链 SKILL.md）
 ln -s /path/to/moonviz/SKILL.md ~/.zcode/skills/moonviz/SKILL.md</code></pre>
