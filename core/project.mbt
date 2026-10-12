@@ -201,6 +201,63 @@ pub fn Project::set_data_json(self : Project, json : String) -> Result[Int, Stri
 }
 
 ///|
+/// Smart UX M-S2：注入 + 绑定影响面 diff。返回 JSON：
+/// {"keys":N,"changed":[{"id","ab","old","new"}…]}——宿主 webview 据此
+/// 做节点级局部更新（不必全量重渲）。仅统计含 {{ 的文本节点与 rect 载字
+/// （resolve_bindings 的两条消费路径），解析后文本不变者不进清单。
+pub fn Project::set_data_json_with_diff(
+  self : Project,
+  json : String,
+) -> Result[String, String] {
+  match parse_data_json(json) {
+    Err(e) => Err(e)
+    Ok(v) =>
+      match v {
+        DObj(m) => {
+          let old_data = self.data
+          self.data = v
+          let keys = m.length()
+          let sb = StringBuilder::new()
+          sb.write_string("{\"keys\":\{keys},\"changed\":[")
+          let mut first = true
+          for ab_id in self.artboards.keys() {
+            match self.artboards.get(ab_id) {
+              None => ()
+              Some(ab) => {
+                for node_id in ab.doc.nodes.keys() {
+                  match ab.doc.get(node_id) {
+                    Some(n) => {
+                      if !n.text.contains("{{") {
+                        continue
+                      }
+                      let old_text = resolve_bindings(n.text, old_data)
+                      let new_text = resolve_bindings(n.text, self.data)
+                      if old_text != new_text {
+                        if !first {
+                          sb.write_string(",")
+                        }
+                        first = false
+                        sb.write_string(
+                          "{\"id\":\"\{json_escape(node_id)}\",\"ab\":\"\{json_escape(ab_id)}\"," +
+                          "\"old\":\"\{json_escape(old_text)}\",\"new\":\"\{json_escape(new_text)}\"}",
+                        )
+                      }
+                    }
+                    None => ()
+                  }
+                }
+              }
+            }
+          }
+          sb.write_string("]}")
+          Ok(sb.to_string())
+        }
+        _ => Err("data_root_must_be_object")
+      }
+  }
+}
+
+///|
 /// Smart UX M-S2：当前数据树 → JSON（collect_data 导出的宿主读面，
 /// 表单回写的取值侧）。从未注入数据（DNull）输出 {}——空集合 envelope
 /// 一律合法 JSON（与 schema_json 同红线）；键按码元字典序，逐字节确定。

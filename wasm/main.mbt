@@ -515,9 +515,10 @@ pub fn session_set_data(handle : Int, json : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) =>
-      match p.set_data_json(json) {
-        Ok(keys) =>
-          "{\"ok\":true,\"op\":\"set-data\",\"keys\":\{keys}}"
+      // M-S2 结构 diff：响应携带 changed 节点清单（id/ab/old/new）——
+      // 宿主 webview 据此局部更新，不必全量重渲（SMART-UX-1.0 支柱 B）
+      match p.set_data_json_with_diff(json) {
+        Ok(diff) => "{\"ok\":true,\"op\":\"set-data\",\{diff.substring(start=1)}"
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
       }
   }

@@ -843,3 +843,27 @@ test "契约：dispatch_event_in 复合槽与直传等价（classic 写路径，
   arg_reset()
   let _ = session_close(h)
 }
+
+///|
+test "契约：set-data 携带 changed 影响面 diff——宿主局部更新依据（Smart UX M-S2）" {
+  let h = session_open(SEED)
+  // 标题节点挂 {{绑定}}
+  let r0 = session_apply_human(h, "update w btn text={{user.name}}")
+  assert_true(r0.contains("\"ok\":true"), msg=r0)
+  // 注入 v1
+  let r1 = session_set_data(h, "{\"user\":{\"name\":\"林一\"}}")
+  assert_true(r1.contains("\"ok\":true") && r1.contains("\"changed\""), msg="响应应含 changed 清单: " + r1)
+  assert_true(r1.contains("林一") && r1.contains("\"new\""), msg="changed 应含新旧文本: " + r1)
+  // 注入 v2（同路径不同值）：changed 应再次出现
+  let r2 = session_set_data(h, "{\"user\":{\"name\":\"陈二\"}}")
+  assert_true(r2.contains("陈二"), msg="第二次注入应有 diff: " + r2)
+  // 幂等注入（同值）：changed 为空数组——无变化不产生噪声
+  let r3 = session_set_data(h, "{\"user\":{\"name\":\"陈二\"}}")
+  assert_true(r3.contains("\"changed\":[]"), msg="同值注入应空清单: " + r3)
+  // 换成不含该路径的数据：绑定失解析也是变化（old=已解析值, new=字面占位）
+  let r4 = session_set_data(h, "{\"other\":\"x\"}")
+  assert_true(r4.contains("\"old\":\"陈二\"") && r4.contains("{{user.name}}"), msg="失解析应作为变化上报: " + r4)
+  let _ = session_close(h)
+}
+
+

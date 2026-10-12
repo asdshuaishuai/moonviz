@@ -11,6 +11,10 @@
 ///
 /// Agent（或 shell 脚本）可以管道组合多个命令。
 extern "c" fn getchar() -> Int = "getchar"
+/// 行协议契约：回执必须即时可达。stdout 接管道时 C 运行时是全缓冲——
+/// 不 flush 的回执会滞留在缓冲区，脚本化宿主（Node/Python spawn）会
+/// 永久等待（本会话实测卡死）。每条回执后清空缓冲。
+extern "c" fn fflush_all(file : Int) -> Int = "fflush"
 
 ///|
 fn read_line() -> String {
@@ -211,6 +215,7 @@ fn main {
         running = false
       } else {
         println(output)
+        let _ = fflush_all(0)  // NULL = flush 全部输出流
       }
     }
   }
