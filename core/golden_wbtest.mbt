@@ -107,14 +107,25 @@ fn golden_diff_report() -> String {
     Some(d) => d
     None => return "SKIP"
   }
-  // 基线目录整体缺失（探一个必然存在的文件名）→ 跳过
-  let first = golden_file_name(golden_themes()[0], golden_component_names()[0])
-  match golden_read_file(dir + "/" + first) {
-    None => return "SKIP"
-    Some(_) => ()
-  }
+  // 基线目录整体缺失才跳过：探首主题×字典序前三个组件样本，
+  // 全部读不到才视为「基线未生成」；个别文件丢失按 missing 报红
+  // （修评审发现：单探针恰丢会 SKIP 掩盖回归）
   let themes = golden_themes()
   let comps = golden_component_names()
+  let mut found_any = false
+  for k in 0..<3 {
+    if k >= comps.length() {
+      break
+    }
+    let probe = golden_file_name(themes[0], comps[k])
+    if golden_read_file(dir + "/" + probe) is Some(_) {
+      found_any = true
+      break
+    }
+  }
+  if !found_any {
+    return "SKIP"
+  }
   let mismatched : Array[String] = []
   let missing : Array[String] = []
   for theme in themes.iter() {

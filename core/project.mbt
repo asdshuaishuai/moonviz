@@ -970,6 +970,8 @@ pub fn Project::suggest_fix(
               "调整 x/y 位置避免与兄弟重叠，或改用栈布局自动排列"
             ConstraintSolvable =>
               "检查尺寸规格组合（Fill 需有界父容器），简化为 Fixed"
+            IconValid =>
+              "icon 名不在内置库内——改用 icon_names() 清单中的名字（SKILL.md 有全表）"
             _ => "检查节点结构"
           }
           targeted.push(

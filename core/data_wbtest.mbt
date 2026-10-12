@@ -292,3 +292,54 @@ test "Project dispatch_event：核心门卫——输入型判定/字面量 revis
   let c = p.clone()
   assert_true(c.collect_data_json().contains("张三"))
 }
+
+
+///|
+fn dl(root : DataValue, path : String) -> String {
+  match data_lookup(root, path) {
+    Some(v) => data_to_display(v)
+    None => "<none>"
+  }
+}
+
+///|
+test "data_set_path 拒绝面：四条拒绝路径 + 双向闭环（评审台账 low→medium 盲区补测）" {
+  // 有效的数据根（原地突变 DObj 内 Map，root 引用不变）
+  let data : DataValue = DObj(Map::new())
+  // 1) 正常写入：新建中间对象 + 落值
+  assert_true(data_set_path(data, "user.name", "林一") is Ok(_))
+  assert_eq(dl(data, "user.name"), "林一")
+  // 2) 标量中途冲突：user.name 已是字符串，再深入 user.name.first
+  assert_true(data_set_path(data, "user.name.first", "x") is Err(_))
+  // 3) 空路径
+  assert_true(data_set_path(data, "", "x") is Err(_))
+  // 4) 对象键名带数字是合法键（创建语义），不受数组规则约束
+  assert_true(data_set_path(data, "meta.9", "k9") is Ok(_))
+  assert_eq(dl(data, "meta.9"), "k9")
+  // —— 真实数组上的拒绝/导航语义（parse_data_json 预置） ——
+  let arr = match parse_data_json("{\"items\":[{\"title\":\"a\"},{\"title\":\"b\"}]}") {
+    Ok(v) => v
+    Err(_) => DNull
+  }
+  // 5) 数组段非数字
+  assert_true(data_set_path(arr, "items.abc", "x") is Err(_))
+  // 6) 数组越界（不越界创建语义）
+  assert_true(data_set_path(arr, "items.9.title", "x") is Err(_))
+  // 7) 末段数组元素不作写入落点（假成功信封缺口的回归锚）
+  assert_true(data_set_path(arr, "items.0", "x") is Err(_))
+  // 8) 数组内既有元素的键可写（items.0.title：数组只作导航）
+  assert_true(data_set_path(arr, "items.0.title", "t") is Ok(_))
+  assert_eq(dl(arr, "items.0.title"), "t")
+  // 拒绝后原数组不受影响（无半写状态）
+  assert_eq(dl(arr, "items.1.title"), "b")
+}
+
+///|
+test "data_set_path 根为 DNull：以空对象起根" {
+  let data : DataValue = DNull
+  let r = data_set_path(data, "a.b", "v")
+  assert_true(r is Ok(_))
+  // 返回新根（DNull 起根语义），落点在返回值里
+  let grown = match r { Ok(v) => v; Err(_) => DNull }
+  assert_eq(dl(grown, "a.b"), "v")
+}

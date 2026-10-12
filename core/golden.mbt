@@ -29,41 +29,10 @@ pub fn golden_component_names() -> Array[String] {
 }
 
 ///|
-/// 码元字典序插入排序（与 data_schema_sort_keys 同规则——绕开工具链
-/// String::compare 长度序缺陷，保证清单与文件遍历逐字节确定）。
+/// 码元字典序插入排序：直接复用同包 data_schema_sort_keys/key_lt
+/// （同一规则同一实现——修评审发现的 35 行逐行重复）。
 fn golden_sort_keys(keys : Array[String]) -> Unit {
-  for i in 1..<keys.length() {
-    let k = keys[i]
-    let mut j = i - 1
-    while j >= 0 && golden_key_lt(k, keys[j]) {
-      keys[j + 1] = keys[j]
-      j = j - 1
-    }
-    keys[j + 1] = k
-  }
-}
-
-///|
-fn golden_key_lt(a : String, b : String) -> Bool {
-  let la = a.length()
-  let lb = b.length()
-  let n = if la < lb { la } else { lb }
-  let mut i = 0
-  while i < n {
-    let ca = match a.get_char(i) {
-      Some(c) => c.to_int()
-      None => 0
-    }
-    let cb = match b.get_char(i) {
-      Some(c) => c.to_int()
-      None => 0
-    }
-    if ca != cb {
-      return ca < cb
-    }
-    i = i + 1
-  }
-  la < lb
+  data_schema_sort_keys(keys)
 }
 
 ///|

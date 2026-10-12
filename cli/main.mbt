@@ -1277,7 +1277,7 @@ fn cli_help() -> String {
   "  update <ab> <node> k=v [k=v ...]  Edit properties; keys:\n" +
   "      w h text fill text_color stroke stroke_width radius opacity font_size\n" +
   "      weight shadow rotate blur blend line tracking constraint align italic\n" +
-  "      dash visible overlay fit layout gap justify padding width_mode height_mode\n" +
+  "      dash visible overlay fit icon layout gap justify padding width_mode height_mode\n" +
   "      x_mode y_mode name\n" +
   "      (align left|center|right; dash solid|dashed|dotted; visible true|false;\n" +
   "       layout vertical|horizontal|none; width_mode/height_mode hug|fill;\n" +

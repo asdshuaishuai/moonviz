@@ -108,4 +108,12 @@ fn main {
   println(
     "[golden-gen] 完成：写入 \{written}，失败 \{failed}（重跑 core/golden_wbtest.mbt 快照比对请用 moon test --target native）",
   )
+  // 部分失败以非零码退出：脚本化重生成时失败不被掩盖（修评审发现）
+  if failed > 0 {
+    println("[golden-gen] FAILED_ITEMS=\{failed}")
+    std_exit(2)
+  }
 }
+
+///|
+extern "c" fn std_exit(code : Int) -> Never = "exit"

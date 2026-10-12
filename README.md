@@ -176,7 +176,7 @@ cd ddp && cargo build --release && cd ..
 #    Produces ddp/target/release/ddp_codec (stdin JSON → stdout JSON)
 #    Override the path with MOONVIZ_DDP_HELPER; the SDK searches ddp/target/{debug,release} automatically
 
-# 4. Full test suite (205 on the default target; 209 with --target native)
+# 4. Full test suite (256 on the default target; 261 with --target native)
 moon test
 
 # 5. Rendering golden snapshots (RENDER-1.0 R4): light/dark × all components
