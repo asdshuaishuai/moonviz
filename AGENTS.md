@@ -68,6 +68,9 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 - 工具字典单一事实源在 `core/agent_api.mbt`（`list_tools_json()` / `list_ops_json()`），
   产物 `moonviz-tools.json` / `moonviz-ops.json` 由 CI 从 CLI 生成，改工具描述只改一处。
 - `moon test` 全量绿是提交前提；组件目录扩充必须带"全变体放置 + 渲染"冒烟测试。
+- **CLI 行协议回执必须逐条可达**：REPL 每条回执后 fflush（stdout 接管道时
+  C 运行时全缓冲，不 flush 会让脚本化宿主永久等待——spawn CLI 的宿主按
+  「一命令一回执」编程）。改 REPL 输出路径时必须保住这条。
 
 ## 分支策略
 
