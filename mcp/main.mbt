@@ -649,6 +649,24 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       @core.animation_css(node_id, preset)
     }
+    "set_data" => {
+      // Smart UX：注入数据树（{{绑定}} 取值来源），响应携带 changed 影响面
+      let data = extract_arg_string(request_line, "data")
+      if data == "" {
+        return err_json("missing data (compact JSON object)")
+      }
+      // diff 即 {"keys":N,"changed":[…]}——本身就是本工具的合法结果对象
+      match p.set_data_json_with_diff(data) {
+        Ok(diff) => diff
+        Err(e) => err_json(e)
+      }
+    }
+    "collect_data" => {
+      p.collect_data_json()
+    }
+    "data_schema" => {
+      p.schema_json()
+    }
     "collab_merge" => {
       let spec = extract_arg_string(request_line, "spec")
       if spec == "" {
@@ -994,11 +1012,20 @@ fn extract_arg_string(line : String, key : String) -> String {
       if args_body.get_char(start) != Some('"') {
         return ""
       }
+      // JSON 字符串值：转义感知扫描闭合引号（\" 内嵌引号不终止），
+      // 再按 JSON 规范解转义——修评审级缺陷：值内含转义引号/换行的参数
+      // 此前会被截断成垃圾（set_data 的 JSON、update 的多行文本全部中招）
       let rest = args_body.substring(start=start + 1)
-      match rest.find("\"") {
-        Some(end) => rest.substring(start=0, end~)
-        None => ""
+      let mut i = 0
+      let n = rest.length()
+      while i < n {
+        match rest.get_char(i) {
+          Some('\\') => i = i + 2
+          Some('"') => return @core.unescape_json(rest.substring(start=0, end=i).to_string())
+          _ => i = i + 1
+        }
       }
+      ""
     }
     None => ""
   }

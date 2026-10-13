@@ -118,6 +118,9 @@ pub fn list_tools() -> Array[AgentTool] {
   add("protest", "Run a prototype test script against an artboard (assertion-based: navigation/inputs/render/violations). script: tap:x:y>board; back>board; swipe:left>board; set:node:value; noviol; render", [arg("artboard", "string", "artboard id", required=true), arg("script", "string", "semicolon-separated assertions", required=true)])
   add("animation_presets", "List the 6 builtin animation presets (press/fade_in/slide_in_right/modal_present/shake/pop).", [])
   add("animation_css", "Generate CSS @keyframes + animation for a node with a preset. args: node_id, preset", [arg("node_id", "string", "target node id", required=true), arg("preset", "string", "press|fade_in|slide_in_right|modal_present|shake|pop", required=true)])
+  add("set_data", "Inject the Smart UX runtime data tree (JSON object) driving {{bindings}}; response carries the changed-binding diff for incremental updates.", [s("data", "compact JSON object, e.g. {\"user\":{\"name\":\"Lin\"}}")])
+  add("collect_data", "Read back the current Smart UX data tree as JSON (form write-back side).", [])
+  add("data_schema", "Read the declared DataSchema contract (schema op) as JSON; {} when undeclared.", [])
   add("collab_merge", "Multi-agent three-way merge: submit N agents' op sequences, get conflicts + auto-resolution. spec: <base_rev> <agent>=<op>[+op...] ... (op grammar: insert/delete/move/fill/radius/font/text/pos/size/gap)", [arg("spec", "string", "<base_rev> <agent>=<op>[+op...] ...", required=true)])
   tools
 }

@@ -513,7 +513,7 @@ fn load_number(s : String, key : String) -> Double {
 
 ///|
 /// 还原 JSON 转义（\n \t \" \\ 等）
-fn unescape_json(s : String) -> String {
+pub fn unescape_json(s : String) -> String {
   let sb = StringBuilder::new()
   let n = s.length()
   let mut i = 0

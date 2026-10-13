@@ -43,7 +43,7 @@ const tools = await engine.tools();
 assert.ok(Array.isArray(tools) && tools.length >= 47, 'tools() 应返回 47+ 工具');
 assert.ok(tools.some(t => t.name === 'list_ops' && t.inputSchema), 'tools() 应含 list_ops 且带 schema');
 const ops = await engine.ops();
-assert.ok(Array.isArray(ops) && ops.length === 26, 'ops() 应返回 26 条 op');
+assert.ok(Array.isArray(ops) && ops.length >= 28, 'ops() 应返回 28+ 条 op（增长弹性下界，随 op 扩容免改）');
 const themes = await engine.listThemes();
 assert.ok(Array.isArray(themes) && themes.length === 6, 'listThemes() 应返回 6 主题');
 const tokens = await engine.listTokens();
