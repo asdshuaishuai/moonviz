@@ -88,6 +88,16 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 版本取自 moon.mod.json，须与 `ENGINE_VERSION` 基线协调。工具链底线
 moonc ≥ 0.10.14，ci.yml 有版本硬门。
 
+## 本设备 Git 操作规定（强制）
+
+- **优先使用 `gh`**：GitHub 交互（issue/PR/release/api/secret）一律走 gh CLI；
+  git 的 HTTPS 推拉已配置 gh 凭据助手（`gh auth setup-git`，2026-10-08）。
+- HTTPS 到 github.com 在本机会间歇性被掐（git push 报 couldn't connect/
+  empty reply，实测多次）——此时依次降级：`gh auth setup-git` 后重试 →
+  SSH URL（`git@github.com:`，密钥已认证）→ 稍后重试。origin 已切 SSH。
+- 涉及外部可见动作（issue 评论/关闭、release 编辑）仍遵守既有纪律：只做
+  用户明确要求或仓库惯例已有的事。
+
 ## 构建与测试
 
 ```bash
