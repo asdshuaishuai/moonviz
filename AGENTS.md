@@ -55,6 +55,21 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 
 ## 分支策略
 
+**发布流程（版本归档分支，2026-10-13 起强制）**：
+
+1. 发布时从 dev 检出归档分支：`git checkout -b release/v<版本> dev`
+   （归档分支从 dev 出发，不从 main）；
+2. 归档分支上完成发布专属提交：版本基线三处同步（ENGINE_VERSION /
+   MOONVIZ_VERSION / moon.mod version）、发布文档节（README×2）；
+3. 门禁：moon test 全量 + 双 wasm 构建 + ABI 断言全绿；
+4. 打 tag `engine-v<版本>`（挂归档分支），推 tag 并触发 binaries
+   workflow，等 4 平台 matrix + release 归档全绿；
+5. mooncakes 打包发布（moon package + curl 直发，见下节）；
+6. 归档分支合并回 main（--no-ff）；
+7. 同步 dev：归档分支合并回 dev（或 dev 快进）——收敛保证 dev ⊇ main。
+
+main 除合并节点与发布基线提交外，不直接承载开发/发布提交。
+
 - `main` = 发布线（0.x 序列，Release 资产从 main 的 engine-v* tag 构建）
 - `dev` = 0.x 主线开发分支（从 main 切出；issue 修复与新能力先进 dev，
   验证后合回 main 发布）
