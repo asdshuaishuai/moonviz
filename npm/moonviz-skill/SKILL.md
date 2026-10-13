@@ -116,6 +116,7 @@ below with `mbt_operation_unsupported`. Run them after `load-mbt-b64`:
 `list` · `flows` · `list-templates` · `list-components` · `list-tools` ·
 `list-tokens` · `list-themes` · `benchmark` ·
 `lint <ab>` · `critique <ab>` · `query <ab>` · `infer <ab>` · `spec <ab>` ·
+（critique 含第 9 维 norms：组件规范偏差计分——按钮不卡文案/圆角档/齐缝列表分割线/撞色零容忍/横平竖直，配 auto_fix 一键预修）
 `missing <ab>` · `doc-json <ab>` · `states <ab>` · `interactions <ab>` ·
 `export-svg <ab>` · `export-html <ab>` (self-contained interactive HTML
 prototype: node-level tap bindings + component states as CSS variants) ·

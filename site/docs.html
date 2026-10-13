@@ -60,6 +60,8 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--ink3);font-si
   <a href="#skill">SKILL 技能</a>
   <a href="#studio">Studio / Viewer</a><a href="https://github.com/asdshuaishuai/moonviz/blob/main/ROADMAP.md">路线图</a>
   <div class="grp">参考</div>
+  <a href="#norms">组件规范 norms</a>
+  <a href="#backnav">内置返回导航</a>
   <a href="#render-pipeline">渲染管线</a>
   <a href="#ddp">DDP 容器</a>
   <a href="#env">环境变量</a>
@@ -363,6 +365,33 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp_codec
 # 解密
 echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 # → {"ok":true,"mbt_b64":"…"}</code></pre>
+</section>
+
+<section id="env">
+<section id="norms">
+<h2>组件规范 norms（0.1.9 起）</h2>
+<p>弱模型最常产出「能用但不精致」的原型。组件规范是组件质量的单一定义点（<code>core/norms.mbt</code>），五类根因各有检测 + <code>auto_fix</code> 一键修复，critique 第 9 维（norms）给 Agent 反馈。<b>只走软路径</b>——critique/fix 软纠偏，不改双门硬约束：</p>
+<table>
+<tr><th>规范</th><th>规则</th><th>auto_fix</th></tr>
+<tr><td>按钮不卡文案</td><td>操作组件（button/chip/tag/fab）文案与边缘留白：宽 ≥ 文案宽+24（左右各 12），高按组件档位（chip 28 / tag 22 / fab 56；多行按行数计高）</td><td>建议尺寸（critique 自带）</td></tr>
+<tr><td>圆角档</td><td>方正圆润族 8px 档；超出 高/2 收敛为胶囊；avatar 正圆 999；app_bar/tab_bar/list_item/divider 占满画板宽时圆角归 0</td><td>收敛到档位</td></tr>
+<tr><td>列表必须有分割线</td><td>≥3 行 list_item 齐缝连排且整段无 divider = 裸列表</td><td>每行行底插入 1px divider 子节点（不参与 v1 重叠/包含检查，零门风险）</td></tr>
+<tr><td>撞色零容忍</td><td>文字对有效背景（自身实底 → 最近实底祖先 → 白底）的 WCAG 对比度 &lt; 2.0 即同色系严禁（黑底黑字/白底白字）；品牌绿白字（≈2.4）不误伤</td><td>按背景亮度翻转文字黑/白</td></tr>
+<tr><td>横平竖直</td><td>rotate 非 90° 倍数归零（与圆角档、对齐网格共同构成几何标准）</td><td>归零</td></tr>
+</table>
+<p>闭环：critique 偏差计分并自带建议尺寸 → <code>auto_fix</code> 一键规范预修（不动 fill/hug 策略）→ <code>list_components</code> 每条目携带 norm 字段。规范走指导与修复，不做硬门。</p>
+</section>
+
+<section id="backnav">
+<h2>内置返回导航（0.1.9 起）</h2>
+<p>返回交互是必须的——不再由各宿主自发实现，而是<b>引擎内置语义</b>：CLI / SDK / MCP / 嵌入 runtime 全部免费获得。</p>
+<table>
+<tr><th>能力</th><th>语义</th></tr>
+<tr><td>返回类节点 tap 兜底</td><td>tap 解析链 flow → marker → 内置返回：命中 back/prev/返回/← 类节点且无 flow/marker 绑定时，弹导航栈返回上一层（栈底原地不动）</td></tr>
+<tr><td>返回热区随清单导出</td><td>interactions 导出包含返回类节点（<code>"builtin":"back"</code>）——宿主热区直接消费引擎数据，无需自带启发式词表</td></tr>
+<tr><td>卡死页校验</td><td>多画板文档中非入口画板无出边 flow 且无返回类节点 = 用户会卡死——norms 维度直接判偏差</td></tr>
+</table>
+<p>测试锚点：<code>core/norms_wbtest.mbt</code>（规范五类）、返回语义随交互运行时测试。</p>
 </section>
 
 <section id="env">
