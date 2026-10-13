@@ -86,6 +86,16 @@ curl -X POST https://mooncakes.io/api/v0/publish \
 0.1.7 已于 2026-10-07 用此通道上架（[包页](https://mooncakes.io/asdshuaishuai/moonviz)），
 「moon add → 编译 → 渲染」闭环实测通过。工具链底线 moonc ≥ 0.10.14，ci.yml 有版本硬门。
 
+## 本设备 Git 操作规定（强制）
+
+- **优先使用 `gh`**：GitHub 交互（issue/PR/release/api/secret）一律走 gh CLI；
+  git 的 HTTPS 推拉已配置 gh 凭据助手（`gh auth setup-git`，2026-10-08）。
+- HTTPS 到 github.com 在本机会间歇性被掐（git push 报 couldn't connect/
+  empty reply，实测多次）——此时依次降级：gh 凭据重试 → SSH URL
+  （`git@github.com:`，密钥已认证，origin 已切 SSH）→ 稍后重试。
+- 涉及外部可见动作（issue 评论/关闭、release 编辑）仍遵守既有纪律：只做
+  用户明确要求或仓库惯例已有的事。
+
 ## 构建与测试
 
 ```bash
