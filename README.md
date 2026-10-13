@@ -1,6 +1,14 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
-## What's New in 0.1.9
+## What's New in 0.1.9-fix
+
+- **Hardening patch** — component norms + built-in back navigation (merged from dev),
+  Smart UX consumption surface (MCP `set_data`/`collect_data`/`data_schema`),
+  MCP protocol escape fix (quoted/newline text args no longer truncated),
+  CLI line-protocol flush (scripted hosts no longer stall), sdk artifacts re-synced.
+- 231 tests green on the default target.
+
+
 
 - **Component norms — buttons never hug their label.** Weak models produce
   "works but not polished" documents from three root causes; norms detects and
