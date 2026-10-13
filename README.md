@@ -1,6 +1,6 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
-## What's New in 0.1.9-fix-2（mooncakes 文档勘误版）
+## What's New in 0.1.9-fix
 
 - **Hardening patch** — component norms + built-in back navigation (merged from dev),
   device Git operating rules documented (gh-first, SSH fallback). 231 tests green

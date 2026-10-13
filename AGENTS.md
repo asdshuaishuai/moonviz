@@ -28,7 +28,10 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 - `core/version.mbt` 的 `ENGINE_VERSION`（wasm version_info / CLI banner / MCP serverInfo / artifact meta_version 的唯一来源）
 - `.github/workflows/binaries.yml` 的 `MOONVIZ_VERSION`（全产物构建与资产命名基准）
 
-`moon.mod.json` 的 version 随上述两处同步。文档中引用版本示例时用 `<ver>` 占位或动态表述，
+`moon.mod.json` 的 version 随上述两处同步，**例外**：mooncakes 拒绝同版本
+重发（409 duplicate）时的文档勘误重包，可在 moon.mod version 加打包后缀
+（如 `0.1.9-fix-2`）而 ENGINE_VERSION/MOONVIZ_VERSION 不动——打包号是
+注册表元数据，不是引擎版本（0.1.9-fix-2 先例，2026-10-13）。文档中引用版本示例时用 `<ver>` 占位或动态表述，
 **不要写死版本数字**（历史教训：写死示例是计数/版本漂移的头号来源）。
 
 ### 同步产物时的检查单（每项都过，缺一项即未完成）
