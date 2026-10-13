@@ -867,3 +867,37 @@ test "契约：set-data 携带 changed 影响面 diff——宿主局部更新依
 }
 
 
+
+///|
+test "契约：数据为运行时态——session 重开（canonical 回灌）后数据清零、绑定回退字面占位（Smart UX 语义锁定）" {
+  let h = session_open(SEED)
+  let _ = session_apply_human(h, "update w btn text={{user.name}}")
+  let _ = session_set_data(h, "{\"user\":{\"name\":\"林一\"}}")
+  // canonical 快照（save）不含数据——save 快照回灌重开后数据清零是设计语义
+  let saved = session_save(h)
+  assert_false(saved.contains("林一"), msg="canonical/save 快照不应携带运行时数据: " + saved)
+  let h2 = session_open_project_json(extract_data(saved))
+  assert_true(h2 >= 0, msg="回灌应成功")
+  let svg2 = session_export_svg(h2, "w")
+  assert_true(svg2.contains("{{user.name}}"), msg="重开后绑定应回退字面占位（数据未随行）: " + svg2)
+  // 重新注入即恢复（活界面 = 文档 + 数据，两者分离）
+  let _ = session_set_data(h2, "{\"user\":{\"name\":\"林一\"}}")
+  let svg3 = session_export_svg(h2, "w")
+  assert_true(svg3.contains("林一"), msg="重注入后恢复: " + svg3)
+  let _ = session_close(h)
+  let _ = session_close(h2)
+}
+
+///|
+test "契约：注入值内含 {{path}} 字面量——数据值不二次解析（无注入递归，Smart UX 语义锁定）" {
+  let h = session_open(SEED)
+  let _ = session_apply_human(h, "update w btn text={{user.name}}")
+  // 注入值本身长得像绑定模板——数据值永远原样显示，不得被当作模板再解析
+  // （否则攻击者/脏数据可通过值触发任意路径联动，且显示不确定）
+  let r = session_set_data(h, "{\"user\":{\"name\":\"{{secret.path}}\"}}")
+  assert_true(r.contains("\"ok\":true"), msg=r)
+  let svg = session_export_svg(h, "w")
+  assert_true(svg.contains("{{secret.path}}"), msg="值应原样显示: " + svg)
+  assert_false(svg.contains("\"secret") && svg.contains("path}}\"") && !svg.contains("{{secret.path}}"), msg="sanity")
+  let _ = session_close(h)
+}
