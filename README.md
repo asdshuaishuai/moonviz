@@ -3,10 +3,12 @@
 ## What's New in 0.1.9-fix
 
 - **Hardening patch** — component norms + built-in back navigation (merged from dev),
-  Smart UX consumption surface (MCP `set_data`/`collect_data`/`data_schema`),
-  MCP protocol escape fix (quoted/newline text args no longer truncated),
-  CLI line-protocol flush (scripted hosts no longer stall), sdk artifacts re-synced.
-- 231 tests green on the default target.
+  device Git operating rules documented (gh-first, SSH fallback). 231 tests green
+  on the default target.
+
+  （Correction note: an earlier version of this section wrongly listed Smart UX
+  consumption-surface items — those live on the release/1.0 branch and are NOT
+  part of 0.1.9-fix. The shipped binaries/packages are unaffected.）
 
 
 
