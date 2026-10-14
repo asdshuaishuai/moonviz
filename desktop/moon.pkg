@@ -1,0 +1,16 @@
+import {
+  "asdshuaishuai/moonviz/core",
+  "moonbitlang/core/encoding/utf8",
+}
+
+options(
+  "is-main": true,
+  "native-stub": ["shim/cwrap.m", "shim/desktop_mac.m"],
+  "supported-targets": ["native"],
+  "link": {
+    "native": {
+      "stub-cc": "clang",
+      "cc-link-flags": "-framework Cocoa -framework WebKit -framework CoreFoundation"
+    }
+  }
+)

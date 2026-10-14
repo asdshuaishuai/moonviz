@@ -15,6 +15,9 @@ core/adaptive.mbt    组件自适应预设注册表（单一事实源）：butto
 core/svg.mbt         宽度感知换行（拉丁按词/CJK 逐字）+ 字号自适应 fit_font_size
                      （fit=auto|shrink，下限 8px、auto 单行放大 2 倍封顶）
 site/                官网 + 文档 + playground（GitHub Pages 部署）
+desktop/             桌面壳（MoonBit native + 平台 webview shim）：mac WKWebView ✅ /
+                     Win WebView2 🔜 / Linux WebKitGTK 🔜；Smart UX 桌面渲染，
+                     引擎经 CLI sidecar 行协议接入（MOONVIZ_SMOKE=1 无头自检）
 site/assets/agent.mjs  Playground AI Agent 运行时（BYOK）：models.dev 目录 +
                        ai-sdk(ai@5/openai-compatible, esm.sh CDN 懒加载) +
                        5 工具环接 wasm 引擎 AgentGate；引擎 facade 注入，可

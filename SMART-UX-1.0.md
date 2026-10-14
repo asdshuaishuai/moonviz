@@ -91,6 +91,11 @@ RENDER-1.0（渲染精致化）整体并入本规划为 **P0 前置**：精致�
 - **M-S3 · webview 宿主面**：鸿蒙 webview / 移动 webview 嵌入样例
   （复用 deepdesign-studio harmonyos-port 与 ddpView 经验）+ 字体度量宿主回调 +
   首帧/内存预算——验收：真机 webview 内高精度渲染 demo。
+  - **桌面壳首成果（2026-10-13）**：`desktop/` MoonBit 薄壳——系统 webview
+    （mac WKWebView ✅ / Win WebView2 🔜 / Linux WebKitGTK 🔜）渲染原型，
+    window/card 两形态；Smart UX 增量链路接通（data → changed →
+    render-node-svg → __mv_patch 局部替换，5 轮逐字节等价）；
+    无头自检 `MOONVIZ_SMOKE=1` 可进 CI。详见 desktop/README.md。
 - **M-S4 · Agent 智能生成**：意图模板 + 工具环升级（数据→UI）+
   playground AI 面板对接（BYOK 面板已有）——验收：对话式「用这份数据做个看板」
   出活界面。
