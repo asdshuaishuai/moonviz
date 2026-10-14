@@ -1160,6 +1160,43 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "render-term" =>
+      // Smart UX 真终端渲染：ANSI 真彩色光栅化（cols 缺省 100）
+      if parts.length() < 2 {
+        cli_err("usage: render-term <artboard> [cols]")
+      } else {
+        match p.artboards.get(parts[1]) {
+          None => cli_err("unknown_artboard: " + parts[1])
+          Some(ab) => {
+            let cols = if parts.length() >= 3 {
+              let v = parse_rev(parts[2])
+              match v {
+                Some(n) =>
+                  if n < 20 {
+                    20
+                  } else if n > 300 {
+                    300
+                  } else {
+                    n
+                  }
+                None => 100
+              }
+            } else {
+              100
+            }
+            println(
+              @core.render_term_svg(
+                ab.doc,
+                surface=p.tokens.resolve_color("surface"),
+                cols=cols,
+              ),
+            )
+            "{\"ok\":true,\"rendered\":\"term\",\"cols\":\{cols}}"
+          }
+        }
+      }
+    "ddp-decode" => cli_ddp_decode(p, parts)
+    "ddp-save" => cli_ddp_save(p, parts)
     "constrain" =>
       // constrain <ab> <text> ：自然语言布局意图（居中对齐 / 垂直排列 / 等宽 / 间距 N）
       if parts.length() < 3 {
@@ -1311,6 +1348,10 @@ fn cli_help() -> String {
   "  align <ab> <mode> <n1> <n2> ...       mode: left|right|top|bottom|hcenter|vcenter\n" +
   "  resize-canvas <ab> <w> <h>            Resize + reflow by constraints\n" +
   "  data <json>                           Inject runtime data for {{bindings}} (Smart UX)\n" +
+  "  render-node-svg <ab> <node>           Node SVG fragment for incremental hosts (Smart UX)\n" +
+  "  render-term <ab> [cols]               ANSI truecolor terminal rendering (Smart UX)\n" +
+  "  ddp-decode <file> [password]          Decode DDP container into session (Smart UX headless)\n" +
+  "  ddp-save <file> [password]            Save current session as DDP container\n" +
   "  render-node-svg <ab> <node>           Node SVG fragment for incremental hosts (Smart UX)\n" +
   "  responsive <ab>                       Generate _tablet/_desktop variants\n" +
   "  restyle <ab> <component_id> k=v ...   Propagate to component instances\n" +

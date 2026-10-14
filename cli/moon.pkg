@@ -8,6 +8,7 @@ import {
 
 options(
   "is-main": true,
+  "native-stub": ["ddp_ffi.c"],
   targets: {
     "main.mbt": [ "native" ],
     "main_stub.mbt": [ "not", "native" ],
