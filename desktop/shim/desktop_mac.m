@@ -118,6 +118,9 @@ int mv_open(int card, const char *title_utf8, const char *html_utf8) {
   if (card) { [g_window setLevel:NSFloatingWindowLevel]; }
   [g_window setTitle:title];
   WKWebViewConfiguration *cfg = [WKWebViewConfiguration new];
+  // 即用即销毁/不允许持久化（不变量）：webview 走非持久 data store——
+  // localStorage/IndexedDB/缓存全部随进程蒸发，跨运行零残留
+  cfg.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
   WKUserContentController *ucc = [WKUserContentController new];
   MVHandler *handler = [MVHandler new];
   [ucc addScriptMessageHandler:handler name:@"mv"];

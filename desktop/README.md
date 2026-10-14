@@ -42,6 +42,17 @@ Rust/MoonBit 薄壳（desktop.mbt：主循环 + patch 调度）
 按节点出 SVG 片段。宿主只 patch 清单内节点——增量语义与 wasm/Node 宿主
 完全同形（见 `scripts/demo-incremental.mjs` 等价性证明）。
 
+## 不变量（强制，违反即回归）
+
+1. **窗口即画布**：整个窗口就是 Smart UX 画布（#mv 100vw×100vh），组件级
+   实时更新（节点级 patch，16ms 节拍），目标是与系统组件级体验基本无感；
+2. **即用即销毁**：壳随用随建随销；webview 走非持久 data store
+   （localStorage/IndexedDB/缓存随进程蒸发，跨运行零残留）；
+3. **不允许持久化**：壳与 webview 全链路零磁盘写入（唯一 write 是引擎
+   sidecar 的内存管道）；数据是运行时态，不落盘；
+4. **核心不变**：引擎核心全程 MoonBit（.mbt.md 唯一事实源、双门、
+   wasm 零 import 红线不变）；desktop 只是渲染宿主，不承载引擎语义。
+
 ## 已知边界（首批）
 
 - 交互执行（tap→flow/dispatch 语义）列入 M-S3；本批点击仅上报日志
