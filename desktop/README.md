@@ -42,6 +42,19 @@ Rust/MoonBit 薄壳（desktop.mbt：主循环 + patch 调度）
 按节点出 SVG 片段。宿主只 patch 清单内节点——增量语义与 wasm/Node 宿主
 完全同形（见 `scripts/demo-incremental.mjs` 等价性证明）。
 
+## 抽象统一层（mv_shim.h 契约）
+
+三平台 shim 必须导出**完全相同**的符号集与语义（`shim/mv_shim.h` 为契约
+单一事实源）：`mv_open` / `mv_app_pump` / `mv_eval` / `mv_ios_poll` /
+`mv_engine_spawn` / `mv_engine_send` / `mv_engine_recv` / `mv_getenv` / `mv_free`。
+事件跨平台统一为 JSON schema：`{"t":"tap"|"input"|"custom", …}`——平台 shim
+负责把原生事件翻译成它。
+
+**Agent 面保证**：personal agent / coding agent 只与引擎协议通信
+（`data` / `render-node-svg` / `export-svg` …）。目标平台、webview 种类、
+窗口/卡片形态、shim 内部实现——对本契约之上的一切消费者不可见，agent
+永远不需要考虑。
+
 ## 不变量（强制，违反即回归）
 
 1. **窗口即画布**：整个窗口就是 Smart UX 画布（#mv 100vw×100vh），组件级

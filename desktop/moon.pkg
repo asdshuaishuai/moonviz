@@ -5,7 +5,12 @@ import {
 
 options(
   "is-main": true,
-  "native-stub": ["shim/cwrap.m", "shim/desktop_mac.m"],
+  "native-stub": [
+    "shim/cwrap.m",
+    "shim/desktop_mac.m",
+    "shim/desktop_win.c",
+    "shim/desktop_linux.c",
+  ],
   "supported-targets": ["native"],
   "link": {
     "native": {

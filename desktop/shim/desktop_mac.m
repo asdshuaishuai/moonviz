@@ -7,6 +7,11 @@
 #import <signal.h>
 #import <unistd.h>
 #import <spawn.h>
+#import "mv_shim.h"
+
+// 契约符号核查（编译期锚定）：本 shim 必须导出 mv_shim.h 的全部符号
+// mv_open / mv_app_pump / mv_eval / mv_ios_poll / mv_ios_push_internal /
+// mv_engine_spawn / mv_engine_send / mv_engine_recv / mv_getenv / mv_free
 
 moonbit_string_t mv_cstr_to_mbt(const char *ptr); // 前向声明（cwrap.m 定义）
 
@@ -139,8 +144,8 @@ void mv_eval(const char *js_utf8) {
   [g_webview evaluateJavaScript:js completionHandler:nil];
 }
 
-// 供 webview 侧主动请求刷新（本批：宿主 JS 定时自报即可，预留）
-void mv_desktop_noop(void) {}
+// ---- 契约：内存 -----------------------------------------------------------
+void mv_free(char *ptr) { free(ptr); }
 
 // 环境变量（模式/开关经 env 传入：MOONVIZ_DESKTOP_MODE=card、MOONVIZ_SMOKE=1）
 moonbit_string_t mv_getenv(const char *name) {

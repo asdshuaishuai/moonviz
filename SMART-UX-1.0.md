@@ -95,7 +95,10 @@ RENDER-1.0（渲染精致化）整体并入本规划为 **P0 前置**：精致�
     （mac WKWebView ✅ / Win WebView2 🔜 / Linux WebKitGTK 🔜）渲染原型，
     window/card 两形态；Smart UX 增量链路接通（data → changed →
     render-node-svg → __mv_patch 局部替换，5 轮逐字节等价）；
-    无头自检 `MOONVIZ_SMOKE=1` 可进 CI。详见 desktop/README.md。
+    无头自检 `MOONVIZ_SMOKE=1` 可进 CI。
+    - **抽象统一层（2026-10-13）**：`shim/mv_shim.h` 契约头——三平台同符号集
+      同事件 JSON schema（tap/input/custom）；win/linux 契约骨架入库（平台
+      守卫，同符号集，落地即接）；**Agent 面零平台知识**——agent 只说引擎协议。
 - **M-S4 · Agent 智能生成**：意图模板 + 工具环升级（数据→UI）+
   playground AI 面板对接（BYOK 面板已有）——验收：对话式「用这份数据做个看板」
   出活界面。
