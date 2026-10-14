@@ -41,6 +41,15 @@ extern "c" fn mv_app_pump() -> Unit = "mv_app_pump"
 extern "c" fn mv_ios_poll() -> String = "mv_ios_poll"
 
 ///|
+extern "c" fn mv_app_running() -> Int = "mv_app_running"
+
+///|
+extern "c" fn mv_engine_alive() -> Int = "mv_engine_alive"
+
+///|
+extern "c" fn mv_engine_kill() -> Int = "mv_engine_kill"
+
+///|
 #borrow(name)
 extern "c" fn mv_getenv(name : Bytes) -> String = "mv_getenv"
 
@@ -185,7 +194,41 @@ fn run_smoke() -> Bool {
     println("[smoke] FAIL — 节点片段: " + f)
     return false
   }
-  println("[smoke] PASS — 引擎桥/diff/节点片段全通")
+  // 自愈段：杀引擎 → 重生 → 链路恢复（Smart UX 桌面级自愈）
+  let _ = mv_engine_kill()
+  if mv_engine_alive() != 0 {
+    println("[smoke] FAIL — kill 后引擎应死亡")
+    return false
+  }
+  let r = engine_cmd("list")
+  if !r.contains("engine_no_reply") && mv_engine_alive() != 0 {
+    println("[smoke] 引擎未按预期死亡: " + r)
+    return false
+  }
+  if mv_engine_spawn(c_bytes(cli_path())) != 0 {
+    println("[smoke] FAIL — 自愈重生失败")
+    return false
+  }
+  let _ = engine_cmd("noop")
+  // 重生后是新会话：重放 boot ops（文档 + 绑定）
+  for op in [
+    "create home 400 200",
+    "place home body_text title - 20 16 360 30",
+    "update home title text={{app.title}}",
+  ].iter() {
+    let _ = engine_cmd(op)
+  }
+  let d = engine_cmd("data {\"app\":{\"title\":\"T2\",\"score\":91,\"grade\":\"A\"}}")
+  if !d.contains("\"keys\"") {
+    println("[smoke] FAIL — 自愈后注入: " + d)
+    return false
+  }
+  let f2 = engine_cmd("render-node-svg home title")
+  if !f2.contains("T2") {
+    println("[smoke] FAIL — 自愈后片段: " + f2)
+    return false
+  }
+  println("[smoke] PASS — 引擎桥/diff/节点片段/自愈重生全通")
   true
 }
 
@@ -234,6 +277,11 @@ fn main {
   let mut tick = 0
   let mut running = true
   while running {
+    if mv_app_running() == 0 {
+      running = false
+      println("[desktop] 窗口已关闭，优雅退出（即用即销毁）")
+      break
+    }
     mv_app_pump()
     let ev = mv_ios_poll()
     if ev.contains("\"tap\"") {

@@ -23,7 +23,15 @@ static int g_engine_in = -1;   // 写给引擎（stdin）
 static FILE *g_engine_out = NULL; // 读引擎回执（stdout）
 
 int mv_engine_spawn(const char *exe_path) {
-  if (g_engine_pid != -1) return 0;
+  signal(SIGPIPE, SIG_IGN); // 引擎死亡后写管道不得误杀薄壳自身
+  if (g_engine_pid != -1 && kill(g_engine_pid, 0) == 0) return 0; // 存活：幂等
+  // 死亡/残留：收割并复位（自愈重生路径）
+  if (g_engine_pid != -1) {
+    waitpid(g_engine_pid, NULL, 0);
+    g_engine_pid = -1;
+    if (g_engine_in != -1) { close(g_engine_in); g_engine_in = -1; }
+    if (g_engine_out != NULL) { fclose(g_engine_out); g_engine_out = NULL; }
+  }
   int in_pipe[2], out_pipe[2];
   if (pipe(in_pipe) != 0) return -1;
   if (pipe(out_pipe) != 0) { close(in_pipe[0]); close(in_pipe[1]); return -1; }
@@ -82,6 +90,7 @@ void mv_ios_push_internal(const char *json_utf8) {
 // ---------------------------------------------------------------------------
 static NSWindow *g_window = NULL;
 static WKWebView *g_webview = NULL;
+static BOOL g_window_closed = NO; // 红按钮/⌘W → 主循环优雅退出
 
 @interface MVHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -108,6 +117,12 @@ void mv_app_pump(void) {
 }
 
 int mv_open(int card, const char *title_utf8, const char *html_utf8) {
+  // 平台门禁（产品约束）：macOS 15+
+  NSOperatingSystemVersion v = [[NSProcessInfo processInfo] operatingSystemVersion];
+  if (v.majorVersion < 15) {
+    NSLog(@"[moonviz-desktop] 需要 macOS 15+（当前 %ld.%ld）", (long)v.majorVersion, (long)v.minorVersion);
+    return -1;
+  }
   NSApplication *app = [NSApplication sharedApplication];
   [app setActivationPolicy:NSApplicationActivationPolicyRegular];
   NSString *title = [NSString stringWithUTF8String:title_utf8];
@@ -135,6 +150,12 @@ int mv_open(int card, const char *title_utf8, const char *html_utf8) {
   [g_window setContentView:g_webview];
   [g_window makeKeyAndOrderFrontNil];
   [app activateIgnoringOtherApps:YES];
+  // 窗口关闭（红按钮/⌘W）→ 置位关闭旗标，宿主主循环优雅退出
+  [[NSNotificationCenter defaultCenter]
+    addObserverForName:NSWindowWillCloseNotification
+                object:g_window
+                 queue:nil
+            usingBlock:^(NSNotification *_) { g_window_closed = YES; }];
   return 0;
 }
 
@@ -155,6 +176,28 @@ moonbit_string_t mv_getenv(const char *name) {
   moonbit_string_t ms = moonbit_make_string(len, 0);
   for (int32_t i = 0; i < len; i++) { ms[i] = (uint16_t)v[i]; }
   return ms;
+}
+
+// ---- 契约：运行态与健康检查 ----------------------------------------------
+// （g_window_closed 定义见文件头 g_window 处）
+
+int mv_app_running(void) {
+  if (g_window_closed) return 0;
+  return g_window != nil && [g_window isVisible];
+}
+
+int mv_engine_alive(void) {
+  return g_engine_pid != -1 && kill(g_engine_pid, 0) == 0;
+}
+
+// 自愈：主动终止引擎（自愈测试/强制重生）
+int mv_engine_kill(void) {
+  if (g_engine_pid == -1) return 0;
+  kill(g_engine_pid, SIGTERM);
+  g_engine_pid = -1;
+  if (g_engine_in != -1) { close(g_engine_in); g_engine_in = -1; }
+  if (g_engine_out != NULL) { fclose(g_engine_out); g_engine_out = NULL; }
+  return 0;
 }
 
 // 事件队列弹出（"" = 无事件）
