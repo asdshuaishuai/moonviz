@@ -145,6 +145,7 @@ options(
         "session_benchmark",
         "session_close",
         "session_set_data",
+        "render_node_svg",
         "render_mbt_with_data",
         "session_count",
         "data_schema",

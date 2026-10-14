@@ -525,6 +525,22 @@ pub fn session_set_data(handle : Int, json : String) -> String {
 }
 
 ///|
+/// Smart UX M-S2：单节点 SVG 片段（增量更新取面）。与 set_data 的
+/// changed 清单配套：宿主按 changed[].id 逐节点索取新片段，按 id 替换
+/// DOM 里的 <g id="n_x">——结构 diff → 局部 patch 的完整闭环。
+pub fn render_node_svg(handle : Int, artboard : String, node_id : String) -> String {
+  match session_get(handle) {
+    None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+    Some(p) =>
+      match p.render_node_svg(artboard~, node_id~) {
+        Ok(fragment) =>
+          "{\"ok\":true,\"svg\":\"\{@core.json_escape(fragment)}\"}"
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+      }
+  }
+}
+
+///|
 /// Smart UX M-S2：读回会话当前数据树（表单回写的取值侧）。按 #4C 只读
 /// 约定走 {ok:true,data:…} 信封；未注入数据 data={}（空对象 envelope），
 /// 非法句柄按 #4A 返回 invalid_session_handle——零崩，宿主零特判。

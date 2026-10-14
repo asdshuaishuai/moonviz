@@ -849,6 +849,17 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "render-node-svg" =>
+      // Smart UX M-S2：单节点 SVG 片段（增量更新取面，与 set_data 的
+      // changed 清单配套）。usage: render-node-svg <artboard> <node_id>
+      if parts.length() < 3 {
+        cli_err("usage: render-node-svg <artboard> <node_id>")
+      } else {
+        match p.render_node_svg(artboard=parts[1], node_id=parts[2]) {
+          Ok(fragment) => "{\"svg\":\"" + @core.json_escape(fragment) + "\"}"
+          Err(e) => cli_err(e)
+        }
+      }
     "data" =>
       // Smart UX M-S1：data <json…>——注入数据树（{{绑定}} 取值来源）。
       // JSON 含空格：取原始行首命令之后的整段（不经空格切分）。
@@ -856,9 +867,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         None => cli_err("mbt_operation_usage:data {\\\"key\\\":value,…}")
         Some(sp) => {
           let json = line.substring(start=sp + 1).trim().to_string()
-          match p.set_data_json(json) {
-            Ok(keys) =>
-              "{\"ok\":true,\"op\":\"set-data\",\"keys\":\{keys}}"
+          // M-S2：响应携带 changed 绑定影响面（宿主局部更新依据，与 wasm 面同形）
+          match p.set_data_json_with_diff(json) {
+            Ok(diff) => diff
             Err(e) => cli_err(e)
           }
         }
@@ -1300,6 +1311,7 @@ fn cli_help() -> String {
   "  align <ab> <mode> <n1> <n2> ...       mode: left|right|top|bottom|hcenter|vcenter\n" +
   "  resize-canvas <ab> <w> <h>            Resize + reflow by constraints\n" +
   "  data <json>                           Inject runtime data for {{bindings}} (Smart UX)\n" +
+  "  render-node-svg <ab> <node>           Node SVG fragment for incremental hosts (Smart UX)\n" +
   "  responsive <ab>                       Generate _tablet/_desktop variants\n" +
   "  restyle <ab> <component_id> k=v ...   Propagate to component instances\n" +
   "  duplicate <ab> <new_name>             Duplicate artboard\n" +

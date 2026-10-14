@@ -83,8 +83,11 @@ RENDER-1.0（渲染精致化）整体并入本规划为 **P0 前置**：精致�
 - **M-S2 · 交互闭环**：`dispatch_event`/`collect_actions` + 表单双向绑定 +
   结构 diff 增量渲染 ✅（dispatch_event + collect_data 双向闭环 ✅；
   set_data 响应携带 changed 绑定影响面清单 ✅——宿主局部更新依据；
-  16ms 预算以宿主面基准落地（scripts/bench-setdata.mjs，120 绑定节点
-  实测 0.02ms，预算余量 800×）✅；CI 面渲染器内增量列 M-S3 webview 阶段）。
+  render_node_svg 节点级 SVG 片段导出 ✅（wasm + CLI，含子树可整块替换）；
+  宿主增量演示 ✅（scripts/demo-incremental.mjs：局部 patch 与全量重渲
+  逐字节等价，5 轮断言）；16ms 预算以宿主面基准落地（scripts/
+  bench-setdata.mjs，120 绑定节点实测 0.02ms，余量 800×）✅；
+  渲染器内部增量列 M-S3 webview 阶段）。
 - **M-S3 · webview 宿主面**：鸿蒙 webview / 移动 webview 嵌入样例
   （复用 deepdesign-studio harmonyos-port 与 ddpView 经验）+ 字体度量宿主回调 +
   首帧/内存预算——验收：真机 webview 内高精度渲染 demo。

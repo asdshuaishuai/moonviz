@@ -258,6 +258,37 @@ pub fn Project::set_data_json_with_diff(
 }
 
 ///|
+/// Smart UX M-S2：单节点 SVG 片段渲染（增量更新的宿主取面）。
+/// 返回该节点的完整 <g id="n_x">…（含子树）——宿主按 id 直接替换 DOM 节点，
+/// 不必全量重渲。布局对整文档求解一次后只渲该节点；数据取 self.data。
+pub fn Project::render_node_svg(
+  self : Project,
+  artboard~ : String,
+  node_id~ : String,
+) -> Result[String, String] {
+  match self.artboards.get(artboard) {
+    None => Err("unknown_artboard")
+    Some(ab) => {
+      if !ab.doc.nodes.contains(node_id) {
+        return Err("unknown_node: " + node_id)
+      }
+      let layout = solve(ab.doc)
+      let sb = StringBuilder::new()
+      render_node(
+        sb,
+        ab.doc,
+        node_id,
+        layout,
+        surface=self.tokens.resolve_color("surface"),
+        frame=self.tokens.resolve_color("outline"),
+        data=self.data,
+      )
+      Ok(sb.to_string())
+    }
+  }
+}
+
+///|
 /// Smart UX M-S2：当前数据树 → JSON（collect_data 导出的宿主读面，
 /// 表单回写的取值侧）。从未注入数据（DNull）输出 {}——空集合 envelope
 /// 一律合法 JSON（与 schema_json 同红线）；键按码元字典序，逐字节确定。

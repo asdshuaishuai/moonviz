@@ -901,3 +901,55 @@ test "契约：注入值内含 {{path}} 字面量——数据值不二次解析�
   assert_false(svg.contains("\"secret") && svg.contains("path}}\"") && !svg.contains("{{secret.path}}"), msg="sanity")
   let _ = session_close(h)
 }
+
+///|
+test "契约：render_node_svg——节点级片段增量（Smart UX M-S2 闭环收口）" {
+  let h = session_open(SEED)
+  let _ = session_apply_human(h, "update w btn text={{user.name}}")
+  let _ = session_set_data(h, "{\"user\":{\"name\":\"林一\"}}")
+  // changed 清单指认 btn → 按节点索取新片段
+  let f = render_node_svg(h, "w", "btn")
+  assert_true(f.contains("\"ok\":true"), msg=f)
+  let frag = json_unescape_text_field(f)
+  assert_true(frag.contains("<g id=\"n_btn\"") , msg="片段应以节点 g 开头: " + frag)
+  assert_true(frag.contains("林一"), msg="片段应携带新数据文本: " + frag)
+  assert_false(frag.contains("<svg"), msg="片段不是全量 SVG: " + frag)
+  // 错误路径：未知节点/画板/非法句柄 零崩
+  assert_true(render_node_svg(h, "w", "nope").contains("unknown_node"), msg="未知节点应报错")
+  assert_true(render_node_svg(h, "nope", "btn").contains("unknown_artboard"), msg="未知画板应报错")
+  assert_true(render_node_svg(0 - 1, "w", "btn").contains("invalid_session_handle"), msg="非法句柄应报错")
+  let _ = session_close(h)
+}
+
+///|
+/// 从 wasm JSON 信封里取 "svg":"…" 字段的转义原文并解转义（测试本地 helper）
+fn json_unescape_text_field(envelope : String) -> String {
+  let marker = "\"svg\":\""
+  let i = match envelope.find(marker) {
+    Some(x) => x + marker.length()
+    None => return ""
+  }
+  let rest = envelope.substring(start=i)
+  let sb = StringBuilder()
+  let chars : Array[Char] = []
+  for c in rest.iter() {
+    chars.push(c)
+  }
+  let mut j = 0
+  while j < chars.length() {
+    let c = chars[j]
+    if c == '\\' {
+      if j + 1 < chars.length() {
+        sb.write_char(chars[j + 1])
+      }
+      j = j + 2
+      continue
+    }
+    if c == '"' {
+      break
+    }
+    sb.write_char(c)
+    j = j + 1
+  }
+  sb.to_string()
+}
