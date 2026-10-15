@@ -46,6 +46,14 @@ moonbit_string_t mv_ios_poll(void);
 // （实现文件内部符号；列出仅为契约完整性）。
 void mv_ios_push_internal(const char *json_utf8);
 
+// ---- 宿主运行态与健康检查 -------------------------------------------------
+// 窗口未关闭且可见（主循环优雅退出依据）。
+int mv_app_running(void);
+// 引擎 sidecar 存活（kill(pid,0) 探测，零崩溃）。
+int mv_engine_alive(void);
+// 自愈：主动终止引擎（自愈测试/强制重生用），清理管道与 pid。
+int mv_engine_kill(void);
+
 // ---- 引擎 sidecar（MoonViz CLI 行协议子进程）-----------------------------
 // 启动引擎子进程（管道互连）。返回 0 / -1。重复调用幂等（已启动即 0）。
 int mv_engine_spawn(const char *exe_path);

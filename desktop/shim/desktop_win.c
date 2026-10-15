@@ -14,6 +14,9 @@ moonbit_string_t mv_ios_poll(void) { return (moonbit_string_t)0; }
 int mv_open(int card, const char *title, const char *html) { (void)card; (void)title; (void)html; return -1; }
 void mv_app_pump(void) {}
 void mv_eval(const char *js) { (void)js; }
+int mv_app_running(void) { return 0; }
+int mv_engine_alive(void) { return 0; }
+int mv_engine_kill(void) { return 0; }
 int mv_engine_spawn(const char *exe) { (void)exe; return -1; }
 int mv_engine_send(const char *line) { (void)line; return -1; }
 moonbit_string_t mv_engine_recv(void) { return (moonbit_string_t)0; }

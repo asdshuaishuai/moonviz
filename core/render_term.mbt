@@ -60,10 +60,14 @@ fn term_paint_node(
   layout : SolvedLayout,
   px_w : Double,
   px_h : Double,
+  data~ : DataValue,
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
-    Some(n) =>
+    Some(n) => {
+      if !n.style.visible {
+        return
+      }
       match layout.rect_of(id) {
         None => ()
         Some(r) => {
@@ -89,10 +93,11 @@ fn term_paint_node(
           }
           // 子节点
           for cid in n.children.iter() {
-            term_paint_node(grid, doc, cid, layout, px_w, px_h)
+            term_paint_node(grid, doc, cid, layout, px_w, px_h, data~)
           }
           // 文本（垂直居中于矩形，水平起点 = 左缘 + 2 格，裁剪于矩形内）
-          if n.text != "" && cx1 > cx0 + 1 {
+          let display_text = resolve_bindings(n.text, data)
+          if display_text != "" && cx1 > cx0 + 1 {
             let fg = term_hex_rgb(n.style.text_color)
             if fg >= 0 {
               let font_px = n.style.font_size
@@ -108,7 +113,7 @@ fn term_paint_node(
               }
               let tx0 = term_clamp(cx0 + 2, cx0, cx1)
               let mut col = tx0
-              for ch in n.text.iter() {
+              for ch in display_text.iter() {
                 if col >= cx1 {
                   break
                 }
@@ -121,9 +126,9 @@ fn term_paint_node(
           }
         }
       }
+    }
   }
 }
-
 ///|
 fn term_clamp(v : Int, lo : Int, hi : Int) -> Int {
   if v < lo {
@@ -190,6 +195,7 @@ pub fn render_term_svg(
   doc : Document,
   surface~ : String,
   cols? : Int = 100,
+  data? : DataValue = DNull,
 ) -> String {
   let w = cols
   let layout = solve(doc)
@@ -221,7 +227,7 @@ pub fn render_term_svg(
   match doc.nodes.get(doc.root_id) {
     Some(root) =>
       for cid in root.children.iter() {
-        term_paint_node(grid, doc, cid, layout, px_w, px_h)
+        term_paint_node(grid, doc, cid, layout, px_w, px_h, data~)
       }
     None => ()
   }

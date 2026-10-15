@@ -61,3 +61,27 @@ test "render_term：栈布局节点溢出画板底缘不崩溃（评分代理复
   let out = render_term_svg(doc, surface="#FFFFFF", cols=100)
   assert_true(out.length() > 0)
 }
+
+
+///|
+test "render_term：数据绑定解析 + 隐藏子树不绘制（语义与 SVG 面对齐）" {
+  let doc = Document::new({ width: 200.0, height: 100.0 })
+  let txt = { ..Node::make("tx", Text), x: Fixed(10.0), y: Fixed(30.0), width: Fixed(80.0), height: Fixed(20.0), text: "{{user.name}}", style: { ..Node::make("tx", Text).style, text_color: "#1A1C1E", font_size: 14.0 } }
+  let _ = doc.insert_node(txt, "root")
+  let hidden = { ..Node::make("hid", Rect), x: Fixed(10.0), y: Fixed(60.0), width: Fixed(50.0), height: Fixed(20.0), style: { ..Node::make("hid", Rect).style, fill: "#FF0000", visible: false } }
+  let _ = doc.insert_node(hidden, "root")
+  // 无数据：字面占位
+  let out1 = render_term_svg(doc, surface="#FFFFFF", cols=40)
+  assert_true(out1.contains("{{user.name}}"), msg="无数据应字面占位")
+  // 注入数据后应解析
+  let inner : Map[String, DataValue] = Map::new()
+  inner.set("name", DStr("林一"))
+  let user_obj : Map[String, DataValue] = Map::new()
+  user_obj.set("user", DObj(inner))
+  let d2 : DataValue = DObj(user_obj)
+  let out2 = render_term_svg(doc, surface="#FFFFFF", cols=40, data=d2)
+  assert_true(out2.contains("林一"), msg="数据绑定应解析: " + out2)
+  assert_false(out2.contains("{{user.name}}"), msg="解析后不应残留占位")
+  // 隐藏节点不绘制
+  assert_false(out2.contains("\u{1b}[48;2;255;0;0m"), msg="隐藏红块不应出现")
+}

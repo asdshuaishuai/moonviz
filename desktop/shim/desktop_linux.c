@@ -19,6 +19,9 @@ void mv_app_pump(void) { /* gtk_main_iteration_do(FALSE); */ }
 void mv_eval(const char *js) { (void)js; }
 void mv_ios_push_internal(const char *json_utf8) { (void)json_utf8; }
 moonbit_string_t mv_ios_poll(void) { return (moonbit_string_t)0; }
+int mv_app_running(void) { return 0; }
+int mv_engine_alive(void) { return 0; }
+int mv_engine_kill(void) { return 0; }
 int mv_engine_spawn(const char *exe) { (void)exe; return -1; }
 int mv_engine_send(const char *line) { (void)line; return -1; }
 moonbit_string_t mv_engine_recv(void) { return (moonbit_string_t)0; }

@@ -272,6 +272,7 @@ pub fn Project::render_term(
           ab.doc,
           surface=self.tokens.resolve_color("surface"),
           cols=cols,
+          data=self.data,
         ),
       )
   }
