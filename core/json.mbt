@@ -3,6 +3,9 @@
 
 ///|
 /// JSON 字符串转义（含引号、反斜杠与控制符）。playground 协议层复用。
+const JSON_HEX : String = "0123456789abcdef"
+
+///|
 pub fn json_escape(s : String) -> String {
   let sb = StringBuilder::new()
   for c in s.iter() {
@@ -12,6 +15,13 @@ pub fn json_escape(s : String) -> String {
       '\n' => sb.write_string("\\n")
       '\r' => sb.write_string("\\r")
       '\t' => sb.write_string("\\t")
+      c if c < ' ' => {
+        let hi = c.to_int() / 16
+        let lo = c.to_int() - hi * 16
+        sb.write_string("\\u00")
+        sb.write_char(JSON_HEX.get_char(hi).unwrap_or('0'))
+        sb.write_char(JSON_HEX.get_char(lo).unwrap_or('0'))
+      }
       _ => sb.write_char(c)
     }
   }

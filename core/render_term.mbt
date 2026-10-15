@@ -68,10 +68,15 @@ fn term_paint_node(
         None => ()
         Some(r) => {
           // 像素 → 网格
+          // clamp 上界为 cols/rows（不含）——节点在画板底缘之下时整块裁剪，
+          // 修评审发现的越界 SIGABRT（cy0==rows 时 term_get 越界）
           let cx0 = term_clamp((r.x / px_w * grid.cols.to_double()).to_int(), 0, grid.cols)
           let cy0 = term_clamp((r.y / px_h * grid.rows.to_double()).to_int(), 0, grid.rows)
           let cx1 = term_clamp(((r.x + r.width) / px_w * grid.cols.to_double()).to_int(), cx0, grid.cols)
           let cy1 = term_clamp(((r.y + r.height) / px_h * grid.rows.to_double()).to_int(), cy0, grid.rows)
+          if cx0 >= grid.cols || cy0 >= grid.rows {
+            return
+          }
           // 填充（纯色 hex 才绘制；none/渐变跳过）
           let bg = term_hex_rgb(n.style.fill)
           if bg >= 0 {
@@ -98,6 +103,9 @@ fn term_paint_node(
                 cy0,
                 if cy1 > cy0 { cy1 - 1 } else { cy0 },
               )
+              if ty >= grid.rows {
+                return
+              }
               let tx0 = term_clamp(cx0 + 2, cx0, cx1)
               let mut col = tx0
               for ch in n.text.iter() {

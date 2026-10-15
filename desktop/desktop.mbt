@@ -118,29 +118,37 @@ fn demo_data(round : Int) -> String {
 ///|
 /// 提取 set_data diff 中的 changed 节点 id 清单（{"keys":N,"changed":[{"id":"x",…}]}）
 fn parse_changed_ids(diff_json : String) -> Array[String] {
+  // String::find 恒从 0 搜索（无起始偏移）——手工扫描位置推进提取全部 id
+  // （修评审发现：原实现多节点只取首个）
   let ids : Array[String] = []
   let key = "\"id\":\""
   let n = diff_json.length()
   let key_len = key.length()
   let mut from = 0
   while from + key_len <= n {
-    match diff_json.find(key) {
-      None => break
-      Some(i) => {
-        if i < from {
-          from = from + 1
-          continue
-        }
-        let s = i + key_len
-        let mut j = s
-        while j < n && diff_json.get_char(j) != Some('"') {
-          j = j + 1
-        }
-        if j > s {
-          ids.push(diff_json.substring(start=s, end=j).to_string())
-        }
-        from = j
+    let i = from
+    let mut matched = true
+    let mut k = 0
+    while k < key_len {
+      if diff_json.get_char(i + k) != key.get_char(k) {
+        matched = false
+        k = key_len
+      } else {
+        k = k + 1
       }
+    }
+    if matched {
+      let s = i + key_len
+      let mut j = s
+      while j < n && diff_json.get_char(j) != Some('"') {
+        j = j + 1
+      }
+      if j > s {
+        ids.push(diff_json.substring(start=s, end=j).to_string())
+      }
+      from = j
+    } else {
+      from = from + 1
     }
   }
   ids
@@ -155,11 +163,95 @@ fn incremental_refresh(ab : String, round : Int) -> Bool {
     return false
   }
   for id in parse_changed_ids(diff).iter() {
-    let frag = engine_cmd("render-node-svg " + ab + " " + id)
-    let js = "window.__mv_patch('" + id + "'," + frag + ")"
+    let frag_reply = engine_cmd("render-node-svg " + ab + " " + id)
+    // 信封解包：{"ok":true,"svg":"…"} → 取 svg 字段字符串再拼 JS
+    let frag = json_string_field(frag_reply, "svg")
+    if frag == "" {
+      println("[desktop] 片段为空: " + frag_reply)
+      continue
+    }
+    let js = "window.__mv_patch('" + id + "'," + c_bytes_js(frag) + ")"
     mv_eval(c_bytes(js))
   }
   true
+}
+
+///|
+/// JSON 字符串字面量转义（引号/反斜杠/换行）——把文本安全地嵌入 JS 调用
+fn js_string_literal(s : String) -> String {
+  let sb = StringBuilder::new()
+  sb.write_char('"')
+  for c in s.iter() {
+    match c {
+      '"' => sb.write_string("\\\"")
+      '\\' => sb.write_string("\\\\")
+      '\n' => sb.write_string("\\n")
+      '\r' => sb.write_string("\\r")
+      _ => sb.write_char(c)
+    }
+  }
+  sb.write_char('"')
+  sb.to_string()
+}
+
+///|
+/// 把 SVG 字符串以 JS 字符串字面量形态嵌入（宿主 __mv_patch(id, frag) 的 frag 是字符串）
+fn c_bytes_js(s : String) -> String {
+  js_string_literal(s)
+}
+
+///|
+/// 从 JSON 信封取字符串字段（解一层转义）
+fn json_string_field(envelope : String, field : String) -> String {
+  let marker = "\"" + field + "\":\""
+  let i = match envelope.find(marker) {
+    Some(x) => x + marker.length()
+    None => return ""
+  }
+  let rest = envelope.substring(start=i)
+  let sb = StringBuilder::new()
+  let mut j = 0
+  let n = rest.length()
+  while j < n {
+    match rest.get_char(j) {
+      Some('\\') =>
+        if j + 1 < n {
+          j = j + 2
+        } else {
+          j = j + 1
+        }
+      Some('"') => break
+      _ => j = j + 1
+    }
+  }
+  let raw = rest.substring(start=0, end=j).to_string()
+  // 解转义（与 json_escape 对应）
+  let out = StringBuilder::new()
+  let m = raw.length()
+  let mut k = 0
+  while k < m {
+    match raw.get_char(k) {
+      Some('\\') => {
+        k = k + 1
+        if k < m {
+          match raw.get_char(k) {
+            Some('n') => out.write_char('\n')
+            Some('r') => out.write_char('\r')
+            Some('t') => out.write_char('\t')
+            Some(c2) => out.write_char(c2)
+            None => ()
+          }
+          k = k + 1
+        }
+      }
+      Some(c2) => {
+        out.write_char(c2)
+        k = k + 1
+      }
+      None => break
+    }
+  }
+  out.to_string()
 }
 
 ///|
@@ -270,7 +362,8 @@ fn main {
     println("[desktop] FAIL — webview 创建失败")
     return
   }
-  mv_eval(c_bytes("window.__mv_base(" + base + ")"))
+  let base_svg = json_string_field(base, "svg")
+  mv_eval(c_bytes("window.__mv_base(" + @core.json_escape(base_svg) + ")"))
   // 主循环：手动事件泵 + 点击事件消费 + 周期增量刷新（演示：数据轮转；
   // 生产：personal agent / 宿主经 data 命令推送）
   let mut round = 0

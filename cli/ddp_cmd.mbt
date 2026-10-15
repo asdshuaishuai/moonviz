@@ -96,7 +96,8 @@ pub fn cli_ddp_decode(p : @core.Project, parts : Array[String]) -> String {
   let req = "{\"operation\":\"decrypt\",\"password\":\"" +
     @core.json_escape(password) + "\",\"ddp_b64\":\"" + b64 + "\"}"
   let req_path = "/tmp/moonviz-ddp-req.json"
-  let _ = mv_write_file_c(c_bytes(req_path), c_bytes(req), req.length())
+  let req_bytes = c_bytes(req)
+  let _ = mv_write_file_c(c_bytes(req_path), req_bytes, req_bytes.length())
   let reply = capture(ddp_helper_path() + " < " + req_path)
   if mv_last_rc() != 0 {
     return cli_err("ddp_codec_failed: " + reply)
@@ -143,7 +144,8 @@ pub fn cli_ddp_save(p : @core.Project, parts : Array[String]) -> String {
   let req = "{\"operation\":\"encrypt\",\"password\":\"" +
     @core.json_escape(password) + "\",\"mbt_b64\":\"" + mbt_b64 + "\"}"
   let req_path = "/tmp/moonviz-ddp-req.json"
-  let _ = mv_write_file_c(c_bytes(req_path), c_bytes(req), req.length())
+  let req_bytes = c_bytes(req)
+  let _ = mv_write_file_c(c_bytes(req_path), req_bytes, req_bytes.length())
   let reply = capture(ddp_helper_path() + " < " + req_path)
   if mv_last_rc() != 0 {
     return cli_err("ddp_codec_failed: " + reply)

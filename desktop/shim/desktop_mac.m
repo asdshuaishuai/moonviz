@@ -68,8 +68,34 @@ moonbit_string_t mv_engine_recv(void) {
   ssize_t n = getline(&line, &cap, g_engine_out);
   if (n < 0) { free(line); close(g_engine_in); g_engine_in = -1; return moonbit_make_string(0, 0); }
   if (n > 0 && line[n-1] == '\n') n -= 1;
-  moonbit_string_t ms = moonbit_make_string((int32_t)n, 0);
-  for (ssize_t i = 0; i < n; i++) { ms[i] = (uint16_t)line[i]; }
+  // UTF-8 → UTF-16 正确解码（修评审 mojibake：逐字节强转会损坏中文等非 ASCII）
+  // UTF-8 → UTF-16 码元（自管缓冲，最后一次性 make）
+  uint16_t *wbuf = (uint16_t*)malloc(sizeof(uint16_t) * (size_t)(n + 1));
+  ssize_t w = 0;
+  ssize_t i = 0;
+  while (i < n) {
+    unsigned char b = (unsigned char)line[i];
+    if (b < 0x80) {
+      wbuf[w++] = (uint16_t)b; i += 1;
+    } else if ((b >> 5) == 0x6 && i + 2 <= n) {
+      uint32_t cp = ((b & 0x1F) << 6) | (line[i+1] & 0x3F);
+      wbuf[w++] = (uint16_t)cp; i += 2;
+    } else if ((b >> 4) == 0xE && i + 2 < n) {
+      uint32_t cp = ((b & 0x0F) << 12) | ((line[i+1] & 0x3F) << 6) | (line[i+2] & 0x3F);
+      wbuf[w++] = (uint16_t)cp; i += 3;
+    } else if ((b >> 3) == 0x1E && i + 3 < n) {
+      uint32_t cp = ((b & 0x07) << 18) | ((line[i+1] & 0x3F) << 12) | ((line[i+2] & 0x3F) << 6) | (line[i+3] & 0x3F);
+      cp -= 0x10000;
+      wbuf[w++] = (uint16_t)(0xD800 + (cp >> 10));
+      wbuf[w++] = (uint16_t)(0xDC00 + (cp & 0x3FF));
+      i += 4;
+    } else {
+      wbuf[w++] = 0xFFFD; i += 1;
+    }
+  }
+  moonbit_string_t ms = moonbit_make_string((int32_t)w, 0);
+  for (ssize_t k = 0; k < w; k++) ms[k] = wbuf[k];
+  free(wbuf);
   free(line);
   return ms;
 }

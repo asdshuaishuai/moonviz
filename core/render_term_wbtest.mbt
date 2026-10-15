@@ -39,3 +39,25 @@ test "render_term：非 hex 填充不绘制（渐变/none 降级）" {
   assert_false(out.contains("\u{1b}[48;2;10;"), msg="渐变首色 #a 不应被绘制")
   assert_false(out.contains("\u{1b}[48;2;11;"), msg="渐变次色 #b 不应被绘制")
 }
+
+
+///|
+test "render_term：节点越出画板底缘不崩溃（修评审 SIGABRT）" {
+  let doc = Document::new({ width: 400.0, height: 300.0 })
+  let a = { ..Node::make("a", Rect), y: Fixed(290.0), height: Fixed(100.0), style: { ..Node::make("a", Rect).style, fill: "#FF0000", text_color: "#FFFFFF", font_size: 14.0 }, text: "below" }
+  let _ = doc.insert_node(a, "root")
+  let out = render_term_svg(doc, surface="#FFFFFF", cols=100)
+  assert_true(out.length() > 0)
+}
+
+///|
+test "render_term：栈布局节点溢出画板底缘不崩溃（评分代理复现路径）" {
+  let doc = Document::new({ width: 400.0, height: 300.0 })
+  let _ = doc.update_node("root", fn(r) { { ..r, layout: Some({ dir: Vertical, gap: 0.0, justify: Start, padding: Padding::uniform(0.0) }) } })
+  for i in 0..<5 {
+    let n = { ..Node::make("n\{i}", Rect), height: Fixed(100.0), width: Fixed(400.0), y: AlignStart((i * 100).to_double()), text: "行\{i}", style: { ..Node::make("n\{i}", Rect).style, fill: "#EEEEEE", text_color: "#111111", font_size: 14.0 } }
+    let _ = doc.insert_node(n, "root")
+  }
+  let out = render_term_svg(doc, surface="#FFFFFF", cols=100)
+  assert_true(out.length() > 0)
+}
