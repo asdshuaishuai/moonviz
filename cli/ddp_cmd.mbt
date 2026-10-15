@@ -72,6 +72,13 @@ fn capture(cmd : String) -> String {
 }
 
 ///|
+///|
+/// UTF-8 Bytes（无 NUL）——文件内容写入用；与 c_bytes（C char* 约定，带 NUL）区分
+fn utf8_bytes(s : String) -> Bytes {
+  @utf8.encode(s)
+}
+
+///|
 fn ddp_helper_available() -> Bool {
   let h = ddp_helper_path()
   h == "ddp_codec" || mv_file_exists_c(c_bytes(h)) == 1
@@ -96,7 +103,7 @@ pub fn cli_ddp_decode(p : @core.Project, parts : Array[String]) -> String {
   let req = "{\"operation\":\"decrypt\",\"password\":\"" +
     @core.json_escape(password) + "\",\"ddp_b64\":\"" + b64 + "\"}"
   let req_path = "/tmp/moonviz-ddp-req.json"
-  let req_bytes = c_bytes(req)
+  let req_bytes = utf8_bytes(req)
   let _ = mv_write_file_c(c_bytes(req_path), req_bytes, req_bytes.length())
   let reply = capture(ddp_helper_path() + " < " + req_path)
   if mv_last_rc() != 0 {
@@ -144,7 +151,7 @@ pub fn cli_ddp_save(p : @core.Project, parts : Array[String]) -> String {
   let req = "{\"operation\":\"encrypt\",\"password\":\"" +
     @core.json_escape(password) + "\",\"mbt_b64\":\"" + mbt_b64 + "\"}"
   let req_path = "/tmp/moonviz-ddp-req.json"
-  let req_bytes = c_bytes(req)
+  let req_bytes = utf8_bytes(req)
   let _ = mv_write_file_c(c_bytes(req_path), req_bytes, req_bytes.length())
   let reply = capture(ddp_helper_path() + " < " + req_path)
   if mv_last_rc() != 0 {
