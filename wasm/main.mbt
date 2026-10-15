@@ -615,6 +615,21 @@ pub fn data_schema(handle : Int) -> String {
 }
 
 ///|
+/// Smart UX 真终端渲染（ANSI 真彩色）：会话面（与 session_export_svg 对齐，
+/// surface 随主题 token）。主题化深化：六主题即切即渲。
+pub fn session_render_term(handle : Int, artboard : String) -> String {
+  match session_get(handle) {
+    None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+    Some(p) =>
+      match p.render_term(artboard~) {
+        Ok(term) =>
+          "{\"ok\":true,\"term\":\"\{@core.json_escape(term)}\"}"
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+      }
+  }
+}
+
+///|
 /// 画板级 SVG 导出（含主题 surface/outline）。
 pub fn session_export_svg(handle : Int, artboard : String) -> String {
   sess_json(handle, fn(p) {

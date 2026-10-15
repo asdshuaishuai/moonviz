@@ -112,8 +112,10 @@ fn main {
   if failed > 0 {
     println("[golden-gen] FAILED_ITEMS=\{failed}")
     std_exit(2)
+  } else {
+    std_exit(0)
   }
 }
 
 ///|
-extern "c" fn std_exit(code : Int) -> Never = "exit"
+extern "c" fn std_exit(code : Int) -> Unit = "exit"

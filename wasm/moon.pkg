@@ -72,6 +72,7 @@ options(
         "session_component_compile_b64",
         "session_constrain",
         "session_critique",
+        "session_render_term",
         "session_export_svg",
         "session_extract_design_system",
         "session_flows",

@@ -13,7 +13,12 @@
 ///|
 /// 快照覆盖的主题（R4 前半：light/dark；后续主题按需追加并重生成基线）
 pub fn golden_themes() -> Array[String] {
-  ["light", "dark"]
+  // 全部 6 主题（0.1.9-fix 主题化深化）：light/dark/high_contrast/sepia/nord/sunset
+  let names : Array[String] = []
+  for t in builtin_themes().iter() {
+    names.push(t.name)
+  }
+  names
 }
 
 ///|

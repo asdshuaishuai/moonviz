@@ -258,6 +258,26 @@ pub fn Project::set_data_json_with_diff(
 }
 
 ///|
+/// Smart UX：真终端渲染（ANSI 真彩色）——Project 面（主题 surface 一致）。
+pub fn Project::render_term(
+  self : Project,
+  artboard~ : String,
+  cols? : Int = 100,
+) -> Result[String, String] {
+  match self.artboards.get(artboard) {
+    None => Err("unknown_artboard")
+    Some(ab) =>
+      Ok(
+        render_term_svg(
+          ab.doc,
+          surface=self.tokens.resolve_color("surface"),
+          cols=cols,
+        ),
+      )
+  }
+}
+
+///|
 /// Smart UX M-S2：单节点 SVG 片段渲染（增量更新的宿主取面）。
 /// 返回该节点的完整 <g id="n_x">…（含子树）——宿主按 id 直接替换 DOM 节点，
 /// 不必全量重渲。布局对整文档求解一次后只渲该节点；数据取 self.data。

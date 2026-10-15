@@ -953,3 +953,51 @@ fn json_unescape_text_field(envelope : String) -> String {
   }
   sb.to_string()
 }
+
+
+///|
+test "契约：六主题切换——surface 随 token 变化且全主题渲染零崩（主题化深化）" {
+  let surfaces = [
+    ("light", "#FFFFFF"), ("dark", "#1A1C1E"), ("high_contrast", "#FFFFFF"),
+    ("sepia", "#FAF6F0"), ("nord", "#3B4252"), ("sunset", "#FFF8E1"),
+  ]
+  for pair in surfaces.iter() {
+    let (name, want_surface) = pair
+    let h = session_open(SEED)
+    let r = session_apply_human(h, "theme \{name}")
+    assert_true(r.contains("\"ok\":true"), msg="theme \{name}: " + r)
+    let svg = session_export_svg(h, "w")
+    // 表面色（主题 surface token 字面量）应出现在导出 SVG
+    assert_true(
+      svg.contains(want_surface),
+      msg="主题 \{name} 的 surface \{want_surface} 应出现在 SVG: " + svg,
+    )
+    let _ = session_close(h)
+  }
+}
+
+///|
+test "契约：六主题 × render-term——ANSI 终端渲染全主题零崩且底色随主题（主题化深化）" {
+  let h = session_open(SEED)
+  for theme in ["light", "dark", "high_contrast", "sepia", "nord", "sunset"].iter() {
+    let _ = session_apply_human(h, "theme \{theme}")
+    let out = session_render_term(h, "w")
+    assert_true(out.contains("\"ok\":true"), msg="render-term \{theme} 应成功: " + out)
+  }
+  let _ = session_close(h)
+}
+
+
+///|
+test "契约：render-term dark 主题——ANSI 底色随主题 surface（主题化深化锁定）" {
+  let h = session_open(SEED)
+  let _ = session_apply_human(h, "theme dark")
+  let dark = session_render_term(h, "w")
+  assert_true(dark.contains("\"ok\":true"), msg=dark)
+  // #1A1C1E → RGB(26,28,30)
+  assert_true(dark.contains("48;2;26;28;30"), msg="dark 主题 ANSI 底色应为 RGB(26,28,30): " + dark)
+  let _ = session_apply_human(h, "theme light")
+  let light = session_render_term(h, "w")
+  assert_true(light.contains("48;2;255;255;255"), msg="light 主题 ANSI 底色应为白色: " + light)
+  let _ = session_close(h)
+}
