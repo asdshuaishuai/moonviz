@@ -296,7 +296,7 @@ moonviz/
 │   └── agent_test.mbt Agent workflow end-to-end tests
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
-├── desktop/           Self-rendering host (system webview; two-layer detection with system fallback — Tauri/Electron just provide a webview, zero client rendering code)
+├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
 ├── mcp/               MCP Server (stdio JSON-RPC; 52 tools mirroring the CLI)
 ├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 27 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
@@ -311,21 +311,26 @@ moonviz/
 └── docs/              Design documents 01–11 + wasm-abi.md
 ```
 
-## Webview Self-Rendering (desktop/)
+## Webview Self-Rendering (desktop/, client-guided)
 
-The engine provides rendering itself — clients only supply a webview. Two-layer
-detection with system fallback:
+The engine provides rendering — but never uses it on its own. The engine has
+**no UI, no window, and never acquires a rendering surface by itself**; the
+capability is strictly **client-guided**: the client (Tauri / Electron / any
+native shell) launches the engine, points it at a source
+(`MOONVIZ_DOC=<path.mbt.md>`), and hosts the result:
 
-1. **Webview layer** — the host opens the system webview (macOS WKWebView,
-   Tauri philosophy: no bundled browser engine) and loads the self-contained
-   interactive prototype; closing the window exits (use-and-destroy).
-2. **System layer** — with no webview available, the engine renders directly
-   and returns the result: a self-contained `index.html` artifact any webview
-   can load (Tauri / Electron ship zero rendering code), or plain stdout when
-   disk is unavailable.
+1. **Client webview surface** — point your webview at the rendered artifact
+   (`MOONVIZ_OUT`, default `moonviz-render.html`): a fully self-contained
+   interactive prototype (tab switching / flows / toasts / state polymorphism
+   baked in). Tauri / Electron ship zero rendering code.
+2. **System fallback** — in a native environment with no webview, the engine
+   renders via the system layer and returns the result: the artifact on disk,
+   or the self-contained HTML on stdout when disk is unavailable.
 
-The whole chain `.mbt.md → load_mbt_project → export_html` runs in-process,
-pure MoonBit — no sidecar, no upper-layer framework. See `desktop/README.md`.
+With no guidance (no `MOONVIZ_DOC`) the engine stays inert — a usage envelope
+only, no rendering, no files (CI asserts this). The whole chain
+`.mbt.md → load_mbt_project → export_html` runs in-process, pure MoonBit —
+no sidecar, no upper-layer framework. See `desktop/README.md`.
 
 ## Interactive Prototype System
 

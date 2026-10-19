@@ -63,29 +63,11 @@ jobs:
           moon build --release --target wasm wasm
           node scripts/check-wasm-abi.mjs _build/wasm/release/build/wasm/wasm.wasm
 
-  desktop-selfrender:
-    # 自渲染宿主（desktop/）只在 macOS 产出：Linux runner 对 mac shim 编译为
-    # 空 TU，骨架平台由第二层系统兜底承接（见 desktop/README.md 两层检测）。
-    name: desktop self-render smoke (macOS webview)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install MoonBit toolchain (latest)
-        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-
-      - name: moon check + test (mac full)
-        run: |
-          export PATH="$HOME/.moon/bin:$PATH"
-          moon check --target native
-          moon test --target native
-
-      - name: Build desktop host
+      - name: Desktop self-render build + smoke (client-guided, no UI)
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --target native desktop
-
-      - name: Headless self-check (source → pipeline → render → fallback IO)
-        run: |
           MOONVIZ_SMOKE=1 ./_build/native/debug/build/desktop/desktop.exe | tee /tmp/mv-smoke.log
           grep -q '\[smoke\] PASS' /tmp/mv-smoke.log
+          # 无引导必须惰性：只回 usage 信封，不渲染不写文件
+          test ! -f moonviz-render.html
