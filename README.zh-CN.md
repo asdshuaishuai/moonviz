@@ -279,7 +279,7 @@ moonviz/
 │   ├── svg.mbt        SVG 渲染
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
-├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
+├── desktop/           自渲染宿主（系统 webview 直接渲染；两层检测 + 系统兜底——Tauri/Electron 只需提供 webview，客户端零渲染代码）
 ├── mcp/               MCP Server（stdio JSON-RPC，52 工具，工具面同 CLI）
 ├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 27 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
@@ -293,6 +293,19 @@ moonviz/
 ├── examples/          DDP2 解析/渲染复刻样例（CI 示例复现）
 └── docs/              设计文档 01–11
 ```
+
+## Webview 自渲染（desktop/）
+
+引擎自己提供渲染能力——客户端只需提供 webview。两层检测，系统兜底：
+
+1. **第一层 webview**：宿主拉起系统 webview（macOS = WKWebView，Tauri 哲学：
+   不打包浏览器内核），直接载入自包含交互原型；关窗即退出（即用即销毁）。
+2. **第二层 系统**：无 webview 时引擎直接调用系统层渲染并返回结果——兜底产物
+   `index.html`（自包含，任意 webview 加载即是活原型，Tauri/Electron 零渲染
+   代码）；连磁盘都不可用时把 HTML 直接打到 stdout。
+
+渲染链路 `.mbt.md → load_mbt_project → export_html` 全程进程内、纯 MoonBit——
+无 sidecar、无上层框架依赖。详见 `desktop/README.md`。
 
 ## 交互原型系统
 

@@ -9,6 +9,7 @@ core/                引擎内核（组件目录、ops、令牌、谓词、门�
 decl/                声明式 DSL：MBT 扫描 ⇄ 场景图 ⇄ .mbt.md 双向往返
 wasm/                双 wasm 产物：wasm-gc（JS 宿主）+ classic 标准 MVP（wasmtime 等任意运行时）
 cli/ mcp/            行协议 CLI + MCP Server（stdio，含 protest proto DSL）
+desktop/             自渲染宿主（系统 webview 直接渲染原型；两层检测 + 系统兜底；契约见 desktop/shim/mv_shim.h，详见 desktop/README.md）
 site/                官网 + 文档 + playground（GitHub Pages 部署）
 sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
                      → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）

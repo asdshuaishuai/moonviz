@@ -62,6 +62,7 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--ink3);font-si
   <div class="grp">参考</div>
   <a href="#norms">组件规范 norms</a>
   <a href="#backnav">内置返回导航</a>
+  <a href="#desktop">Webview 自渲染</a>
   <a href="#render-pipeline">渲染管线</a>
   <a href="#ddp">DDP 容器</a>
   <a href="#env">环境变量</a>
@@ -392,6 +393,17 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 <tr><td>卡死页校验</td><td>多画板文档中非入口画板无出边 flow 且无返回类节点 = 用户会卡死——norms 维度直接判偏差</td></tr>
 </table>
 <p>测试锚点：<code>core/norms_wbtest.mbt</code>（规范五类）、返回语义随交互运行时测试。</p>
+</section>
+
+<section id="desktop">
+<h2>Webview 自渲染（desktop/，dev 线）</h2>
+<p>引擎<b>直接为客户端提供渲染能力</b>：客户端（Tauri / Electron / 任意原生壳）只需提供一个 webview 来源，渲染本身零客户端代码。两层检测，系统兜底：</p>
+<table>
+<tr><th>层</th><th>条件</th><th>行为</th></tr>
+<tr><td>第一层 webview</td><td>系统 webview 可用（macOS = WKWebView）</td><td>拉起窗口直接渲染自包含交互原型；关窗即退出（即用即销毁）</td></tr>
+<tr><td>第二层 系统</td><td>webview 不可用</td><td>引擎直接调用系统层渲染并返回结果：兜底产物写盘（<code>MOONVIZ_OUT</code>，缺省 moonviz-render.html），写盘也不可用时把自包含 HTML 打到 stdout</td></tr>
+</table>
+<p>渲染链路 <code>.mbt.md → load_mbt_project → export_html</code> 全程进程内、纯 MoonBit——无 sidecar、无上层框架依赖；交互（画板切换/导航流/toast/状态多态）由导出 HTML 内嵌运行时承载。抽象统一层 <code>desktop/shim/mv_shim.h</code>：三平台 shim 导出完全相同的符号集；macOS 已实测，Windows/Linux 骨架落地前自动走第二层。开关：<code>MOONVIZ_DOC</code>（渲染源）· <code>MOONVIZ_DESKTOP_MODE=card</code>（卡形态）· <code>MOONVIZ_SMOKE=1</code>（无头自检，CI mac job 硬门）。</p>
 </section>
 
 <section id="env">
