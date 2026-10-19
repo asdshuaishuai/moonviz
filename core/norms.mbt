@@ -783,3 +783,117 @@ pub fn norm_back_issues(self : Project, artboard~ : String) -> Array[String] {
   }
   issues
 }
+
+// ---------------------------------------------------------------------------
+// Norms v2 — 设计语言扩展（对标 Claude Design codebase-aware 约束 +
+// Open Design agent 设计知识）：触控目标 / 间距网格 / 字号层级 / 节点密度
+// ---------------------------------------------------------------------------
+
+const NORM_TOUCH_MIN : Double = 44.0
+
+const NORM_GRID_UNIT : Double = 4.0
+
+const NORM_TYPE_SCALE_MAX : Int = 5
+
+const NORM_NODE_BUDGET : Int = 80
+
+fn norm_is_interactive(component : String) -> Bool {
+  norm_is_action_component(component) || component == "tab_bar" || component == "search_bar" || component == "slider" || component == "switch" || component == "checkbox"
+}
+
+pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+  let issues : Array[String] = []
+  for id in doc.nodes.keys() {
+    if issues.length() >= 4 { break }
+    match doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        if !norm_is_interactive(n.component) { continue }
+        match layout.rect_of(id) {
+          None => continue
+          Some(r) => {
+            if r.width < NORM_TOUCH_MIN - 0.5 || r.height < NORM_TOUCH_MIN - 0.5 {
+              issues.push(json_escape(id) + "(" + n.component + ") " + r.width.to_int().to_string() + "x" + r.height.to_int().to_string() + " below touch min 44x44")
+            }
+          }
+        }
+      }
+    }
+  }
+  issues
+}
+
+pub fn norm_grid_issues(doc : Document) -> Array[String] {
+  let issues : Array[String] = []
+  for id in doc.nodes.keys() {
+    if issues.length() >= 4 { break }
+    match doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        match n.layout {
+          None => continue
+          Some(l) => {
+            if l.gap > 0.5 && l.gap % NORM_GRID_UNIT != 0.0 {
+              issues.push(json_escape(id) + " gap " + l.gap.to_string() + " not on 4pt grid")
+            }
+          }
+        }
+      }
+    }
+  }
+  issues
+}
+
+pub fn norm_type_issues(doc : Document) -> Array[String] {
+  let sizes : Map[Int, Int] = Map::new()
+  for id in doc.nodes.keys() {
+    match doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        if n.text.length() == 0 { continue }
+        let fs = n.style.font_size.to_int()
+        sizes.set(fs, sizes.get(fs).unwrap_or(0) + 1)
+      }
+    }
+  }
+  let issues : Array[String] = []
+  if sizes.size() > NORM_TYPE_SCALE_MAX {
+    let detail = StringBuilder::new()
+    let mut first = true
+    for fs in sizes.keys() {
+      if !first { detail.write_string(" ") }
+      first = false
+      detail.write_string(fs.to_string() + "px x" + sizes.get(fs).unwrap_or(0).to_string())
+    }
+    issues.push("type scale " + sizes.size().to_string() + " > " + NORM_TYPE_SCALE_MAX.to_string() + " (" + detail.to_string() + ")")
+  }
+  issues
+}
+
+pub fn norm_density_issues(doc : Document) -> Array[String] {
+  let issues : Array[String] = []
+  if doc.nodes.size() > NORM_NODE_BUDGET {
+    issues.push("node count " + doc.nodes.size().to_string() + " > " + NORM_NODE_BUDGET.to_string())
+  }
+  issues
+}
+
+
+///|
+/// Norms v2：v1 五规则 + v2 四规则（触控/字号/密度/间距网格）
+pub fn norm_issues_v2(doc : Document, layout : SolvedLayout) -> Array[String] {
+  let issues = norm_issues(doc, layout)
+  for issue in norm_touch_issues(doc, layout).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  for issue in norm_type_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  for issue in norm_density_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  for issue in norm_grid_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  issues
+}
