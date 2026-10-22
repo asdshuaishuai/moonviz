@@ -318,3 +318,12 @@ test "渲染：SVG 输出包含预期形状与文本" {
   assert_true(svg.contains("欢迎回来"))
   assert_true(svg.contains("#4B6BFB"))
 }
+
+///|
+test "json_escape: C0 control chars emit \\u00xx per RFC 8259" {
+  assert_true(json_escape("\u{0001}") == "\\u0001")
+  assert_true(json_escape("\u{0008}") == "\\u0008")
+  assert_true(json_escape("\u{001f}") == "\\u001f")
+  // 常规转义不受影响
+  assert_true(json_escape("a\"b\\c\nd") == "a\\\"b\\\\c\\nd")
+}

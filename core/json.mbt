@@ -2,7 +2,8 @@
 /// v1 只做编码；JSON → Patch 的解码在 M1 桥接层（MoonBit JS 后端）落地。
 
 ///|
-/// JSON 字符串转义（含引号、反斜杠与控制符）。playground 协议层复用。
+/// JSON 字符串转义（含引号、反斜杠与全部 C0 控制符——\b \f 等按 RFC 8259
+/// 统一输出 \u00xx，裸控制字符合法 JSON 不允许；playground 协议层复用）。
 pub fn json_escape(s : String) -> String {
   let sb = StringBuilder::new()
   for c in s.iter() {
@@ -12,7 +13,18 @@ pub fn json_escape(s : String) -> String {
       '\n' => sb.write_string("\\n")
       '\r' => sb.write_string("\\r")
       '\t' => sb.write_string("\\t")
-      _ => sb.write_char(c)
+      _ => {
+        let code = c.to_int()
+        if code < 0x20 {
+          let hi = (code >> 4) & 15
+          let lo = code & 15
+          sb.write_string("\\u00")
+          sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
+          sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+        } else {
+          sb.write_char(c)
+        }
+      }
     }
   }
   sb.to_string()

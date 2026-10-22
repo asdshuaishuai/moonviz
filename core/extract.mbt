@@ -594,3 +594,76 @@ fn kind_str(n : Node) -> String {
     Image => "image"
   }
 }
+
+///|
+/// 令牌名 → CSS 自定义属性片（小写；非字母数字归一为 -，首尾/连续 dash 压缩）
+fn design_slug(name : String) -> String {
+  let lower = name.to_lower()
+  let sb = StringBuilder::new()
+  let mut prev_dash = true
+  for c in lower.iter() {
+    if is_ascii_alnum(c) {
+      sb.write_char(c)
+      prev_dash = false
+    } else if !prev_dash {
+      sb.write_char('-')
+      prev_dash = true
+    }
+  }
+  let s = sb.to_string()
+  let mut end = s.length()
+  while end > 0 {
+    match s.get_char(end - 1) {
+      Some('-') => end = end - 1
+      _ => break
+    }
+  }
+  s.substring(start=0, end=end)
+}
+
+///|
+/// 设计系统导出：把反向提取结果打包为可直接消费的形态——tokens JSON
+/// （机器）+ CSS Custom Properties（前端直用）。与 extract_design_system
+/// 同源同判据，这是导出形态，不是新的提取口径。
+pub fn Project::export_design_system(
+  self : Project,
+  artboard~ : String,
+) -> Result[String, String] {
+  match self.extract_design_system(artboard~) {
+    Err(e) => Err(e)
+    Ok(ds) => {
+      let sb = StringBuilder::new()
+      sb.write_string(
+        "/* MoonViz design tokens — extracted from \{artboard} */\n:root {\n",
+      )
+      // 语义名推断可能把不同值归到同名（两个色都叫 surface）——CSS 同名
+      // 自定义属性后者静默覆盖前者，令牌交付物不允许丢值：slug 冲突加序号
+      let used : Map[String, Bool] = Map::new()
+      fn emit_var(sb : StringBuilder, used : Map[String, Bool], group : String, raw : String, value : String) -> Unit {
+        let base = design_slug(raw)
+        let mut slug = base
+        let mut n = 2
+        while used.contains(slug) {
+          slug = "\{base}-\{n}"
+          n = n + 1
+        }
+        used.set(slug, true)
+        sb.write_string("  --ds-\{group}-\{slug}: \{value};\n")
+      }
+      for t in ds.color_tokens.iter() {
+        emit_var(sb, used, "color", t.name, t.value)
+      }
+      for t in ds.spacing_tokens.iter() {
+        emit_var(sb, used, "spacing", t.suggested_name, "\{t.value.to_int()}px")
+      }
+      for t in ds.font_tokens.iter() {
+        emit_var(sb, used, "font", t.suggested_name, "\{t.value.to_int()}px")
+      }
+      sb.write_string("}\n")
+      let css = sb.to_string()
+      Ok(
+        "{\"ok\":true,\"op\":\"export-design-system\",\"artboard\":\"\{json_escape(artboard)}\",\"counts\":{\"colors\":\{ds.color_tokens.length()},\"spacing\":\{ds.spacing_tokens.length()},\"fonts\":\{ds.font_tokens.length()}},\"tokens\":\{ds.to_json()},\"css\":\"\{json_escape(css)}\"}",
+      )
+    }
+  }
+}

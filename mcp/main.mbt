@@ -713,6 +713,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         Err(e) => err_json(e)
       }
     }
+    "export_design_system" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      match p.export_design_system(artboard~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
     "generate_responsive" => {
       if artboard == "" {
         return err_json("missing artboard")

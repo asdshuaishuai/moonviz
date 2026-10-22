@@ -252,6 +252,11 @@ pub fn list_tools() -> Array[AgentTool] {
     [s("artboard", "artboard id")],
   )
   add(
+    "export_design_system",
+    "Export an artboard's extracted design system as deliverables: tokens JSON (machine) + CSS custom properties (frontend-ready).",
+    [s("artboard", "artboard id")],
+  )
+  add(
     "generate_responsive",
     "Generate responsive variants (_tablet/_desktop) for an artboard.",
     [s("artboard", "artboard id")],

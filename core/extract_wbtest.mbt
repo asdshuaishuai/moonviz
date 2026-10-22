@@ -138,3 +138,26 @@ test "提取：颜色饱和度计算" {
   let s2 = color_saturation(r2, g2, b2)
   assert_true(s2 < 0.1) // 低饱和度
 }
+
+///|
+test "export_design_system: deliverable form (tokens JSON + CSS custom properties)" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="b1",
+    x=10.0,
+    y=10.0,
+  )
+  // 显式非默认填充色进入提取口径（默认色被排除是提取判据的一部分）
+  let _ = p.edit_node(artboard="home", node_id="b1", kvs=[("fill", "#4B6BFB")])
+  let json = match p.export_design_system(artboard="home") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(json.contains("\"op\":\"export-design-system\""))
+  assert_true(json.contains("--ds-color-"))
+  assert_true(json.contains("\"tokens\""))
+  assert_true(json.contains("\"css\""))
+}

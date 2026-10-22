@@ -1219,6 +1219,15 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "export-design-system" =>
+      if parts.length() < 2 {
+        cli_err("usage: export-design-system <artboard>")
+      } else {
+        match p.export_design_system(artboard=parts[1]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
     "list" => p.list_artboards_json()
     "exit" | "quit" => ":exit"
     "anim-list" => @core.animation_presets_json()
@@ -1329,6 +1338,7 @@ fn cli_help() -> String {
   "Generative (execution ladder, always start from the top):\n" +
   "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score)\n" +
   "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
+  "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
   "\n" +
   "Node editing (both gates share this grammar):\n" +
   "  move <ab> <node> <x> <y>          Move node\n" +

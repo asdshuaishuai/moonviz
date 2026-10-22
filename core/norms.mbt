@@ -823,6 +823,57 @@ pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String]
   issues
 }
 
+///|
+/// Norms v2 触控修复：交互组件低于 44×44 的抬到触控最小值。与
+/// norm_touch_issues 同一判据（同一组件集、同一 0.5 容差）；只抬 Fixed
+/// 维度——Hug/Fill 尺寸策略不得被静默降级为 Fixed。放大可能引入溢出，
+/// 由 auto_fix 在本 pass 之后的谓词循环清偿（与文案留白放大同序）。
+pub fn norm_touch_fix_pass(
+  doc : Document,
+  layout : SolvedLayout,
+) -> Array[String] {
+  let fixes : Array[String] = []
+  for id in doc.nodes.keys() {
+    match doc.nodes.get(id) {
+      None => ()
+      Some(n) => {
+        if !norm_is_interactive(n.component) { continue }
+        match layout.rect_of(id) {
+          None => ()
+          Some(r) => {
+            let w_short = r.width < NORM_TOUCH_MIN - 0.5
+            let h_short = r.height < NORM_TOUCH_MIN - 0.5
+            if !w_short && !h_short { continue }
+            let w_fixed = match n.width {
+              Fixed(_) => true
+              _ => false
+            }
+            let h_fixed = match n.height {
+              Fixed(_) => true
+              _ => false
+            }
+            let new_w = if w_short && w_fixed { NORM_TOUCH_MIN } else { r.width }
+            let new_h = if h_short && h_fixed { NORM_TOUCH_MIN } else { r.height }
+            if new_w != r.width || new_h != r.height {
+              let _ = doc.update_node(id, fn(x) {
+                {
+                  ..x,
+                  width: if new_w != r.width { Fixed(new_w) } else { x.width },
+                  height: if new_h != r.height { Fixed(new_h) } else { x.height },
+                }
+              })
+              fixes.push(
+                "{\"node\":\"\{json_escape(id)}\",\"action\":\"touch_norm\",\"why\":\"触控目标 44×44\",\"before\":\"\{r.width.to_int()}×\{r.height.to_int()}\",\"after\":\"\{new_w.to_int()}×\{new_h.to_int()}\"}",
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+  fixes
+}
+
 pub fn norm_grid_issues(doc : Document) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {

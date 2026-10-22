@@ -765,3 +765,32 @@ test "norm_issues_v2：smoke——可调用且返回数组" {
   let issues = norm_issues_v2(doc, layout)
   assert_true(issues.length() >= 0)
 }
+
+///|
+test "norms v2: auto_fix enlarges sub-44 interactive targets (Fixed dims only)" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="touch")
+  let _ = p.place_component(
+    artboard="touch",
+    component_id="button",
+    instance_id="tiny",
+    x=20.0,
+    y=20.0,
+    w=40.0,
+    h=30.0,
+  )
+  let _ = p.auto_fix(artboard="touch")
+  match p.artboards.get("touch") {
+    None => assert_true(false)
+    Some(meta) => {
+      let layout = solve(meta.doc)
+      match layout.rect_of("tiny") {
+        Some(r) => {
+          assert_true(r.width >= 43.5)
+          assert_true(r.height >= 43.5)
+        }
+        None => assert_true(false)
+      }
+    }
+  }
+}

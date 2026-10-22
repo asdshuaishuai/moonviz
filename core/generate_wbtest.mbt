@@ -68,7 +68,7 @@ test "ops_batch：一次提交与断点即停" {
 ///|
 /// 工具字典：生成式两工具在单一事实源（MCP tools/list 同源自动可见）
 test "agent_api：generate/batch_apply 注册" {
-  assert_true(list_tools().length() == 54)
+  assert_true(list_tools().length() == 55)
   let json = list_tools_json()
   assert_true(json.contains("\"name\":\"generate\""))
   assert_true(json.contains("\"name\":\"batch_apply\""))
