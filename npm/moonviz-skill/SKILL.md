@@ -6,6 +6,40 @@ MoonViz is a prototype design engine built entirely in MoonBit. It treats one Mo
 
 `.mbt.md` follows MoonBit's official literate-source rules: `mbt` compiles, `mbt check` runs document tests, while `mbt nocheck` and `moonbit` are display-only. MoonViz adds explicit `moonviz:artboard` visual blocks and parses only supported public `@decl` declarations.
 
+## Execution Policy: Generative First
+
+MoonViz is a **generative UI engine**, not a node-placement service. The agent
+declares intent; the engine owns page structure, component choice, spacing
+norms, and visual consistency. Do NOT drive the engine like a painter placing
+every node — that is slow, token-expensive, and produces off-norm work the
+engine would have to repair anyway.
+
+**The execution ladder (always start from the top):**
+
+1. `generate` — one sentence of intent (`generate "登录页 dark"` /
+   `generate web landing page as landing`). One call returns a complete,
+   norms-healed artboard plus a report: `autofix` (what the engine repaired),
+   `missing` (what a page of this type usually has but lacks),
+   `score` (A–D design quality grade), and deterministic `alternatives`.
+2. `template` — when you already know the exact page template id
+   (`template dashboard home`). Same generative path, explicit selection.
+3. `ops-batch-b64` / MCP `batch_apply` — a determined refinement pass in ONE
+   call: newline-separated ops, base64-encoded (max 64). Aborts at the first
+   error and returns its index for resume-from-breakpoint.
+4. Single ops — micro-adjustments and probes only.
+
+**Read the report before re-generating.** `missing` and `score` are the
+engine telling you what a senior designer would add next; fix those with one
+batch instead of re-running generate.
+
+**Anti-patterns (all red):**
+
+- Placing nodes one-by-one to build a standard page (login/settings/dashboard)
+  that a template already covers — use `generate`/`template` instead.
+- Hand-computing coordinates for generated content — the engine owns layout.
+- N single tool calls for a known list of edits — pack them into one batch.
+- Shipping without reading `score`/`missing` — the report is the review loop.
+
 ## Quick Start
 
 ```bash

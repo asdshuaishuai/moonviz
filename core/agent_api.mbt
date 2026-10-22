@@ -255,6 +255,20 @@ pub fn list_tools() -> Array[AgentTool] {
     "Generate responsive variants (_tablet/_desktop) for an artboard.",
     [s("artboard", "artboard id")],
   )
+  // ---- 生成式 UI（执行策略第一级：意图声明，引擎生成）----
+  add(
+    "generate",
+    "Generative UI entry: describe the page in one sentence; the engine picks a semantic template, self-heals norms/predicates, and returns a report (autofix/missing/score). Prefer this over placing nodes one by one — the agent declares intent, the engine generates.",
+    [
+      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard)"),
+      so("name", "artboard name (default = template id)"),
+    ],
+  )
+  add(
+    "batch_apply",
+    "Generative execution tier 2: apply multiple session ops in ONE call (newline-separated ops, base64 of the block). Executes in order, aborts at the first error and returns its index. Prefer over N single calls for deterministic refinements.",
+    [s("operations_b64", "base64 of newline-separated ops (e.g. update home title text=... lines), max 64")],
+  )
   // ---- 交互 / 状态 ----
   add(
     "interact",

@@ -155,6 +155,8 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
   let token = extract_arg_string(request_line, "token")
   let value = extract_arg_string(request_line, "value")
   let source_b64 = extract_arg_string(request_line, "source_b64")
+  let intent = extract_arg_string(request_line, "intent")
+  let operations_b64 = extract_arg_string(request_line, "operations_b64")
   let x = extract_arg_num(request_line, "x")
   let y = extract_arg_num(request_line, "y")
   let w = extract_arg_num(request_line, "w")
@@ -421,6 +423,39 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       match p.lint(artboard~) {
         Ok(json) => json
         Err(e) => err_json(e)
+      }
+    }
+    "generate" => {
+      // 生成式 UI 入口（执行策略第一级）：意图一句话，引擎生成 + 报告
+      if intent == "" {
+        return err_json("missing intent")
+      }
+      match p.generate(intent_text=intent, name=name) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "batch_apply" => {
+      // 执行策略第二级：多条确定精修一次提交（base64(换行分隔 ops)）
+      if operations_b64 == "" {
+        return err_json("missing operations_b64")
+      }
+      let block = decode_mcp_b64(operations_b64)
+      let lines : Array[String] = []
+      for line in block.split("\n").iter() {
+        let trimmed = line.trim().to_string()
+        if trimmed != "" {
+          lines.push(trimmed)
+        }
+      }
+      if lines.length() == 0 {
+        return err_json("ops_batch_empty")
+      }
+      match @core.apply_operations(p, lines) {
+        Ok(applied) =>
+          "{\"ok\":true,\"op\":\"batch_apply\",\"applied\":\{applied}}"
+        Err((index, error)) =>
+          "{\"ok\":false,\"op\":\"batch_apply\",\"applied\":\{index},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
       }
     }
     "critique" => {

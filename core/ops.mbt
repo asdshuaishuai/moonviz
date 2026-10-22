@@ -642,3 +642,28 @@ pub fn apply_operation(
     _ => Err("mbt_operation_unsupported:" + parts[0])
   }
 }
+
+///|
+/// 批量执行上限：防滥用/防失控循环；64 条足够覆盖一次精修轮。
+pub const OPS_BATCH_LIMIT : Int = 64
+
+///|
+/// 批量执行 mutating ops（生成式执行策略第二级：确定的精修一次提交，
+/// 替代 N 次单调用往返）。顺序执行、遇错即停——与逐条执行语义完全一致
+/// （错误处之后的 op 不落，索引随错误返回供断点续批）。
+pub fn apply_operations(
+  project : Project,
+  operations : Array[String],
+) -> Result[Int, (Int, String)] {
+  if operations.length() > OPS_BATCH_LIMIT {
+    return Err((-1, "mbt_ops_batch_too_many:\{OPS_BATCH_LIMIT}"))
+  }
+  let mut i = 0
+  while i < operations.length() {
+    match apply_operation(project, operations[i]) {
+      Err(error) => return Err((i, error))
+      Ok(_) => i = i + 1
+    }
+  }
+  Ok(operations.length())
+}

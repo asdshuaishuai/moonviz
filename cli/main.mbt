@@ -685,6 +685,59 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "generate" =>
+      // 生成式 UI 入口（执行策略第一级）：一句话意图 → 引擎生成完整画板
+      // + 报告信封。意图支持引号包裹（split_cmd 还原）；未加引号时把余下
+      // token 空格拼接；尾部 "as <name>" 指定画板名。
+      if parts.length() < 2 {
+        cli_err("usage: generate <意图一句话> [as <name>]")
+      } else {
+        let mut intent = parts[1]
+        let mut artboard_name = ""
+        let mut i = 2
+        while i < parts.length() {
+          if parts[i] == "as" && i + 1 < parts.length() {
+            artboard_name = parts[i + 1]
+            i = i + 2
+          } else {
+            intent = intent + " " + parts[i]
+            i = i + 1
+          }
+        }
+        match p.generate(intent_text=intent, name=artboard_name) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "ops-batch-b64" =>
+      // 执行策略第二级：确定的多条精修一次提交（base64(换行分隔 ops)）。
+      // 顺序执行、遇错即停（index 随错误返回，供断点续批）。
+      if parts.length() < 2 {
+        cli_err("usage: ops-batch-b64 <utf8_base64_of_newline_separated_ops>")
+      } else {
+        match decode_mbt_b64(parts[1]) {
+          Err(error) => cli_err(error)
+          Ok(block) => {
+            let ops : Array[String] = []
+            for line in block.split("\n").iter() {
+              let trimmed = mbt_trim_ws(line.to_string())
+              if trimmed.length() > 0 {
+                ops.push(trimmed)
+              }
+            }
+            if ops.length() == 0 {
+              cli_err("ops_batch_empty")
+            } else {
+              match @core.apply_operations(p, ops) {
+                Ok(applied) =>
+                  "{\"ok\":true,\"op\":\"ops-batch\",\"applied\":\{applied}}"
+                Err((index, error)) =>
+                  "{\"ok\":false,\"op\":\"ops-batch\",\"applied\":\{index},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+              }
+            }
+          }
+        }
+      }
     "theme" =>
       if parts.length() < 2 {
         cli_err("usage: theme <name>")

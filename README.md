@@ -90,7 +90,7 @@
 │  discover components → create artboard → place → lint →      │
 │  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (52 tools, JSON in/out)
+               │ Agent Tools API (54 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -116,7 +116,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent Tool List (52 tools)
+## Agent Tool List (54 tools)
 
 | Tool | Semantics |
 | :--- | :--- |
@@ -139,6 +139,8 @@
 | `ddp_view` | Read-only DDP view and render contract |
 | `export_react` | React TSX component stubs (code generation only, not a fact source) |
 | `apply_template` | Generate a complete artboard from a template (one sentence → full page) |
+| `generate` | **Generative UI entry (execution tier 1)**: one-sentence intent → engine picks template, self-heals norms, returns report (autofix/missing/score/alternatives). Prefer over node-by-node placement |
+| `batch_apply` | **Execution tier 2**: multiple ops in ONE call (newline-separated, base64, ≤64); aborts at first error with its index | |
 | `fork_variants` | Fork design variants (parallel A/B exploration) |
 | `score_variants` | Score all variants (violations/lint/alignment/richness) |
 | `merge_variant` | Merge the best variant back into the main branch |
@@ -268,7 +270,7 @@ moonviz/
 │   ├── tokens.mbt     Design tokens (Material 3 style)
 │   ├── component.mbt  Component system (65 components × 115 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
-│   ├── agent_api.mbt  Agent tool API (52 tools + list-ops op dictionary)
+│   ├── agent_api.mbt  Agent tool API (54 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
 │   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
 │   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)
@@ -297,7 +299,7 @@ moonviz/
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
 ├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
-├── mcp/               MCP Server (stdio JSON-RPC; 52 tools mirroring the CLI)
+├── mcp/               MCP Server (stdio JSON-RPC; 54 tools mirroring the CLI)
 ├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 27 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)

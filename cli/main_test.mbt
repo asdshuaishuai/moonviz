@@ -54,3 +54,30 @@ test "MBT transport rejects malformed Base64 before parsing source" {
   let result = cli_exec(project, "render-mbt-b64 %%not-base64%%")
   assert_true(result.contains("mbt_transport_invalid_base64"))
 }
+
+///|
+test "generate: one-sentence intent produces a full artboard plus report" {
+  let project = @core.Project::new()
+  let result = cli_exec(project, "generate 登录页")
+  assert_true(result.contains("\"ok\":true"))
+  assert_true(result.contains("\"template\":\"login\""))
+  assert_true(result.contains("\"autofix\""))
+  assert_true(result.contains("\"score\""))
+  // 自定义画板名（as 尾缀）
+  let named = cli_exec(project, "generate 设置页 as my_settings")
+  assert_true(named.contains("\"artboard\":\"my_settings\""))
+}
+
+///|
+test "ops-batch: one-shot submission with breakpoint index on failure" {
+  let project = @core.Project::new()
+  let ok = cli_b64("create home 390 844\ncreate detail 390 844")
+  let result = cli_exec(project, "ops-batch-b64 " + ok)
+  assert_true(result.contains("\"ok\":true"))
+  assert_true(result.contains("\"applied\":2"))
+  let bad = cli_b64("create home2 390 844\nupdate home2 ghost text=x")
+  let result2 = cli_exec(project, "ops-batch-b64 " + bad)
+  assert_true(result2.contains("\"ok\":false"))
+  assert_true(result2.contains("\"applied\":1"))
+  assert_true(result2.contains("\"index\":1"))
+}
