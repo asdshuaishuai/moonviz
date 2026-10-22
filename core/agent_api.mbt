@@ -543,6 +543,12 @@ pub fn op_entries() -> Array[OpEntry] {
     "token", "token <name> <value>", "tokens", "Override a COLOR design token: recolors old-value literals, persists via frontmatter `tokens:`; setting the default value back reverts.",
   )
   add(
+    "autofill",
+    "autofill <artboard>",
+    "debt",
+    "Materialize the infer_missing report as real nodes (per page-type recipes), then auto_fix settles overlaps/overflows. Idempotent: filled text satisfies the detector.",
+  )
+  add(
     "fix", "fix <artboard>", "debt", "Debt-repayment auto-fix: commits only when total violations strictly decrease; the remainder is accepted as visual debt (HumanGate fallback).",
   )
   ops
@@ -552,7 +558,7 @@ pub fn op_entries() -> Array[OpEntry] {
 /// CLI op 面字典（list-ops / list_ops 输出）：
 /// [{"op","usage","category","description","gates":{"agent":true,"human":true}}]
 ///
-/// 全部 26 条 op 在双路线共享（差别在提交门禁的校验强度：AgentGate 硬拦
+/// 全部 27 条 op 在双路线共享（差别在提交门禁的校验强度：AgentGate 硬拦
 /// 结构违规，HumanGate 放行视觉债）；fix 的还债特例写进 description。
 pub fn list_ops_json() -> String {
   let gates = "{\"agent\":true,\"human\":true}"

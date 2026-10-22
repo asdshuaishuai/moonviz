@@ -202,7 +202,7 @@ const back = await DDP.decrypt(free.bytes);         // → { mbt }</code></pre>
 <table>
 <tr><th>导出</th><th>说明</th></tr>
 <tr><td><code>MoonViz</code></td><td>引擎会话类：<code>run(cmds)</code> / <code>last(cmds)</code> / <code>render</code> / <code>validate</code> / <code>applyHumanOp</code> / <code>applyAgentOp</code> / <code>apply</code> / <code>create</code></td></tr>
-<tr><td>能力字典 / 清单</td><td><code>tools()</code>（55 工具含 inputSchema）/ <code>ops()</code>（26 op）/ <code>listTemplates()</code> / <code>listComponents()</code> / <code>listThemes()</code> / <code>listTokens()</code> —— 与 MCP tools/list、CLI list-tools·list-ops 同源</td></tr>
+<tr><td>能力字典 / 清单</td><td><code>tools()</code>（55 工具含 inputSchema）/ <code>ops()</code>（27 op）/ <code>listTemplates()</code> / <code>listComponents()</code> / <code>listThemes()</code> / <code>listTokens()</code> —— 与 MCP tools/list、CLI list-tools·list-ops 同源</td></tr>
 <tr><td>导出</td><td><code>exportSvg(mbt, artboard)</code> / <code>exportHtml(mbt)</code>（自包含可交互原型）</td></tr>
 <tr><td><code>Project</code></td><td>构建器：<code>template/create/duplicate/deleteArtboard/update/move/flip/reorder/copy/flow/exportHuman</code> + <code>theme/token/interact/state/setState/exportHtml</code></td></tr>
 <tr><td><code>Session</code></td><td>有状态 CLI 会话（与 wasm 会话面对齐）：<code>open/exec/apply/lint/critique/autoFix/constrain/interactions/states/queryNodes/flows/spec/protest/collabMerge/animationCss/history/exportMbt/close</code> —— <code>constrain</code> 为自然语言布局意图</td></tr>

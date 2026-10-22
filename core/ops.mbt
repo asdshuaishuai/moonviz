@@ -630,6 +630,15 @@ pub fn apply_operation(
           Err(error) => Err(error)
         }
       }
+    "autofill" =>
+      if parts.length() < 2 {
+        Err("mbt_operation_usage:autofill <artboard>")
+      } else {
+        match project.autofill_missing(artboard=parts[1]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
     "fix" =>
       if parts.length() < 2 {
         Err("mbt_operation_usage:fix <artboard>")

@@ -744,6 +744,15 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           }
         }
       }
+    "autofill" =>
+      if parts.length() < 2 {
+        cli_err("usage: autofill <artboard>")
+      } else {
+        match p.autofill_missing(artboard=parts[1]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
     "theme" =>
       if parts.length() < 2 {
         cli_err("usage: theme <name>")
@@ -1339,6 +1348,7 @@ fn cli_help() -> String {
   "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score)\n" +
   "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
   "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
+  "  autofill <ab>        Materialize the infer_missing report as real nodes, then auto_fix settles layout\n" +
   "\n" +
   "Node editing (both gates share this grammar):\n" +
   "  move <ab> <node> <x> <y>          Move node\n" +
