@@ -49,6 +49,29 @@ pub fn Easing::css_value(self : Easing) -> String {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 动效令牌：时长刻度 + 引擎曲线的 CSS 注出（精致感的节拍单一来源）
+// ---------------------------------------------------------------------------
+
+///|
+/// 动效时长刻度（ms）。导出 HTML 与一切宿主共用同一套节拍：
+/// 即时反馈 120 / 标准转场 240 / 强调慢速 360。
+pub const MOTION_FAST : Int = 120
+
+///|
+pub const MOTION_BASE : Int = 240
+
+///|
+pub const MOTION_SLOW : Int = 360
+
+///|
+/// 动效令牌 CSS（:root 变量）：时长刻度 + 引擎缓动曲线（cubic-bezier 等价式）。
+/// 曲线一律出自 Easing::css_value——导出原型、宿主、运行时共用同一来源，
+/// 不允许各处手写贝塞尔（节拍/手感漂移是精致感的第一杀手）。
+pub fn motion_tokens_css() -> String {
+  ":root{--mv-dur-fast:\{MOTION_FAST}ms;--mv-dur:\{MOTION_BASE}ms;--mv-dur-slow:\{MOTION_SLOW}ms;--mv-ease:\{Easing::css_value(EaseInOut)};--mv-out:\{Easing::css_value(EaseOut)};--mv-spring:\{Easing::css_value(Spring(1.0))}}"
+}
+
 ///|
 /// 数值插值：根据缓动函数计算 t 时刻的值
 pub fn interpolate(

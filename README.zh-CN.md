@@ -321,6 +321,7 @@ moonviz/
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | 组件多态（default / pressed / disabled / loading） |
 | **NavigationState** | 导航栈（push / pop / back） |
+| **Motion** | 引擎动效令牌（120/240/360ms 刻度 + 缓动曲线含 spring）驱动导出原型：方向感知转场（navigate 前进 / back 反向 / tab 淡入）、按压 spring 反馈、入场阶梯、`prefers-reduced-motion`、ESC = 返回 |
 
 ## Agent 中间产物（.moonviz）
 

@@ -343,6 +343,7 @@ Prototypes are not static pictures — MoonViz has a complete interaction runtim
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | Component polymorphism (default / pressed / disabled / loading) |
 | **NavigationState** | Navigation stack (push / pop / back) |
+| **Motion** | Engine-sourced motion tokens (120/240/360ms scale + easing curves incl. spring) drive the exported prototype: direction-aware transitions (navigate forward / back reversed / tab fade), spring press feedback, staggered entrance, `prefers-reduced-motion` support, ESC = back |
 
 ## Agent Intermediate Artifacts (.moonviz)
 

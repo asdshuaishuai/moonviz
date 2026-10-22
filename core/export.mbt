@@ -9,6 +9,31 @@
 // ---------------------------------------------------------------------------
 
 ///|
+/// 入场画板推断：导航流的天然起点——没有被任何 flow 指向的画板；并列/成环
+/// 时取 id 字典序最小（确定性）。登录→首页型原型因此开在登录页，不再随
+/// Map 遍历序漂移到任意画板（精致感缺陷：开屏即错页）。
+fn Project::infer_entry(self : Project) -> String {
+  let targets : Map[String, Bool] = {}
+  for e in self.flows.iter() {
+    targets.set(e.to, true)
+  }
+  let mut best = ""
+  for id in self.artboards.keys() {
+    if !targets.contains(id) && (best == "" || id < best) {
+      best = id
+    }
+  }
+  if best == "" {
+    for id in self.artboards.keys() {
+      if best == "" || id < best {
+        best = id
+      }
+    }
+  }
+  best
+}
+
+///|
 /// 导出为自包含 HTML（SVG 内嵌 + 画板切换 + 导航流模拟）
 pub fn Project::export_html(self : Project) -> String {
   let sb = StringBuilder::new()
@@ -20,24 +45,53 @@ pub fn Project::export_html(self : Project) -> String {
   )
   sb.write_string("<title>MoonViz Prototype</title>\n")
   sb.write_string("<style>\n")
+  // 动效令牌：时长刻度 + 引擎缓动曲线（animation.mbt 单一来源，不手写贝塞尔）
+  sb.write_string("  \{motion_tokens_css()}\n")
   sb.write_string(
     "  body{margin:0;font-family:-apple-system,sans-serif;background:#1a1c1e;color:#e0e0e0;display:flex;flex-direction:column;align-items:center;min-height:100vh}\n",
   )
   sb.write_string("  .tabs{display:flex;gap:8px;padding:12px;flex-wrap:wrap}\n")
   sb.write_string(
-    "  .tab{padding:8px 16px;border-radius:8px;cursor:pointer;background:#2a2c2e;border:1px solid #42474f;font-size:14px}\n",
+    "  .tab{padding:8px 16px;border-radius:8px;cursor:pointer;background:#2a2c2e;border:1px solid #42474f;font-size:14px;transition:background var(--mv-dur-fast) var(--mv-ease),color var(--mv-dur-fast) var(--mv-ease),border-color var(--mv-dur-fast) var(--mv-ease),box-shadow var(--mv-dur-fast) var(--mv-ease),transform var(--mv-dur-fast) var(--mv-spring)}\n",
   )
-  sb.write_string("  .tab.active{background:#4B6BFB;color:#fff}\n")
+  sb.write_string("  .tab:hover{transform:translateY(-1px)}\n")
+  sb.write_string(
+    "  .tab.active{background:#4B6BFB;color:#fff;border-color:#4B6BFB;box-shadow:0 2px 10px rgba(75,107,251,.35)}\n",
+  )
   sb.write_string(
     "  .board{display:none;padding:16px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}\n",
   )
-  sb.write_string("  .board.active{display:block;background:#fff}\n")
+  // 画板转场：方向感知（navigate 前进 +1 / back 返回 -1 / tab 纯淡入 0），
+  // fill 用 backwards——结束后把 transform 交还按压反馈，不冻结交互
+  sb.write_string(
+    "  .board.active{display:block;background:#fff;animation:mv-board-in var(--mv-dur) var(--mv-out) backwards}\n",
+  )
+  sb.write_string(
+    "  @keyframes mv-board-in{from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}}\n",
+  )
+  // 入场阶梯：画板子节点依次浮现（24ms 步进，前 8 个后同步），克制不抢戏
+  sb.write_string(
+    "  .board.active>svg>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n" +
+    "  .board.active>svg>g:nth-child(2){animation-delay:24ms}\n" +
+    "  .board.active>svg>g:nth-child(3){animation-delay:48ms}\n" +
+    "  .board.active>svg>g:nth-child(4){animation-delay:72ms}\n" +
+    "  .board.active>svg>g:nth-child(5){animation-delay:96ms}\n" +
+    "  .board.active>svg>g:nth-child(6){animation-delay:120ms}\n" +
+    "  .board.active>svg>g:nth-child(7){animation-delay:144ms}\n" +
+    "  .board.active>svg>g:nth-child(8){animation-delay:168ms}\n" +
+    "  @keyframes mv-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}\n",
+  )
   sb.write_string(
     "  .flow{padding:12px;font-size:12px;color:#9098a1;text-align:center}\n" +
-    "  g[id^=n_]{cursor:pointer}\n" +
-    "  #mv-toast{position:fixed;left:50%;bottom:10%;transform:translateX(-50%) translateY(20px);background:rgba(20,22,26,.92);color:#fff;padding:10px 22px;border-radius:99px;font-size:14px;opacity:0;transition:all .25s ease;pointer-events:none;z-index:9}\n" +
+    // 按压反馈：spring 回弹 + fill-box 居中缩放（SVG 节点的触感来源）；
+    // 状态多态的 fill 切换走引擎缓动——状态切换不再生硬跳变
+    "  g[id^=n_]{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform var(--mv-dur-fast) var(--mv-spring)}\n" +
+    "  g[id^=n_]:active{transform:scale(.96)}\n" +
+    "  g[id^=n_] rect,g[id^=n_] text{transition:fill var(--mv-dur) var(--mv-out)}\n" +
+    "  #mv-toast{position:fixed;left:50%;bottom:10%;transform:translateX(-50%) translateY(20px);background:rgba(20,22,26,.92);color:#fff;padding:10px 22px;border-radius:99px;font-size:14px;opacity:0;transition:opacity var(--mv-dur) var(--mv-out),transform var(--mv-dur) var(--mv-spring);pointer-events:none;z-index:9}\n" +
     "  #mv-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}\n" +
-    "  .board{transition:opacity .18s ease}\n",
+    // 无障碍：系统开启减弱动态效果时全部动效关闭（精致感不含强制动）
+    "  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}\n",
   )
   // 状态多态 CSS：每个非 default 状态生成一份视觉覆盖（fill/text_color/
   // font_size）。SVG 表现属性可被 CSS 覆盖，g[#n_x] 挂 .st-<state> 类切换。
@@ -82,7 +136,7 @@ pub fn Project::export_html(self : Project) -> String {
     match self.artboards.get(id) {
       Some(ab) =>
         sb.write_string(
-          "  <div class=\"tab\" onclick=\"show('\{id}')\" id=\"tab-\{id}\">\{ab.name}</div>\n",
+          "  <div class=\"tab\" onclick=\"show('\{id}',true,0)\" id=\"tab-\{id}\">\{ab.name}</div>\n",
         )
       None => ()
     }
@@ -197,10 +251,10 @@ pub fn Project::export_html(self : Project) -> String {
     "const MV_STACK=[];const cur=()=>MV_STACK[MV_STACK.length-1];\n",
   )
   sb.write_string(
-    "function show(id,push=true){if(push&&cur()!==id)MV_STACK.push(id);document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');document.getElementById('board-'+id)?.classList.add('active')}\n",
+    "function show(id,push=true,dir=1){if(push&&cur()!==id)MV_STACK.push(id);const b=document.getElementById('board-'+id);if(b){b.style.setProperty('--mv-dir',dir);void b.offsetWidth}document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');b?.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}\n",
   )
   sb.write_string(
-    "function back(){if(MV_STACK.length>1){MV_STACK.pop();show(MV_STACK[MV_STACK.length-1],false)}}\n",
+    "function back(){if(MV_STACK.length>1){MV_STACK.pop();show(MV_STACK[MV_STACK.length-1],false,-1)}}\n",
   )
   sb.write_string(
     "let mvTimer;function toast(m){const t=document.getElementById('mv-toast');t.textContent=m;t.classList.add('show');clearTimeout(mvTimer);mvTimer=setTimeout(()=>t.classList.remove('show'),1800)}\n",
@@ -209,13 +263,20 @@ pub fn Project::export_html(self : Project) -> String {
     "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st)}\n",
   )
   sb.write_string(
-    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t)t.textContent=s}})});\n",
+    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t)t.textContent=s}})});\n",
+  )
+  // 键盘返回：ESC = back()（与引擎内置返回导航语义对齐）
+  sb.write_string(
+    "document.addEventListener('keydown',e=>{if(e.key==='Escape')back()});\n",
   )
   // 默认显示第一个（show 已由上方带导航栈的版本定义）
   let first : String? = None
+  let entry = self.infer_entry()
   for id in self.artboards.keys() {
     match first {
-      None => sb.write_string("show('\{id}')\n")
+      None => if id == entry {
+        sb.write_string("show('\{json_escape(id)}',true,0)\n")
+      }
       Some(_) => ()
     }
   }
