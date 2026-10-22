@@ -660,6 +660,24 @@ pub fn session_constrain(
 }
 
 ///|
+/// 生成式 UI（执行策略第一级）：一句话意图 → 完整画板 + 报告
+/// （autofix/missing/score）。新画板变更——sess_mut 语义，成功信封回传
+/// canonical mbt（issue #19 同类：键控缓存宿主零额外往返接住变更）。
+pub fn session_generate(
+  handle : Int,
+  intent : String,
+  name : String,
+) -> String {
+  sess_mut_json(handle, fn(p) { p.generate(intent_text=intent, name=name) })
+}
+
+///|
+/// classic 槽变体：主槽（arg）= intent，副槽（arg2）= name。
+pub fn session_generate_in(handle : Int) -> String {
+  session_generate(handle, slot_string(g_arg_bytes), slot_string(g_arg2_bytes))
+}
+
+///|
 /// 页面类型推断。
 pub fn session_infer_page_type(handle : Int, artboard : String) -> String {
   sess_json(handle, fn(p) { p.infer_page_type(artboard~) })

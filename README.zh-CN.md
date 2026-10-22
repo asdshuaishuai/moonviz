@@ -284,7 +284,7 @@ moonviz/
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── desktop/           自渲染服务（客户端引导：引擎无 UI，渲染面由客户端 webview 承载；无 webview 走系统层兜底返回结果）
 ├── mcp/               MCP Server（stdio JSON-RPC，55 工具，工具面同 CLI）
-├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 27 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
+├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 28 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）

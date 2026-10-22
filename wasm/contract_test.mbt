@@ -650,3 +650,41 @@ test "契约：history 裸 commit 兼容 + 删板不复活旧栈（issue #21 审
   assert_false(u.contains("rev1内容"), msg="sanity")
   let _ = session_close(h)
 }
+
+///|
+/// 契约：session_generate 一句话生成——新画板变更必须回传 canonical mbt
+/// （sess_mut 语义，issue #19 同类），报告带 autofix/missing/score。
+test "契约：session_generate 生成即变更回传 canonical mbt" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let r = session_generate(h, "登录页", "gen_login")
+  assert_true(r.contains("\"ok\":true"), msg="generate 应成功: \{r}")
+  assert_true(r.contains("\"mbt\":\""), msg="变更信封必须回传 canonical mbt: \{r}")
+  assert_true(r.contains("\"template\":\"login\""))
+  assert_true(r.contains("\"score\""))
+  // 新画板真实入库（后续会话操作可见）
+  let boards = session_list_artboards(h)
+  assert_true(boards.contains("gen_login"), msg="gen_login 应在画板清单: \{boards}")
+  let _ = session_close(h)
+}
+
+///|
+/// 契约：session_generate_in 槽变体——主槽（arg）= intent，副槽（arg2）= name。
+test "契约：session_generate_in 槽变体" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  arg_reset()
+  let intent = "登录页"
+  for c in intent.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+  arg2_reset()
+  let name = "gen_login_in"
+  for c in name.to_array() {
+    arg2_push(c.to_int(), 1)
+  }
+  let r = session_generate_in(h)
+  assert_true(r.contains("\"ok\":true"), msg="generate_in 应成功: \{r}")
+  assert_true(r.contains("gen_login_in"), msg="槽变体应使用副槽 name: \{r}")
+  let _ = session_close(h)
+}

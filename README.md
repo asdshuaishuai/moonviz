@@ -300,7 +300,7 @@ moonviz/
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
 ├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
 ├── mcp/               MCP Server (stdio JSON-RPC; 55 tools mirroring the CLI)
-├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 27 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
+├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 28 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
