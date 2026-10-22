@@ -33,7 +33,7 @@ fn autofill_recipe(
     "search_bar" => Some(("text_input", "搜索", cw, 44.0, "", true))
     // 通用加载状态（灰字，弱存在感）
     "loading_state" =>
-      Some(("body_text", "加载中…", cw, 20.0, "#9098A1", false))
+      Some(("body_text", "加载中…", cw, 20.0, "#6B7280", false))
     // missing_validation（error_states）是状态语义，不是可放置节点——
     // 由组件状态多态（define_component_state）承载，本配方跳过
     _ => None
