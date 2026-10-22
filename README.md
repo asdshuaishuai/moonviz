@@ -149,6 +149,20 @@
 | `center_in_parent` | Center within parent |
 | `suggest_alignment` | Detect near-alignments and suggest snapping |
 
+## Generative UI: genUI First, Tools as the Fallback
+
+Two modes, one engine — both fully retained:
+
+- **genUI (primary)** — `generate` one sentence of intent → complete,
+  norms-healed artboard + report (autofix/missing/score); `autofill`
+  materializes the report's missing elements; `batch_apply` packs a
+  refinement pass into one call.
+- **Tool mode (fallback, fully retained)** — the complete per-node
+  vocabulary (all 55 tools / 27 ops) stays unchanged: freeform artboards,
+  layouts no template matches, surgical edits, probes. The ladder ranks
+  channels by cost, not by permission — falling through to tools is correct
+  behavior whenever no recipe expresses your intent.
+
 ## Built-in Page Templates (14 complete pages)
 
 | Template | Contents |

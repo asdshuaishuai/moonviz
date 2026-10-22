@@ -419,14 +419,14 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 
 <section id="generative">
 <h2>生成式 UI 与 Agent 执行策略（dev 线）</h2>
-<p>理念：<b>Agent 声明意图，引擎生成界面</b>。Agent 的角色不是逐件工具调用摆放每个节点（慢、贵、易错，还把布局/规范决策压给模型）——页面结构、组件选择、间距规范、视觉一致性由引擎负责。执行阶梯（永远从顶层开始）：</p>
+<p>理念：<b>Agent 声明意图，引擎生成界面（genUI 第一公民）</b>；<b>工具模式完整保留作为兜底</b>（以前的不抛弃）——自由形态画板、模板之外的布局、外科手术式单节点修改、探查，本来就是工具面的职责。页面结构、组件选择、间距规范、视觉一致性由引擎负责；阶梯是按成本排通道，不是按权限设门槛（逐层下探是正确行为而非失败）。执行阶梯（从顶层开始）：</p>
 <table>
 <tr><th>级</th><th>入口</th><th>语义</th></tr>
 <tr><td>第一级</td><td><code>generate</code>（MCP 工具 / CLI 命令）</td><td>一句话意图（<code>"登录页 dark"</code> / <code>web 落地页</code>）→ 引擎选模板 + 规范自愈（auto_fix）→ 报告信封：<code>autofix</code>（引擎修了什么）/ <code>missing</code>（该类页面还缺什么）/ <code>score</code>（A–D 质量分）/ 确定性 <code>alternatives</code>。意图解析为确定性关键词分类（中英/主题/设备暗示），引擎无 LLM、同输入恒同决策</td></tr>
 <tr><td>第二级</td><td><code>batch_apply</code> / CLI <code>ops-batch-b64</code></td><td>确定的精修一批一次提交（换行分隔 ops，base64，≤64）——顺序执行、遇错即停、回传断点索引供续批</td></tr>
-<tr><td>兜底</td><td><code>template</code> / 单条 op</td><td>已知模板 id 的显式生成；单条调用只做微调与探查</td></tr>
+<tr><td>兜底（工具模式）</td><td><code>template</code> / 全部单条工具与 op</td><td>完整保留：模板之外的自由形态构建、外科手术式修改、微调与探查——55 工具 / 27 op 一个不少</td></tr>
 </table>
-<p><b>反模式（全红）</b>：标准页面逐节点摆放（模板已覆盖）；为生成内容手算坐标（布局归引擎）；已知清单拆 N 次单调用（应打包一批）；不看 <code>score</code>/<code>missing</code> 就交付（报告就是评审环）。测试锚点：<code>core/generate_wbtest.mbt</code>、<code>cli/main_test.mbt</code>（generate/ops-batch 协议）。</p>
+<p><b>反模式（限定在 genUI 已覆盖的场域——工具模式本身不是罪）</b>：标准页面逐节点摆放（模板已覆盖）；为生成内容手算坐标（布局归引擎）；已知清单拆 N 次单调用（应打包一批）；不看 <code>score</code>/<code>missing</code> 就交付（报告就是评审环）。拿不准就问：模板/配方是否已表达这个意图？是 → genUI；否 → 用工具自由构建——那正是兜底存在的意义。测试锚点：<code>core/generate_wbtest.mbt</code>、<code>cli/main_test.mbt</code>（generate/ops-batch 协议）。</p>
 </section>
 
 <section id="desktop">
