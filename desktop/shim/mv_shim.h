@@ -25,15 +25,22 @@
 moonbit_string_t mv_getenv(const char *name);
 
 // ---- 渲染源读取（客户端引导：MOONVIZ_DOC 指向 .mbt.md 唯一事实源）--------
-// 读整个文本文件为 moonbit GC 串（UTF-8）；不可读返回 ""。
+// 读整个文本文件为 moonbit GC 串（UTF-8，严格解码：非法序列回退 U+FFFD）；
+// 不可读或含内嵌 NUL（非文本源）返回 ""。
 moonbit_string_t mv_read_file(const char *path_utf8);
 
 // ---- 兜底产物写出（第二层：系统层渲染返回结果）----------------------------
-// 写文本文件（UTF-8，整文件覆盖；父目录须已存在）。返回 0 / -1。
-int mv_write_file(const char *path_utf8, const char *data_utf8);
+// 写文本文件（UTF-8，显式字节长度 data[0..len)：不依赖 NUL 终止、内嵌内容
+// 不截断；整文件覆盖；父目录须已存在）。len < 0 视为非法。返回 0 / -1。
+int mv_write_file(const char *path_utf8, const char *data_utf8, int len);
 
 // ---- 内存 -----------------------------------------------------------------
 // 释放 shim malloc 暴露给外部的指针（如有）；NULL 安全。
 void mv_free(char *ptr);
+
+// ---- 进程退出 --------------------------------------------------------------
+// 终止进程（不返回）：smoke 自检失败经此非零退出，不解析 stdout 的调用方
+// （CI 门禁）也能感知失败。0 = 成功，非 0 = 失败。
+void mv_exit(int code);
 
 #endif // MV_SHIM_H

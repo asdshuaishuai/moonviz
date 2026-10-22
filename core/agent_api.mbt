@@ -58,7 +58,8 @@ fn no(name : String, desc : String) -> ToolArg {
 }
 
 ///|
-/// 引擎内置工具清单：与 mcp/main.mbt execute_tool 的 46 个分支一一对应。
+/// 引擎内置工具清单：与 mcp/main.mbt execute_tool 的分支一一对应
+///（不写死数字，分支数随工具注册演进，漂移由 wbtest 锚定）。
 pub fn list_tools() -> Array[AgentTool] {
   let tools : Array[AgentTool] = []
   let add = fn(name : String, description : String, args : Array[ToolArg]) {
@@ -260,7 +261,7 @@ pub fn list_tools() -> Array[AgentTool] {
     "generate",
     "Generative UI entry: describe the page in one sentence; the engine picks a semantic template, self-heals norms/predicates, and returns a report (autofix/missing/score). Prefer this over placing nodes one by one — the agent declares intent, the engine generates.",
     [
-      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard)"),
+      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard). NOTE: theme applies project-wide (recolors all existing artboards)"),
       so("name", "artboard name (default = template id)"),
     ],
   )

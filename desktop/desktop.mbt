@@ -18,15 +18,23 @@
 //   MOONVIZ_DOC=<path>  渲染源 .mbt.md 路径（必需；无它引擎保持惰性）
 //   MOONVIZ_OUT=<path>  渲染产物路径（缺省 moonviz-render.html；
 //                       客户端 webview 加载该文件即是活原型）
-//   MOONVIZ_SMOKE=1     无头自检（不出任何界面：源读取/管线/渲染/兜底写读）
+//   MOONVIZ_SMOKE=1     无头自检（不出任何界面：源读取/管线/渲染/兜底写读；
+//                       失败非零退出，不解析 stdout 的调用方也能感知）
 
 ///|
-/// FFI 边界：String → NUL 终止 UTF-8 Bytes（官方 C-FFI 约定）
+/// FFI 边界：String → NUL 终止 UTF-8 Bytes（官方 C-FFI 约定，供 C 侧字符串参数）
 fn c_bytes(s : String) -> Bytes {
   let utf8 = @utf8.encode(s)
   let arr = utf8.to_array()
   arr.push(0)
   Bytes::from_array(arr)
+}
+
+///|
+/// FFI 边界：String → 裸 UTF-8 Bytes（不追加 NUL；写盘载荷走显式长度，
+/// 内嵌内容不再受 NUL 终止假设约束）
+fn utf8_bytes(s : String) -> Bytes {
+  Bytes::from_array(@utf8.encode(s).to_array())
 }
 
 ///|
@@ -39,7 +47,10 @@ extern "c" fn mv_read_file(path : Bytes) -> String = "mv_read_file"
 
 ///|
 #borrow(path, data)
-extern "c" fn mv_write_file(path : Bytes, data : Bytes) -> Int = "mv_write_file"
+extern "c" fn mv_write_file(path : Bytes, data : Bytes, len : Int) -> Int = "mv_write_file"
+
+///|
+extern "c" fn mv_exit(code : Int) -> Unit = "mv_exit"
 
 ///|
 fn getenv_str(name : String) -> String {
@@ -93,7 +104,14 @@ fn guided_render() -> Result[String, Unit] {
 fn deliver(html : String) -> Unit {
   let out = getenv_str("MOONVIZ_OUT")
   let path = if out == "" { "moonviz-render.html" } else { out }
-  if mv_write_file(c_bytes(path), c_bytes(html)) == 0 {
+  // 显式长度写盘 + 读回比对：产物与渲染结果逐字符一致才回 ok:true 信封，
+  // 否则退 stdout 兜底——写盘半途失败/产物损坏不再误报成功。
+  let payload = utf8_bytes(html)
+  let mut ok = mv_write_file(c_bytes(path), payload, payload.length()) == 0
+  if ok {
+    ok = mv_read_file(c_bytes(path)) == html
+  }
+  if ok {
     println(
       "{\"ok\":true,\"surface\":\"client-webview\",\"artifact\":\"" +
       @core.json_escape(path) +
@@ -138,11 +156,12 @@ fn run_smoke() -> Bool {
   }
   println("[smoke] 引擎渲染 OK（HTML \{html.length()} 字符，含交互运行时）")
   let mut probe = "_build/moonviz-smoke-render.html"
-  let written = if mv_write_file(c_bytes(probe), c_bytes(html)) == 0 {
+  let payload = utf8_bytes(html)
+  let written = if mv_write_file(c_bytes(probe), payload, payload.length()) == 0 {
     true
   } else {
     probe = "moonviz-smoke-render.html"
-    mv_write_file(c_bytes(probe), c_bytes(html)) == 0
+    mv_write_file(c_bytes(probe), payload, payload.length()) == 0
   }
   if !written {
     println("[smoke] FAIL — 兜底产物写盘失败")
@@ -160,10 +179,14 @@ fn run_smoke() -> Bool {
 ///|
 fn main {
   if getenv_str("MOONVIZ_SMOKE") == "1" {
-    let _ = run_smoke()
+    // smoke 失败非零退出：不解析 stdout 的调用方（CI 门禁）也能感知失败
+    if !run_smoke() {
+      mv_exit(1)
+    }
     return
   }
   // 客户端引导渲染：无引导引擎保持惰性（无窗口、无渲染、无文件写入）
+  // （not_guided 惰性路径保持退出码 0）
   match guided_render() {
     Err(_) => ()
     Ok(html) => deliver(html)

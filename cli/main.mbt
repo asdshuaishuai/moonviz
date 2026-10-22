@@ -730,9 +730,15 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             } else {
               match @core.apply_operations(p, ops) {
                 Ok(applied) =>
-                  "{\"ok\":true,\"op\":\"ops-batch\",\"applied\":\{applied}}"
-                Err((index, error)) =>
-                  "{\"ok\":false,\"op\":\"ops-batch\",\"applied\":\{index},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+                  "{\"ok\":true,\"op\":\"batch_apply\",\"applied\":\{applied}}"
+                Err((index, error)) => {
+                  // applied 语义是已应用条数；超限拒绝时 index=-1 是哨兵
+                  // 而非条数，信封层与 index 解耦（不可能值会误导断点续批
+                  // 逻辑）。op 用工具字典规范名 batch_apply（与 MCP 臂/
+                  // list_tools 同名，两臂信封同构）。
+                  let applied = if index < 0 { 0 } else { index }
+                  "{\"ok\":false,\"op\":\"batch_apply\",\"applied\":\{applied},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+                }
               }
             }
           }
@@ -1319,6 +1325,10 @@ fn cli_help() -> String {
   "  export-svg <ab>      Export artboard as SVG\n" +
   "  export-artifact      Export .moonviz artifact\n" +
   "  spec <ab>            Generate design spec\n" +
+  "\n" +
+  "Generative (execution ladder, always start from the top):\n" +
+  "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score)\n" +
+  "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
   "\n" +
   "Node editing (both gates share this grammar):\n" +
   "  move <ab> <node> <x> <y>          Move node\n" +

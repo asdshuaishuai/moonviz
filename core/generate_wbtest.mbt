@@ -73,3 +73,42 @@ test "agent_api：generate/batch_apply 注册" {
   assert_true(json.contains("\"name\":\"generate\""))
   assert_true(json.contains("\"name\":\"batch_apply\""))
 }
+
+///|
+/// 信封可见性 + 意图词边界：信封必须暴露画板实际宽高与覆盖标记——
+/// 多数模板保留内建默认尺寸（意图宽度不被消费），同名画板被静默覆盖
+/// （旧 Document 连同 tier-2 精修丢失），Agent 只有从信封才能发现。
+test "generate：信封宽高/覆盖标记与 pc/web 整词、平分-反超清理" {
+  // 平板意图：dashboard 模板不消费 768 宽，实际产出 390×844——信封可见
+  let p = Project::new()
+  let tablet = match p.generate(intent_text="平板 仪表盘") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(tablet.contains("\"template\":\"dashboard\""))
+  assert_true(tablet.contains("\"width\":390"))
+  assert_true(tablet.contains("\"height\":844"))
+  assert_true(tablet.contains("\"replaced\":false"))
+  // 重跑同意图：同名画板被覆盖 → replaced:true（覆盖必须可见）
+  let rerun = match p.generate(intent_text="平板 仪表盘") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(rerun.contains("\"replaced\":true"))
+  // pc 整词匹配："npc" 不再触发设备映射（否则被强改为 pc_app+1280）
+  let npc = parse_generate_intent("npc 仪表盘")
+  assert_true(npc.template_id == "dashboard")
+  assert_true(npc.width == 0.0)
+  // web 整词匹配："webview" 不再判成 web 设备暗示
+  let webview = parse_generate_intent("webview 仪表盘")
+  assert_true(webview.template_id == "dashboard")
+  // 整词不误伤："pc 仪表盘" / "web 落地页" 照常命中
+  assert_true(parse_generate_intent("pc 仪表盘").template_id == "pc_app")
+  assert_true(parse_generate_intent("web 落地页").template_id == "web_landing")
+  // 平分-反超：alternatives 只保留与终局 best 等分者（onboarding 实得
+  // 1 分 < settings 的 2 分，不得残留旧 best 的等分列表）
+  let tie = parse_generate_intent("注册 引导 设置 偏好 概览 统计")
+  assert_true(tie.template_id == "settings")
+  assert_true(tie.alternatives.length() == 1)
+  assert_true(tie.alternatives[0] == "dashboard")
+}

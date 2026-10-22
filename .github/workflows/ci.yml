@@ -69,5 +69,6 @@ jobs:
           moon build --target native desktop
           MOONVIZ_SMOKE=1 ./_build/native/debug/build/desktop/desktop.exe | tee /tmp/mv-smoke.log
           grep -q '\[smoke\] PASS' /tmp/mv-smoke.log
-          # 无引导必须惰性：只回 usage 信封，不渲染不写文件
+          # 无引导必须惰性：只回 not_guided 信封（exit 0），不渲染不写文件
+          ./_build/native/debug/build/desktop/desktop.exe | grep -q '"error":"not_guided"'
           test ! -f moonviz-render.html

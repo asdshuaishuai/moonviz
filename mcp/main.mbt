@@ -119,15 +119,6 @@ fn handle_request(line : String) -> String {
 // ---------------------------------------------------------------------------
 
 ///|
-fn decode_mcp_b64(value : String) -> String {
-  let decoded = try? @base64.decode(value)
-  match decoded {
-    Ok(bytes) => @utf8.decode_lossy(bytes)
-    Err(_) => ""
-  }
-}
-
-///|
 fn tools_definition() -> String {
   // 工具能力字典的单一事实源在 core/agent_api.mbt：name/description/
   // inputSchema（真实参数 schema）由此生成，CLI `list-tools` 与
@@ -436,11 +427,18 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
     }
     "batch_apply" => {
-      // 执行策略第二级：多条确定精修一次提交（base64(换行分隔 ops)）
+      // 执行策略第二级：多条确定精修一次提交（base64(换行分隔 ops)）。
+      // 严格解码（decode_b64_text 与 CLI decode_mbt_b64 同构：非法
+      // base64/UTF-8 直接报错透传）——此前 try?+decode_lossy 把非法输入
+      // 吞成空串再误报 ops_batch_empty，与 CLI 同输入的严格报错不同构，
+      // 误导 Agent 诊断方向。
       if operations_b64 == "" {
         return err_json("missing operations_b64")
       }
-      let block = decode_mcp_b64(operations_b64)
+      let block = match decode_b64_text(operations_b64) {
+        Err(e) => return err_json(e)
+        Ok(text) => text
+      }
       let lines : Array[String] = []
       for line in block.split("\n").iter() {
         let trimmed = line.trim().to_string()
@@ -454,8 +452,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       match @core.apply_operations(p, lines) {
         Ok(applied) =>
           "{\"ok\":true,\"op\":\"batch_apply\",\"applied\":\{applied}}"
-        Err((index, error)) =>
-          "{\"ok\":false,\"op\":\"batch_apply\",\"applied\":\{index},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+        Err((index, error)) => {
+          // applied 语义是已应用条数；超限拒绝时 index=-1 是哨兵而非
+          // 条数，信封层与 index 解耦（不可能值会误导断点续批逻辑）
+          let applied = if index < 0 { 0 } else { index }
+          "{\"ok\":false,\"op\":\"batch_apply\",\"applied\":\{applied},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+        }
       }
     }
     "critique" => {
@@ -516,21 +518,29 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if source_b64 == "" {
         "{\"error\":\"source_b64_required\"}"
       } else {
-        match @decl.load_mbt_project(decode_mcp_b64(source_b64)) {
-          Ok(doc) =>
-            "{\"ok\":true,\"mbt\":\"" +
-            json_escape_text(doc.document.source) +
-            "\"}"
-          Err(e) => "{\"error\":\"" + json_escape_text(e) + "\"}"
+        match decode_b64_text(source_b64) {
+          Err(e) => err_json(e)
+          Ok(text) =>
+            match @decl.load_mbt_project(text) {
+              Ok(doc) =>
+                "{\"ok\":true,\"mbt\":\"" +
+                json_escape_text(doc.document.source) +
+                "\"}"
+              Err(e) => err_json(e)
+            }
         }
       }
     "render_mbt" =>
       if source_b64 == "" {
         "{\"error\":\"source_b64_required\"}"
       } else {
-        match @decl.load_mbt_project(decode_mcp_b64(source_b64)) {
-          Ok(doc) => doc.render_json()
-          Err(e) => "{\"error\":\"" + json_escape_text(e) + "\"}"
+        match decode_b64_text(source_b64) {
+          Err(e) => err_json(e)
+          Ok(text) =>
+            match @decl.load_mbt_project(text) {
+              Ok(doc) => doc.render_json()
+              Err(e) => err_json(e)
+            }
         }
       }
     "ddp_view" =>
@@ -973,7 +983,12 @@ fn find_arguments_body(line : String) -> Int? {
 }
 
 ///|
-/// 从 JSON-RPC params.arguments 中提取字符串参数
+/// 从 JSON-RPC params.arguments 中提取字符串参数（转义感知）。
+/// 闭引号扫描必须跳过 \ 转义并还原常用序列（\" \\ \n \t \r \b \f /）：
+/// generate 是首个以完整自然语句入参的工具，intent 含 \" 时裸 find("\"")
+/// 会在转义引号处截断、后半句静默丢失（{"intent":"生成\"欢迎\"引导页"}
+/// 实证只提取出 "生成\"）。未知转义原样保留（不丢字符）；无闭合引号
+/// 返回 ""（与既有行为一致）。
 /// 输入行形如: {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apply_template","arguments":{"template_id":"login"}}}
 fn extract_arg_string(line : String, key : String) -> String {
   // 先定位 "arguments":{ ... }
@@ -993,10 +1008,54 @@ fn extract_arg_string(line : String, key : String) -> String {
       if args_body.get_char(start) != Some('"') {
         return ""
       }
+      // 扫描到第一个未转义的闭引号，途中还原 \X 转义序列
       let rest = args_body.substring(start=start + 1)
-      match rest.find("\"") {
-        Some(end) => rest.substring(start=0, end~)
-        None => ""
+      let sb = StringBuilder::new()
+      let mut i = 0
+      let n = rest.length()
+      let mut closed = false
+      while i < n {
+        match rest.get_char(i) {
+          Some('"') => {
+            closed = true
+            i = n
+          }
+          Some('\\') => {
+            if i + 1 < n {
+              match rest.get_char(i + 1) {
+                Some('"') => sb.write_char('"')
+                Some('\\') => sb.write_char('\\')
+                Some('/') => sb.write_char('/')
+                Some('n') => sb.write_char('\n')
+                Some('t') => sb.write_char('\t')
+                Some('r') => sb.write_char('\r')
+                Some('b') => sb.write_char('\u{0008}')
+                Some('f') => sb.write_char('\u{000C}')
+                Some(other) => {
+                  // 未知转义（含 \uXXXX）：原样保留，不做有损丢弃
+                  sb.write_char('\\')
+                  sb.write_char(other)
+                }
+                None => sb.write_char('\\')
+              }
+              i = i + 2
+            } else {
+              // 行尾孤立反斜杠（截断的请求）：原样保留
+              sb.write_char('\\')
+              i = i + 1
+            }
+          }
+          Some(ch) => {
+            sb.write_char(ch)
+            i = i + 1
+          }
+          None => i = i + 1
+        }
+      }
+      if closed {
+        sb.to_string()
+      } else {
+        ""
       }
     }
     None => ""

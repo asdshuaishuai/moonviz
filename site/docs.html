@@ -267,7 +267,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
     }
   }
 }</code></pre>
-<h3>工具清单（52 个，节选；完整机器可读字典见 tools/list 或 <a href="assets/moonviz-tools.json">moonviz-tools.json</a>）</h3>
+<h3>工具清单（54 个，节选；完整机器可读字典见 tools/list 或 <a href="assets/moonviz-tools.json">moonviz-tools.json</a>）</h3>
 <table>
 <tr><th>工具</th><th>类别</th><th>说明</th></tr>
 <tr><td><code>initialize</code></td><td>会话</td><td>初始化项目会话，返回引擎能力清单</td></tr>
@@ -286,6 +286,8 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
 <tr><td><code>critique</code></td><td>智能</td><td>AI 设计批评（启发式规则集）</td></tr>
 <tr><td><code>infer_page_type</code> / <code>infer_missing</code></td><td>智能</td><td>页面类型推断 / 缺失元素推断</td></tr>
 <tr><td><code>extract_design_system</code></td><td>智能</td><td>从既有画板反向提取设计系统</td></tr>
+<tr><td><code>generate</code></td><td>生成</td><td>生成式 UI 入口（执行策略第一级）：一句话意图 → 引擎选语义模板 + 规范自愈，返回报告（autofix/missing/score）——优先于逐节点摆放</td></tr>
+<tr><td><code>batch_apply</code></td><td>生成</td><td>生成式执行第二级：多条 session op 一次调用（换行分隔 base64，≤64），按序执行、遇错即停并返回索引</td></tr>
 <tr><td><code>generate_spec</code> / <code>generate_responsive</code></td><td>生成</td><td>开发移交标注 / 响应式断点变体</td></tr>
 <tr><td><code>place_component</code></td><td>结构</td><td>放置组件实例（variant/x/y/w/h/args——w/h 一步最终尺寸，门在最终 bbox 评估）</td></tr>
 <tr><td><code>update_node</code> / <code>move_node</code></td><td>节点编辑</td><td>修改任意节点属性（30+ 键，含 align/italic/dash/visible/layout/name）</td></tr>
@@ -399,7 +401,7 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 
 <section id="motion">
 <h2>动效系统（dev 线，精致感/流畅性）</h2>
-<p>动效不是装饰，是交互反馈的一部分。<b>令牌单一来源</b>：<code>animation.mbt</code> 的时长刻度（120/240/360ms）与缓动曲线（<code>Easing::css_value</code>，含 spring/bounce 的 cubic-bezier 等价式）经 <code>motion_tokens_css()</code> 注出 <code>:root</code> 变量——导出原型与一切宿主共用同一节拍，不允许各处手写贝塞尔。</p>
+<p>动效不是装饰，是交互反馈的一部分。<b>令牌单一来源</b>：<code>animation.mbt</code> 的时长刻度（120/240/360ms）与缓动曲线（<code>Easing::css_value</code>，含 spring/bounce 的 cubic-bezier 等价式）经 <code>motion_tokens_css()</code> 注出 <code>:root</code> 变量——引擎与导出面共用同一节拍，引擎侧不散落手写贝塞尔。</p>
 <table>
 <tr><th>能力</th><th>语义</th></tr>
 <tr><td>方向感知转场</td><td>navigate 前进（+1 滑入）/ back 返回（−1 反向）/ tab 纯淡入（0）；fill 用 backwards，动画结束即交还 transform 给按压反馈</td></tr>

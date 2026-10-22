@@ -116,7 +116,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent Tool List (54 tools)
+## Selected Agent Tools (subset)
 
 | Tool | Semantics |
 | :--- | :--- |
@@ -127,7 +127,6 @@
 | `place_component` | Place a component instance on an artboard |
 | `query_nodes` | Query nodes by kind/component/text content |
 | `lint_design` | Design quality checks (contrast/touch/spacing/consistency) |
-| `get_violations` | Get the non-crash predicate violation list |
 | `suggest_fix` | Actionable fix patches for violations |
 | `export_svg` | Export an artboard as engine-derived SVG |
 | `collab_merge` | Multi-agent three-way merge: submit N agents' op sequences, get conflicts + auto-resolution |
@@ -140,7 +139,7 @@
 | `export_react` | React TSX component stubs (code generation only, not a fact source) |
 | `apply_template` | Generate a complete artboard from a template (one sentence → full page) |
 | `generate` | **Generative UI entry (execution tier 1)**: one-sentence intent → engine picks template, self-heals norms, returns report (autofix/missing/score/alternatives). Prefer over node-by-node placement |
-| `batch_apply` | **Execution tier 2**: multiple ops in ONE call (newline-separated, base64, ≤64); aborts at first error with its index | |
+| `batch_apply` | **Execution tier 2**: multiple ops in ONE call (newline-separated, base64, ≤64); aborts at first error with its index |
 | `fork_variants` | Fork design variants (parallel A/B exploration) |
 | `score_variants` | Score all variants (violations/lint/alignment/richness) |
 | `merge_variant` | Merge the best variant back into the main branch |

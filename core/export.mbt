@@ -10,7 +10,8 @@
 
 ///|
 /// 入场画板推断：导航流的天然起点——没有被任何 flow 指向的画板；并列/成环
-/// 时取 id 字典序最小（确定性）。登录→首页型原型因此开在登录页，不再随
+/// 时按确定性 tie-break 取最小 id（String < 为长度优先的 shortlex，非纯
+/// 字典序）。登录→首页型原型因此开在登录页，不再随
 /// Map 遍历序漂移到任意画板（精致感缺陷：开屏即错页）。
 fn Project::infer_entry(self : Project) -> String {
   let targets : Map[String, Bool] = {}
@@ -31,6 +32,43 @@ fn Project::infer_entry(self : Project) -> String {
     }
   }
   best
+}
+
+///|
+/// 导出面的 JS 字符串转义（仅 export 层收口，不动 core/json.mbt 的
+/// json_escape——那是 JSON 协议语义）：boot/tab onclick 落在单引号 JS
+/// 字符串、MV_ACT/MV_STATES 落在双引号 JS 字符串，且全部内嵌在 <script>
+/// 里。duplicate 的 new_name 原样成为画板 id，可含单引号/尖括号——
+/// json_escape 不转义单引号，裸插会让整个脚本解析失败、原型交互全哑。
+/// 引号/反斜杠/'<'/C0 控制符统一转成 JS 转义序列；'<' 一律 \x3c，
+/// 顺带封死 </script> 从字符串内提前闭合（含大小写变体）。
+fn js_string_escape(s : String) -> String {
+  let sb = StringBuilder::new()
+  for c in s.iter() {
+    match c {
+      '"' => sb.write_string("\\x22")
+      '\'' => sb.write_string("\\'")
+      '\\' => sb.write_string("\\\\")
+      '<' => sb.write_string("\\x3c")
+      '\n' => sb.write_string("\\n")
+      '\r' => sb.write_string("\\r")
+      '\t' => sb.write_string("\\t")
+      _ => {
+        let code = c.to_int()
+        if code < 32 {
+          // 其余 C0 控制符：\u00xx
+          let hi = (code >> 4) & 15
+          let lo = code & 15
+          sb.write_string("\\u00")
+          sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
+          sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+        } else {
+          sb.write_char(c)
+        }
+      }
+    }
+  }
+  sb.to_string()
 }
 
 ///|
@@ -69,16 +107,19 @@ pub fn Project::export_html(self : Project) -> String {
   sb.write_string(
     "  @keyframes mv-board-in{from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}}\n",
   )
-  // 入场阶梯：画板子节点依次浮现（24ms 步进，前 8 个后同步），克制不抢戏
+  // 入场阶梯：画板顶层节点依次浮现（24ms 步进，前 8 个后同步），克制不抢戏。
+  // svg 的唯一直接子 g 是根 wrapper（render_svg 只对 root 调一次 render_node，
+  // 节点 g 全嵌其内）——选择器下钻一层 >g>g 对准顶层节点；wrapper 自带一个
+  // 非 g 的背景 rect 占位，故按 nth-of-type 对 g 计数，不受普通子元素挤位
   sb.write_string(
-    "  .board.active>svg>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n" +
-    "  .board.active>svg>g:nth-child(2){animation-delay:24ms}\n" +
-    "  .board.active>svg>g:nth-child(3){animation-delay:48ms}\n" +
-    "  .board.active>svg>g:nth-child(4){animation-delay:72ms}\n" +
-    "  .board.active>svg>g:nth-child(5){animation-delay:96ms}\n" +
-    "  .board.active>svg>g:nth-child(6){animation-delay:120ms}\n" +
-    "  .board.active>svg>g:nth-child(7){animation-delay:144ms}\n" +
-    "  .board.active>svg>g:nth-child(8){animation-delay:168ms}\n" +
+    "  .board.active>svg>g>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n" +
+    "  .board.active>svg>g>g:nth-of-type(2){animation-delay:24ms}\n" +
+    "  .board.active>svg>g>g:nth-of-type(3){animation-delay:48ms}\n" +
+    "  .board.active>svg>g>g:nth-of-type(4){animation-delay:72ms}\n" +
+    "  .board.active>svg>g>g:nth-of-type(5){animation-delay:96ms}\n" +
+    "  .board.active>svg>g>g:nth-of-type(6){animation-delay:120ms}\n" +
+    "  .board.active>svg>g>g:nth-of-type(7){animation-delay:144ms}\n" +
+    "  .board.active>svg>g>g:nth-of-type(8){animation-delay:168ms}\n" +
     "  @keyframes mv-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}\n",
   )
   sb.write_string(
@@ -134,10 +175,14 @@ pub fn Project::export_html(self : Project) -> String {
   sb.write_string("<div class=\"tabs\">\n")
   for id in self.artboards.keys() {
     match self.artboards.get(id) {
-      Some(ab) =>
+      Some(ab) => {
+        // onclick 的 id 落在单引号 JS 字符串里，必须转义；DOM id 属性保持
+        // 原样——getElementById('tab-'+id) 按 JS 解析后的串查 DOM，两侧一致
+        let js_id = js_string_escape(id)
         sb.write_string(
-          "  <div class=\"tab\" onclick=\"show('\{id}',true,0)\" id=\"tab-\{id}\">\{ab.name}</div>\n",
+          "  <div class=\"tab\" onclick=\"show('\{js_id}',true,0)\" id=\"tab-\{id}\">\{ab.name}</div>\n",
         )
+      }
       None => ()
     }
   }
@@ -175,7 +220,7 @@ pub fn Project::export_html(self : Project) -> String {
     }
     if node != "" {
       acts.push(
-        "[\"\{json_escape(e.from)}\",\"\{json_escape(node)}\",\"navigate\",\"\{json_escape(e.to)}\"]",
+        "[\"\{js_string_escape(e.from)}\",\"\{js_string_escape(node)}\",\"navigate\",\"\{js_string_escape(e.to)}\"]",
       )
     }
   }
@@ -191,27 +236,27 @@ pub fn Project::export_html(self : Project) -> String {
                     match action_from_spec(spec) {
                       Some(NavigateTo(t)) =>
                         acts.push(
-                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"navigate\",\"\{json_escape(t)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"navigate\",\"\{js_string_escape(t)}\"]",
                         )
                       Some(Back) =>
                         acts.push(
-                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"back\",\"\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"back\",\"\"]",
                         )
                       Some(ShowToast(msg)) =>
                         acts.push(
-                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"toast\",\"\{json_escape(msg)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"toast\",\"\{js_string_escape(msg)}\"]",
                         )
                       Some(SetState(id2, st)) =>
                         acts.push(
-                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"set_state\",\"\{json_escape(id2)}:\{json_escape(st)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"set_state\",\"\{js_string_escape(id2)}:\{js_string_escape(st)}\"]",
                         )
                       Some(ToggleState(id2, _)) =>
                         acts.push(
-                          "[\"\{json_escape(ab_id)}\",\"\{json_escape(nid)}\",\"toggle_state\",\"\{json_escape(id2)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"toggle_state\",\"\{js_string_escape(id2)}\"]",
                         )
                       Some(SetText(id2, txt)) =>
                         acts.push(
-                          "[\"\{json_escape(id2)}\",\"\{json_escape(nid)}\",\"set_text\",\"\{json_escape(id2)}:\{json_escape(txt)}\"]",
+                          "[\"\{js_string_escape(id2)}\",\"\{js_string_escape(nid)}\",\"set_text\",\"\{js_string_escape(id2)}:\{js_string_escape(txt)}\"]",
                         )
                       _ => ()
                     }
@@ -237,7 +282,7 @@ pub fn Project::export_html(self : Project) -> String {
         }
         if names.length() > 0 {
           let joined = names.join(",")
-          state_defs.push("\"\{json_escape(node_id)}\":\"\{joined}\"")
+          state_defs.push("\"\{js_string_escape(node_id)}\":\"\{joined}\"")
         }
       }
       None => ()
@@ -275,7 +320,7 @@ pub fn Project::export_html(self : Project) -> String {
   for id in self.artboards.keys() {
     match first {
       None => if id == entry {
-        sb.write_string("show('\{json_escape(id)}',true,0)\n")
+        sb.write_string("show('\{js_string_escape(id)}',true,0)\n")
       }
       Some(_) => ()
     }

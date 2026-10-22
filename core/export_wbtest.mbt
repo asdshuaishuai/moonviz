@@ -64,7 +64,19 @@ test "export_html：动效令牌与交互流畅性" {
   // 按压反馈（spring 触感）+ 状态 fill 平滑切换
   assert_true(html.contains("g[id^=n_]:active{transform:scale(.96)}"))
   assert_true(html.contains("transition:fill var(--mv-dur) var(--mv-out)"))
-  // 入场阶梯 / reduced-motion / ESC 返回
+  // 入场阶梯：选择器下钻到根 wrapper 内的顶层节点 g——svg 的唯一直接子 g
+  // 是根 wrapper（render_svg 只对 root 调一次 render_node），旧选择器
+  // >svg>g 只命中 wrapper 一层，逐节点阶梯从未生效；wrapper 自带非 g 的
+  // 背景 rect 占位，按 nth-of-type 对 g 计数，不受普通子元素挤位
+  assert_true(html.contains(".board.active>svg>g>g{animation:mv-rise"))
+  assert_true(html.contains(
+    ".board.active>svg>g>g:nth-of-type(2){animation-delay:24ms}",
+  ))
+  assert_true(html.contains(
+    ".board.active>svg>g>g:nth-of-type(8){animation-delay:168ms}",
+  ))
+  assert_false(html.contains(".board.active>svg>g{animation"))
+  // 阶梯 keyframes / reduced-motion / ESC 返回
   assert_true(html.contains("@keyframes mv-rise"))
   assert_true(html.contains("prefers-reduced-motion"))
   assert_true(html.contains("if(e.key==='Escape')back()"))
@@ -86,4 +98,38 @@ test "export_html：入场画板推断" {
   // tab 的 onclick 会为每个画板都产出同形字符串。
   assert_true(html.contains("\nshow('z_login',true,0)\n"))
   assert_false(html.contains("\nshow('a_home',true,0)\n"))
+}
+
+///|
+/// 注入封堵：duplicate 的 new_name 原样成为画板 id，可含单引号/尖括号——
+/// boot 与 tab onclick 都落在单引号 JS 字符串，须转义后注出，否则整个
+/// <script> 解析失败、原型交互全哑。
+test "export_html：单引号/尖括号画板 id 的脚本注入封堵" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.duplicate_artboard(src="login", new_name="ab'cd")
+  let html = p.export_html()
+  // 单引号转义为 \'；boot 调用锚在自成一行的形态上（tab onclick 不换行）
+  assert_true(html.contains("\nshow('ab\\'cd',true,0)\n"))
+  assert_false(html.contains("show('ab'cd"))
+  assert_true(html.contains("onclick=\"show('ab\\'cd',true,0)\""))
+  // 尖括号一律 \x3c，</script> 无法再从字符串内提前闭合脚本
+  let _ = p.duplicate_artboard(src="login", new_name="x</script>y")
+  let html2 = p.export_html()
+  assert_true(html2.contains("show('x\\x3c/script>y',true,0)"))
+  assert_false(html2.contains("show('x</script>y'"))
+  // 脚本尾部完好：boot 行（并列候选的 shortlex 最小是 ab'cd）后紧跟闭合标签
+  assert_true(html2.contains("\nshow('ab\\'cd',true,0)\n</script>"))
+}
+
+///|
+/// 并列 tie-break：无 flow 可达时全部画板皆为候选，取确定性最小 id。
+/// String < 是长度优先的 shortlex——zz 短于 aaa，boot 因此开在 zz 而非 aaa。
+test "export_html：并列候选 shortlex tie-break" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="zz")
+  let _ = p.create_artboard(name="aaa")
+  let html = p.export_html()
+  assert_true(html.contains("\nshow('zz',true,0)\n"))
+  assert_false(html.contains("\nshow('aaa',true,0)\n"))
 }
