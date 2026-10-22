@@ -16,11 +16,7 @@ pub fn json_escape(s : String) -> String {
       _ => {
         let code = c.to_int()
         if code < 0x20 {
-          let hi = (code >> 4) & 15
-          let lo = code & 15
-          sb.write_string("\\u00")
-          sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
-          sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+          write_c0_u_escape(sb, code)
         } else {
           sb.write_char(c)
         }
@@ -28,6 +24,18 @@ pub fn json_escape(s : String) -> String {
     }
   }
   sb.to_string()
+}
+
+///|
+/// C0 控制符（0x00–0x1F）→ \u00xx（小写十六进制）。json_escape 与
+/// export.mbt 的 js_string_escape 共用的机械编码尾段——两处转义策略
+/// 各自独立（JSON 协议语义 / JS 字符串语义），仅这一段逐字相同。
+fn write_c0_u_escape(sb : StringBuilder, code : Int) -> Unit {
+  let hi = (code >> 4) & 15
+  let lo = code & 15
+  sb.write_string("\\u00")
+  sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
+  sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
 }
 
 ///|

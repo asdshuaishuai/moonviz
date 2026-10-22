@@ -97,7 +97,7 @@ export async function createEngine(source) {
       return JSON.parse(exports.export_html(mbt));
     },
 
-    /** op 面字典（26 条 mutating op：op/usage/category/gates）。 */
+    /** op 面字典（全部 mutating op：op/usage/category/gates；条数随注册表演进，由 core/ops_registry_wbtest 锚定）。 */
     listOps() {
       return JSON.parse(exports.list_ops());
     },
@@ -170,6 +170,16 @@ export async function createEngine(source) {
       return JSON.parse(exports.session_generate_responsive(handle, artboard));
     },
 
+    /**
+     * 生成式 UI（执行策略第一级）：一句话意图 → 完整画板 + 报告
+     * （autofix/missing/score）。新画板变更——成功信封带 canonical mbt，
+     * 按 canonical 交换的宿主应保存它供下次 sessionOpen 使用。
+     * 槽变体 session_generate_in 反向传参：主槽 arg=intent、副槽 arg2=name。
+     */
+    sessionGenerate(handle, intent, name) {
+      return JSON.parse(exports.session_generate(handle, intent, name));
+    },
+
     /** 关闭会话。 */
     sessionClose(handle) {
       return exports.session_close(handle);
@@ -195,7 +205,7 @@ export async function createEngine(source) {
       return JSON.parse(exports.session_query_nodes(handle, artboard));
     },
 
-    /** 其余 session_* 以 raw 导出直用（spec/infer/用户组件…）。改文档面（constrain/auto_fix/responsive/tap/component_compile）成功信封均带 canonical mbt，宿主应保存供下次 sessionOpen 使用。 */
+    /** 其余 session_* 以 raw 导出直用（spec/infer/用户组件…）。改文档面（constrain/auto_fix/generate/responsive/tap/component_compile）成功信封均带 canonical mbt，宿主应保存供下次 sessionOpen 使用。 */
     raw: exports,
   };
 }

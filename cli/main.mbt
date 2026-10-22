@@ -688,7 +688,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
     "generate" =>
       // 生成式 UI 入口（执行策略第一级）：一句话意图 → 引擎生成完整画板
       // + 报告信封。意图支持引号包裹（split_cmd 还原）；未加引号时把余下
-      // token 空格拼接；尾部 "as <name>" 指定画板名。
+      // token 空格拼接；仅行尾 "as <name>" 指定画板名（真尾部语义）——
+      // 居中的 as 是意图内容（"login as hero page"），按普通词并入意图，
+      // 否则意图被截断且 "as" 之后的 token 被整体劫持为画板名。
       if parts.length() < 2 {
         cli_err("usage: generate <意图一句话> [as <name>]")
       } else {
@@ -696,7 +698,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         let mut artboard_name = ""
         let mut i = 2
         while i < parts.length() {
-          if parts[i] == "as" && i + 1 < parts.length() {
+          // 真尾部语义：仅 "as" 是倒数第二个 token（"as <name>" 恰好占满
+          // 行尾两个 token）才消费为画板名分隔符，与 usage 声明一致
+          if parts[i] == "as" && i + 2 == parts.length() {
             artboard_name = parts[i + 1]
             i = i + 2
           } else {
@@ -1399,8 +1403,12 @@ fn cli_help() -> String {
 }
 
 ///|
+/// 错误信封统一出口：msg 必须经 JSON 转义——错误串携带原始用户 token
+/// （template/history 的画板名、state 的 k=v 等），含反斜杠/引号时裸
+/// 插值会产出非法 JSON；与 batch_apply 臂的 @core.json_escape、MCP 臂
+/// err_json（json_escape_text）同构。调用方一律传原文，不预转义。
 fn cli_err(msg : String) -> String {
-  "{\"error\":\"\{msg}\"}"
+  "{\"error\":\"\{cli_json_escape(msg)}\"}"
 }
 
 ///|

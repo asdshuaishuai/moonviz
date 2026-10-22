@@ -102,37 +102,35 @@
 
 ## Agent 工具清单（55 个，节选）
 
+下表每个名字都与运行面字典逐字一致（CLI `list-tools` / MCP `tools/list`，55 个）——没有一个占位名。
+
 | 工具 | 语义 |
 | :--- | :--- |
-| `list_components` | 列出所有可用 UI 组件（含变体/描述/分类） |
-| `list_tokens` | 列出设计令牌（颜色/间距/圆角/字号） |
-| `create_artboard` | 创建新画板（name, width, height） |
-| `list_artboards` | 列出项目中的所有画板及元数据 |
-| `place_component` | 在画板上放置组件实例 |
-| `query_nodes` | 按类型/组件/文字内容查询节点 |
-| `lint_design` | 设计质量检查（对比度/触控/间距/一致性） |
-| `get_violations` | 获取不崩谓词违规列表 |
-| `suggest_fix` | 针对违规给出可执行修复补丁 |
-| `export_svg` | 导出画板为引擎派生 SVG |
+| `list_components` | 列出所有 UI 组件（内置 + 用户）含变体/分类/描述 |
+| `list_tokens` | 列出设计令牌（颜色/间距/圆角/字体） |
+| `list_artboards` | 列出项目中的所有画板及元数据与节点数 |
+| `apply_template` | 以模板实例化新画板（id 默认取 template_id） |
+| `place_component` | 在画板上按最终尺寸放置组件实例（w/h 在 place 时落定，门在最终 bbox 上评估） |
+| `update_node` | 以空格分隔的 k=v 对编辑节点属性 |
+| `query_nodes` | 查询画板节点（id/类型/组件/矩形/样式/文字） |
+| `lint_design` | 设计质量 lint（对比度/触控目标/间距/可读性），返回结构化建议 |
+| `auto_fix` | 自动修复画板上可修复的违规 |
+| `align_nodes` | 对齐 ≥2 个节点（模式：left / right / top / bottom / hcenter / vcenter） |
+| `suggest_alignment` | 为画板建议对齐修复 |
+| `export_html` | 导出整个项目为自包含可交互 HTML 原型（节点级导航流/状态 CSS/导航栈/toast） |
+| `export_svg` | 导出单个画板为 SVG（主题化 surface/描边） |
+| `export_design_system` | 设计系统导出：把画板反向提取的设计系统打包为交付物——tokens JSON + CSS 自定义属性 |
 | `collab_merge` | 多 Agent 三方合并：提交 N 个 Agent 的操作序列，返回冲突与自动解决 |
 | `history` | 设计版本控制：init/commit/log/undo/redo/checkout/diff（时间旅行 + 语义 diff） |
 | `animation_presets` / `animation_css` | 动画预设清单 / 为节点生成 CSS @keyframes |
 | `protest` | 运行原型测试脚本（断言式验证导航/输入/渲染/违规） |
-| `read_mbt` | 读取并校验完整 `.mbt.md` 源码 |
-| `render_mbt` | 从 `.mbt.md` 重新解析并渲染 |
-| `ddp_view` | 只读 DDP 查看与渲染契约 |
-| `export_react` | React TSX 组件桩（仅代码生成，不是事实源） |
-| `apply_template` | 从模板生成完整画板（一句话→整页面） |
-| `generate` | **生成式 UI 入口（执行策略第一级）**：一句话意图 → 引擎选模板 + 规范自愈 + 报告（autofix/missing/score/候选）——优先于逐节点摆放 |
-| `batch_apply` | **执行策略第二级**：多条 op 一次提交（换行分隔 base64，≤64），遇错即停回传断点索引 |
-| `export_design_system` | 设计系统导出：把画板反向提取的设计系统打包为交付物——tokens JSON + CSS 自定义属性 |
-| `fork_variants` | 分叉设计变体（A/B 测试并行探索） |
-| `score_variants` | 对所有变体评分（违规/lint/对齐/丰富度） |
-| `merge_variant` | 合并最优变体回主分支 |
-| `auto_arrange` | 垂直等间距自动排列 |
-| `snap_to_grid` | 吸附到 N px 网格 |
-| `center_in_parent` | 父容器居中 |
-| `suggest_alignment` | 检测近似对齐并建议吸附 |
+| `read_mbt` | 从 base64 文档返回 canonical `.mbt.md` 源码 |
+| `render_mbt` | 校验并渲染 canonical `.mbt.md`（完整画板 JSON） |
+| `ddp_view` | 回报 DDP 编解码状态（只读视图） |
+| `generate` | **生成式 UI 入口（执行策略第一级）**：一句话意图 → 引擎选语义模板 + 规范/谓词自愈 + 返回报告（autofix/missing/score）——优先于逐节点摆放 |
+| `batch_apply` | **执行策略第二级**：多条会话 op 一次提交（换行分隔 base64，最多 64 条）；按序执行，遇错即停并回传断点索引 |
+
+`create` / `fix` / `autofill` 等更底层原语是 **op** 而非工具——它们在 27 条 op 字典（`list_ops`）里，经 `batch_apply` 或 CLI 行协议触达。
 
 ## 生成式 UI：genUI 第一公民，工具模式兜底
 

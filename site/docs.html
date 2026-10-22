@@ -150,7 +150,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>constrain &lt;ab&gt; &lt;intent&gt;</code></td><td>布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N（层级/z-order 走 reorder；全包含背景直通）</td></tr>
 <tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
 <tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
-<tr><td><code>list-ops</code></td><td>26 条 mutating op 字典（usage/分类/双门禁）</td></tr>
+<tr><td><code>list-ops</code></td><td>27 条 mutating op 字典（usage/分类/双门禁）</td></tr>
 <tr><td><code>help</code> / <code>list-tools</code> / <code>exit</code></td><td>帮助 / 55 工具字典 / 退出</td></tr>
 <tr><td>Norms v2 触控目标</td><td>交互组件（按钮/输入/开关/滑块/复选/tab/搜索）命中区 ≥ 44×44（HIG/Material）</td><td>auto_fix 可修——只抬 Fixed 维到 44，Hug/Fill 策略不降级；放大引入的溢出由谓词循环清偿</td></tr>
 <tr><td>Norms v2 其余三类</td><td>间距网格 4pt / 字号层级 ≤5 / 节点密度 ≤80</td><td>仅检测进 critique norms 维（属设计决策，不做机械修复）</td></tr>
@@ -283,7 +283,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
 <tr><td><code>history</code></td><td>版本</td><td>设计版本控制：时间旅行 / 提交日志 / 语义 diff</td></tr>
 <tr><td><code>animation_presets</code> / <code>animation_css</code></td><td>动画</td><td>6 预设清单 / 节点 CSS @keyframes 生成</td></tr>
 <tr><td><code>protest</code></td><td>测试</td><td>原型测试脚本（断言式：导航/输入/渲染/违规）</td></tr>
-<tr><td><code>list_ops</code></td><td>字典</td><td>26 条 mutating op 机器可读字典（usage/category/gates）</td></tr>
+<tr><td><code>list_ops</code></td><td>字典</td><td>27 条 mutating op 机器可读字典（usage/category/gates）</td></tr>
 <tr><td><code>lint_design</code> / <code>auto_fix</code></td><td>质量</td><td>设计 Lint 与自动修复</td></tr>
 <tr><td><code>critique</code></td><td>智能</td><td>AI 设计批评（启发式规则集）</td></tr>
 <tr><td><code>infer_page_type</code> / <code>infer_missing</code></td><td>智能</td><td>页面类型推断 / 缺失元素推断</td></tr>

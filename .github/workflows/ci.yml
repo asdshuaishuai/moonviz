@@ -65,8 +65,10 @@ jobs:
 
       - name: Desktop self-render build + smoke (client-guided, no UI)
         run: |
+          set -o pipefail
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --target native desktop
+          # pipefail：smoke 失败时 desktop.exe 经 mv_exit(1) 的非零退出不被 tee 吞掉
           MOONVIZ_SMOKE=1 ./_build/native/debug/build/desktop/desktop.exe | tee /tmp/mv-smoke.log
           grep -q '\[smoke\] PASS' /tmp/mv-smoke.log
           # 无引导必须惰性：只回 not_guided 信封（exit 0），不渲染不写文件

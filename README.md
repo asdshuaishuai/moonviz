@@ -118,36 +118,35 @@
 
 ## Selected Agent Tools (subset)
 
+Every name below is taken verbatim from the live dictionary (`list-tools` on the CLI / `tools/list` on MCP, 55 entries) — nothing here is a placeholder.
+
 | Tool | Semantics |
 | :--- | :--- |
-| `list_components` | List all available UI components (with variants/descriptions/categories) |
-| `list_tokens` | List design tokens (colors/spacings/radii/font sizes) |
-| `create_artboard` | Create a new artboard (name, width, height) |
-| `list_artboards` | List all artboards in the project with metadata |
-| `place_component` | Place a component instance on an artboard |
-| `query_nodes` | Query nodes by kind/component/text content |
-| `lint_design` | Design quality checks (contrast/touch/spacing/consistency) |
-| `suggest_fix` | Actionable fix patches for violations |
-| `export_svg` | Export an artboard as engine-derived SVG |
+| `list_components` | List all UI components (builtin + user) with variants/categories/descriptions |
+| `list_tokens` | List design tokens (colors/spacings/radii/typography) |
+| `list_artboards` | List all artboards in the project with metadata and node counts |
+| `apply_template` | Instantiate a template as a new artboard (id = template_id unless overridden) |
+| `place_component` | Place a component instance on an artboard at final size (w/h applied at place time, so the gate evaluates the final bbox) |
+| `update_node` | Edit node properties via space-separated k=v pairs |
+| `query_nodes` | Query nodes of an artboard (id/kind/component/rect/style/text) |
+| `lint_design` | Design quality lint (contrast/touch-target/spacing/readability); returns structured suggestions |
+| `auto_fix` | Auto-fix fixable violations on an artboard |
+| `align_nodes` | Align ≥2 nodes (modes: left / right / top / bottom / hcenter / vcenter) |
+| `suggest_alignment` | Suggest alignment fixes for an artboard |
+| `export_html` | Export the whole project as a self-contained interactive HTML prototype (node-level flows, state CSS, nav stack, toast) |
+| `export_svg` | Export one artboard as SVG (themed surface/outline) |
+| `export_design_system` | Export an artboard's extracted design system as deliverables: tokens JSON + CSS custom properties |
 | `collab_merge` | Multi-agent three-way merge: submit N agents' op sequences, get conflicts + auto-resolution |
 | `history` | Design version control: init/commit/log/undo/redo/checkout/diff (time travel + semantic diff) |
 | `animation_presets` / `animation_css` | List the 6 animation presets / generate CSS @keyframes for a node |
 | `protest` | Run a prototype test script (assertion-based navigation/inputs/render/violations) |
-| `read_mbt` | Read and validate a complete `.mbt.md` source |
-| `render_mbt` | Re-parse and render from `.mbt.md` |
-| `ddp_view` | Read-only DDP view and render contract |
-| `export_react` | React TSX component stubs (code generation only, not a fact source) |
-| `apply_template` | Generate a complete artboard from a template (one sentence → full page) |
-| `generate` | **Generative UI entry (execution tier 1)**: one-sentence intent → engine picks template, self-heals norms, returns report (autofix/missing/score/alternatives). Prefer over node-by-node placement |
-| `batch_apply` | **Execution tier 2**: multiple ops in ONE call (newline-separated, base64, ≤64); aborts at first error with its index |
-| `export_design_system` | Export an artboard's extracted design system as deliverables: tokens JSON + CSS custom properties |
-| `fork_variants` | Fork design variants (parallel A/B exploration) |
-| `score_variants` | Score all variants (violations/lint/alignment/richness) |
-| `merge_variant` | Merge the best variant back into the main branch |
-| `auto_arrange` | Vertical equal-spacing auto-arrange |
-| `snap_to_grid` | Snap to an N px grid |
-| `center_in_parent` | Center within parent |
-| `suggest_alignment` | Detect near-alignments and suggest snapping |
+| `read_mbt` | Return canonical `.mbt.md` source from a base64 document |
+| `render_mbt` | Validate + render canonical `.mbt.md` (full artboards JSON) |
+| `ddp_view` | Report DDP codec status (read-only view) |
+| `generate` | **Generative UI entry (execution tier 1)**: one-sentence intent → engine picks a semantic template, self-heals norms/predicates, returns a report (autofix/missing/score). Prefer over node-by-node placement |
+| `batch_apply` | **Execution tier 2**: multiple session ops in ONE call (newline-separated, base64, max 64); executes in order, aborts at the first error and returns its index |
+
+Lower-level primitives such as `create` / `fix` / `autofill` are **ops**, not tools — they live in the 27-entry op dictionary (`list_ops`) and are reached through `batch_apply` or the CLI line protocol.
 
 ## Generative UI: genUI First, Tools as the Fallback
 

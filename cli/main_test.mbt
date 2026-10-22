@@ -69,6 +69,44 @@ test "generate: one-sentence intent produces a full artboard plus report" {
 }
 
 ///|
+/// generate 的 "as" 分隔符是真尾部语义：仅 "as <name>" 恰好占满行尾
+/// 两个 token 时才消费。居中的 as 是意图内容，按普通词并入——此前
+/// 任意位置裸 " as " 都劫持为分隔符，意图被截断且 "as" 后的 token
+/// 整体丢失（"generate login as hero page" 产出画板 hero、"page" 丢失）。
+test "generate: mid-intent as stays in the intent, trailing as names the artboard" {
+  let project = @core.Project::new()
+  // as 居中（其后还有 token）：不劫持——意图完整，画板名回落 template_id
+  let mid = cli_exec(project, "generate login as hero page")
+  assert_true(mid.contains("\"ok\":true"))
+  assert_true(mid.contains("\"template\":\"login\""))
+  assert_true(mid.contains("\"artboard\":\"login\""))
+  // as 尾部：仍按声明生效
+  let tail = cli_exec(project, "generate login page as hero")
+  assert_true(tail.contains("\"template\":\"login\""))
+  assert_true(tail.contains("\"artboard\":\"hero\""))
+  // 引号意图含 as：split_cmd 还原为单 token，as 永不劫持（与 wasm 臂同构）
+  let quoted = cli_exec(project, "generate \"登录页 with as badge 中间词\"")
+  assert_true(quoted.contains("\"template\":\"login\""))
+  assert_true(quoted.contains("\"artboard\":\"login\""))
+  assert_true(!quoted.contains("\"artboard\":\"badge"))
+}
+
+///|
+/// cli_err 统一 JSON 转义：错误串携带原始用户 token，含反斜杠/引号时
+/// 输出必须仍是合法 JSON（此前裸插值产出非法 JSON——python json.loads
+/// 与 jq 双判非法，而同输入走 MCP 臂是合法转义输出）。精确匹配同时
+/// 排除双重转义。
+test "cli_err escapes backslash and quote so error output stays valid JSON" {
+  let project = @core.Project::new()
+  // 裸反斜杠 token（split_cmd 引号外原样保留）
+  let bs = cli_exec(project, "template back\\slash my_login")
+  assert_eq(bs, "{\"error\":\"unknown_template: back\\\\slash\"}")
+  // 引号包裹内 \" 保留原文（反斜杠+引号双字符进入错误串）
+  let q = cli_exec(project, "template \"my\\\"tab\" my_login")
+  assert_eq(q, "{\"error\":\"unknown_template: my\\\\\\\"tab\"}")
+}
+
+///|
 test "ops-batch: one-shot submission with breakpoint index on failure" {
   let project = @core.Project::new()
   let ok = cli_b64("create home 390 844\ncreate detail 390 844")

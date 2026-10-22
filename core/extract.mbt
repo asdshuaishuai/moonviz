@@ -637,17 +637,20 @@ pub fn Project::export_design_system(
         "/* MoonViz design tokens — extracted from \{artboard} */\n:root {\n",
       )
       // 语义名推断可能把不同值归到同名（两个色都叫 surface）——CSS 同名
-      // 自定义属性后者静默覆盖前者，令牌交付物不允许丢值：slug 冲突加序号
+      // 自定义属性后者静默覆盖前者，令牌交付物不允许丢值：slug 冲突加序号。
+      // 去重键带组前缀：CSS 变量名自带 --ds-{group}- 前缀，跨组同 slug
+      // 本不冲突（18px 同为间距与字号时各自叫 --ds-spacing-*/--ds-font-*），
+      // 只在组内去重——跨组合表会把无冲突的令牌强行改名成 -2。
       let used : Map[String, Bool] = Map::new()
       fn emit_var(sb : StringBuilder, used : Map[String, Bool], group : String, raw : String, value : String) -> Unit {
         let base = design_slug(raw)
         let mut slug = base
         let mut n = 2
-        while used.contains(slug) {
+        while used.contains("\{group}:\{slug}") {
           slug = "\{base}-\{n}"
           n = n + 1
         }
-        used.set(slug, true)
+        used.set("\{group}:\{slug}", true)
         sb.write_string("  --ds-\{group}-\{slug}: \{value};\n")
       }
       for t in ds.color_tokens.iter() {

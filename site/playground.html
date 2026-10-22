@@ -1516,8 +1516,8 @@ async function boot(){
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
     const exports=new WebAssembly.Instance(mod,{}).exports;
-    // 对齐最新 wasm-gc 产物（71 导出；此处包裹 38 个：11 静态 + 27 会话，
-    // 其余为 _in 槽变体与 memory，不经 JS 包装）
+    // 对齐最新 wasm-gc 产物（73 导出；此处包裹 39 个：11 静态 + 28 会话，
+    // 其余为 _in 槽变体与 in/arg/arg2 槽原语，不经 JS 包装）
     engine={
       // —— 无状态（11）——
       version:()=>JSON.parse(exports.version_info()),
@@ -1531,8 +1531,8 @@ async function boot(){
       list_tokens:()=>JSON.parse(exports.list_tokens()),
       list_ops:()=>JSON.parse(exports.list_ops()),
       export_html:s=>JSON.parse(exports.export_html(s)),
-      // —— 会话（24，i32 句柄）——
-      // 改文档面（apply_*/constrain/auto_fix/responsive/tap/component_compile/history undo|redo|checkout）
+      // —— 会话（28，i32 句柄）——
+      // 改文档面（apply_*/constrain/auto_fix/generate/generate_responsive/tap/component_compile/history undo|redo|checkout）
       // 成功信封带 canonical mbt（r.mbt）：按 canonical 交换的宿主须保存它供下次 open 用
       session_open:s=>exports.session_open(s),
       session_close:h=>exports.session_close(h),
@@ -1554,6 +1554,7 @@ async function boot(){
       session_infer_missing:(h,a)=>JSON.parse(exports.session_infer_missing(h,a)),
       session_extract_design_system:(h,a)=>JSON.parse(exports.session_extract_design_system(h,a)),
       session_generate_responsive:(h,a)=>JSON.parse(exports.session_generate_responsive(h,a)),
+      session_generate:(h,i,n)=>JSON.parse(exports.session_generate(h,i,n)),
       session_benchmark:h=>JSON.parse(exports.session_benchmark(h)),
       session_component_compile_b64:(h,b)=>JSON.parse(exports.session_component_compile_b64(h,b)),
       session_library_snapshot:h=>JSON.parse(exports.session_library_snapshot(h)),

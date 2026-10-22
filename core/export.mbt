@@ -56,12 +56,8 @@ fn js_string_escape(s : String) -> String {
       _ => {
         let code = c.to_int()
         if code < 32 {
-          // 其余 C0 控制符：\u00xx
-          let hi = (code >> 4) & 15
-          let lo = code & 15
-          sb.write_string("\\u00")
-          sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
-          sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+          // 其余 C0 控制符：\u00xx（编码尾段与 json_escape 共用）
+          write_c0_u_escape(sb, code)
         } else {
           sb.write_char(c)
         }

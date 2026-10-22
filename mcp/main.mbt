@@ -996,8 +996,11 @@ fn find_arguments_body(line : String) -> Int? {
 /// 闭引号扫描必须跳过 \ 转义并还原常用序列（\" \\ \n \t \r \b \f /）：
 /// generate 是首个以完整自然语句入参的工具，intent 含 \" 时裸 find("\"")
 /// 会在转义引号处截断、后半句静默丢失（{"intent":"生成\"欢迎\"引导页"}
-/// 实证只提取出 "生成\"）。未知转义原样保留（不丢字符）；无闭合引号
-/// 返回 ""（与既有行为一致）。
+/// 实证只提取出 "生成\"）。JSON 标准 \uXXXX 同样按标准解码（含
+/// \uD83D\uDE00 代理对合成）——ensure_ascii 风格客户端发送的中文意图
+/// 关键词（登录页 → \u767b\u5f55\u9875）只有解码才能命中模板；非法
+/// 序列（hex 残缺/孤立代理项）与其余未知转义一样原样保留（不丢字符）。
+/// 无闭合引号返回 ""（与既有行为一致）。
 /// 输入行形如: {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apply_template","arguments":{"template_id":"login"}}}
 fn extract_arg_string(line : String, key : String) -> String {
   // 先定位 "arguments":{ ... }
@@ -1030,7 +1033,20 @@ fn extract_arg_string(line : String, key : String) -> String {
             i = n
           }
           Some('\\') => {
-            if i + 1 < n {
+            if i + 1 < n && rest.get_char(i + 1) == Some('u') {
+              // JSON 标准 \uXXXX：解析 4 位十六进制还原码点（含代理对合成）
+              match decode_unicode_escape(rest, i, n) {
+                Some((ch, next_i)) => {
+                  sb.write_char(ch)
+                  i = next_i
+                }
+                None => {
+                  // 非法序列（hex 残缺/孤立代理项）：原样保留，不做有损丢弃
+                  sb.write_char('\\')
+                  i = i + 1
+                }
+              }
+            } else if i + 1 < n {
               match rest.get_char(i + 1) {
                 Some('"') => sb.write_char('"')
                 Some('\\') => sb.write_char('\\')
@@ -1041,7 +1057,8 @@ fn extract_arg_string(line : String, key : String) -> String {
                 Some('b') => sb.write_char('\u{0008}')
                 Some('f') => sb.write_char('\u{000C}')
                 Some(other) => {
-                  // 未知转义（含 \uXXXX）：原样保留，不做有损丢弃
+                  // 其余未知转义：原样保留，不做有损丢弃
+                  // （\uXXXX 已在上方分支按 JSON 标准解码）
                   sb.write_char('\\')
                   sb.write_char(other)
                 }
@@ -1068,6 +1085,81 @@ fn extract_arg_string(line : String, key : String) -> String {
       }
     }
     None => ""
+  }
+}
+
+///|
+/// 解析 rest 中自 i 起（rest[i]=='\\'、rest[i+1]=='u'）的 \uXXXX 转义。
+/// 成功返回（还原的字符, 消费后的下一游标）：4 位十六进制直接映射码点；
+/// 高代理项 \uD800-\uDBFF 后随低代理项转义 \uDC00-\uDFFF 时合成增补码点
+/// （emoji 等 BMP 外字符）。序列非法（hex 残缺、孤立代理项）返回 None，
+/// 由调用方原样保留整段文本（不做有损丢弃）。
+fn decode_unicode_escape(rest : String, i : Int, n : Int) -> (Char, Int)? {
+  // 至少要有 "\uXXXX" 6 个字符
+  if i + 6 > n {
+    return None
+  }
+  let code = match parse_hex4(rest, i + 2) {
+    Some(c) => c
+    None => return None
+  }
+  if code >= 0xD800 && code <= 0xDBFF {
+    // 高代理项：紧随 \uXXXX 低代理项（0xDC00-0xDFFF）才合成，否则非法
+    if
+      i + 12 <= n &&
+      rest.get_char(i + 6) == Some('\\') &&
+      rest.get_char(i + 7) == Some('u') {
+      match parse_hex4(rest, i + 8) {
+        Some(low) =>
+          if low >= 0xDC00 && low <= 0xDFFF {
+            let cp = 0x10000 + (code - 0xD800) * 0x400 + (low - 0xDC00)
+            return Some((Char::from_int(cp), i + 12))
+          }
+        None => ()
+      }
+    }
+    return None
+  }
+  if code >= 0xDC00 && code <= 0xDFFF {
+    // 孤立低代理项：非法序列
+    return None
+  }
+  Some((Char::from_int(code), i + 6))
+}
+
+///|
+/// 解析 s 自 start 起的 4 位十六进制（\uXXXX 的 XXXX）；含非 hex 字符
+/// 返回 None
+fn parse_hex4(s : String, start : Int) -> Int? {
+  let mut code = 0
+  let mut k = 0
+  while k < 4 {
+    match hex_digit_value(s.get_char(start + k)) {
+      Some(v) => code = code * 16 + v
+      None => return None
+    }
+    k = k + 1
+  }
+  Some(code)
+}
+
+///|
+/// 单个十六进制字符的数值（0-9 / a-f / A-F）；其余返回 None
+fn hex_digit_value(c : Char?) -> Int? {
+  match c {
+    Some(ch) => {
+      let code = ch.to_int()
+      if code >= '0'.to_int() && code <= '9'.to_int() {
+        Some(code - '0'.to_int())
+      } else if code >= 'a'.to_int() && code <= 'f'.to_int() {
+        Some(code - 'a'.to_int() + 10)
+      } else if code >= 'A'.to_int() && code <= 'F'.to_int() {
+        Some(code - 'A'.to_int() + 10)
+      } else {
+        None
+      }
+    }
+    None => None
   }
 }
 

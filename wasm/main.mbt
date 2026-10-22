@@ -96,8 +96,9 @@ pub fn list_tokens() -> String {
 }
 
 ///|
-/// 机器可读 op 面字典：26 条 mutating op（usage/category/gates），
-/// 与 CLI list-ops / MCP list_ops 同源（core/agent_api.mbt）。
+/// 机器可读 op 面字典：全部 mutating op（usage/category/gates；条数随
+/// 注册表演进，由 core/ops_registry_wbtest.mbt 锚定），与 CLI list-ops /
+/// MCP list_ops 同源（core/agent_api.mbt）。
 pub fn list_ops() -> String {
   @core.list_ops_json()
 }

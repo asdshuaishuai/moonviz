@@ -341,7 +341,7 @@ pub fn list_tools() -> Array[AgentTool] {
   add("ddp_view", "Report DDP codec status (read-only view).", [])
   add(
     "list_ops",
-    "Machine-readable CLI op surface: all 26 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).",
+    "Machine-readable CLI op surface: all 27 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).",
     [],
   )
   add(
@@ -558,8 +558,10 @@ pub fn op_entries() -> Array[OpEntry] {
 /// CLI op 面字典（list-ops / list_ops 输出）：
 /// [{"op","usage","category","description","gates":{"agent":true,"human":true}}]
 ///
-/// 全部 27 条 op 在双路线共享（差别在提交门禁的校验强度：AgentGate 硬拦
-/// 结构违规，HumanGate 放行视觉债）；fix 的还债特例写进 description。
+/// 全部 mutating op 在双路线共享（条数随注册表演进，由
+/// core/ops_registry_wbtest 锚定，不写死数字；差别在提交门禁的校验强度：
+/// AgentGate 硬拦结构违规，HumanGate 放行视觉债）；fix 的还债特例写进
+/// description。
 pub fn list_ops_json() -> String {
   let gates = "{\"agent\":true,\"human\":true}"
   let parts : Array[String] = []

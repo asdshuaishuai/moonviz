@@ -56,41 +56,17 @@ pub fn Project::autofill_missing(
     Ok(j) => j
     Err(e) => return Err(e)
   }
+  let page_type = extract_field(missing_json, "page_type")
   // 解析缺失元素清单（element 字段；与 infer_missing 的 JSON 形状耦合，
-  // 单一事实源在 infer_missing——这里只消费）
-  let elements : Array[String] = []
-  let page_type = match missing_json.find("\"page_type\":\"") {
-    Some(i) => {
-      let rest = missing_json.substring(start=i + 13)
-      match rest.find("\"") {
-        Some(j) => rest.substring(start=0, end=j).to_string()
-        None => ""
-      }
-    }
-    None => ""
-  }
-  let mut from = 0
-  let key = "\"element\":\""
-  while from + key.length() <= missing_json.length() {
-    match missing_json.substring(start=from).find(key) {
-      Some(rel) => {
-        let i = from + rel + key.length()
-        let rest = missing_json.substring(start=i)
-        match rest.find("\"") {
-          Some(j) => {
-            elements.push(rest.substring(start=0, end=j).to_string())
-            from = i + j
-          }
-          None => from = missing_json.length()
-        }
-      }
-      None => from = missing_json.length()
-    }
-  }
-  // 内容底缘（确定性放置光标）
+  // 单一事实源在 infer_missing——这里只消费）。扫描限定在 "missing":[ … ]
+  // 数组片段内：裸扫整个信封的话，信封其他字段一旦也带 element 键就会
+  // 静默重复收集，放大放置冲突。
+  let elements = parse_missing_envelope(missing_json)
+  // 内容底缘（确定性放置光标）+ 现有内容矩形表（锚定占用检查用）
   let layout = solve(ab.doc)
   let mut bottom = 0.0
   let mut app_bar_bottom = -1.0
+  let occupied : Array[Rect] = []
   for id in ab.doc.nodes.keys() {
     match ab.doc.nodes.get(id) {
       Some(n) => {
@@ -107,6 +83,7 @@ pub fn Project::autofill_missing(
             if n.component == "app_bar" && r.y + r.height > app_bar_bottom {
               app_bar_bottom = r.y + r.height
             }
+            occupied.push(r)
           }
           None => ()
         }
@@ -121,21 +98,44 @@ pub fn Project::autofill_missing(
   let mut y_cursor = bottom + 16.0
   for element in elements.iter() {
     match autofill_recipe(element, content_w) {
-      None =>
-        skipped.push(
-          "{\"element\":\"" +
-          json_escape(element) +
-          "\",\"reason\":\"state_semantics_not_placeable\"}",
-        )
+      None => skipped.push(af_skip_json(element, "state_semantics_not_placeable"))
       Some(recipe) => {
         let (component, text, node_w, node_h, color, anchor_top) = recipe
-        // search_bar 锚定 app_bar 之下（语义位置）；其余走底缘光标
-        let y = if anchor_top && app_bar_bottom >= 0.0 {
-          app_bar_bottom + 12.0
-        } else {
-          y_cursor
-        }
         let node_id = element
+        // 同 id 预检：place_component 的根路径会丢弃 insert_node 的重复 id
+        // 失败（返回值未消费），既有节点随后被 edit_node 静默改写——用户
+        // 数据破坏 + 假成功报告。命中即跳过，绝不覆盖既有内容。
+        if ab.doc.has(node_id) {
+          skipped.push(af_skip_json(element, "id_taken"))
+          continue
+        }
+        // search_bar 等锚定元素语义位置在 app_bar 之下；锚定前先查带区
+        // 占用——候选矩形与既有内容（或本轮已放置节点）相交即退回底缘
+        // 光标。锚定是语义偏好，不是插队许可：硬塞进占用带区会触发
+        // auto_fix 的下移级联，把既有内容推挤改写。
+        let mut y = y_cursor
+        let mut anchored_rect : Rect? = None
+        if anchor_top && app_bar_bottom >= 0.0 {
+          let cand = Rect::new(24.0, app_bar_bottom + 12.0, node_w, node_h)
+          let mut taken = false
+          for r in occupied.iter() {
+            if cand.intersects(r) {
+              taken = true
+              break
+            }
+          }
+          if !taken {
+            y = cand.y
+            anchored_rect = Some(cand)
+          }
+        }
+        // 画布高度钳制：底缘光标越过画布（近满页）时节点会落到画布外，
+        // 而 fix_overflow 对负剩余空间保持原尺寸、清偿不动——如实跳过，
+        // 不制造永久视觉债。
+        if y + node_h > ab.height {
+          skipped.push(af_skip_json(element, "no_room"))
+          continue
+        }
         let placed_ok = match
           self.place_component(
             artboard=artboard,
@@ -176,13 +176,16 @@ pub fn Project::autofill_missing(
             y.to_string() +
             "}",
           )
-          y_cursor = y + node_h + 16.0
+          match anchored_rect {
+            // 锚定放置注册占用（防后续锚定元素同带区叠放），但**不推进**
+            // 底缘光标——锚定 y 在内容带中部，推进会让后续物化节点落进
+            // 既有内容里
+            Some(r) => occupied.push(r)
+            // 只有底缘光标放置才推进光标
+            None => y_cursor = y + node_h + 16.0
+          }
         } else {
-          skipped.push(
-            "{\"element\":\"" +
-            json_escape(element) +
-            "\",\"reason\":\"place_failed\"}",
-          )
+          skipped.push(af_skip_json(element, "place_failed"))
         }
       }
     }
@@ -192,6 +195,8 @@ pub fn Project::autofill_missing(
     Ok(json) => json
     Err(_) => "{\"fixes\":0}"
   }
+  // 顶层 ok 如实采纳 autofix 结果：清偿不动（remaining > 0）时不再谎报成功
+  let autofix_ok = !autofix_json.contains("\"ok\":false")
   let after = match self.infer_missing(artboard=artboard) {
     Ok(j) => j
     Err(e) => return Err(e)
@@ -210,21 +215,66 @@ pub fn Project::autofill_missing(
     }
     None => "?"
   }
-  let pj = af_join(placed)
-  let sj = af_join(skipped)
+  let pj = placed.join(",")
+  let sj = skipped.join(",")
   Ok(
-    "{\"ok\":true,\"op\":\"autofill\",\"artboard\":\"\{json_escape(artboard)}\",\"page_type\":\"\{page_type}\",\"placed_count\":\{placed.length()},\"placed\":[\{pj}],\"skipped\":[\{sj}],\"autofix\":\{autofix_json},\"missing_count_after\":\{after_count}}",
+    "{\"ok\":\{autofix_ok},\"op\":\"autofill\",\"artboard\":\"\{json_escape(artboard)}\",\"page_type\":\"\{page_type}\",\"placed_count\":\{placed.length()},\"placed\":[\{pj}],\"skipped\":[\{sj}],\"autofix\":\{autofix_json},\"missing_count_after\":\{after_count}}",
   )
 }
 
 ///|
-fn af_join(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
-  for i in 0..<parts.length() {
-    if i > 0 {
-      sb.write_string(",")
+/// 从 infer_missing 信封提取缺失元素清单：先截取 "missing":[ … ] 数组
+/// 片段再扫描 element——信封其他字段里的同名键不参与（CORE-4）
+fn parse_missing_envelope(json : String) -> Array[String] {
+  parse_missing_elements(missing_array_scope(json))
+}
+
+///|
+/// 截取信封里 "missing":[ … ] 的数组内容片段（不含方括号）；数组缺席或
+/// 为空返回 ""。闭合按当前 infer_missing 的扁平条目形状取首个 `]`——
+/// 条目的 suggestion 文案不含括号。
+fn missing_array_scope(json : String) -> String {
+  match json.find("\"missing\":[") {
+    Some(i) => {
+      let rest = json.substring(start=i + "\"missing\":[".length())
+      match rest.find("]") {
+        Some(j) => rest.substring(start=0, end=j).to_string()
+        None => ""
+      }
     }
-    sb.write_string(parts[i])
+    None => ""
   }
-  sb.to_string()
+}
+
+///|
+/// 从缺失数组片段提取 element 清单（顺序保留；只消费不校验——单一
+/// 事实源在 infer_missing 的 JSON 形状）
+fn parse_missing_elements(scope : String) -> Array[String] {
+  let elements : Array[String] = []
+  let mut from = 0
+  let key = "\"element\":\""
+  while from + key.length() <= scope.length() {
+    match scope.substring(start=from).find(key) {
+      Some(rel) => {
+        let i = from + rel + key.length()
+        let rest = scope.substring(start=i)
+        match rest.find("\"") {
+          Some(j) => {
+            elements.push(rest.substring(start=0, end=j).to_string())
+            from = i + j
+          }
+          None => from = scope.length()
+        }
+      }
+      None => from = scope.length()
+    }
+  }
+  elements
+}
+
+///|
+/// skipped 数组元素 JSON 片段：{"element":"…","reason":"…"}（element 经
+/// 转义；reason 为字面枚举，不需转义）
+fn af_skip_json(element : String, reason : String) -> String {
+  "{\"element\":\"\{json_escape(element)}\",\"reason\":\"\{reason}\"}"
 }

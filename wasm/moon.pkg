@@ -126,6 +126,7 @@ options(
         "session_infer_missing_in",
         "session_extract_design_system_in",
         "session_generate_responsive_in",
+        "session_generate_in",
         "session_component_compile_b64_in",
         "session_constrain_in",
         "session_tap_in",

@@ -11,7 +11,7 @@
 // 因此本契约只有系统 I/O：读渲染源、写兜底产物、环境变量。webview 的创建、
 // 窗口、事件泵全部属于客户端——引擎侧不存在任何 UI 符号。
 //
-// 单文件实现（shim/desktop_io.c）：纯 C 标准库（stdio/stdlib），三平台无
+// 单文件实现（shim/desktop_io.c）：纯 C 标准库（stdio/stdlib/string），三平台无
 // 差异、零框架链接。字符串约定：UTF-8；C→MoonBit 回传一律经
 // moonbit_make_string 产出 GC 串。内存：本契约不外借 malloc 指针；
 // mv_free 保留给未来确需外借暂存的场景（NULL 安全）。
