@@ -786,7 +786,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "export-html" => {
       let html = p.export_html()
-      "{\"ok\":true,\"html_length\":\{html.length()},\"html\":\"\{cli_json_escape(html)}\"}"
+      "{\"ok\":true,\"html_length\":\{html.length()},\"html\":\"\{@core.json_escape(html)}\"}"
     }
     "token" =>
       if parts.length() < 3 {
@@ -803,7 +803,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       } else {
         match p.export_svg(artboard=parts[1]) {
           Ok(svg) =>
-            "{\"ok\":true,\"svg_length\":\{svg.length()},\"svg\":\"\{cli_json_escape(svg)}\"}"
+            "{\"ok\":true,\"svg_length\":\{svg.length()},\"svg\":\"\{@core.json_escape(svg)}\"}"
           Err(e) => cli_err(e)
         }
       }
@@ -892,7 +892,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Some(ab) => {
             let proto = @decl.from_document(ab.doc)
             let t = proto.to_decl_text()
-            "{\"ok\":true,\"decl\":\"\{cli_json_escape(t)}\"}"
+            "{\"ok\":true,\"decl\":\"\{@core.json_escape(t)}\"}"
           }
         }
       }
@@ -903,7 +903,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         match p.artboards.get(parts[1]) {
           None => cli_err("unknown_artboard: \{parts[1]}")
           Some(ab) =>
-            "{\"ok\":true,\"json\":\"\{cli_json_escape(ab.doc.to_json())}\"}"
+            "{\"ok\":true,\"json\":\"\{@core.json_escape(ab.doc.to_json())}\"}"
         }
       }
     "duplicate" =>
@@ -1349,7 +1349,7 @@ fn cli_help() -> String {
   "  spec <ab>            Generate design spec\n" +
   "\n" +
   "Generative (execution ladder, always start from the top):\n" +
-  "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score)\n" +
+  "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score); \"a+b\" composite → multi-artboard + auto nav flows (max 4)\n" +
   "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
   "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
   "  autofill <ab>        Materialize the infer_missing report as real nodes, then auto_fix settles layout\n" +
@@ -1408,7 +1408,7 @@ fn cli_help() -> String {
 /// 插值会产出非法 JSON；与 batch_apply 臂的 @core.json_escape、MCP 臂
 /// err_json（json_escape_text）同构。调用方一律传原文，不预转义。
 fn cli_err(msg : String) -> String {
-  "{\"error\":\"\{cli_json_escape(msg)}\"}"
+  "{\"error\":\"\{@core.json_escape(msg)}\"}"
 }
 
 ///|
@@ -1430,49 +1430,8 @@ fn char_at_str(s : String, i : Int) -> String {
   s.substring(start=i, end=i + 1)
 }
 
-///|
-/// JSON 字符串转义（export-svg 内嵌完整 SVG 用）
-fn cli_json_escape(s : String) -> String {
-  let sb = StringBuilder::new()
-  for c in s.iter() {
-    match c {
-      '"' => sb.write_string("\\\"")
-      '\\' => sb.write_string("\\\\")
-      '\n' => sb.write_string("\\n")
-      '\r' => sb.write_string("\\r")
-      '\t' => sb.write_string("\\t")
-      _ => {
-        let code = c.to_int()
-        if code < 32 {
-          let hex = "0123456789abcdef"
-          let h1 = char_at(hex, code / 16)
-          let h2 = char_at(hex, code % 16)
-          sb.write_string("\\u00\{h1}\{h2}")
-        } else {
-          sb.write_char(c)
-        }
-      }
-    }
-  }
-  sb.to_string()
-}
-
-///|
-fn char_at(s : String, i : Int) -> String {
-  let buf : Array[String] = []
-  let mut idx = 0
-  for c in s.iter() {
-    if idx == i {
-      buf.push(c.to_string())
-    }
-    idx = idx + 1
-  }
-  if buf.length() > 0 {
-    buf[0]
-  } else {
-    "0"
-  }
-}
+// JSON 字符串转义直接复用 @core.json_escape（core/json.mbt：引号/反斜杠/
+// \n\r\t + C0 控制符 \u00xx 小写 hex，逐字节同语义）——不再维护 cli 本地副本。
 
 ///|
 fn join_arr(parts : Array[String]) -> String {

@@ -80,7 +80,8 @@ export async function createEngine(source) {
     },
 
     /**
-     * 预设组件库清单（8 组件 × 22 变体）。
+     * 预设组件库清单（当前实测 65 组件 / 8 分类 / 115 变体；条数随注册
+     * 表演进，漂移由 core/agent_test.mbt 的组件目录回归锚锚定）。
      * @returns {Array<{id:string,kind:string,category:string,variants:string[]}>}
      */
     listComponents() {

@@ -128,29 +128,163 @@ test "generate multi：组合意图与自动导航流" {
   // 双画板真实入库
   assert_true(p.artboards.contains("login"))
   assert_true(p.artboards.contains("signup"))
-  // 相邻流存在且 trigger 指向 login 上的真实节点（validate_flows 契约）
+  // 英文出口词命中 login 既有 signup_btn（Create Account）：就地连线，
+  // 不再在既有按钮之下凭空合成第二个注册 CTA
+  match p.artboards.get("login") {
+    Some(meta) => assert_false(meta.doc.has("goto_signup"))
+    None => assert_true(false)
+  }
+  // 相邻流存在且 trigger 指向 login 上的真实出口节点（validate_flows 契约）
   let mut flow_ok = false
   for e in p.flows.iter() {
-    if e.from == "login" && e.to == "signup" {
+    if e.from == "login" && e.to == "signup" && e.trigger == "tap:signup_btn" {
       match p.artboards.get("login") {
-        Some(meta) =>
-          if e.trigger.has_prefix("tap:") {
-            flow_ok = meta.doc.has(e.trigger.substring(start=4))
-          }
+        Some(meta) => flow_ok = meta.doc.has("signup_btn")
         None => ()
       }
     }
   }
-  assert_true(flow_ok, msg="login→signup 流必须指向真实出口节点")
-  // 双板零违规（auto_fix 清偿了合成按钮的重叠）
+  assert_true(flow_ok, msg="login→signup 流必须就地连线既有 signup_btn 出口")
+  // 流不重复：出口流 + 模板内建流（signup→login tap:have_account）共 2 条
+  assert_true(p.flows.length() == 2)
+  // 首跑逐板 replaced:false（覆盖探测与单通道信封同构）
+  assert_true(json.contains("\"replaced\":false"))
+  assert_false(json.contains("\"replaced\":true"))
+  // 双板零违规
   for ab_id in ["login", "signup"] {
     match p.artboards.get(ab_id) {
       Some(meta) => assert_true(validate(meta.doc).length() == 0)
       None => ()
     }
   }
-  // 幂等重跑：信封带 replaced 系信息且不崩
+  // 幂等重跑：手工 tier-2 精修随 upsert 覆盖丢失——信封逐板 replaced:true
+  // 必须可见；模板条件流 + 出口流不再线性膨胀（按 (from,to,trigger) 去重）
+  let _ = p.place_component(
+    artboard="login",
+    component_id="badge",
+    instance_id="t2_probe",
+    x=300.0,
+    y=10.0,
+  )
+  let flows_before = p.flows.length()
+  let rerun = match p.generate(intent_text="登录+注册") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(rerun.contains("\"mode\":\"multi\""))
+  assert_true(rerun.contains("\"replaced\":true"))
+  assert_false(rerun.contains("\"replaced\":false"))
+  match p.artboards.get("login") {
+    Some(meta) => assert_false(meta.doc.has("t2_probe"))
+    None => assert_true(false)
+  }
+  assert_true(p.flows.length() == flows_before, msg="重跑 flows 数不得膨胀")
+  // 再跑一次仍不膨胀（去重覆盖模板内建流与出口流两个来源）
   let _ = p.generate(intent_text="登录+注册")
+  assert_true(p.flows.length() == flows_before)
+}
+
+///|
+/// 主题段在前的退化组合（"dark+登录"）：退化单通道必须拿页面段原文
+/// 重拼——写死 segments[0] 会拿 "dark" 重拼成 "dark dark"，页面段被
+/// 丢弃、静默落到空状态兜底板（SKILL/docs 承诺主题段全局生效、不限顺序）。
+test "generate multi：主题段在前的退化取页面段原文" {
+  let p = Project::new()
+  let j1 = match p.generate(intent_text="dark+登录") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j1.contains("\"artboard\":\"login\""))
+  assert_true(j1.contains("\"template\":\"login\""))
+  assert_true(j1.contains("\"theme_applied\":\"dark\""))
+  assert_false(j1.contains("未识别"))
+  assert_true(p.artboards.contains("login"))
+  // 带空格的中文主题段同样退化到页面段
+  let p2 = Project::new()
+  let j2 = match p2.generate(intent_text="暗色 + 注册页") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j2.contains("\"artboard\":\"signup\""))
+  assert_true(j2.contains("\"template\":\"signup\""))
+  assert_true(j2.contains("\"theme_applied\":\"dark\""))
+  assert_false(j2.contains("未识别"))
+  assert_true(p2.artboards.contains("signup"))
+}
+
+///|
+/// 归一撞名查重：multi 通道按 sanitize_id 归一记录/查重——name="Signup"
+/// （首板 login 模板）与第二板模板名 "signup" 归一同 id，第二板加序号成
+/// signup_2，不再经 create_artboard 的 Map upsert 静默覆盖第一板。
+test "generate multi：归一撞名加序号不静默覆盖" {
+  let p = Project::new()
+  let json = match p.generate(intent_text="登录+注册", name="Signup") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(json.contains("\"count\":2"))
+  // 两板 id 不同：signup（login 模板）+ signup_2（signup 模板）
+  assert_true(json.contains("\"id\":\"signup\""))
+  assert_true(json.contains("\"id\":\"signup_2\""))
+  assert_true(p.artboards.contains("signup"))
+  assert_true(p.artboards.contains("signup_2"))
+  assert_true(p.artboards.length() == 2)
+  // 两板内容各自完好（旧实现第二板 upsert 覆盖第一板，login 的 email_input 丢失）
+  match p.artboards.get("signup") {
+    Some(meta) => assert_true(meta.doc.has("email_input"))
+    None => assert_true(false)
+  }
+  match p.artboards.get("signup_2") {
+    Some(meta) => assert_true(meta.doc.has("field_0"))
+    None => assert_true(false)
+  }
+  // 出口流指向第二板（而非覆盖后的同 id 自环）
+  let mut cross = false
+  for e in p.flows.iter() {
+    if e.from == "signup" && e.to == "signup_2" {
+      cross = true
+    }
+  }
+  assert_true(cross, msg="signup→signup_2 相邻流必须存在")
+}
+
+///|
+/// 合成出口画布钳制 + autofix 摘要透传：settings 高内容模板底缘放不下
+/// 合成按钮时找带区空位、仍无空位则放弃合成——不再产生 auto_fix 清偿
+/// 不动的越界债（contained_in_parent 对负剩余空间保持原尺寸）；逐板
+/// autofix ok/fixes 摘要进入信封，不再 `let _ =` 丢弃后硬编码 ok:true。
+test "generate multi：合成出口画布钳制与 autofix 摘要" {
+  let p = Project::new()
+  let json = match p.generate(intent_text="设置+仪表盘") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(json.contains("\"mode\":\"multi\""))
+  assert_true(json.contains("\"count\":2"))
+  // 逐板 autofix 摘要可见且清偿干净
+  assert_true(json.contains("\"autofix\":{\"ok\":true"))
+  assert_false(json.contains("\"autofix\":{\"ok\":false"))
+  // settings 底缘无 44px 带区空位：放弃合成，相邻流诚实跳过而非落出画布
+  assert_true(json.contains("\"flows\":[]"))
+  for ab_id in ["settings", "dashboard"] {
+    match p.artboards.get(ab_id) {
+      Some(meta) => {
+        assert_false(meta.doc.has("goto_dashboard"))
+        assert_true(validate(meta.doc).length() == 0)
+        // 全部节点严格包含在画板内（越界按钮曾是清偿不动的永久债）
+        let layout = solve(meta.doc)
+        for id in meta.doc.nodes.keys() {
+          if id != "root" {
+            match layout.rect_of(id) {
+              Some(r) => assert_true(r.y + r.height <= meta.height + 0.5)
+              None => ()
+            }
+          }
+        }
+      }
+      None => assert_true(false)
+    }
+  }
 }
 
 ///|

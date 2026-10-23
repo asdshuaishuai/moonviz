@@ -154,4 +154,7 @@ test "help surfaces the generative commands" {
   let help = cli_exec(@core.Project::new(), "help")
   assert_true(help.contains("generate <意图一句话> [as <name>]"))
   assert_true(help.contains("ops-batch-b64 <b64>"))
+  // 组合意图通道（"+" 多段 → mode:multi）必须从 help 可发现——与
+  // core/agent_api.mbt 的 generate 描述同源，SKILL.md 不再是唯一入口
+  assert_true(help.contains("composite → multi-artboard"))
 }

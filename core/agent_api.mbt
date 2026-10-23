@@ -264,9 +264,9 @@ pub fn list_tools() -> Array[AgentTool] {
   // ---- 生成式 UI（执行策略第一级：意图声明，引擎生成）----
   add(
     "generate",
-    "Generative UI entry: describe the page in one sentence; the engine picks a semantic template, self-heals norms/predicates, and returns a report (autofix/missing/score). Prefer this over placing nodes one by one — the agent declares intent, the engine generates.",
+    "Generative UI entry: describe the page in one sentence; the engine picks a semantic template, self-heals norms/predicates, and returns a report (autofix/missing/score). Prefer this over placing nodes one by one — the agent declares intent, the engine generates. Composite intent: \"+\"-separated segments (e.g. \"登录+注册\", max 4) expand to multiple artboards wired with adjacent auto-navigation flows, returned as a mode:\"multi\" envelope (count/artboards/flows).",
     [
-      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard). NOTE: theme applies project-wide (recolors all existing artboards)"),
+      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard); composite \"登录+注册\" splits on \"+\" (max 4 segments) → mode:\"multi\" envelope. NOTE: theme applies project-wide (recolors all existing artboards)"),
       so("name", "artboard name (default = template id)"),
     ],
   )
@@ -341,7 +341,7 @@ pub fn list_tools() -> Array[AgentTool] {
   add("ddp_view", "Report DDP codec status (read-only view).", [])
   add(
     "list_ops",
-    "Machine-readable CLI op surface: all 27 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).",
+    "Machine-readable CLI op surface: all \{op_entries().length()} mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).",
     [],
   )
   add(

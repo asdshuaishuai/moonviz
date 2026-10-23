@@ -22,12 +22,29 @@ function die(msg) {
 
 // ── 守卫 1+2：moon_pkg 源级断言（不依赖产物是否已构建）──
 const pkgSrc = await readFile(new URL('../wasm/moon.pkg', import.meta.url), 'utf8');
-const lists = [...pkgSrc.matchAll(/"exports"\s*:\s*\[([^\]]*)\]/g)]
-  .map(m => [...m[1].matchAll(/"([a-z0-9_]+)"/g)].map(x => x[1]));
-if (lists.length !== 2) {
-  die(`moon.pkg 解析到 ${lists.length} 个 exports 段（应恰为 2：wasm / wasm-gc）`);
+// 锚定 link 键（"wasm"/"wasm-gc"）归属清单，而非按段出现顺序取——键重排
+// 时守卫 1 的「classic 独有」标签才不会张冠李戴；[^{}] 限定段体不出所在
+// 对象，防止跨段误配。
+const sections = [...pkgSrc.matchAll(/"(wasm|wasm-gc)"\s*:\s*\{[^{}]*?"exports"\s*:\s*\[([^\]]*)\]/g)]
+  .map(m => {
+    const key = m[1];
+    // raw-token 总数 vs 解析条目数一致性断言：导出名若含字符类之外的字
+    // 符，窄正则会静默丢弃——锁步两边同过滤仍相等、required 烘焙比对看
+    // 不到、守卫 3 只查子集，三层守卫全部失明，故必须就地失衡即红。
+    const raw = [...m[2].matchAll(/"([^"]+)"/g)].map(x => x[1]);
+    const bad = raw.filter(n => !/^[A-Za-z0-9_]+$/.test(n));
+    if (bad.length) {
+      die(`moon.pkg ${key} 段 raw token ${raw.length} 个 / 解析仅得 ${raw.length - bad.length} 个：` +
+        `导出名含 [A-Za-z0-9_] 之外字符会被静默丢弃：${bad.join(', ')}`);
+    }
+    return [key, raw];
+  });
+const byKey = Object.fromEntries(sections);
+if (sections.length !== 2 || !byKey.wasm || !byKey['wasm-gc']) {
+  die(`moon.pkg 解析到 ${sections.length} 个 exports 段（键：${sections.map(([k]) => k).join(', ') || '无'}；应恰为 wasm / wasm-gc 各 1）`);
 }
-const [classicList, gcList] = lists;
+const classicList = byKey.wasm;
+const gcList = byKey['wasm-gc'];
 const bakeMiss = classicList.filter(n => !required.includes(n));
 const bakeExtra = required.filter(n => !classicList.includes(n));
 if (bakeMiss.length || bakeExtra.length) {
@@ -124,7 +141,14 @@ for (const path of paths) {
     if (!withBuiltins) {
       mod = new WebAssembly.Module(new Uint8Array(bytes), GC_OPTS);
     }
-    const inst = new WebAssembly.Instance(mod, {});
+    // 实例化兜底：Module.imports 仍如实上报 builtins imports 的引擎（未
+    // 特化 js-string）会在此抛未捕获异常，与编译失败同款给可读诊断。
+    let inst;
+    try {
+      inst = new WebAssembly.Instance(mod, {});
+    } catch (e) {
+      die(`${path}：wasm-gc 实例化失败（gc 侧需 wasm-gc + js-string builtins 运行时，Node ≥ 24 / Chrome 119+）：${e.message}`);
+    }
     const s = inst.exports.version_info();
     if (typeof s !== 'string' || !s.includes('"version"')) {
       die(`${path}：version_info 未返回含 "version" 的字符串（js-string 判别失败：${typeof s}）`);

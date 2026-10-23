@@ -44,6 +44,8 @@ jobs:
 
       - name: Example repro (examples/login-demo.mbt.md)
         run: |
+          # pipefail：ubuntu 默认 bash -e 不含 pipefail，cli.exe 非零退出但输出恰含标记时步骤会假绿
+          set -o pipefail
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --target native cli
           B64="$(base64 -w0 examples/login-demo.mbt.md)"
@@ -52,6 +54,7 @@ jobs:
 
       - name: README Quick Start repro
         run: |
+          set -o pipefail
           export PATH="$HOME/.moon/bin:$PATH"
           printf 'template login t_login 390 844\ncreate t_home 390 844\nupdate t_login welcome_title text="Welcome back"\nflow t_login t_home login_btn\nexport-mbt-human\nexit\n' \
             | _build/native/debug/build/cli/cli.exe | grep -q '"debt":'

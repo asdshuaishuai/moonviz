@@ -6,10 +6,26 @@
 /// 1. 计数锚定：新增 op 必须同步分发器 + op_entries() + SKILL.md 三处；
 /// 2. 每条注册 op 裸名打一遍分发器，错误必须是该 op 的 usage 串
 ///    （逐字匹配），而不是 mbt_operation_unsupported——漏注册、拼错、
-///    usage 漂移一律红。
+///    usage 漂移一律红；
+/// 3. Agent 可见的 list_ops 工具描述（core/agent_api.mbt）必须内插
+///    op_entries().length() 与注册表同源——回退成字面量后，下次加 op
+///    即与本守卫同红。
 test "list-ops：注册表与分发器对齐" {
   let ops = op_entries()
   assert_eq(ops.length(), 27)
+  // 工具面同源：list_ops 描述内插注册表条数，不写死数字
+  let want_desc = "all \{ops.length()} mutating ops"
+  let mut desc_ok = false
+  for t in list_tools().iter() {
+    if t.name == "list_ops" {
+      assert_true(
+        t.description.contains(want_desc),
+        msg="list_ops 工具描述与注册表条数脱钩: \{t.description}",
+      )
+      desc_ok = true
+    }
+  }
+  assert_true(desc_ok, msg="list_tools 未注册 list_ops")
   let p = Project::new()
   for e in ops.iter() {
     let want = "mbt_operation_usage:" + e.usage

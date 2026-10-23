@@ -321,7 +321,7 @@ fn mbt_seg_trim(s : String) -> String {
   let mut end = chars.length()
   while start < end {
     let c = chars[start]
-    if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+    if ws.contains(c) {
       start = start + 1
     } else {
       break
@@ -329,7 +329,7 @@ fn mbt_seg_trim(s : String) -> String {
   }
   while end > start {
     let c = chars[end - 1]
-    if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+    if ws.contains(c) {
       end = end - 1
     } else {
       break
@@ -354,16 +354,55 @@ fn egress_keyword(target_hint : String) -> String {
 }
 
 ///|
-/// 在 from 画板上找出口节点：text/name 含目标语义关键词者就地连线；
-/// 找不到则合成 "前往X" 按钮（底缘放置，auto_fix 清偿）——流必须指向
-/// 真实存在的节点（mbt_validate_flows 契约）。
+/// 目标模板的惯用英文出口词（小写）。全部内置模板文案为英文（templates.mbt
+/// 83 处 set_text 零 CJK），纯中文关键词对 text/name 做 contains 永远命不中
+/// 现成出口——旗舰示例「登录+注册」会在 login 既有的 signup_btn（Create
+/// Account）之下再凭空合成第二个注册 CTA。按目标模板给英文同义词，命中
+/// 既有出口（节点 text 或 id 名）即就地连线不再合成。web_* 设备形态与其
+/// 移动形态同词；无惯用出口的模板（empty_state/落地页）返回空表，退回中文
+/// 关键词匹配。不收 "stats" 一类会撞 dashboard 自身 stat_N 节点名的泛词。
+fn egress_template_keywords(template_id : String) -> Array[String] {
+  if template_id == "signup" {
+    ["signup", "sign up", "register"]
+  } else if template_id == "login" || template_id == "web_login" {
+    ["login", "sign in", "signin"]
+  } else if template_id == "settings" {
+    ["settings", "preferences"]
+  } else if template_id == "dashboard" || template_id == "web_dashboard" {
+    ["dashboard", "overview"]
+  } else if template_id == "profile" {
+    ["profile", "account"]
+  } else if template_id == "list_detail" {
+    ["list", "detail", "feed"]
+  } else if template_id == "onboarding" {
+    ["onboarding", "get started"]
+  } else {
+    []
+  }
+}
+
+///|
+/// 在 from 画板上找出口节点：text/name 含目标语义关键词（中文 hint 词 +
+/// 目标模板惯用英文词）者就地连线；找不到则合成 "前往X" 按钮——放置经
+/// 画布高度钳制（autofill 同款 `y + node_h > ab.height`），底缘放不下先
+/// 自上而下找带区空位，仍无空位则放弃合成返回 ""（调用方跳过该相邻流）
+/// ——流必须指向真实存在的节点（mbt_validate_flows 契约），而越界按钮是
+/// auto_fix 清偿不动的债（fix_overflow 对负剩余空间保持原尺寸）。
 fn Project::find_or_make_egress(
   self : Project,
   from_ab~ : String,
   target_hint~ : String,
   target_id~ : String,
+  target_template~ : String,
 ) -> String {
   let kw = egress_keyword(target_hint)
+  let kws : Array[String] = []
+  if kw != "" {
+    kws.push(kw.to_lower())
+  }
+  for en in egress_template_keywords(target_template).iter() {
+    kws.push(en)
+  }
   let ab = match self.artboards.get(from_ab) {
     Some(meta) => meta
     None => return "goto_" + target_id
@@ -378,7 +417,7 @@ fn Project::find_or_make_egress(
         match layout.rect_of(id) {
           Some(_) => {
             let hay = (n.text + " " + n.name).to_lower()
-            if kw != "" && hay.contains(kw.to_lower()) {
+            if kws.length() > 0 && contains_any(hay, kws) {
               return id
             }
           }
@@ -387,7 +426,10 @@ fn Project::find_or_make_egress(
       None => ()
     }
   }
-  // 合成导航按钮：底缘之下，交由调用方的 auto_fix 清偿
+  // 合成导航按钮：底缘之下放置；高内容模板（settings/dashboard 底缘已近
+  // 满页）放不下时找带区空位，再放不下则放弃——宁可少一条流也不落出画布
+  let node_w = 140.0
+  let node_h = 44.0
   let mut bottom = 0.0
   for id in ab.doc.nodes.keys() {
     if id == "root" {
@@ -400,15 +442,44 @@ fn Project::find_or_make_egress(
       None => ()
     }
   }
+  let mut y = bottom + 16.0
+  if y + node_h > ab.height {
+    // 带区空位扫描：候选矩形与既有内容仅贴边不算相交（Rect::intersects）
+    y = -1.0
+    let mut cy = 8.0
+    while y < 0.0 && cy + node_h <= ab.height {
+      let cand = Rect::new(24.0, cy, node_w, node_h)
+      let mut taken = false
+      for id in ab.doc.nodes.keys() {
+        if id == "root" {
+          continue
+        }
+        match layout.rect_of(id) {
+          Some(r) => if cand.intersects(r) {
+            taken = true
+          }
+          None => ()
+        }
+      }
+      if taken {
+        cy = cy + 8.0
+      } else {
+        y = cy
+      }
+    }
+    if y < 0.0 {
+      return ""
+    }
+  }
   let node_id = "goto_" + target_id
   let _ = self.place_component(
     artboard=from_ab,
     component_id="button",
     instance_id=node_id,
     x=24.0,
-    y=bottom + 16.0,
-    w=140.0,
-    h=44.0,
+    y~,
+    w=node_w,
+    h=node_h,
   )
   let _ = self.edit_node(
     artboard=from_ab,
@@ -419,16 +490,72 @@ fn Project::find_or_make_egress(
 }
 
 ///|
+/// 从 JSON 串取 `"key":` 之后的非负整数；键缺失或后随非数字时返回 fallback。
+/// 仅供 multi 信封摘要解析（autofix fixes/remaining、missing_count、score）。
+fn json_int_field(json : String, key : String, fallback : Int) -> Int {
+  let pat = "\"" + key + "\":"
+  match json.find(pat) {
+    None => fallback
+    Some(pos) => {
+      let rest = json.substring(start=pos + pat.length())
+      let mut j = 0
+      let mut v = 0
+      while j < rest.length() {
+        match rest.get_char(j) {
+          Some(c) =>
+            if c >= '0' && c <= '9' {
+              v = v * 10 + (c.to_int() - 48)
+              j = j + 1
+            } else {
+              break
+            }
+          None => break
+        }
+      }
+      if j == 0 {
+        fallback
+      } else {
+        v
+      }
+    }
+  }
+}
+
+///|
+/// 导航流按 (from,to,trigger) 去重，保留首条。add_flow 无条件 push
+/// （project.mbt 越界不可改），模板条件流又随画板 upsert 重建再次追加
+/// ——generate_multi 幂等重跑的线性膨胀（实测 2→5→8）在此一次性收口。
+fn Project::dedup_flows(self : Project) -> Unit {
+  let seen : Map[String, Bool] = Map::new()
+  let out : Array[FlowEdge] = []
+  for f in self.flows.iter() {
+    let key = "\{f.from}>\{f.to}@\{f.trigger}"
+    if !seen.contains(key) {
+      seen.set(key, true)
+      out.push(f)
+    }
+  }
+  if out.length() != self.flows.length() {
+    self.flows = out
+  }
+}
+
+///|
 /// 组合意图生成：逐段分类 → 逐板实例化（纯主题段只换主题不生成板，
-/// 同模板重名加序号）→ 相邻板自动连线（出口启发）→ 逐板自愈/评分。
-/// 信封 mode=multi，逐板带 missing_count/score 摘要。
+/// 同模板重名加序号）→ 相邻板自动连线（出口启发）→ 流去重 → 逐板自愈/
+/// 评分。信封 mode=multi，逐板带 replaced（覆盖探测，与单通道同构）、
+/// autofix（ok/fixes[/remaining] 摘要）、missing_count/score。
 pub fn Project::generate_multi(
   self : Project,
   segments : Array[String],
   name? : String = "",
 ) -> Result[String, String] {
-  // 1) 逐段分类；无页面语义的段视为主题修饰（dark 等）不生成板
+  // 1) 逐段分类；无页面语义的段视为主题修饰（dark 等）不生成板。
+  //    页面段原文必须记账：退化单通道时拿页面段重拼——写死 segments[0]
+  //    会把主题词在前的组合（"dark+登录"）退化成 "dark dark"，页面段
+  //    被丢弃、静默落到空状态兜底板。
   let boards : Array[GenIntent] = []
+  let page_segs : Array[String] = []
   let mut theme = ""
   for seg in segments.iter() {
     let gi = parse_generate_intent(seg)
@@ -442,14 +569,16 @@ pub fn Project::generate_multi(
       theme = gi.theme
     }
     boards.push(gi)
+    page_segs.push(seg)
   }
   if boards.length() == 0 {
     return Err("generate_multi_no_page_intent")
   }
   if boards.length() == 1 {
-    // 退化为单段：走单通道保持信封形状兼容。被丢弃的主题修饰段
-    // （"登录+dark" 的 dark）把关键词拼回意图，单通道重新解析即生效
-    let only = segments[0]
+    // 退化为单段：走单通道保持信封形状兼容。页面段原文 + 被丢弃的
+    // 主题修饰段关键词拼回意图，单通道重新解析即生效（顺序无关：
+    // "dark+登录" 与 "登录+dark" 同得 login + dark 主题）
+    let only = page_segs[0]
     let with_theme = if theme != "" { "\{only} \{theme}" } else { only }
     return self.generate(intent_text=with_theme, name=name)
   }
@@ -461,19 +590,29 @@ pub fn Project::generate_multi(
       Err(_) => theme_applied = ""
     }
   }
-  // 3) 逐板实例化：同模板重名追加序号；name 参数归第一板
+  // 3) 逐板实例化：同模板重名追加序号；name 参数归第一板。
+  //    查重按 sanitize_id 归一口径：create_artboard 以 sanitize_id(name)
+  //    为画板 id 做 Map upsert（大写转小写、非法字符转 _），未归一查重
+  //    把 "Signup"/"signup" 当两个名，归一后同 id 的第二板静默覆盖第一板
+  //    （信封仍报 count:2，相邻导航流成自环）。
   let ids : Array[String] = []
   let hints : Array[String] = []
-  let used_names : Map[String, Bool] = Map::new()
+  let replaced_flags : Array[Bool] = []
+  let used_ids : Map[String, Bool] = Map::new()
   let mut first = true
   for gi in boards.iter() {
     let mut ab_name = if first && name != "" { name } else { gi.template_id }
+    let mut ab_id = sanitize_id(ab_name)
     let mut n = 2
-    while used_names.contains(ab_name) {
+    while used_ids.contains(ab_id) {
       ab_name = "\{gi.template_id}_\{n}"
+      ab_id = sanitize_id(ab_name)
       n = n + 1
     }
-    used_names.set(ab_name, true)
+    used_ids.set(ab_id, true)
+    // 覆盖探测与单通道同口径：重跑同组合意图经 upsert 静默覆盖旧
+    // Document（连同其上的 tier-2 精修），信封逐板 replaced 可见。
+    let replaced = self.artboards.contains(ab_id)
     let ab = match
       self.apply_template(
         template_id=gi.template_id,
@@ -486,9 +625,11 @@ pub fn Project::generate_multi(
     }
     ids.push(ab)
     hints.push(gi.page_hint)
+    replaced_flags.push(replaced)
     first = false
   }
-  // 4) 相邻板导航流：出口启发（就地找语义节点，找不到合成前往按钮）
+  // 4) 相邻板导航流：出口启发（就地找语义节点，找不到合成前往按钮；
+  //    画布放不下放弃合成时跳过该流——流契约要求 trigger 指向真实节点）
   let flows_json : Array[String] = []
   let mut i = 0
   while i + 1 < ids.length() {
@@ -496,56 +637,50 @@ pub fn Project::generate_multi(
       from_ab=ids[i],
       target_hint=hints[i + 1],
       target_id=ids[i + 1],
+      target_template=boards[i + 1].template_id,
     )
-    self.add_flow(from=ids[i], to=ids[i + 1], trigger="tap:\{egress}")
-    flows_json.push(
-      "{\"from\":\"\{json_escape(ids[i])}\",\"to\":\"\{json_escape(ids[i + 1])}\",\"trigger\":\"tap:\{json_escape(egress)}\"}",
-    )
+    if egress != "" {
+      self.add_flow(from=ids[i], to=ids[i + 1], trigger="tap:\{egress}")
+      flows_json.push(
+        "{\"from\":\"\{json_escape(ids[i])}\",\"to\":\"\{json_escape(ids[i + 1])}\",\"trigger\":\"tap:\{json_escape(egress)}\"}",
+      )
+    }
     i = i + 1
   }
-  // 5) 逐板自愈 + 摘要（先逐板 auto_fix 清偿合成按钮引入的重叠）
+  // 5) 流去重：模板条件流（templates.mbt 在目标板已存在时追加内建流，
+  //    随 upsert 重建再次追加）与出口流每次重跑各追加一遍，而 add_flow
+  //    无条件 push（project.mbt 越界不可改）——幂等重跑线性膨胀，在
+  //    构造信封前按 (from,to,trigger) 保留首条一次性收口。
+  self.dedup_flows()
+  // 6) 逐板自愈 + 摘要（先逐板 auto_fix 清偿合成按钮引入的重叠）
   let arts : Array[String] = []
   let mut k = 0
   while k < ids.length() {
-    let _ = self.auto_fix(artboard=ids[k])
+    // autofix 结果透传（不再 `let _ =` 丢弃）：逐板 ok/remaining 摘要
+    // 进入信封——清偿不动时调用方可见，生成器不谎报合规。
+    let autofix_json = match self.auto_fix(artboard=ids[k]) {
+      Ok(j) => j
+      Err(_) => "{\"ok\":false,\"remaining\":0,\"fixes\":0}"
+    }
+    let fixes_n = json_int_field(autofix_json, "fixes", 0)
+    let autofix_summary = if autofix_json.contains("\"ok\":true") {
+      "{\"ok\":true,\"fixes\":\{fixes_n}}"
+    } else {
+      "{\"ok\":false,\"remaining\":\{json_int_field(autofix_json, "remaining", 0)},\"fixes\":\{fixes_n}}"
+    }
     let missing_json = match self.infer_missing(artboard=ids[k]) {
       Ok(j) => j
       Err(_) => "{\"missing_count\":0}"
     }
-    let missing_count = match missing_json.find("\"missing_count\":") {
-      Some(pos) => {
-        let rest = missing_json.substring(start=pos + 16)
-        let mut j = 0
-        while j < rest.length() {
-          match rest.get_char(j) {
-            Some(c) => if c >= '0' && c <= '9' { j = j + 1 } else { break }
-            None => break
-          }
-        }
-        rest.substring(start=0, end=j).to_string()
-      }
-      None => "0"
-    }
+    let missing_count = json_int_field(missing_json, "missing_count", 0)
     let score_json = match self.design_quality_score(artboard=ids[k]) {
       Ok(j) => j
       Err(_) => "{}"
     }
-    let score_total = match score_json.find("\"total\":") {
-      Some(pos) => {
-        let rest = score_json.substring(start=pos + 8)
-        let mut j = 0
-        while j < rest.length() {
-          match rest.get_char(j) {
-            Some(c) => if c >= '0' && c <= '9' { j = j + 1 } else { break }
-            None => break
-          }
-        }
-        rest.substring(start=0, end=j).to_string()
-      }
-      None => "?"
-    }
+    let sv = json_int_field(score_json, "total", -1)
+    let score_total = if sv < 0 { "?" } else { sv.to_string() }
     arts.push(
-      "{\"id\":\"\{json_escape(ids[k])}\",\"template\":\"\{json_escape(boards[k].template_id)}\",\"page_hint\":\"\{json_escape(hints[k])}\",\"missing_count\":\{missing_count},\"score\":\{score_total}}",
+      "{\"id\":\"\{json_escape(ids[k])}\",\"template\":\"\{json_escape(boards[k].template_id)}\",\"page_hint\":\"\{json_escape(hints[k])}\",\"replaced\":\{replaced_flags[k]},\"autofix\":\{autofix_summary},\"missing_count\":\{missing_count},\"score\":\{score_total}}",
     )
     k = k + 1
   }

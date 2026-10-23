@@ -20,7 +20,8 @@ pub fn new() -> @core.Project {
 }
 
 ///|
-/// 应用一条 mutating op（与 CLI/MCP/WASM 四面同源分发，26 条）。
+/// 应用一条 mutating op（与 CLI/MCP/WASM 三面同源分发；条数随注册演进，
+/// 漂移由 ops_registry_wbtest 锚定，不写死数字）。
 /// 典型：`create` / `template` / `place` / `update` / `flow` / `unflow` /
 /// `reorder` / `theme` / `token` / `fix`。
 pub fn apply(p : @core.Project, op : String) -> Result[Unit, String] {
