@@ -10,7 +10,7 @@
 /// ```
 ///
 /// 设计约束：门面只做转发与组装，不改写引擎语义——所有变更仍走
-/// `apply`（26 条 mutating op，HumanGate/AgentGate 语义由调用方选路），
+/// `apply`（mutating op（条数随注册演进，漂移由 ops_registry_wbtest 锚定），HumanGate/AgentGate 语义由调用方选路），
 /// 与 CLI/MCP/WASM 三面同源。
 
 ///|

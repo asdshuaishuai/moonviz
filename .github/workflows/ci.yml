@@ -56,12 +56,17 @@ jobs:
           printf 'template login t_login 390 844\ncreate t_home 390 844\nupdate t_login welcome_title text="Welcome back"\nflow t_login t_home login_btn\nexport-mbt-human\nexit\n' \
             | _build/native/debug/build/cli/cli.exe | grep -q '"debt":'
 
+      - name: Setup Node 24 (wasm-gc + js-string builtins 断言需 ≥ 24)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Dual wasm build
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --release --target wasm-gc wasm
           moon build --release --target wasm wasm
-          node scripts/check-wasm-abi.mjs _build/wasm/release/build/wasm/wasm.wasm
+          node scripts/check-wasm-abi.mjs _build/wasm/release/build/wasm/wasm.wasm _build/wasm-gc/release/build/wasm/wasm.wasm
 
       - name: Desktop self-render build + smoke (client-guided, no UI)
         run: |
