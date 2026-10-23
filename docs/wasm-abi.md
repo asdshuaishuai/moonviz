@@ -64,18 +64,16 @@ let ptr = render_mbt_in();
 let json = read_moonstr(ptr);   // §2 判别式读取
 ```
 
-带 `_in` 后缀的入口（当前 21 个）：`render_mbt_in validate_mbt_in
-export_html_in apply_agent_op_in apply_human_op_in session_open_in
-session_apply_agent_in session_apply_human_in session_export_svg_in
-session_lint_in session_query_nodes_in session_interactions_in
-session_states_in session_spec_in session_infer_page_type_in
-session_infer_missing_in session_extract_design_system_in
-session_generate_responsive_in session_component_compile_b64_in
-session_constrain_in session_tap_in session_critique_in
-session_auto_fix_in session_open_project_json_in`。
+带 `_in` 后缀的入口（当前 26 个）：`render_mbt_in validate_mbt_in export_html_in apply_agent_op_in apply_human_op_in session_open_in session_apply_agent_in session_apply_human_in session_export_svg_in session_lint_in session_query_nodes_in session_interactions_in session_states_in session_spec_in session_infer_page_type_in session_infer_missing_in session_extract_design_system_in session_generate_responsive_in session_generate_in session_component_compile_b64_in session_constrain_in session_tap_in session_critique_in session_auto_fix_in session_open_project_json_in session_history_in`。
 
 ## 6. 防漂移
 
-`scripts/check-wasm-abi.mjs` 在每次 classic 构建后自动校验：
-导出清单齐全、0 imports、字符串对象布局判别式（对 version_info 实测
-往返）。布局/编码漂移会在 CI 直接报错，不再静默损坏宿主。
+`scripts/check-wasm-abi.mjs` 三层守卫（CI 的 Dual wasm build 步骤以
+Node ≥ 24 对双产物实跑）：
+1. required 烘焙同步——脚本内 required 数组必须与 moon.pkg classic 段
+   逐字一致（忘烘焙即红）；
+2. 双清单锁步——moon.pkg 的 wasm / wasm-gc exports 段逐字相等（漏配
+   一侧即红，如 gc 段漏 session_generate_in 的回归）；
+3. 双产物实测——classic 全量（0 imports + version_info 字符串判别式
+   实测往返）；wasm-gc 按 js-string builtins 实例化后 required 全导出
+   + version 冒烟。布局/编码/清单漂移在 CI 直接报错，不再静默损坏宿主。
