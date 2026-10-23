@@ -220,6 +220,15 @@ pub fn Project::generate(
   intent_text~ : String,
   name? : String = "",
 ) -> Result[String, String] {
+  // 组合意图（"登录+注册"）：多段走 multi 通道（多画板 + 相邻导航流）；
+  // 单段路径保持字节级不变（兼容既有信封消费者）
+  let segs = split_intent_segments(intent_text)
+  if segs.length() > 1 {
+    if segs.length() > GENERATE_MULTI_MAX {
+      return Err("generate_multi_too_many:\{GENERATE_MULTI_MAX}")
+    }
+    return self.generate_multi(segs, name=name)
+  }
   let intent = parse_generate_intent(intent_text)
   let ab_name = if name == "" { intent.template_id } else { name }
   // 覆盖探测：create_artboard 经 sanitize_id 归一后 upsert，重跑同意图
@@ -269,5 +278,280 @@ pub fn Project::generate(
   let alts_j = alts.join(",")
   Ok(
     "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
+  )
+}
+
+///|
+/// 组合意图上限：一句话最多展开 4 块画板（防滥用；真实原型一屏意图
+/// 极少超过 4 页）。
+pub const GENERATE_MULTI_MAX : Int = 4
+
+///|
+/// 意图分段：按 "+" / "＋" 切分（保守分隔符——空格是单意图内的正常
+/// 组成部分，"登录页 dark" 不受影响），去空白、丢空段。
+pub fn split_intent_segments(text : String) -> Array[String] {
+  let out : Array[String] = []
+  let cur = StringBuilder::new()
+  for c in text.iter() {
+    if c == '+' || c == '＋' {
+      let seg = mbt_seg_trim(cur.to_string())
+      if seg != "" {
+        out.push(seg)
+      }
+      cur.reset()
+    } else {
+      cur.write_char(c)
+    }
+  }
+  let seg = mbt_seg_trim(cur.to_string())
+  if seg != "" {
+    out.push(seg)
+  }
+  out
+}
+
+///|
+fn mbt_seg_trim(s : String) -> String {
+  let ws : Array[Char] = [' ', '\t', '\n', '\r']
+  let chars : Array[Char] = []
+  for c in s.iter() {
+    chars.push(c)
+  }
+  let mut start = 0
+  let mut end = chars.length()
+  while start < end {
+    let c = chars[start]
+    if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+      start = start + 1
+    } else {
+      break
+    }
+  }
+  while end > start {
+    let c = chars[end - 1]
+    if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+      end = end - 1
+    } else {
+      break
+    }
+  }
+  let sb = StringBuilder::new()
+  for i in start..<end {
+    sb.write_char(chars[i])
+  }
+  sb.to_string()
+}
+
+///|
+/// 出口节点语义关键词：目标画板 hint 去尾 "页"（注册页→注册）。
+fn egress_keyword(target_hint : String) -> String {
+  if target_hint.length() >= 3 &&
+    target_hint.substring(start=target_hint.length() - 3) == "页" {
+    target_hint.substring(start=0, end=target_hint.length() - 3)
+  } else {
+    target_hint
+  }
+}
+
+///|
+/// 在 from 画板上找出口节点：text/name 含目标语义关键词者就地连线；
+/// 找不到则合成 "前往X" 按钮（底缘放置，auto_fix 清偿）——流必须指向
+/// 真实存在的节点（mbt_validate_flows 契约）。
+fn Project::find_or_make_egress(
+  self : Project,
+  from_ab~ : String,
+  target_hint~ : String,
+  target_id~ : String,
+) -> String {
+  let kw = egress_keyword(target_hint)
+  let ab = match self.artboards.get(from_ab) {
+    Some(meta) => meta
+    None => return "goto_" + target_id
+  }
+  let layout = solve(ab.doc)
+  for id in ab.doc.nodes.keys() {
+    if id == "root" {
+      continue
+    }
+    match ab.doc.nodes.get(id) {
+      Some(n) =>
+        match layout.rect_of(id) {
+          Some(_) => {
+            let hay = (n.text + " " + n.name).to_lower()
+            if kw != "" && hay.contains(kw.to_lower()) {
+              return id
+            }
+          }
+          None => ()
+        }
+      None => ()
+    }
+  }
+  // 合成导航按钮：底缘之下，交由调用方的 auto_fix 清偿
+  let mut bottom = 0.0
+  for id in ab.doc.nodes.keys() {
+    if id == "root" {
+      continue
+    }
+    match layout.rect_of(id) {
+      Some(r) => if r.y + r.height > bottom {
+        bottom = r.y + r.height
+      }
+      None => ()
+    }
+  }
+  let node_id = "goto_" + target_id
+  let _ = self.place_component(
+    artboard=from_ab,
+    component_id="button",
+    instance_id=node_id,
+    x=24.0,
+    y=bottom + 16.0,
+    w=140.0,
+    h=44.0,
+  )
+  let _ = self.edit_node(
+    artboard=from_ab,
+    node_id=node_id,
+    kvs=[("text", "前往" + kw)],
+  )
+  node_id
+}
+
+///|
+/// 组合意图生成：逐段分类 → 逐板实例化（纯主题段只换主题不生成板，
+/// 同模板重名加序号）→ 相邻板自动连线（出口启发）→ 逐板自愈/评分。
+/// 信封 mode=multi，逐板带 missing_count/score 摘要。
+pub fn Project::generate_multi(
+  self : Project,
+  segments : Array[String],
+  name? : String = "",
+) -> Result[String, String] {
+  // 1) 逐段分类；无页面语义的段视为主题修饰（dark 等）不生成板
+  let boards : Array[GenIntent] = []
+  let mut theme = ""
+  for seg in segments.iter() {
+    let gi = parse_generate_intent(seg)
+    if gi.page_hint.contains("未识别") {
+      if gi.theme != "" && theme == "" {
+        theme = gi.theme
+      }
+      continue
+    }
+    if gi.theme != "" && theme == "" {
+      theme = gi.theme
+    }
+    boards.push(gi)
+  }
+  if boards.length() == 0 {
+    return Err("generate_multi_no_page_intent")
+  }
+  if boards.length() == 1 {
+    // 退化为单段：走单通道保持信封形状兼容。被丢弃的主题修饰段
+    // （"登录+dark" 的 dark）把关键词拼回意图，单通道重新解析即生效
+    let only = segments[0]
+    let with_theme = if theme != "" { "\{only} \{theme}" } else { only }
+    return self.generate(intent_text=with_theme, name=name)
+  }
+  // 2) 主题一次全局生效（先换主题再实例化，模板取色一致）
+  let mut theme_applied = ""
+  if theme != "" {
+    match self.apply_theme(theme) {
+      Ok(_) => theme_applied = theme
+      Err(_) => theme_applied = ""
+    }
+  }
+  // 3) 逐板实例化：同模板重名追加序号；name 参数归第一板
+  let ids : Array[String] = []
+  let hints : Array[String] = []
+  let used_names : Map[String, Bool] = Map::new()
+  let mut first = true
+  for gi in boards.iter() {
+    let mut ab_name = if first && name != "" { name } else { gi.template_id }
+    let mut n = 2
+    while used_names.contains(ab_name) {
+      ab_name = "\{gi.template_id}_\{n}"
+      n = n + 1
+    }
+    used_names.set(ab_name, true)
+    let ab = match
+      self.apply_template(
+        template_id=gi.template_id,
+        name=ab_name,
+        width=gi.width,
+        height=gi.height,
+      ) {
+      Err(error) => return Err(error)
+      Ok(id) => id
+    }
+    ids.push(ab)
+    hints.push(gi.page_hint)
+    first = false
+  }
+  // 4) 相邻板导航流：出口启发（就地找语义节点，找不到合成前往按钮）
+  let flows_json : Array[String] = []
+  let mut i = 0
+  while i + 1 < ids.length() {
+    let egress = self.find_or_make_egress(
+      from_ab=ids[i],
+      target_hint=hints[i + 1],
+      target_id=ids[i + 1],
+    )
+    self.add_flow(from=ids[i], to=ids[i + 1], trigger="tap:\{egress}")
+    flows_json.push(
+      "{\"from\":\"\{json_escape(ids[i])}\",\"to\":\"\{json_escape(ids[i + 1])}\",\"trigger\":\"tap:\{json_escape(egress)}\"}",
+    )
+    i = i + 1
+  }
+  // 5) 逐板自愈 + 摘要（先逐板 auto_fix 清偿合成按钮引入的重叠）
+  let arts : Array[String] = []
+  let mut k = 0
+  while k < ids.length() {
+    let _ = self.auto_fix(artboard=ids[k])
+    let missing_json = match self.infer_missing(artboard=ids[k]) {
+      Ok(j) => j
+      Err(_) => "{\"missing_count\":0}"
+    }
+    let missing_count = match missing_json.find("\"missing_count\":") {
+      Some(pos) => {
+        let rest = missing_json.substring(start=pos + 16)
+        let mut j = 0
+        while j < rest.length() {
+          match rest.get_char(j) {
+            Some(c) => if c >= '0' && c <= '9' { j = j + 1 } else { break }
+            None => break
+          }
+        }
+        rest.substring(start=0, end=j).to_string()
+      }
+      None => "0"
+    }
+    let score_json = match self.design_quality_score(artboard=ids[k]) {
+      Ok(j) => j
+      Err(_) => "{}"
+    }
+    let score_total = match score_json.find("\"total\":") {
+      Some(pos) => {
+        let rest = score_json.substring(start=pos + 8)
+        let mut j = 0
+        while j < rest.length() {
+          match rest.get_char(j) {
+            Some(c) => if c >= '0' && c <= '9' { j = j + 1 } else { break }
+            None => break
+          }
+        }
+        rest.substring(start=0, end=j).to_string()
+      }
+      None => "?"
+    }
+    arts.push(
+      "{\"id\":\"\{json_escape(ids[k])}\",\"template\":\"\{json_escape(boards[k].template_id)}\",\"page_hint\":\"\{json_escape(hints[k])}\",\"missing_count\":\{missing_count},\"score\":\{score_total}}",
+    )
+    k = k + 1
+  }
+  let arts_j = arts.join(",")
+  let flows_j = flows_json.join(",")
+  Ok(
+    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"theme_applied\":\"\{theme_applied}\",\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
   )
 }

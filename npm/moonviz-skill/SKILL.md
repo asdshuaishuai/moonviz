@@ -31,6 +31,9 @@ does not fit — falling through is correct behavior, not failure):**
    norms-healed artboard plus a report: `autofix` (what the engine repaired),
    `missing` (what a page of this type usually has but lacks),
    `score` (A–D design quality grade), and deterministic `alternatives`.
+   **Composite intents** (`generate "登录+注册"`) expand to multiple
+   artboards wired with auto navigation flows ("+"-separated, max 4;
+   theme-only segments like `dark` apply globally).
 2. `template` — when you already know the exact page template id
    (`template dashboard home`). Same generative path, explicit selection.
 3. `ops-batch-b64` / MCP `batch_apply` — a determined refinement pass in ONE

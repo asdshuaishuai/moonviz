@@ -112,3 +112,66 @@ test "generate：信封宽高/覆盖标记与 pc/web 整词、平分-反超清�
   assert_true(tie.alternatives.length() == 1)
   assert_true(tie.alternatives[0] == "dashboard")
 }
+///|
+/// 组合意图：一句话出多画板 + 相邻自动导航流（出口启发：A 板上找目标
+/// 语义节点，找不到合成前往按钮）；纯主题段不生成板只换主题。
+test "generate multi：组合意图与自动导航流" {
+  let p = Project::new()
+  let json = match p.generate(intent_text="登录+注册") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(json.contains("\"mode\":\"multi\""))
+  assert_true(json.contains("\"count\":2"))
+  assert_true(json.contains("\"template\":\"login\""))
+  assert_true(json.contains("\"template\":\"signup\""))
+  // 双画板真实入库
+  assert_true(p.artboards.contains("login"))
+  assert_true(p.artboards.contains("signup"))
+  // 相邻流存在且 trigger 指向 login 上的真实节点（validate_flows 契约）
+  let mut flow_ok = false
+  for e in p.flows.iter() {
+    if e.from == "login" && e.to == "signup" {
+      match p.artboards.get("login") {
+        Some(meta) =>
+          if e.trigger.has_prefix("tap:") {
+            flow_ok = meta.doc.has(e.trigger.substring(start=4))
+          }
+        None => ()
+      }
+    }
+  }
+  assert_true(flow_ok, msg="login→signup 流必须指向真实出口节点")
+  // 双板零违规（auto_fix 清偿了合成按钮的重叠）
+  for ab_id in ["login", "signup"] {
+    match p.artboards.get(ab_id) {
+      Some(meta) => assert_true(validate(meta.doc).length() == 0)
+      None => ()
+    }
+  }
+  // 幂等重跑：信封带 replaced 系信息且不崩
+  let _ = p.generate(intent_text="登录+注册")
+}
+
+///|
+/// 主题修饰段（"dark"）不生成板；纯修饰组合报 no_page_intent；超上限拒绝。
+test "generate multi：主题段/空组合/上限" {
+  let p = Project::new()
+  // "登录+dark"：dark 只是主题修饰 → 单板 + dark 主题生效
+  let j1 = match p.generate(intent_text="登录+dark") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j1.contains("\"theme_applied\":\"dark\""))
+  assert_false(j1.contains("\"mode\":\"multi\""))
+  // 纯修饰组合 → no_page_intent
+  match p.generate(intent_text="dark+light") {
+    Err(e) => assert_true(e.contains("no_page_intent"))
+    Ok(_) => assert_true(false)
+  }
+  // 5 段超上限
+  match p.generate(intent_text="登录+注册+设置+仪表盘+个人主页") {
+    Err(e) => assert_true(e.contains("too_many"))
+    Ok(_) => assert_true(false)
+  }
+}
