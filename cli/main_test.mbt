@@ -236,3 +236,102 @@ test "组合意图产物 canonical 往返：双板与导航流零损失" {
   assert_true(flows.contains("\"from\":\"login\",\"to\":\"signup\""))
   assert_true(flows.contains("tap:signup_btn"))
 }
+
+///|
+/// 用户组件声明样例（plain 名字：含 param + 两变体，供 MCF 往返）
+let cli_sample_component = "---\ncomponent:\n  id: badge\n  description: mini badge\n  params:\n    - name: label\n      kind: text\n      default: Hi\n  variants:\n    - name: default\n    - name: big\n      label: BIG\n---\n\n<!-- moonviz:artboard badge -->\n```mbt\nfn visual_badge() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"badge\", width=64.0, height=32.0)\n  page.add(@decl.text(id=\"cap\", content=\"${label}\", size=12.0))\n  page\n}\n```\n"
+
+///|
+/// 含引号的组件 id / 变体名（解析器仅 strip_quotes，允许任意文本）
+let cli_quoted_component = "---\ncomponent:\n  id: \"a\"b\"\n  description: quoted name\n  variants:\n    - name: pri\"mary\n---\n\n<!-- moonviz:artboard a\"b -->\n```mbt\nfn visual_q() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"quoted\", width=64.0, height=32.0)\n  page.add(@decl.text(id=\"cap\", content=\"hi\", size=12.0))\n  page\n}\n```\n"
+
+///|
+/// 从信封里抽 b64 字段值（base64 无引号/转义，找到闭引号即值尾）
+fn envelope_b64(envelope : String, key : String) -> String {
+  let k = "\"" + key + "\":\""
+  let i = match envelope.find(k) {
+    Some(x) => x + k.length()
+    None => return ""
+  }
+  let rest = envelope.substring(start=i)
+  match rest.find("\"") {
+    Some(end) => rest.substring(start=0, end~)
+    None => ""
+  }
+}
+
+///|
+/// component-import 成功信封契约：header 由 mcf_header_json 产出（已是
+/// 合法 JSON 对象文本），必须原样对象嵌入、信封以 }} 收尾，且 header.id
+/// 与组件 id 一致。此前 header 值被 json_escape 后未加引号嵌入且信封缺
+/// 收尾 } ——每次导入成功都返回非法 JSON。
+test "component-import 成功信封合法：header 对象嵌入且 id 与组件一致" {
+  let p = @core.Project::new()
+  let comp = cli_exec(p, "component-compile-b64 " + cli_b64(cli_sample_component))
+  assert_true(comp.contains("\"ok\":true"), msg="compile 应成功: \{comp}")
+  let exp = cli_exec(p, "component-export badge")
+  let mcf = envelope_b64(exp, "mcf_b64")
+  assert_true(mcf.length() > 0, msg="export 应产出 mcf_b64: \{exp}")
+  // 全新会话导入（完整重验收管线）
+  let p2 = @core.Project::new()
+  let imp = cli_exec(p2, "component-import " + mcf)
+  assert_true(imp.contains("\"ok\":true"), msg="import 应成功: \{imp}")
+  assert_true(imp.contains("\"header\":{\"id\":\"badge\""), msg=imp)
+  assert_true(imp.has_suffix("}}"), msg=imp)
+  let desc = cli_exec(p2, "component-describe badge")
+  assert_true(desc.contains("\"id\":\"badge\""), msg=desc)
+}
+
+///|
+/// set-state 文法 <node> <state_name> [toggle]：最小合法形式此前被
+/// <4 双重 off-by-one 拒之门外，toggle 尾缀（parts[4]）永远打不开。
+test "set-state 最小形式生效且 toggle 尾缀可开" {
+  let p = @core.Project::new()
+  let ab = cli_exec(p, "create home 390 844")
+  assert_true(ab.contains("\"ok\":true"), msg=ab)
+  let placed = cli_exec(p, "place home button btn1 - 10 10")
+  assert_true(placed.contains("\"ok\":true"), msg=placed)
+  let st = cli_exec(p, "state home btn1 pressed fill=#FF0000")
+  assert_true(st.contains("\"ok\":true"), msg=st)
+  // 最小形式：直接激活
+  let set1 = cli_exec(p, "set-state btn1 pressed")
+  assert_true(set1.contains("\"current\":\"pressed\""), msg=set1)
+  // toggle 尾缀：当前已是 pressed → 切回 default
+  let set2 = cli_exec(p, "set-state btn1 pressed toggle")
+  assert_true(set2.contains("\"current\":\"default\""), msg=set2)
+}
+
+///|
+/// 含引号组件名/变体名：信封层必须转义成合法 JSON（此前 param.name/
+/// param.kind/variant 裸插值产出非法 JSON——"component":"a"b"）。
+test "含引号组件名：compile 与 list-components 信封仍合法" {
+  let p = @core.Project::new()
+  let comp = cli_exec(p, "component-compile-b64 " + cli_b64(cli_quoted_component))
+  assert_true(comp.contains("\"ok\":true"), msg="compile 应成功: \{comp}")
+  assert_true(comp.contains("\"component\":\"a\\\"b\""), msg=comp)
+  assert_true(comp.contains("\"variants\":[\"pri\\\"mary\"]"), msg=comp)
+  let list = cli_exec(p, "list-components")
+  assert_true(list.contains("\"id\":\"a\\\"b\""), msg=list)
+  assert_true(list.contains("\"variants\":[\"pri\\\"mary\"]"), msg=list)
+}
+
+///|
+/// unflow CLI 臂（F52）：op_entries 注册表宣告自己是 CLI op 面，Agent 按
+/// list-ops 逐字发命令——此前 27 条 mutating op 唯独 unflow 缺臂回
+/// unknown_command。与 flow 臂对称：建边→删除→边消失，重复删除报错。
+test "unflow 从 CLI 行协议删除单条导航边" {
+  let p = @core.Project::new()
+  let ab = cli_exec(p, "create home 390 844")
+  assert_true(ab.contains("\"ok\":true"), msg=ab)
+  let ab2 = cli_exec(p, "create detail 390 844")
+  assert_true(ab2.contains("\"ok\":true"), msg=ab2)
+  let flow = cli_exec(p, "flow home detail go_btn")
+  assert_true(flow.contains("\"ok\":true"), msg=flow)
+  let un = cli_exec(p, "unflow home detail go_btn")
+  assert_true(un.contains("\"ok\":true"), msg=un)
+  let flows = cli_exec(p, "flows")
+  assert_true(!flows.contains("tap:go_btn"), msg=flows)
+  // 不存在的边：报错（与 ops 注册表 unflow 语义一致）
+  let again = cli_exec(p, "unflow home detail go_btn")
+  assert_true(again.contains("\"error\""), msg=again)
+}

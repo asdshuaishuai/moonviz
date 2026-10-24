@@ -29,6 +29,10 @@ pub fn Project::to_project_json(self : Project) -> String {
 
 ///|
 /// 从项目 JSON 重建 Project（替换当前内容；load 用）
+///
+/// 事务模式（对齐 replace_with）：先全部解析进暂存表，全部成功才原子替换
+/// 现有画板——单板失败不再被静默吞掉，也不会出现「项目已被清空才报错」
+/// 的失败半态；任何 LoadErr 都汇总进 Err，现状保持不变。
 pub fn Project::from_project_json(
   self : Project,
   text : String,
@@ -39,19 +43,11 @@ pub fn Project::from_project_json(
     Some(i) => i + art_marker.length()
     None => return Err("missing_artboards")
   }
-  // 清空现有画板
-  let ids : Array[String] = []
-  for k in self.artboards.keys() {
-    ids.push(k)
-  }
-  for k in ids.iter() {
-    self.artboards.remove(k)
-  }
-  // 逐个解析画板对象
+  let staged : Map[String, ArtboardMeta] = Map::new()
+  let errors : Array[String] = []
   let body = text.substring(start=arr_start)
   let mut pos = 0
   let n = body.length()
-  let mut count = 0
   while pos < n {
     let obj_start = find_obj_start(body, pos)
     match obj_start {
@@ -63,19 +59,32 @@ pub fn Project::from_project_json(
         }
         let obj = body.substring(start=os, end~)
         match load_one_artboard(obj) {
-          LoadOk(id, meta) => {
-            self.artboards.set(id, meta)
-            count = count + 1
-          }
-          LoadErr(_e) => ()
+          LoadOk(id, meta) => staged.set(id, meta)
+          LoadErr(e) => errors.push(e)
         }
         pos = end
       }
     }
   }
-  if count == 0 {
+  if errors.length() > 0 {
+    Err("artboard_load_failed: " + jstr8(errors, "; "))
+  } else if staged.size() == 0 {
     Err("no_artboards_loaded")
   } else {
+    // 全部成功：原子替换
+    let ids : Array[String] = []
+    for k in self.artboards.keys() {
+      ids.push(k)
+    }
+    for k in ids.iter() {
+      self.artboards.remove(k)
+    }
+    for id in staged.keys() {
+      match staged.get(id) {
+        Some(meta) => self.artboards.set(id, meta)
+        None => ()
+      }
+    }
     self.revision = self.revision + 1
     Ok(())
   }

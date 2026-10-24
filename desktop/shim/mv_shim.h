@@ -20,6 +20,10 @@
 #ifndef MV_SHIM_H
 #define MV_SHIM_H
 
+// 契约头自包含：单独包含本头（契约头应有的用法）即可编译，
+// 不要求宿主先包含 moonbit.h（此前只有恰好先包含它的 desktop_io.c 能过）
+#include <moonbit.h>
+
 // ---- 环境（客户端引导的开关经 env 传入，不经命令行参数）------------------
 // 取环境变量（UTF-8）；未设置返回 ""。
 moonbit_string_t mv_getenv(const char *name);

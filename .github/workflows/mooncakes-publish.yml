@@ -22,12 +22,6 @@ jobs:
           echo "$MOONCAKES_CREDENTIALS" > ~/.moon/credentials.json
 
       - name: moon publish
-        env:
-          PATH_OVERRIDE: $HOME/.moon/bin
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon publish
-
-      - name: Report result
-        if: always()
-        run: echo "Publish exit code $?"

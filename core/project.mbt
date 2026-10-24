@@ -283,6 +283,12 @@ pub fn Project::place_component(
           match self.components.get(component_id) {
             None => Err("unknown_component: \{component_id}")
             Some(def) => {
+              // 未知变体与用户组件路径同权报错（usercomp.mbt 同名检查）：
+              // 拼写错误不再被静默回退吞掉
+              let v = if variant == "" { def.default_variant } else { variant }
+              if v != def.default_variant && def.variants.contains(v) == false {
+                return Err("unknown_variant:" + v)
+              }
               let node = instantiate_component(
                 def,
                 instance_id,

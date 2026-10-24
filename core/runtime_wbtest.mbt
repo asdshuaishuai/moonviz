@@ -450,3 +450,187 @@ test "组件状态：补丁真实应用且可切换" {
     Err(e) => assert_true(e.contains("unknown_state"))
   }
 }
+
+///|
+/// 回归：SwipeEvent 分发命中首条 flow 后必须停——此前漏 break，同一画板
+/// 多条同 trigger 的 swipe flow 全部执行，导航栈连推多个画板（与
+/// KeyEvent 的 break、find_flow_target 的首条即返回语义不一致）。
+test "swipe：同 trigger 多条 flow 只执行第一条" {
+  let p = Project::new()
+  let a = p.create_artboard(name="sw_a")
+  let b = p.create_artboard(name="sw_b")
+  let c = p.create_artboard(name="sw_c")
+  p.add_flow(from=a, to=b, trigger="swipe_left")
+  p.add_flow(from=a, to=c, trigger="swipe_left")
+  let rt = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let changes = rt.handle_event(SwipeEvent("left"))
+  // 只命中首条 flow：NavigationPushed + ArtboardChanged 各一条，
+  // 不得出现第二条 flow 的成串变更
+  assert_eq(changes.length(), 2)
+  assert_eq(rt.current_artboard(), b)
+  // 栈深也锚定：只推了一层
+  assert_eq(rt.nav.stack.length(), 2)
+}
+
+///|
+/// 回归：栈底 tap 返回类节点原地不动——go_back None → 仅 NodeUpdated，
+/// 不弹栈、不换画板（norms_wbtest 只覆盖了栈中弹回的 happy path）。
+test "back：栈底 tap 返回类节点原地不动（仅 NodeUpdated）" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="solo")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="back_btn",
+  )
+  let rt = match MoonVizRT::create(p, initial_artboard=ab) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let layout = solve(
+    match rt.project.artboards.get(ab) {
+      Some(x) => x.doc
+      None => {
+        assert_true(false)
+        return
+      }
+    },
+  )
+  let rect = match layout.rect_of("back_btn") {
+    Some(r) => r
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let changes = rt.handle_event(
+    TapEvent(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0),
+  )
+  // 无 flow / 无 marker / 栈底无上一层 → 仅 NodeUpdated
+  assert_eq(changes.length(), 1)
+  match changes[0] {
+    NodeUpdated(id) => assert_eq(id, "back_btn")
+    _ => assert_true(false)
+  }
+  assert_eq(rt.current_artboard(), ab)
+}
+
+///|
+/// 回归：list_interactions / interactions_json 对 id/name/trigger/action
+/// 过 json_escape（与 query_node_json 同一约定）——SKILL.md:204 记载的
+/// update name= 改名路径值可含字面双引号，裸插值产出非法 JSON 信封。
+test "interactions 导出：含引号的 name/action 过 json_escape" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="esc_ab")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="btn",
+  )
+  // 经 update <ab> <node> name=... 改名，值含字面双引号（split_cmd 协议：
+  // 字面引号走引号包裹 + \" 转义，裸引号是分组符会被吞掉）
+  let _ = apply_operation(p, "update " + ab + " btn name=\"a\\\"b\"")
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="btn",
+    trigger="tap",
+    action_spec="set_text:lbl:\"hi\"",
+  )
+  match p.list_interactions(artboard=ab) {
+    Ok(j) => {
+      // name 中的引号必须已转义（\"），裸引号形态不得出现
+      assert_true(j.contains("a\\\"b ⚡"))
+      assert_false(j.contains("a\"b"))
+      assert_true(j.contains("\"artboard\":\"esc_ab\""))
+    }
+    Err(_) => assert_true(false)
+  }
+  match p.interactions_json(artboard=ab) {
+    Ok(j) => {
+      // action spec 中的引号必须已转义
+      assert_true(j.contains("set_text:lbl:\\\"hi\\\""))
+      assert_true(j.contains("\"trigger\":\"tap\""))
+      assert_false(j.contains(":\"hi\""))
+    }
+    Err(_) => assert_true(false)
+  }
+  // artifact 的 flow trigger 同批（export_artifact 的 flows from/to/trigger
+  // 此前裸拼）
+  p.add_flow(from=ab, to="esc_ab2", trigger="tap:a\"b")
+  let artifact = p.export_artifact()
+  assert_true(artifact.contains("tap:a\\\"b"))
+  assert_false(artifact.contains("tap:a\"b"))
+}
+
+///|
+/// 回归：组件状态 text 含逗号/方括号经名字标记往返不丢失——
+/// 此前 patch_to_spec 裸写 text 值，parse 侧 split_commas 逢逗号即切、
+/// 标记解析逢 ] 即收尾，每次 canonical 重建后状态文本被静默截断。
+test "组件状态：text 含逗号/方括号经名字标记往返保真" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="esc_st")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="cta",
+  )
+  let tricky = "第1, 2项 [草稿]\\n换行"
+  match
+    p.define_component_state(
+      artboard=ab,
+      node_id="cta",
+      state_name="pressed",
+      patch={ ..NodePatch::empty(), text: Some(tricky) },
+    ) {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+  // canonical 重建路径：从节点名标记重新解析状态表（load-mbt 后同路）
+  match p.artboards.get(ab) {
+    Some(abd) =>
+      match abd.doc.nodes.get("cta") {
+        Some(n) =>
+          match parse_state_markers(n.name) {
+            None => assert_true(false)
+            Some(states) => {
+              let mut found = false
+              for kv in states.iter() {
+                let (sname, patch) = kv
+                if sname == "pressed" {
+                  found = true
+                  match patch.text {
+                    Some(t) => assert_eq(t, tricky)
+                    None => assert_true(false)
+                  }
+                }
+              }
+              assert_true(found, msg="pressed 状态标记应可从名字解析")
+            }
+          }
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // 内存表同值（会话内为真值）
+  match p.node_states.get("cta") {
+    Some(def) =>
+      match def.states.get("pressed") {
+        Some(patch) =>
+          match patch.text {
+            Some(t) => assert_eq(t, tricky)
+            None => assert_true(false)
+          }
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+}

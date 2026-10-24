@@ -245,19 +245,20 @@ pub fn MergeResult::to_json(self : MergeResult) -> String {
   sb.write_string(",\"auto_resolved\":\{self.auto_resolved}")
   sb.write_string(",\"ops_ours\":\{self.total_ops_ours}")
   sb.write_string(",\"ops_theirs\":\{self.total_ops_theirs}")
-  if self.conflicts.length() > 0 {
-    sb.write_string(",\"conflict_detail\":[")
-    for i in 0..<self.conflicts.length() {
-      if i > 0 {
-        sb.write_string(",")
-      }
-      let c = self.conflicts[i]
-      sb.write_string(
-        "{\"node\":\"\{c.node_id}\",\"field\":\"\{c.field}\",\"ours\":\"\{c.ours_desc}\",\"theirs\":\"\{c.theirs_desc}\",\"suggestion\":\"\{c.suggestion}\"}",
-      )
+  // 空集合键恒输出 []（AGENTS.md 红线：detail 类键为空时输出 []，
+  // 与 infer_missing/prototest 的 canonical 惯例一致——省略键会迫使
+  // 消费方做「键缺失 = 空」的特判）
+  sb.write_string(",\"conflict_detail\":[")
+  for i in 0..<self.conflicts.length() {
+    if i > 0 {
+      sb.write_string(",")
     }
-    sb.write_string("]")
+    let c = self.conflicts[i]
+    sb.write_string(
+      "{\"node\":\"\{c.node_id}\",\"field\":\"\{c.field}\",\"ours\":\"\{c.ours_desc}\",\"theirs\":\"\{c.theirs_desc}\",\"suggestion\":\"\{c.suggestion}\"}",
+    )
   }
+  sb.write_string("]")
   sb.write_string("}")
   sb.to_string()
 }

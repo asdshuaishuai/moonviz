@@ -401,7 +401,7 @@ fn write_react_node(
       match n.kind {
         Text =>
           sb.write_string(
-            "\{pad}<span style={{\{full_style}}}\{n.text}</span>\n",
+            "\{pad}<span style={{\{full_style}}}>\{jsx_text_escape(n.text)}</span>\n",
           )
         _ =>
           if n.children.length() == 0 {
@@ -421,6 +421,23 @@ fn write_react_node(
     }
     _ => ()
   }
+}
+
+///|
+/// JSX 文本内容转义：& < > { } 按实体转义，防止文本字面量破坏标签/表达式结构
+fn jsx_text_escape(s : String) -> String {
+  let sb = StringBuilder::new()
+  for c in s.iter() {
+    match c {
+      '&' => sb.write_string("&amp;")
+      '<' => sb.write_string("&lt;")
+      '>' => sb.write_string("&gt;")
+      '{' => sb.write_string("&#123;")
+      '}' => sb.write_string("&#125;")
+      _ => sb.write_char(c)
+    }
+  }
+  sb.to_string()
 }
 
 ///|

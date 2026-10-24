@@ -349,7 +349,8 @@ pub fn Project::suggest_optimizations(
         )
       }
       if suggestions.length() == 0 {
-        Ok("{\"optimizations\":0,\"message\":\"性能良好，无需优化\"}")
+        // 空集合键恒输出 []（AGENTS.md 红线，与 infer_missing/prototest 对齐）
+        Ok("{\"optimizations\":0,\"detail\":[],\"message\":\"性能良好，无需优化\"}")
       } else {
         let j = jstr23(suggestions)
         Ok("{\"optimizations\":\{suggestions.length()},\"detail\":\{j}}")

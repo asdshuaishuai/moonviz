@@ -194,13 +194,15 @@ pub fn Project::generate_spec(
 
       // ── 交互标注 ──
       sb.write_string("## Interactions\n\n")
-      let has_interactions = false
+      let mut has_interactions = false
       for e in self.flows.iter() {
         if e.from == artboard {
           sb.write_string("- **\{e.trigger}** → navigate to `\{e.to}`\n")
+          has_interactions = true
         }
       }
-      if !has_interactions && self.flows.length() == 0 {
+      // 空段判断只看本画板是否列出过条目——其他画板的 flow 不代表本画板有交互
+      if !has_interactions {
         sb.write_string("_No interactions defined_\n")
       }
       sb.write_string("\n")
@@ -242,15 +244,18 @@ pub fn Project::spec_json(
         match (ab.doc.nodes.get(id), layout.rect_of(id)) {
           (Some(n), Some(r)) =>
             if id != "root" {
+              // rect 用合法 JSON 数组值 [x,y,w,h]；id/component/fill/text
+              // 过 json_escape——消费端 JSON.parse 不再被裸数字花括号/
+              // 未转义引号打崩
               let w = r.width.to_int().to_string()
               let h = r.height.to_int().to_string()
               let x = r.x.to_int().to_string()
               let y = r.y.to_int().to_string()
-              let fill = n.style.fill
-              let comp = n.component
-              let txt = n.text
+              let fill = json_escape(n.style.fill)
+              let comp = json_escape(n.component)
+              let txt = json_escape(n.text)
               items.push(
-                "{\"id\":\"\{id}\",\"component\":\"\{comp}\",\"rect\":{\{x},\{y},\{w},\{h}},\"fill\":\"\{fill}\",\"text\":\"\{txt}\"}",
+                "{\"id\":\"\{json_escape(id)}\",\"component\":\"\{comp}\",\"rect\":[\{x},\{y},\{w},\{h}],\"fill\":\"\{fill}\",\"text\":\"\{txt}\"}",
               )
             }
           _ => ()

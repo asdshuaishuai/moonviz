@@ -5,9 +5,9 @@ name: CI
 # 示例可复现（examples/login-demo + README Quick Start）
 on:
   push:
-    branches: [main, release/1.0]
+    branches: [main, dev, release/1.0]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 jobs:

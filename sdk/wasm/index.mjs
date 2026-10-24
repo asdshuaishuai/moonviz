@@ -175,7 +175,7 @@ export async function createEngine(source) {
      * 生成式 UI（执行策略第一级）：一句话意图 → 完整画板 + 报告
      * （autofix/missing/score）。新画板变更——成功信封带 canonical mbt，
      * 按 canonical 交换的宿主应保存它供下次 sessionOpen 使用。
-     * 槽变体 session_generate_in 反向传参：主槽 arg=intent、副槽 arg2=name。
+     * 槽变体 session_generate_in 反向传参（槽语义表唯一特例）：辅槽 arg=intent、三槽 arg2=name。
      */
     sessionGenerate(handle, intent, name) {
       return JSON.parse(exports.session_generate(handle, intent, name));

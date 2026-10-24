@@ -32,16 +32,24 @@ function findCodec(explicit) {
 /** 运行一次 ddp_codec：stdin JSON → stdout JSON。 */
 function runCodec(codecPath, payload) {
   return new Promise((resolve, reject) => {
+    // ddp_codec 读满 24 MiB + 1 即退出；超大请求先在 JS 侧拒绝，避免半途 EPIPE
+    const serialized = JSON.stringify(payload);
+    if (Buffer.byteLength(serialized) > 24 * 1024 * 1024) {
+      reject(new Error('ddp_request_too_large'));
+      return;
+    }
     const child = spawn(codecPath, [], { stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '', err = '';
     child.stdout.on('data', c => (out += c));
     child.stderr.on('data', c => (err += c));
     child.on('error', e => reject(new Error(`ddp_codec 启动失败：${e.message}`)));
+    // codec 超限退出会关掉 stdin，写入端触发 EPIPE——转 reject，不外泄成宿主未捕获异常
+    child.stdin.on('error', e => reject(new Error(`ddp_codec stdin 写入失败：${e.message}`)));
     child.on('close', () => {
       try { resolve(JSON.parse(out)); }
       catch { reject(new Error(`ddp_codec 输出无效：${err.slice(0, 200) || out.slice(0, 200)}`)); }
     });
-    child.stdin.write(JSON.stringify(payload));
+    child.stdin.write(serialized);
     child.stdin.end();
   });
 }
@@ -84,6 +92,7 @@ export const DDP = {
       password,
     });
     if (!r.ok) throw new Error(r.error ?? 'ddp_decrypt_failed');
-    return { mbt: Buffer.from(r.mbt_b64, 'base64').toString('utf8'), mode: r.magic ?? '' };
+    // codec 解密响应只回 {ok,mbt_b64}——mode 与 encrypt 同构，本地从容器首 4 字节判别
+    return { mbt: Buffer.from(r.mbt_b64, 'base64').toString('utf8'), mode: buf.subarray(0, 4).toString() };
   },
 };

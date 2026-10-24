@@ -10,6 +10,7 @@ pub(all) struct Node {
   id : String            // 全文档唯一，人类与 Agent 共同的引用语言
   kind : NodeKind        // Frame / Group / Rect / Text / Image
   name : String
+  component : String     // 语义组件名（"button" / "text_input" / "frame"...）
   width : SizeSpec       // Fixed(v) / Fill / Hug
   height : SizeSpec
   x : PosSpec            // Fixed / AlignStart / AlignEnd / CenterInParent
@@ -18,6 +19,7 @@ pub(all) struct Node {
   style : NodeStyle
   text : String          // Text 的内容；Rect 上非空即为居中标签（按钮/输入框）
   children : Array[String]
+  constraint : String    // 父容器 resize 适配约束（"lt" "rt" "stretch-c" 等）
 }
 ```
 
@@ -42,7 +44,7 @@ pub(all) struct Document {
   mut root_id : String
   mut nodes : Map[String, Node]
   mut revision : Int                  // 单调递增，乐观锁基准
-  mut journal : Array[JournalEntry]   // 每次合并一条
+  journal : Array[JournalEntry]       // 每次合并一条（只追加）
 }
 ```
 

@@ -1,6 +1,6 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.9-fix**（moonc ≥ 0.10.14 · GitHub Release + mooncakes 0.1.9-fix-2 已上架） · `moon test` 231/231 · 组件目录 65×115 · 仓库 100+ commits
+> 当前基线：**v0.1.9-fix**（moonc ≥ 0.10.14 · GitHub Release + mooncakes 0.1.9-fix-2 已上架） · `moon test` 全绿（默认目标 + native） · 组件目录 65×115 · 仓库 100+ commits
 
 ## 0.1.9 · 组件规范（norms）——弱模型的"能用但不精致"三类根因
 
@@ -37,16 +37,17 @@
 
 ### P0 · 能力平权（核心模块 → 边界全通）
 
-**1. 搁浅模块出井。** 以下模块已在 core 实现并经测试，但尚未到达任何调用边界（CLI/MCP/WASM/SDK 均不可达）：
+**1. 搁浅模块出井。** collab/history/animation/prototest 已于 0.1.x 补齐 CLI 命令 + MCP 工具边界（见文末附表）；**剩余真实缺口**是 wasm 会话面（仅 history 有 `session_history`，其余三者不可达）与最后的搁浅模块 `core/variants.mbt`（实测 CLI/MCP/WASM 均无调用）：
 
-| 模块 | 能力 | 缺口 |
-|---|---|---|
-| `core/collab.mbt` | 多 Agent 操作变换（OT）、冲突检测、三方合并 | 零暴露 |
-| `core/history.mbt` | 设计版本控制：时间旅行、分支、变更回放、undo/redo | 零暴露 |
-| `core/animation.mbt` | 属性动画：关键帧、缓动函数、时间线编排、CSS 导出 | 零暴露 |
-| `core/prototest.mbt` | 原型测试：断言式验证导航/输入/渲染/违规 | 零暴露 |
+| 模块 | 能力 | 已达边界 | 剩余缺口 |
+|---|---|---|---|
+| `core/collab.mbt` | 多 Agent 操作变换（OT）、冲突检测、三方合并 | CLI · MCP | wasm 会话面 |
+| `core/history.mbt` | 设计版本控制：时间旅行、分支、变更回放、undo/redo | CLI · MCP · WASM(`session_history`) | —— |
+| `core/animation.mbt` | 属性动画：关键帧、缓动函数、时间线编排、CSS 导出 | CLI · MCP | wasm 会话面 |
+| `core/prototest.mbt` | 原型测试：断言式验证导航/输入/渲染/违规 | CLI · MCP | wasm 会话面 |
+| `core/variants.mbt` | fork/score/merge 变体探索 | ——（无任何外部调用，实测仅 core 内部与测试引用） | CLI + MCP + wasm 会话面（最后搁浅模块） |
 
-交付：每个模块按既有模式补齐边界（CLI 命令 + MCP 工具 + 按需 session API），文档同步，测试锚定。
+交付：按既有模式补齐剩余缺口（collab/animation/prototest 的 wasm 会话面 + variants.mbt 全边界），文档同步，测试锚定。
 
 **2. classic wasm 写路径。** Rust/wasmtime 宿主目前只能读（无参调用）。补齐 `session_*` 入参方向：在 wasm 边界导出字符串分配辅助（宿主写入线性内存 → 引擎构造 MoonBit String），打通 `render_mbt` / `apply_*_op` / `session_apply_*` 的双向调用。
 

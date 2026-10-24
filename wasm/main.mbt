@@ -70,7 +70,8 @@ pub fn export_html(mbt : String) -> String {
 }
 
 ///|
-/// 预设组件库清单（playground 组件面板）：52 组件 × 93 变体。
+/// 预设组件库清单（playground 组件面板）：组件/变体计数不在此写死，
+/// 单一事实源是 core 组件目录（core/agent_test.mbt 的 catalog 数量测试锚定）。
 pub fn list_components() -> String {
   @core.list_components_json(@core.builtin_components())
 }
@@ -267,7 +268,8 @@ pub fn session_history(handle : Int, line : String) -> String {
       }
       let ab = parts[1]
       match cur.project.artboards.get(ab) {
-        None => "{\"ok\":false,\"error\":\"unknown_artboard: \{ab}\"}"
+        None =>
+          "{\"ok\":false,\"error\":\"unknown_artboard: \{@core.json_escape(ab)}\"}"
         Some(board) => {
           // 幂等（issue #21）：对已注册板 init 不重基线——宿主每 op 后重 init
           // 或「重开 + init-all」都不会静默摧毁已累积的历史栈。
@@ -288,7 +290,8 @@ pub fn session_history(handle : Int, line : String) -> String {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) =>
           match cur.project.artboards.get(ab) {
-            None => "{\"ok\":false,\"error\":\"unknown_artboard: \{ab}\"}"
+            None =>
+              "{\"ok\":false,\"error\":\"unknown_artboard: \{@core.json_escape(ab)}\"}"
             Some(board) => {
               let rev = h.commit("agent", msg, [], board.doc.clone())
               "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{rev},\"msg\":\"\{@core.json_escape(msg)}\"}"
@@ -331,7 +334,8 @@ pub fn session_history(handle : Int, line : String) -> String {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) =>
           match history_rev(parts[1]) {
-            None => "{\"ok\":false,\"error\":\"invalid_revision: \{parts[1]}\"}"
+            None =>
+              "{\"ok\":false,\"error\":\"invalid_revision: \{@core.json_escape(parts[1])}\"}"
             Some(rev) =>
               match h.checkout(rev) {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
@@ -673,7 +677,9 @@ pub fn session_generate(
 }
 
 ///|
-/// classic 槽变体：主槽（arg）= intent，副槽（arg2）= name。
+/// classic 槽变体：辅槽（arg）= intent，三槽（arg2）= name。
+/// 注意这是槽语义表的唯一特例（一般规则 intent 走三槽）——name 是
+/// 新画板名而非画板引用，故与 constrain_in 的 arg=artboard 布局不同。
 pub fn session_generate_in(handle : Int) -> String {
   session_generate(handle, slot_string(g_arg_bytes), slot_string(g_arg2_bytes))
 }
@@ -822,7 +828,8 @@ fn encode_mbt_b64(text : String) -> String {
 // classic wasm 无法导出 GC 内部的字符串分配原语（unsafe_make_string_raw
 // 不可达），宿主也没有 FFI 写引擎堆的通道。本协议用全公开 API 打通：
 //   1. in_reset() / arg_reset()           清空输入槽
-//   2. in_push(chunk, n) / arg_push(...)  小端 4 字节小块压入（n=有效字节 1-4）
+//   2. in_push(chunk, n) / arg_push(...)  小端 4 字节小块压入（n=有效字节 1-4，
+//                                         n<1 忽略——no-op，不产生字节）
 //   3. render_mbt_in() 等 *_in 变体       用槽内字符串调用既有入口
 // UTF-8 解码失败时槽内字符串为空（宿主应保证 in_len 与预期一致）。
 // ---------------------------------------------------------------------------
@@ -835,7 +842,12 @@ let g_arg_bytes : Ref[Array[Byte]] = Ref::new([])
 
 ///|
 fn slot_push(slot : Ref[Array[Byte]], chunk : Int, n : Int) -> Unit {
-  let count = if n < 1 { 1 } else if n > 4 { 4 } else { n }
+  // 契约外 n（<1）视为宿主误用：no-op（此前钳到 1 会压入 1 个垃圾字节，
+  // 静默污染输入槽——越界 n 必须不产生任何字节）。
+  if n < 1 {
+    return
+  }
+  let count = if n > 4 { 4 } else { n }
   let mut i = 0
   while i < count {
     let b = ((chunk >> (i * 8)) & 0xFF).to_byte()

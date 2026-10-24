@@ -130,19 +130,19 @@ fn render_node(
               if n.style.opacity != 1.0 {
                 sb.write_string(" opacity=\"\{n.style.opacity}\"")
               }
-              if n.style.shadow != "none" {
+              // 单一 filter 属性：shadow+blur 同设时引用合并滤镜 def（fx_<id>，
+              // collect_gradients 生成）——输出两个同名属性是 XML 非良构，
+              // 浏览器取首个导致 blur 静默丢失，严格解析器直接拒绝整个 SVG
+              if n.style.shadow != "none" && n.style.blur > 0.0 {
+                sb.write_string(" filter=\"url(#fx_\{svg_id_tag(n.id)})\"")
+              } else if n.style.shadow != "none" {
                 sb.write_string(" filter=\"url(#\{n.style.shadow})\"")
-              }
-              if n.style.blur > 0.0 {
+              } else if n.style.blur > 0.0 {
                 sb.write_string(" filter=\"url(#blur_\{svg_id_tag(n.id)})\"")
               }
-              if n.style.rotate != 0.0 {
-                let cx = r.x + r.width / 2.0
-                let cy = r.y + r.height / 2.0
-                sb.write_string(
-                  " transform=\"rotate(\{n.style.rotate} \{cx} \{cy})\"",
-                )
-              }
+              // 单一 transform 属性：变换列表从右向左作用，
+              // flip 矩阵写在左侧即左乘 rotate（先转后翻）
+              let transforms : Array[String] = []
               if n.style.flip != "none" {
                 let cx = r.x + r.width / 2.0
                 let cy = r.y + r.height / 2.0
@@ -151,9 +151,17 @@ fn render_node(
                   "v" => "1,-1"
                   _ => "-1,-1"
                 }
-                sb.write_string(
-                  " transform=\"translate(\{cx} \{cy}) scale(\{m}) translate(\{-cx} \{-cy})\"",
+                transforms.push(
+                  "translate(\{cx} \{cy}) scale(\{m}) translate(\{-cx} \{-cy})",
                 )
+              }
+              if n.style.rotate != 0.0 {
+                let cx = r.x + r.width / 2.0
+                let cy = r.y + r.height / 2.0
+                transforms.push("rotate(\{n.style.rotate} \{cx} \{cy})")
+              }
+              if transforms.length() > 0 {
+                sb.write_string(" transform=\"\{jstr8(transforms, " ")}\"")
               }
               sb.write_string("/>")
               // 带文字的形状（按钮 / 输入框占位符）：默认水平垂直居中，
@@ -232,6 +240,18 @@ fn dash_array(dash : String) -> String? {
     "dashed" => Some("6 4")
     "dotted" => Some("1.5 3")
     _ => None
+  }
+}
+
+///|
+/// elevation 阴影令牌参数 (dx, dy, stdDeviation, flood-opacity)——
+/// 与 render_svg 顶部 defs 的 e1/e2/e3 定义一一对应；未知令牌取 e2 档兜底
+fn shadow_token_params(tok : String) -> (Double, Double, Double, Double) {
+  match tok {
+    "e1" => (0.0, 1.0, 2.0, 0.07)
+    "e2" => (0.0, 4.0, 10.0, 0.10)
+    "e3" => (0.0, 14.0, 28.0, 0.16)
+    _ => (0.0, 4.0, 10.0, 0.10)
   }
 }
 
@@ -338,16 +358,24 @@ fn collect_gradients(doc : Document) -> String {
       }
     }
   }
-  // blur 滤镜 defs
+  // blur 滤镜 defs；shadow+blur 同设时生成合并滤镜（先模糊、再对模糊结果投阴影）
   for id in doc.nodes.keys() {
     match doc.get(id) {
       None => ()
-      Some(n) =>
-        if n.style.blur > 0.0 {
+      Some(n) => {
+        let has_blur = n.style.blur > 0.0
+        let has_shadow = n.style.shadow != "none"
+        if has_blur && has_shadow {
+          let (dx, dy, std, op) = shadow_token_params(n.style.shadow)
+          sb.write_string(
+            "<filter id=\"fx_\{svg_id_tag(id)}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"\{n.style.blur}\" result=\"b\"/><feDropShadow in=\"b\" dx=\"\{dx}\" dy=\"\{dy}\" stdDeviation=\"\{std}\" flood-opacity=\"\{op}\"/></filter>",
+          )
+        } else if has_blur {
           sb.write_string(
             "<filter id=\"blur_\{svg_id_tag(id)}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feGaussianBlur stdDeviation=\"\{n.style.blur}\"/></filter>",
           )
         }
+      }
     }
   }
   let inner = sb.to_string()

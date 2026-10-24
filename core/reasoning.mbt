@@ -231,11 +231,13 @@ pub fn Project::apply_intent(
         EqualSpacing => self.auto_arrange(artboard~, parent_id~)
         GridAlign(grid) => self.snap_to_grid(artboard~, grid~)
         MoveTop => {
-          let count = move_to_edge(ab.doc, parent_id, true)
+          let layout = solve(ab.doc)
+          let count = move_to_edge(ab.doc, parent_id, layout, true)
           Ok("{\"intent\":\"move_top\",\"moved\":\{count}}")
         }
         MoveBottom => {
-          let count = move_to_edge(ab.doc, parent_id, false)
+          let layout = solve(ab.doc)
+          let count = move_to_edge(ab.doc, parent_id, layout, false)
           Ok("{\"intent\":\"move_bottom\",\"moved\":\{count}}")
         }
         MoveCenter => {
@@ -349,18 +351,48 @@ fn equalize_height(doc : Document, parent_id : String) -> Int {
 }
 
 ///|
-fn move_to_edge(doc : Document, parent_id : String, top : Bool) -> Int {
+/// 顶部/底部对齐（MoveTop/MoveBottom）：按求解后的子节点高度级联错开
+/// （保留相对次序，行距 8，与 center_all 同法）——曾把全部子节点压到同一
+/// y（顶部全 0、底部写死 700），必然产生重叠违规且 700 与画板高度无关。
+/// 底边锚定父容器 bottom（pr.height - 总高，不足则收在顶部）。
+fn move_to_edge(
+  doc : Document,
+  parent_id : String,
+  layout : SolvedLayout,
+  top : Bool,
+) -> Int {
   let mut count = 0
-  match doc.nodes.get(parent_id) {
-    Some(parent) =>
+  match (doc.nodes.get(parent_id), layout.rect_of(parent_id)) {
+    (Some(parent), Some(pr)) => {
+      if parent.children.length() == 0 {
+        return 0
+      }
+      let gap = 8.0
+      let mut total_h = 0.0
       for cid in parent.children.iter() {
-        let _ = doc.update_node(cid, fn(n) {
-          let y = if top { 0.0 } else { 700.0 } // 简化：底边距 700
-          { ..n, y: AlignStart(y), }
-        })
+        match layout.rect_of(cid) {
+          Some(r) => total_h = total_h + r.height
+          None => ()
+        }
+      }
+      let n = parent.children.length()
+      let total_with_gap = total_h + gap * (n - 1).to_double()
+      let mut y = if top {
+        0.0
+      } else {
+        let start = pr.height - total_with_gap
+        if start > 0.0 { start } else { 0.0 }
+      }
+      for cid in parent.children.iter() {
+        let _ = doc.update_node(cid, fn(c) { { ..c, y: AlignStart(y), } })
+        match layout.rect_of(cid) {
+          Some(r) => y = y + r.height + gap
+          None => ()
+        }
         count = count + 1
       }
-    None => ()
+    }
+    _ => ()
   }
   count
 }

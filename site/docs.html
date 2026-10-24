@@ -156,8 +156,6 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
 <tr><td><code>list-ops</code></td><td>27 条 mutating op 字典（usage/分类/双门禁）</td></tr>
 <tr><td><code>help</code> / <code>list-tools</code> / <code>exit</code></td><td>帮助 / 55 工具字典 / 退出</td></tr>
-<tr><td>Norms v2 触控目标</td><td>交互组件（按钮/输入/开关/滑块/复选/tab/搜索）命中区 ≥ 44×44（HIG/Material）</td><td>auto_fix 可修——只抬 Fixed 维到 44，Hug/Fill 策略不降级；放大引入的溢出由谓词循环清偿</td></tr>
-<tr><td>Norms v2 其余三类</td><td>间距网格 4pt / 字号层级 ≤5 / 节点密度 ≤80</td><td>仅检测进 critique norms 维（属设计决策，不做机械修复）</td></tr>
 </table>
 
 <h3>无会话命令（单发）</h3>
@@ -379,7 +377,6 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 # → {"ok":true,"mbt_b64":"…"}</code></pre>
 </section>
 
-<section id="env">
 <section id="norms">
 <h2>组件规范 norms（0.1.9 起）</h2>
 <p>弱模型最常产出「能用但不精致」的原型。组件规范是组件质量的单一定义点（<code>core/norms.mbt</code>），五类根因各有检测 + <code>auto_fix</code> 一键修复，critique 第 9 维（norms）给 Agent 反馈。<b>只走软路径</b>——critique/fix 软纠偏，不改双门硬约束：</p>
@@ -390,6 +387,8 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 <tr><td>列表必须有分割线</td><td>≥3 行 list_item 齐缝连排且整段无 divider = 裸列表</td><td>每行行底插入 1px divider 子节点（不参与 v1 重叠/包含检查，零门风险）</td></tr>
 <tr><td>撞色零容忍</td><td>文字对有效背景（自身实底 → 最近实底祖先 → 白底）的 WCAG 对比度 &lt; 2.0 即同色系严禁（黑底黑字/白底白字）；品牌绿白字（≈2.4）不误伤</td><td>按背景亮度翻转文字黑/白</td></tr>
 <tr><td>横平竖直</td><td>rotate 非 90° 倍数归零（与圆角档、对齐网格共同构成几何标准）</td><td>归零</td></tr>
+<tr><td>触控目标（v2）</td><td>交互组件（按钮/输入/开关/滑块/复选/tab/搜索）命中区 ≥ 44×44（HIG/Material）</td><td>auto_fix 可修——只抬 Fixed 维到 44，Hug/Fill 策略不降级；放大引入的溢出由谓词循环清偿</td></tr>
+<tr><td>间距网格 / 字号 / 密度（v2）</td><td>间距网格 4pt / 字号层级 ≤5 / 节点密度 ≤80</td><td>仅检测进 critique norms 维（属设计决策，不做机械修复）</td></tr>
 </table>
 <p>闭环：critique 偏差计分并自带建议尺寸 → <code>auto_fix</code> 一键规范预修（不动 fill/hug 策略）→ <code>list_components</code> 每条目携带 norm 字段。规范走指导与修复，不做硬门。</p>
 </section>

@@ -101,30 +101,66 @@ pub fn Project::snap_to_grid(
     None => Err("unknown_artboard")
     Some(ab) => {
       let snapped : Array[String] = []
+      // 先解一次布局取全部绝对矩形做吸附快照，再自根向下统一写回：
+      // 写回值是「相对父容器新原点」的偏移（父也在移动），与 Map 迭序无关。
+      // 直接把绝对吸附坐标当相对偏移写回，会让嵌套节点整体偏移一个父原点。
+      let layout = solve(ab.doc)
+      let targets : Map[String, (Double, Double)] = Map::new()
       for id in ab.doc.nodes.keys() {
         if id != "root" {
-          match ab.doc.nodes.get(id) {
-            Some(n) => {
-              let layout = solve(ab.doc)
-              match layout.rect_of(id) {
-                Some(r) => {
-                  let old_x = r.x
-                  let old_y = r.y
-                  let new_x = snap_val(old_x, grid)
-                  let new_y = snap_val(old_y, grid)
-                  if new_x != old_x || new_y != old_y {
-                    let _ = ab.doc.update_node(id, fn(c) {
-                      { ..c, x: AlignStart(new_x), y: AlignStart(new_y), }
-                    })
-                    snapped.push(
-                      "{\"id\":\"\{id}\",\"from\":\"\{old_x.to_int()},\{old_y.to_int()}\",\"to\":\"\{new_x.to_int()},\{new_y.to_int()}\"}",
-                    )
-                  }
-                }
-                None => ()
+          match layout.rect_of(id) {
+            Some(r) => {
+              let new_x = snap_val(r.x, grid)
+              let new_y = snap_val(r.y, grid)
+              if new_x != r.x || new_y != r.y {
+                targets.set(id, (new_x, new_y))
               }
             }
             None => ()
+          }
+        }
+      }
+      // DFS（父先于子）：子节点用父的新绝对原点换算 AlignStart 偏移
+      let stack : Array[(String, Double, Double)] = []
+      match layout.rect_of(ab.doc.root_id) {
+        Some(rr) => stack.push((ab.doc.root_id, rr.x, rr.y))
+        None => ()
+      }
+      while stack.length() > 0 {
+        match stack.pop() {
+          None => ()
+          Some((id, px, py)) => {
+            let (nx, ny) = match targets.get(id) {
+              Some((tx, ty)) => {
+                let (ox, oy) = match layout.rect_of(id) {
+                  Some(r) => (r.x, r.y)
+                  None => (tx, ty)
+                }
+                let _ = ab.doc.update_node(id, fn(c) {
+                  {
+                    ..c,
+                    x: AlignStart(tx - px),
+                    y: AlignStart(ty - py),
+                  }
+                })
+                snapped.push(
+                  "{\"id\":\"\{id}\",\"from\":\"\{ox.to_int()},\{oy.to_int()}\",\"to\":\"\{tx.to_int()},\{ty.to_int()}\"}",
+                )
+                (tx, ty)
+              }
+              None =>
+                match layout.rect_of(id) {
+                  Some(r) => (r.x, r.y)
+                  None => (px, py)
+                }
+            }
+            match ab.doc.nodes.get(id) {
+              Some(node) =>
+                for cid in node.children.iter() {
+                  stack.push((cid, nx, ny))
+                }
+              None => ()
+            }
           }
         }
       }

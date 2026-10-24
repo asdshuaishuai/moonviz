@@ -16,10 +16,10 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "moonviz-bin-darwin-arm64": "^0.1.5",
-    "moonviz-bin-linux-x64": "^0.1.5",
-    "moonviz-bin-linux-arm64": "^0.1.5",
-    "moonviz-bin-win32-x64": "^0.1.5"
+    "moonviz-bin-darwin-arm64": "*",
+    "moonviz-bin-linux-x64": "*",
+    "moonviz-bin-linux-arm64": "*",
+    "moonviz-bin-win32-x64": "*"
   },
   "scripts": {
     "test": "node test/selftest.mjs"

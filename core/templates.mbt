@@ -451,7 +451,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
       ab,
       "card",
       aid,
-      variant="outlined",
+      variant="elevated",
       x=24.0,
       y=576.0 + j.to_double() * 62.0,
     )
@@ -526,7 +526,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   for i in 0..<3 {
     let sid = "stat_\{i}"
     let x = 44.0 + i.to_double() * 110.0
-    let _ = self.place_comp(ab, "card", sid, variant="outlined", x~, y=290.0)
+    let _ = self.place_comp(ab, "card", sid, variant="elevated", x~, y=290.0)
     self.resize_node(ab, sid, 90.0, 60.0, 8.0)
     self.set_text(ab, sid, "\{stats[i].0}: \{stats[i].1}")
   }
@@ -547,7 +547,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
     ab,
     "button",
     "message_btn",
-    variant="outlined",
+    variant="secondary",
     x=203.0,
     y=380.0,
   )
@@ -624,7 +624,7 @@ fn Project::template_settings(self : Project, name : String) -> String {
     // 分组项
     for ii in 0..<items.length() {
       let iid = "item_\{si}_\{ii}"
-      let _ = self.place_comp(ab, "card", iid, variant="outlined", x=24.0, y~)
+      let _ = self.place_comp(ab, "card", iid, variant="elevated", x=24.0, y~)
       self.resize_node(ab, iid, 342.0, 40.0, 8.0)
       self.set_text(ab, iid, items[ii])
       y = y + 46.0
@@ -679,7 +679,7 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
       ab,
       "card",
       "chat_\{ci}",
-      variant="default",
+      variant="elevated",
       x=12.0,
       y~,
     )
@@ -692,7 +692,7 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
     ab,
     "card",
     "detail_card",
-    variant="outlined",
+    variant="elevated",
     x=12.0,
     y=y + 8.0,
   )
@@ -722,7 +722,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     ab,
     "body_text",
     "ob_sub",
-    variant="default",
+    variant="body",
     x=24.0,
     y=236.0,
   )
@@ -766,7 +766,7 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
     ab,
     "card",
     "illustration",
-    variant="filled",
+    variant="elevated",
     x=95.0,
     y=250.0,
   )

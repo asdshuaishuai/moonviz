@@ -207,9 +207,11 @@ test "门语义：兄弟全包含＝有意分层豁免，部分相交仍违规�
     instance_id="bg",
     y=0.0,
   )
+  // edit_node 词汇表是 w/h（width/height 属 typo 键，未知键显式报错后
+  // 不能再依赖静默丢弃；此处意图即注释所言「背景全屏 375×812」）
   let _ = p.edit_node(artboard="m", node_id="bg", kvs=[
-    ("width", "375"),
-    ("height", "812"),
+    ("w", "375"),
+    ("h", "812"),
     ("fill", "#112233"),
   ])
   let _ = p.place_component(

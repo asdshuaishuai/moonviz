@@ -1,6 +1,10 @@
 ///|
 /// 组件插槽系统：支持嵌套内容分发的组合式组件。
 ///
+/// 定位：**SDK-only 能力**（README「组件插槽系统」，宿主经 MoonBit SDK 直调）——
+/// 不进 agent_api 工具字典，CLI/MCP/WASM 三面不暴露；Agent 侧的组合
+/// 表达走 place_component + parent_id。
+///
 /// 这是让组件真正**可组合**的原语——像 React/Vue 的 children/slots：
 /// ```jsx
 /// <Card>
@@ -18,7 +22,7 @@
 /// - 槽位定义：组件声明命名槽位
 /// - 槽位填充：Agent 把内容放进指定槽位
 /// - 默认内容：槽位为空时使用默认值
-/// - 组合组件：槽位里可以放其他组件（递归组合）
+/// - 组合组件：槽位里可以放其他组件（递归组合；SlotDef.accepts 非空时强校验）
 
 // ---------------------------------------------------------------------------
 // 槽位定义
@@ -392,7 +396,10 @@ pub fn Project::fill_slot(
         return Err("slot_not_found: " + slot_node_id)
       }
       let _ = ab.doc.update_node(slot_node_id, fn(n) { { ..n, text: content, } })
-      Ok("{\"ok\":true,\"slot\":\"\{slot_name}\",\"content\":\"\{content}\"}")
+      // envelope 合法性红线：content 含引号/反斜杠时裸拼会产出非法 JSON
+      Ok(
+        "{\"ok\":true,\"slot\":\"\{json_escape(slot_name)}\",\"content\":\"\{json_escape(content)}\"}",
+      )
     }
   }
 }
@@ -443,7 +450,7 @@ pub fn Project::list_slots(
               None => ""
             }
             slots.push(
-              "{\"name\":\"\{slot.name}\",\"content\":\"\{content}\",\"description\":\"\{slot.description}\"}",
+              "{\"name\":\"\{json_escape(slot.name)}\",\"content\":\"\{json_escape(content)}\",\"description\":\"\{json_escape(slot.description)}\"}",
             )
           }
           let j = jstr22(slots)
@@ -470,6 +477,36 @@ pub fn Project::fill_slot_with_component(
     Some(ab) => {
       if !ab.doc.has(slot_node_id) {
         return Err("slot_not_found")
+      }
+      // SlotDef.accepts 校验（空数组 = 任意组件）：约束不是摆设，
+      // 违约放置在这里显式拒绝而非静默落位
+      let comp_type = match ab.doc.get(instance_id) {
+        Some(n) => n.component
+        None => return Err("instance_not_found")
+      }
+      match builtin_slotted_components().get(comp_type) {
+        Some(sc) => {
+          let mut accepts : Array[String] = []
+          for s in sc.slots.iter() {
+            if s.name == slot_name {
+              accepts = s.accepts
+            }
+          }
+          if accepts.length() > 0 {
+            let mut allowed = false
+            for a in accepts.iter() {
+              if a == child_component {
+                allowed = true
+              }
+            }
+            if !allowed {
+              return Err(
+                "slot_accepts_violation: slot \"\{slot_name}\" accepts [\{jstr22(accepts)}], got \"\{child_component}\"",
+              )
+            }
+          }
+        }
+        None => () // 非组合式组件实例：沿用旧行为，仅要求槽位节点存在
       }
       // 在槽位节点内放置子组件
       let comps = builtin_components()

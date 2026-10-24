@@ -65,10 +65,11 @@ fn write_node_json(sb : StringBuilder, doc : Document, id : String) -> Unit {
       }
       sb.write_string(
         "{\"id\":\"\{json_escape(n.id)}\",\"kind\":\"\{kind}\",\"name\":\"\{json_escape(n.name)}\"," +
+        "\"component\":\"\{json_escape(n.component)}\"," +
         "\"width\":\{size_spec_json(n.width)},\"height\":\{size_spec_json(n.height)}," +
         "\"x\":\{pos_spec_json(n.x)},\"y\":\{pos_spec_json(n.y)},\"text\":\"\{json_escape(n.text)}\"," +
         "\"constraint\":\"\{n.constraint}\"," +
-        "\"style\":{\"fill\":\"\{n.style.fill}\",\"stroke\":\"\{n.style.stroke}\",\"corner_radius\":\{n.style.corner_radius},\"opacity\":\{n.style.opacity},\"font_size\":\{n.style.font_size},\"text_color\":\"\{n.style.text_color}\",\"font_weight\":\"\{n.style.font_weight}\",\"shadow\":\"\{n.style.shadow}\",\"rotate\":\{n.style.rotate},\"blur\":\{n.style.blur},\"blend\":\"\{n.style.blend}\",\"line_height\":\{n.style.line_height},\"tracking\":\{n.style.tracking},\"flip\":\"\{n.style.flip}\"},\"children\":[",
+        "\"style\":{\"fill\":\"\{n.style.fill}\",\"stroke\":\"\{n.style.stroke}\",\"stroke_width\":\{n.style.stroke_width},\"corner_radius\":\{n.style.corner_radius},\"opacity\":\{n.style.opacity},\"font_size\":\{n.style.font_size},\"text_color\":\"\{n.style.text_color}\",\"font_weight\":\"\{n.style.font_weight}\",\"shadow\":\"\{n.style.shadow}\",\"rotate\":\{n.style.rotate},\"blur\":\{n.style.blur},\"blend\":\"\{n.style.blend}\",\"line_height\":\{n.style.line_height},\"tracking\":\{n.style.tracking},\"flip\":\"\{n.style.flip}\",\"text_align\":\"\{n.style.text_align}\",\"font_style\":\"\{n.style.font_style}\",\"stroke_dash\":\"\{n.style.stroke_dash}\",\"visible\":\{n.style.visible}},\"children\":[",
       )
       for i in 0..<n.children.length() {
         if i > 0 {

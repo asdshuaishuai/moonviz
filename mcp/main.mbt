@@ -91,8 +91,13 @@ fn main {
 
 ///|
 fn handle_request(line : String) -> String {
+  // JSON-RPC 2.0：无 id 成员的请求是通知（含未知通知），必须静默不响应；
+  // extract_json_id 返回 None 即无 id（F54）
+  let id = match extract_json_id(line) {
+    Some(v) => v
+    None => return ""
+  }
   let method = extract_json_string(line, "method")
-  let id = extract_json_id(line)
   match method {
     "initialize" =>
       "{\"jsonrpc\":\"2.0\",\"id\":\{id},\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"moonviz\",\"version\":\"\{@core.ENGINE_VERSION}\"}}}"
@@ -172,10 +177,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           Some(def) => {
             let vs : Array[String] = []
             for v in def.variants.keys() {
-              vs.push("\"\{v}\"")
+              vs.push("\"\{@core.json_escape(v)}\"")
             }
             user_items.push(
-              "{\"id\":\"\{id}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{mcp_join(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{@core.json_escape(def.category)}\",\"variants\":[\{mcp_join(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
             )
           }
           None => ()
@@ -215,12 +220,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           let ps : Array[String] = []
           for param in def.params.iter() {
             ps.push(
-              "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
+              "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{@core.json_escape(param.kind)}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
             )
           }
           let vs : Array[String] = []
           for v in def.variants.keys() {
-            vs.push("\"\{v}\"")
+            vs.push("\"\{@core.json_escape(v)}\"")
           }
           let kvs : Array[String] = []
           for param in def.params.iter() {
@@ -271,7 +276,9 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
             Err(e) => err_json(e)
             Ok(def) => {
               p.user_components.set(def.id, def)
-              "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header)}"
+              // header_json 由 mcf_header_json 产出，已是合法 JSON 对象文本：
+              // 原样嵌入（再转义会破坏结构），收尾 } 是信封闭合（F51）
+              "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{header}}"
             }
           }
       }
@@ -382,16 +389,24 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           }
         }
       }
+      // x/y 是 schema required：缺参报错而非静默落 0（F55）；
+      // w/h 是可选（no() 注册）：缺失保持 ≤0=默认尺寸语义
+      let (xv, yv) = match (x, y) {
+        (Some(a), Some(b)) => (a, b)
+        _ => return err_json("missing x/y (required numbers)")
+      }
+      let wv = w.unwrap_or(0.0)
+      let hv = h.unwrap_or(0.0)
       match
         p.place_component(
           artboard~,
           component_id~,
           instance_id~,
           variant~,
-          x~,
-          y~,
-          w~,
-          h~,
+          x=xv,
+          y=yv,
+          w=wv,
+          h=hv,
           args=kv,
         ) {
         Ok(msg) => "{\"ok\":true,\"result\":\"\{@core.json_escape(msg)}\"}"
@@ -560,18 +575,33 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           match g_project.artboards.get(artboard) {
             None => err_json("unknown_artboard: " + artboard)
             Some(ab) => {
-              // 允许 rebind：换目标画板即重置历史（与 CLI 语义对齐）
-              g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
-              g_history_board.val = artboard
-              "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\"}"
+              // 幂等（与 CLI 语义对齐，issue #21）：已注册同一目标板时
+              // init 不重基线、保留已累积历史栈；换板才重置（此前每次
+              // init 都清空撤销栈，注释与实现漂移——F57）
+              let kept = match g_history.val {
+                Some(_) => g_history_board.val == artboard
+                None => false
+              }
+              if !kept {
+                g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+                g_history_board.val = artboard
+              }
+              "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\",\"kept\":\{kept}}"
             }
           }
         "commit" =>
           match g_history.val {
             None => err_json("history_not_initialized")
-            Some(h) =>
-              match g_project.artboards.get(artboard) {
-                None => err_json("unknown_artboard: " + artboard)
+            Some(h) => {
+              // schema 中 artboard 可省略：缺省回落当前 history 板（与
+              // CLI「history commit <msg> [artboard]」对齐——F57）
+              let target = if artboard != "" {
+                artboard
+              } else {
+                g_history_board.val
+              }
+              match g_project.artboards.get(target) {
+                None => err_json("unknown_artboard: " + target)
                 Some(ab) => {
                   let msg = extract_arg_string(request_line, "message")
                   let m = if msg == "" { "commit" } else { msg }
@@ -579,6 +609,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
                   "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{h.rev()},\"message\":\"\{@core.json_escape(m)}\"}"
                 }
               }
+            }
           }
         "log" =>
           match g_history.val {
@@ -769,7 +800,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if artboard == "" || node_id == "" {
         return err_json("missing artboard/node_id")
       }
-      match p.move_node(artboard~, node_id~, x~, y~) {
+      // x/y 是 schema required：缺参报错而非静默搬到 0（F55）
+      let (xv, yv) = match (x, y) {
+        (Some(a), Some(b)) => (a, b)
+        _ => return err_json("missing x/y (required numbers)")
+      }
+      match p.move_node(artboard~, node_id~, x=xv, y=yv) {
         Ok(json) => json
         Err(e) => err_json(e)
       }
@@ -825,7 +861,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if artboard == "" {
         return err_json("missing artboard")
       }
-      match p.resize_canvas(artboard~, width~, height~) {
+      // width/height 是 schema required：缺 height 报错而非静默重排成 0 高（F55）
+      let (wv, hv) = match (width, height) {
+        (Some(a), Some(b)) => (a, b)
+        _ => return err_json("missing width/height (required numbers)")
+      }
+      match p.resize_canvas(artboard~, width=wv, height=hv) {
         Ok(json) => json
         Err(e) => err_json(e)
       }
@@ -1164,11 +1205,14 @@ fn hex_digit_value(c : Char?) -> Int? {
 }
 
 ///|
-/// 从 params.arguments 中提取数值参数
-fn extract_arg_num(line : String, key : String) -> Double {
+/// 从 params.arguments 中提取数值参数：键缺失返回 None（schema 标注
+/// required 的 x/y、width/height 缺参必须报错，静默取 0.0 会把节点搬到
+/// 原点或把画板重排成 0 高——F55）；键存在但非数值仍解析为 0.0（容忍
+/// 字符串数字等历史形态，语义不变）。
+fn extract_arg_num(line : String, key : String) -> Double? {
   let args_idx = match find_arguments_body(line) {
     Some(i) => i
-    None => return 0.0
+    None => return None
   }
   let args_body = line.substring(start=args_idx)
   let pattern = "\"" + key + "\":"
@@ -1199,9 +1243,9 @@ fn extract_arg_num(line : String, key : String) -> Double {
           break
         }
       }
-      result
+      Some(result)
     }
-    None => 0.0
+    None => None
   }
 }
 
@@ -1234,32 +1278,50 @@ fn extract_json_string(json : String, key : String) -> String {
 }
 
 ///|
-fn extract_json_id(json : String) -> String {
+/// 提取 JSON-RPC 请求 id（F54）：
+/// - 数字 id（含负号）：原样回显；
+/// - 字符串 id：回显含引号形态（嵌入响应即合法 JSON 字符串），修复
+///   字符串 id 被回成 0 破坏请求-响应关联；
+/// - id 存在但非串/数（null 等）：以 null 回显；
+/// - 无 id 成员：返回 None——JSON-RPC 2.0 通知，调用方不得响应。
+fn extract_json_id(json : String) -> String? {
   match json.find("\"id\":") {
+    None => None
     Some(idx) => {
-      let start = idx + 5
-      let rest = json.substring(start~)
-      let mut i = 0
-      while i < rest.length() && rest.get_char(i) == Some(' ') {
-        i = i + 1
+      let mut start = idx + 5
+      while start < json.length() && json.get_char(start) == Some(' ') {
+        start = start + 1
       }
-      let digits = rest.substring(start=i)
-      let mut result = ""
-      for c in digits.iter() {
-        let code = c.to_int()
-        if (code >= 48 && code <= 57) || c == '-' {
-          result = result + c.to_string()
-        } else {
-          break
+      match json.get_char(start) {
+        Some('"') => {
+          // 字符串 id：扫描到闭引号，保留引号形态回显
+          let rest = json.substring(start=start + 1)
+          match rest.find("\"") {
+            Some(end) =>
+              Some("\"" + rest.substring(start=0, end~) + "\"")
+            None => None // 截断请求：无合法 id，按通知静默
+          }
         }
-      }
-      if result == "" {
-        "0"
-      } else {
-        result
+        Some(_) => {
+          let rest = json.substring(start~)
+          let mut result = ""
+          for c in rest.iter() {
+            let code = c.to_int()
+            if (code >= 48 && code <= 57) || c == '-' {
+              result = result + c.to_string()
+            } else {
+              break
+            }
+          }
+          if result == "" {
+            Some("null")
+          } else {
+            Some(result)
+          }
+        }
+        None => None
       }
     }
-    None => "0"
   }
 }
 

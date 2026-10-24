@@ -144,22 +144,22 @@ export class MoonViz {
     });
   }
 
-  /** 引擎工具能力字典（52 工具，含 inputSchema）——与 MCP tools/list 同源。 */
+  /** 引擎工具能力字典（含 inputSchema，条数随 agent_api 注册表演进）——与 MCP tools/list 同源。 */
   async tools() {
     return this.last(['list-tools']);
   }
 
-  /** 引擎 op 面字典（26 条 mutating op：usage/category/gates）。 */
+  /** 引擎 op 面字典（mutating op：usage/category/gates，条数随注册表演进）。 */
   async ops() {
     return this.last(['list-ops']);
   }
 
-  /** 模板清单（8 个完整页面模板）。 */
+  /** 模板清单（完整页面模板，数量随模板目录演进）。 */
   async listTemplates() {
     return this.last(['list-templates']);
   }
 
-  /** 预设组件清单（52 组件 × 93 变体，含默认尺寸）。 */
+  /** 预设组件清单（组件 × 变体，含默认尺寸；计数随组件目录演进）。 */
   async listComponents() {
     return this.last(['list-components']);
   }

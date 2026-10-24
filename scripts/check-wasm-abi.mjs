@@ -11,13 +11,78 @@
 // 用法：node scripts/check-wasm-abi.mjs [路径...]
 //   无参数 = 默认双路径（classic + wasm-gc 各自全检）；
 //   传路径 = 只检指定产物（CI 现行用法），按 imports 自动判别产物形态。
-import { readFile } from 'node:fs/promises';
+// 运行时要求：wasm-gc 侧需 WasmGC + js-string builtins（Node ≥ 24 / Chrome 119+，
+// CI 固定 node 24）。本机默认 node 过旧（如 nvm 停在 20）时，自动在常见安装位
+// （homebrew / nvm）找一个 ≥ 24 的 node 重执行本脚本——断言逻辑原样全跑、退出码
+// 原样透传；找不到合格运行时仍按原诊断报红，绝不跳过 gc 侧断言。
+import { readFile, readdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 const required = ["render_mbt", "validate_mbt", "apply_agent_op", "apply_human_op", "list_templates", "list_components", "list_themes", "list_tokens", "list_ops", "export_html", "version_info", "in_reset", "in_push", "in_len", "arg_reset", "arg_push", "arg_len", "render_mbt_in", "validate_mbt_in", "export_html_in", "apply_agent_op_in", "apply_human_op_in", "session_open_in", "session_apply_agent_in", "session_apply_human_in", "session_export_svg_in", "session_lint_in", "session_query_nodes_in", "session_interactions_in", "session_states_in", "session_spec_in", "session_infer_page_type_in", "session_infer_missing_in", "session_extract_design_system_in", "session_generate_responsive_in", "session_generate_in", "session_component_compile_b64_in", "session_constrain_in", "session_tap_in", "session_critique_in", "session_auto_fix_in", "session_open_project_json_in", "arg2_reset", "arg2_push", "session_apply_agent", "session_apply_human", "session_auto_fix", "session_benchmark", "session_close", "session_count", "session_open_project_json", "session_component_compile_b64", "session_constrain", "session_critique", "session_export_svg", "session_extract_design_system", "session_flows", "session_history", "session_history_in", "session_generate_responsive", "session_generate", "session_infer_missing", "session_infer_page_type", "session_interactions", "session_library_snapshot", "session_lint", "session_list_artboards", "session_open", "session_query_nodes", "session_save", "session_spec", "session_states", "session_tap"];
 
 function die(msg) {
   console.error(`ABI 断言失败：${msg}`);
   process.exit(1);
+}
+
+// 当前运行时编译不了 wasm-gc 时，找一台本机 ≥ 24 的 node 重执行本脚本。
+// 返回可用 node 路径；找不到或已处于重执行（防递归）返回 null。
+// gcPath：正在检验的产物路径，探针拿它对候选运行时做真实 gc 形态编译验证。
+async function capableNode(gcPath) {
+  if (process.env.MOONVIZ_ABI_REEXEC) return null;
+  const candidates = new Set(['/opt/homebrew/bin/node', '/usr/local/bin/node']);
+  const nvmRoot = process.env.NVM_DIR || join(homedir(), '.nvm');
+  try {
+    const vers = await readdir(join(nvmRoot, 'versions/node'));
+    for (const v of vers) candidates.add(join(nvmRoot, 'versions/node', v, 'bin/node'));
+  } catch { /* 无 nvm 安装，跳过 */ }
+  const parseVer = (s) => {
+    const m = s.trim().match(/^v(\d+)\.(\d+)\.(\d+)/);
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+  };
+  const scored = [];
+  for (const bin of candidates) {
+    try {
+      const ver = parseVer(execFileSync(bin, ['-v'], { encoding: 'utf8' }));
+      if (ver && ver[0] >= 24) scored.push([ver, bin]);
+    } catch { /* 安装残缺或非 node，跳过 */ }
+  }
+  scored.sort((a, b) => b[0][0] - a[0][0] || b[0][1] - a[0][1] || b[0][2] - a[0][2]);
+  for (const [, bin] of scored) {
+    if (probeGc(bin, gcPath)) return bin;
+  }
+  return null;
+}
+
+// 探针：候选 node 能否按 js-string builtins 形态编译该产物（拿真产物验，
+// 不只靠版本号猜——避免「版本 ≥24 但 gc 被封」之类的运行时误选）。
+function probeGc(bin, gcPath) {
+  try {
+    const out = execFileSync(
+      bin,
+      ['-e', 'new WebAssembly.Module(require("fs").readFileSync(process.argv[1]),{builtins:["js-string"],importedStringConstants:"_"});console.log("GC_OK")', gcPath],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+    return out.includes('GC_OK');
+  } catch {
+    return false;
+  }
+}
+
+// 用合格运行时整体重跑本脚本：argv 原样透传（守卫 1-3 全部原样执行），
+// 退出码透传——产物真有问题时子进程给真实红诊，绝不因换运行时而洗白。
+function rerunUnder(bin) {
+  try {
+    execFileSync(bin, [process.argv[1], ...process.argv.slice(2)], {
+      stdio: 'inherit',
+      env: { ...process.env, MOONVIZ_ABI_REEXEC: '1' },
+    });
+    process.exit(0);
+  } catch (e) {
+    process.exit(typeof e.status === 'number' ? e.status : 1);
+  }
 }
 
 // ── 守卫 1+2：moon_pkg 源级断言（不依赖产物是否已构建）──
@@ -85,6 +150,14 @@ for (const path of paths) {
       mod = new WebAssembly.Module(new Uint8Array(bytes), GC_OPTS);
       withBuiltins = true;
     } catch (e) {
+      // 两种形态都编译失败：先分「运行时太旧不识 gc」与「产物真坏」——
+      // 本机若有 ≥ 24 的 node（探针实测能编该产物）就换它整体重跑本脚本，
+      // 断言原样执行；没有才按运行时缺口报红。
+      const bin = await capableNode(path);
+      if (bin) {
+        console.error(`当前 node ${process.versions.node} 编译不了 ${path}（${e.message.split('\n')[0]}）——改用 ${bin} 重跑全套断言`);
+        rerunUnder(bin);
+      }
       die(`产物编译失败（gc 侧需 wasm-gc + js-string builtins 运行时，Node ≥ 24 / Chrome 119+）：${e.message}`);
     }
   }

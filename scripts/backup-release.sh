@@ -13,14 +13,15 @@ VERSION="${MOONVIZ_VERSION:-$(grep -o 'MOONVIZ_VERSION: "[^"]*"' .github/workflo
 TAG="engine-v${VERSION}"
 REPO="$(git -C "$ROOT" remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##')"
 
-# 包家族清单：与 npm 发布面保持一致（新增包在这里追加一行）
+# 包家族清单：与 npm 发布面保持一致（新增包在这里追加一行）。
+# 不含 moonviz-bin-darwin-x64：该平台已停建（binaries.yml matrix 注释），
+# 备份面与构建面保持一致。
 PACKAGES=(
   "moonviz-mcp"
   "moonviz-engine-sdk"
   "moonviz-engine-wasm"
   "moonviz-skill"
   "moonviz-bin-darwin-arm64"
-  "moonviz-bin-darwin-x64"
   "moonviz-bin-linux-x64"
   "moonviz-bin-linux-arm64"
   "moonviz-bin-win32-x64"
@@ -38,8 +39,20 @@ gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || {
 uploaded=0
 for pkg in "${PACKAGES[@]}"; do
   meta=$(curl -fsSL "https://registry.npmjs.org/$pkg" 2>/dev/null) || { echo "  ⊘ $pkg 不在 npm（跳过）"; continue; }
-  ver=$(printf '%s' "$meta" | python3 -c "import sys,json;d=json.load(sys.stdin);vs=sorted(d.get('versions',{}).keys());print(vs[-1] if vs else '')")
-  [ -z "$ver" ] && { echo "  ⊘ $pkg 无版本（跳过）"; continue; }
+  # tag 版本一致性：只备份与 MOONVIZ_VERSION 基线相等的版本，
+  # npm 最新版落后/超前基线（含打包后缀号）一律告警跳过
+  ver=$(printf '%s' "$meta" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+vs = sorted(d.get('versions', {}).keys())
+base = sys.argv[1]
+matches = [v for v in vs if v == base]
+print(matches[-1] if matches else '')" "$VERSION")
+  if [ -z "$ver" ]; then
+    latest=$(printf '%s' "$meta" | python3 -c "import sys,json;d=json.load(sys.stdin);vs=sorted(d.get('versions',{}).keys());print(vs[-1] if vs else '')")
+    echo "  ⚠ $pkg npm 无 ${VERSION} 基线版本（最新 ${latest:-无}），与 tag 基线不一致，跳过" >&2
+    continue
+  fi
   tgz="$WORK/$pkg-$ver.tgz"
   curl -fsSL -o "$tgz" "https://registry.npmjs.org/$pkg/-/$pkg-$ver.tgz"
   # 已有同名资产则 --clobber 刷新，否则新增

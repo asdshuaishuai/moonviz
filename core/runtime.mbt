@@ -211,7 +211,9 @@ pub fn MoonVizRT::handle_event(
         }
       }
     SwipeEvent(dir) =>
-      // 滑动也可能触发导航
+      // 滑动也可能触发导航。与 KeyEvent 臂同语义：命中首条即停——
+      // 同画板多条同 trigger 的 swipe flow 只执行第一条，否则导航栈
+      // 连推多个画板、成串状态变更（此前漏 break，与 tap/key 不一致）
       match self.project.artboards.get(self.nav.current) {
         Some(ab) => {
           let trigger = "swipe_\{dir}"
@@ -220,6 +222,7 @@ pub fn MoonVizRT::handle_event(
               let _ = self.nav.navigate(e.to)
               changes.push(NavigationPushed(e.to))
               changes.push(ArtboardChanged(e.to))
+              break
             }
           }
         }

@@ -1287,12 +1287,14 @@ function downloadSvg(){
 }
 function downloadHtml(){
   if(!engine){setStatus(false,'引擎未就绪');return;}
-  const r=engine.exportHtml(mbt);
-  if(r.ok!==true){setStatus(false,r.error||'导出失败');return;}
-  const blob=new Blob([r.html],{type:'text/html'});
-  const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download='moonviz-prototype.html';el.click();
-  URL.revokeObjectURL(el.href);
-  setStatus(true,`✓ HTML 原型已导出（${(r.html.length/1024).toFixed(1)}KB · 节点级交互内置）`);
+  try{
+    const r=engine.export_html(mbt);
+    if(r.ok!==true){setStatus(false,r.error||'导出失败');return;}
+    const blob=new Blob([r.html],{type:'text/html'});
+    const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download='moonviz-prototype.html';el.click();
+    URL.revokeObjectURL(el.href);
+    setStatus(true,`✓ HTML 原型已导出（${(r.html.length/1024).toFixed(1)}KB · 节点级交互内置）`);
+  }catch(err){setStatus(false,String(err.message||err));}
 }
 async function loadTemplates(){
   try{

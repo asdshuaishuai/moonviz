@@ -3,8 +3,8 @@
 ## What's New in 0.1.9-fix
 
 - **Hardening patch** — component norms + built-in back navigation (merged from dev),
-  device Git operating rules documented (gh-first, SSH fallback). 231 tests green
-  on the default target.
+  device Git operating rules documented (gh-first, SSH fallback). Full test suite
+  green on the default target and `--target native`.
 
   （Correction note — this fix-2 exists to correct the packaged README; an earlier version of this section wrongly listed Smart UX
   consumption-surface items — those live on the release/1.0 branch and are NOT
@@ -220,7 +220,7 @@ cd ddp && cargo build --release && cd ..
 #    Produces ddp/target/release/ddp_codec (stdin JSON → stdout JSON)
 #    Override the path with MOONVIZ_DDP_HELPER; the SDK searches ddp/target/{debug,release} automatically
 
-# 4. Full test suite (205 on the default target; 209 with --target native)
+# 4. Full test suite (dynamic: `moon test --target native` is the full matrix; counts grow with the release)
 moon test
 ```
 
@@ -321,7 +321,7 @@ moonviz/
 ├── npm/               npm distribution: moonviz-mcp (launcher) + moonviz-skill + moonviz-bin-<platform> (prebuilt platform packages)
 ├── playground/        Terminal canvas + PNG rendering + REPL
 ├── site/              Website (GitHub Pages: asdshuaishuai.github.io/moonviz/)
-├── scripts/           publish-npm.sh and other release scripts
+├── scripts/           publish-all.sh / backup-release.sh (release scripts) + check-wasm-abi.mjs
 ├── examples/          DDP2 parse/render replica samples (CI example repro)
 └── docs/              Design documents 01–12 + wasm-abi.md
 ```
@@ -354,7 +354,7 @@ Prototypes are not static pictures — MoonViz has a complete interaction runtim
 | Concept | Description |
 |:---|:---|
 | **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_text / submit_form / show_toast |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound (submit_form exists only at the API layer — no spec syntax yet) |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | Component polymorphism (default / pressed / disabled / loading) |
 | **NavigationState** | Navigation stack (push / pop / back) |
@@ -626,7 +626,7 @@ p.enable_auto_dark()          // derive a dark variant from the current theme
 | nord | Nordic | #88C0D0 | #3B4252 |
 | sunset | Warm sunset | #FF7043 | #FFF8E1 |
 
-**Auto dark**: `Theme::auto_dark(light)` → invert luminance, keep hue → a dark variant is generated automatically.
+**Auto dark**: `Theme::auto_dark(light)` → invert each RGB channel (hue rotates 180°) → a dark variant is generated automatically.
 
 ## Component Slot System
 
@@ -719,7 +719,7 @@ Seven integration routes, the same `.mbt.md` fact source, the same dual gates:
 | **DDP container** | Rust `ddp_codec` (DDP1 encrypted / DDP2 keyless) | Encrypted design distribution, read-only viewers |
 | **WASM (classic)** | `moon build --target wasm` — pure WASM MVP (0 imports, linear memory), consumed by wasmtime/wasmi and any spec-compliant runtime | Rust hosts, server-side embedding |
 
-Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-0.1.3.wasm` / `moonviz-wasm-classic-0.1.3.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
+Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-<ver>.wasm` / `moonviz-wasm-classic-<ver>.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
 
 MCP client configuration (npx prebuilt route):
 
@@ -795,3 +795,4 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit rendering ecosystem survey
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **Complete technical notes on the rendering scheme and pipeline** (declaration parsing → layout → predicates → SVG/PNG/terminal backends + tech stack + binary distribution and toolchain risk)
 11. [11-user-components.md](docs/11-user-components.md) — User components (component_compile / component_import / component_export)
+12. [12-generative-ui.md](docs/12-generative-ui.md) — Generative UI and the Agent execution strategy (pipeline / report-driven loop / composite intents / integration matrix / invariants)

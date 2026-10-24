@@ -106,6 +106,23 @@ test "主题：set_token 单令牌修改" {
 }
 
 ///|
+test "主题：set_token 值含引号/反斜杠仍产出合法 JSON envelope（回归锚）" {
+  let p = Project::new()
+  match p.set_token("primary", "a\"b\\c") {
+    Ok(json) => {
+      // value 区必须是转义序列，裸引号/裸反斜杠即 envelope 非法
+      assert_true(json.contains("\"value\":\"a\\\"b\\\\c\""))
+    }
+    Err(_) => assert_true(false)
+  }
+  // 生效不受转义影响：落库的是原始值
+  match p.get_token("primary") {
+    Ok(v) => assert_eq(v, "a\"b\\c")
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
 test "主题：preview_themes 显示各主题颜色" {
   let p = Project::new()
   let _ = p.create_artboard(name="test")
@@ -137,26 +154,15 @@ test "主题：自动暗色推导" {
 }
 
 ///|
-test "主题：ThemeRegistry" {
-  let reg = ThemeRegistry::new()
-  // 切换到 dark
-  match reg.switch("dark") {
-    Ok(tokens) => {
-      let s = tokens.resolve_color("surface")
-      assert_eq(s, "#1A1C1E")
-    }
+test "主题：ThemeRegistry 已移除（回归锚：Project::apply_theme 是唯一切换面）" {
+  // ThemeRegistry 及其 switch/register 无任何生产消费面（F24），已删除；
+  // 主题切换统一走 Project::apply_theme。此测试仅锚定删除事实，
+  // 防止死代码回潮——若恢复 ThemeRegistry 请同时接入工具面。
+  let p = Project::new()
+  match p.apply_theme("dark") {
+    Ok(json) => assert_true(json.contains("\"ok\":true"))
     Err(_) => assert_true(false)
   }
-  // 当前主题
-  match reg.current_theme() {
-    Ok(t) => assert_eq(t.name, "dark")
-    Err(_) => assert_true(false)
-  }
-  // 列表
-  let list = reg.list()
-  assert_true(list.contains("\"light\""))
-  assert_true(list.contains("\"dark\""))
-  assert_true(list.contains("←current"))
 }
 
 ///|

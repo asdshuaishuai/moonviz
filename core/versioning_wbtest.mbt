@@ -149,6 +149,39 @@ test "AI 设计批评：摘要评分" {
 }
 
 ///|
+/// 回归（评审 F36）：extract_scores 曾把信封头 "principles":9 当一条原则
+/// 分计入——avg=(9+Σ九项)/10 而非 Σ/9，档位边界虚高一级。摘要均值必须
+/// 只计九项原则分（scores 长度 9 是本回归的判别断言）。
+test "AI 设计批评：摘要均值只计九项原则分" {
+  let p = Project::new()
+  let _ = p.apply_template(template_id="login")
+  let json = match p.critique(artboard="login") {
+    Ok(j) => j
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let scores = extract_scores(json)
+  assert_eq(scores.length(), 9)
+  let avg = sum_scores(scores) / scores.length()
+  let grade = if avg >= 8 {
+    "A"
+  } else if avg >= 6 {
+    "B"
+  } else if avg >= 4 {
+    "C"
+  } else {
+    "D"
+  }
+  // 摘要串与九项原则分的均值/档位严格一致（数值断言）
+  match p.critique_summary(artboard="login") {
+    Ok(s) => assert_eq(s, "Design Critique: \{grade} (\{avg}/10)")
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
 test "Agent 全流程：设计→批评→版本控制→回放" {
   let p = Project::new()
   // 创建设计

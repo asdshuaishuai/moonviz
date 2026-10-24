@@ -26,6 +26,8 @@ test "令牌覆盖：set_token 全链往返" {
                   let canon2 = m2.to_mbt()
                   assert_true(canon2.contains(fillback))
                   assert_false(canon2.contains(ovline))
+                  // 改回默认值后 tokens: 段整体消失（与默认同值的恒真条目不序列化）
+                  assert_false(canon2.contains("tokens:"))
                 }
               }
             }

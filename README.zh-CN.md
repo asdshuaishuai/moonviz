@@ -2,7 +2,7 @@
 ## 0.1.9-fix 新特性
 
 - **加固补丁**——组件规范 + 内置返回导航（dev 合入）、本设备 Git 操作规定
-  入档（优先 gh / SSH 降级链）。默认目标 231 测试全绿。
+  入档（优先 gh / SSH 降级链）。全量测试绿（默认目标 + `--target native`）。
 
   （勘误：本节早先版本误列了 Smart UX 消费面条目——那些在 release/1.0
   分支上，不属于 0.1.9-fix。已发布的二进制与包不受影响。）
@@ -202,7 +202,7 @@ cd ddp && cargo build --release && cd ..
 #    产物 ddp/target/release/ddp_codec（stdin JSON → stdout JSON）
 #    可用 MOONVIZ_DDP_HELPER 指定路径；SDK 会自动在 ddp/target/{debug,release} 下查找
 
-# 4. 全量测试（默认目标 205 项；--target native 全量 209 项）
+# 4. 全量测试（动态口径：`moon test --target native` 为全量，测试数随版本增长）
 moon test
 ```
 
@@ -302,9 +302,9 @@ moonviz/
 ├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-skill + moonviz-bin-<platform>（预编译平台包）
 ├── playground/        终端画布 + PNG 渲染 + REPL
 ├── site/              官网（GitHub Pages：asdshuaishuai.github.io/moonviz/）
-├── scripts/           publish-npm.sh 等发布脚本
+├── scripts/           publish-all.sh / backup-release.sh 等发布脚本 + check-wasm-abi.mjs
 ├── examples/          DDP2 解析/渲染复刻样例（CI 示例复现）
-└── docs/              设计文档 01–12
+└── docs/              设计文档 01–12 + wasm-abi.md
 ```
 
 ## Webview 自渲染（desktop/，客户端引导模型）
@@ -330,7 +330,7 @@ moonviz/
 | 概念 | 说明 |
 |:---|:---|
 | **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_text / submit_form / show_toast |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound（submit_form 仅 API 层，spec 语法未落地） |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | 组件多态（default / pressed / disabled / loading） |
 | **NavigationState** | 导航栈（push / pop / back） |
@@ -603,7 +603,7 @@ p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 | nord | 极地 | #88C0D0 | #3B4252 |
 | sunset | 落日暖 | #FF7043 | #FFF8E1 |
 
-**自动暗色推导**：`Theme::auto_dark(light)` → 反转亮度，保留色相 → 自动生成暗色版本。
+**自动暗色推导**：`Theme::auto_dark(light)` → RGB 通道逐位反转（色相旋转 180°）→ 自动生成暗色版本。
 
 ## 组件插槽系统
 
@@ -747,7 +747,7 @@ MCP 客户端配置（npx 预编译路线）：
 MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分四层：
 
 1. **产物冻结**（根本手段）：预编译二进制与 WASM 一经发布即快照——工具链后续破坏性变更不影响任何已分发产物，语言不确定性被隔离在构建时。
-2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 209 项测试（`--target native` 全量）+ CLI/MCP 冒烟挡板验证。
+2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 `moon test --target native` 全量测试 + CLI/MCP 冒烟挡板验证。
 3. **协议稳定**：`SolvedLayout` / `GateDecision` / `RenderPlan` 等对外协议刻意稳定（求解器预留 Cassowary 替换接口），不随语言版本漂移。
 4. **组件隔离兜底**：DDP 已示范非 MoonBit 组件独立进程化路线，极端情况下任何组件可按此模式替换而不动 `.mbt.md` 事实源格式。
 
@@ -772,3 +772,4 @@ MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit 绘制引擎生态调研
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **绘制方案与渲染管线完整技术说明**（声明解析 → 布局 → 谓词 → SVG/PNG/终端三后端 + 技术栈 + 二进制分发与工具链风险）
 11. [11-user-components.md](docs/11-user-components.md) — 用户组件（component_compile / component_import / component_export）
+12. [12-generative-ui.md](docs/12-generative-ui.md) — 生成式 UI 与 Agent 执行策略（管线 / 报告驱动闭环 / 组合意图 / 接入面矩阵 / 不变量）

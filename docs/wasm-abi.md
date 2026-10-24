@@ -8,9 +8,11 @@
 
 ## 1. 模块形态
 
-纯 WASM MVP：线性内存（导出名 `memory`）、0 imports、所有函数签名为
-`(i32...) -> i32`。任何符合 WASM MVP 规范的运行时（wasmtime/wasmi…）
-可直接实例化。
+纯 WASM MVP：线性内存（导出名 `memory`）、0 imports。函数签名以
+`(i32...) -> i32` 为主：句柄/计数走 i32，`Double` 形参走 f64（仅
+`session_tap` / `session_tap_in` 的 x/y），槽协议的 reset/push/len 导出
+无返回值（Unit，wasm 层无结果）。任何符合 WASM MVP 规范的运行时
+（wasmtime/wasmi…）可直接实例化。
 
 ## 2. 字符串对象布局
 
@@ -51,7 +53,8 @@ arg_reset() / arg_push(chunk,n) / arg_len()   辅槽：op / artboard 文本
 arg2_reset() / arg2_push(chunk,n)             三槽：intent / value 文本
 ```
 
-`chunk` 为小端 4 字节 UTF-8，`n` 为有效字节数（1-4）。例（Rust）：
+`chunk` 为小端 4 字节 UTF-8，`n` 为有效字节数（1-4）；`n < 1` 被忽略
+（no-op，不向槽写入任何字节——宿主越界误用不污染槽）。例（Rust）：
 
 ```rust
 // render_mbt_in：主槽压入 SEED 后调用
@@ -64,7 +67,41 @@ let ptr = render_mbt_in();
 let json = read_moonstr(ptr);   // §2 判别式读取
 ```
 
-带 `_in` 后缀的入口（当前 26 个）：`render_mbt_in validate_mbt_in export_html_in apply_agent_op_in apply_human_op_in session_open_in session_apply_agent_in session_apply_human_in session_export_svg_in session_lint_in session_query_nodes_in session_interactions_in session_states_in session_spec_in session_infer_page_type_in session_infer_missing_in session_extract_design_system_in session_generate_responsive_in session_generate_in session_component_compile_b64_in session_constrain_in session_tap_in session_critique_in session_auto_fix_in session_open_project_json_in session_history_in`。
+带 `_in` 后缀的入口当前 26 个，与 `wasm/moon.pkg` classic exports 段
+一一对应。一般槽位规则：主槽放文档级长文本，辅槽放 op/artboard 参数
+文本，三槽放 intent/value 自由文本。**唯一特例 `session_generate_in`：
+辅槽 = intent、三槽 = name**——name 是新画板名而非既有画板引用，故
+不走 constrain_in 的 arg=artboard 布局；宿主若按一般规则把 intent 放
+三槽会装反。逐导出槽位映射：
+
+| 导出 | 主槽 in_ | 辅槽 arg_ | 三槽 arg2_ | 其他形参 |
+|---|---|---|---|---|
+| render_mbt_in | MBT 文档 | — | — | |
+| validate_mbt_in | MBT 文档 | — | — | |
+| export_html_in | MBT 文档 | — | — | |
+| apply_agent_op_in | MBT 文档 | op | — | |
+| apply_human_op_in | MBT 文档 | op | — | |
+| session_open_in | MBT 文档 | — | — | |
+| session_open_project_json_in | project_json | — | — | |
+| session_apply_agent_in | — | op | — | |
+| session_apply_human_in | — | op | — | |
+| session_export_svg_in | — | artboard | — | |
+| session_lint_in | — | artboard | — | |
+| session_query_nodes_in | — | artboard | — | |
+| session_interactions_in | — | artboard | — | |
+| session_states_in | — | artboard | — | |
+| session_spec_in | — | artboard | — | |
+| session_infer_page_type_in | — | artboard | — | |
+| session_infer_missing_in | — | artboard | — | |
+| session_extract_design_system_in | — | artboard | — | |
+| session_generate_responsive_in | — | artboard | — | |
+| session_generate_in | — | **intent（特例）** | name | |
+| session_component_compile_b64_in | — | base64 组件声明 | — | |
+| session_constrain_in | — | artboard | intent | |
+| session_tap_in | — | artboard | — | x、y: f64 |
+| session_critique_in | — | artboard | — | |
+| session_auto_fix_in | — | artboard | — | |
+| session_history_in | — | history line | — | |
 
 ## 6. 防漂移
 

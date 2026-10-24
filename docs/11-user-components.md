@@ -1,6 +1,8 @@
 # 11 — 用户自定义组件系统（NL 生成 · 本地持久化 · MCF 专有格式）
 
-> 状态：设计方案（未编码）。需求原文：自然语言描述生成组件；持久化到本地可复用；Agent 与内置组件无差别感知；可通过**专有格式**文件分发（无密码、仅引擎可解析、载荷仍是 `.mbt.md`、声明头与 DDP 分开）。
+> 状态：C1（组件管线）与 C2（MCF v1）已落地——`core/usercomp.mbt` / `core/mcf.mbt`；
+> 本文档 §3 字节布局按 v1 实现回写（v1 尚未做 engine_compat 区间校验，见 §3 第 3 层的诚实边界）。
+> 需求原文：自然语言描述生成组件；持久化到本地可复用；Agent 与内置组件无差别感知；可通过**专有格式**文件分发（无密码、仅引擎可解析、载荷仍是 `.mbt.md`、声明头与 DDP 分开）。
 
 ---
 
@@ -81,33 +83,35 @@ fn component_cart_button() -> @decl.ComponentDecl {
 
 **与 DDP 的关系**：完全独立的容器族——DDP（`DDP1/DDP2` magic）承载**文档**，MCF 承载**组件**；工具路径、magic、语义互不重叠。声明头（元信息）与载荷（源码）分区，正如需求所述「声明头和 DDP 的格式分开」。
 
-### 字节布局（v1 规范草案）
+### 字节布局（v1 实现回写，与 core/mcf.mbt 一致）
 
 ```
 偏移   长度   字段
 ──────────────────────────────────────────────────────
 0      4     magic = ASCII "MVCC"
 4      1     version = 0x01
-5      1     flags  （bit0: header 压缩；其余预留）
+5      1     flags  （预留 0）
 6      4     header_len   LE u32
 10     8     payload_len  LE u64
 18     4     header_crc32   LE u32（原始 header 字节）
 22     4     payload_crc32  LE u32（混淆后的 payload 字节）
-26     H     HEADER：专有序列化（TLV 二进制，非 JSON）
-                  组件 id/名称/版本/params schema/variants/
-                  engine_compat 区间/created_at/author 标签
+26     H     HEADER：TLV 专有序列化（type 0x01 包裹一段 JSON 元信息）
+                  {"id", "description", "params[]"（name/kind/default）,
+                   "variants[]"（变体名列表）, "format":"mcf-v1"}
+                  ——v1 未含名称/版本/engine_compat/created_at/author
+                    （注册表 schema 保留这些字段，随 docs/mcf-spec.md 冻结扩入）
 26+H   P     PAYLOAD：mbt.md 组件声明源码
              （经引擎自逆字节变换，见下）
-尾     8     引擎指纹 = FNV-1a(engine_revision || magic) LE u64
+尾     8     格式指纹 = FNV-1a64("MVCC:moonviz:1") LE u64（固定常量）
 ```
 
 ### 「只有引擎能解析」的三层实现（诚实边界）
 
 无密码格式**不可能防专业逆向**（这是密码学常识），方案把壁垒做成三层结构性私有：
 
-1. **格式私有**：header 用专有 TLV 序列化（非标准容器，第三方无 schema 读不出结构）；payload 施加**内生自逆变换**——xor 流的密钥由 header 前若干字节 + header_crc 派生（不来自任何密码，来自格式自身），顺带 payload_crc 对变换后字节计算，第三方即便猜到是 mbt.md 也须逆向整套规范
+1. **格式私有**：header 用专有 TLV 序列化包裹 JSON（第三方无 schema 读不出结构约定）；payload 施加**内生自逆变换**——xor 流的种子由格式指纹常量 + header 前若干字节派生（不来自任何密码，来自格式自身），顺带 payload_crc 对变换后字节计算，第三方即便猜到是 mbt.md 也须逆向整套规范
 2. **管线私有**：MCF 的唯一合法入口是 `component-import`——导入必经「结构校验 + 参数闭合 + 实例化测试渲染 + AgentGate 谓词验收」编译管线，**离开引擎的注册管线，一个解开的 mbt.md 也无法获得组件地位**（不能 place、不被 list、不进注册表）。真正的护城河在管线，文件格式是第一道门
-3. **指纹绑定**：尾部引擎指纹 + `engine_compat` 区间校验，防第三方工具伪造合法 MCF 分发链；不匹配拒绝导入并给出可读错误
+3. **指纹校验（混淆非防伪）**：尾部指纹在 v1 是**固定格式常量** FNV-1a64("MVCC:moonviz:1")，作用是完整性校验（防传输损坏/误配格式族），**不构成引擎版本绑定，也不能防第三方工具伪造合法 MCF**——伪造者读规范即可算出该常量。防伪造的版本绑定（指纹改由 engine_revision 派生 + header 增加 `engine_compat` 区间校验）留待 `docs/mcf-spec.md` 冻结时随 v2 演进；v1 的真实防线是第 2 层管线私有
 
 ### 编解码归属
 

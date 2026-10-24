@@ -347,10 +347,10 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Some(def) => {
             let vs : Array[String] = []
             for v in def.variants.keys() {
-              vs.push("\"\{v}\"")
+              vs.push("\"\{@core.json_escape(v)}\"")
             }
             user_items.push(
-              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{@core.json_escape(def.category)}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
             )
           }
           None => ()
@@ -567,78 +567,23 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           "usage: place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]",
         )
       } else {
-        let ab = parts[1]
-        let comp = parts[2]
-        let nid = parts[3]
-        // "-" 占位 = 使用组件默认 variant
-        let variant = if parts.length() >= 5 && parts[4] != "-" {
-          parts[4]
-        } else {
-          ""
-        }
-        let x = if parts.length() >= 6 { parse_d(parts[5]) } else { 0.0 }
-        let y = if parts.length() >= 7 { parse_d(parts[6]) } else { 0.0 }
-        // 位置参数 w/h（issue #18）：与 op 面（core/ops.mbt place 臂）同规则——
-        // 槽 7/8 的无 "=" 数字 token 视为宽/高；"-" 表示沿用默认尺寸
-        let mut w = 0.0
-        let mut h = 0.0
-        let mut kv_error = ""
-        let mut kv_start = 7
-        if parts.length() >= 8 && parts[7].find("=") is None {
-          if parts[7] == "-" {
-            kv_start = 8
-          } else if place_token_is_number(parts[7]) {
-            w = parse_d(parts[7])
-            kv_start = 8
-            if parts.length() >= 9 && parts[8].find("=") is None {
-              if parts[8] == "-" {
-                kv_start = 9
-              } else if place_token_is_number(parts[8]) {
-                h = parse_d(parts[8])
-                kv_start = 9
-              } else {
-                kv_error = "place_invalid_arg:" + parts[8]
-              }
-            }
-          } else {
-            kv_error = "place_invalid_arg:" + parts[7]
-          }
-        }
-        // 尾部 k=v 对：用户组件参数槽传参（内置组件忽略）
-        let kv : Map[String, String] = Map::new()
-        for i = kv_start; i < parts.length(); i = i + 1 {
-          if kv_error != "" {
-            break
-          }
-          match parts[i].find("=") {
-            None =>
-              if kv_error == "" {
-                kv_error = "place_invalid_arg:" + parts[i]
-              }
-            Some(pos) => {
-              let k = parts[i].substring(start=0, end=pos)
-              // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
-              let v = @decl.unescape_value(parts[i].substring(start=pos + 1))
-              if k != "" {
-                kv.set(k, v)
-              }
-            }
-          }
-        }
-        if kv_error != "" {
-          cli_err(kv_error)
+        // 参数解析走 @core.parse_place_args——与 op 面（apply_operation
+        // 的 place 臂）同一实现，「双路线解析必须一致」结构性兑现
+        let pa = @core.parse_place_args(parts)
+        if pa.error != "" {
+          cli_err(pa.error)
         } else {
           match
             p.place_component(
-              artboard=ab,
-              component_id=comp,
-              instance_id=nid,
-              variant~,
-              x~,
-              y~,
-              w~,
-              h~,
-              args=kv,
+              artboard=parts[1],
+              component_id=parts[2],
+              instance_id=parts[3],
+              variant=pa.variant,
+              x=pa.x,
+              y=pa.y,
+              w=pa.w,
+              h=pa.h,
+              args=pa.args,
             ) {
             Ok(msg) => msg
             Err(e) => cli_err(e)
@@ -938,6 +883,20 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         "{\"ok\":true,\"flow\":\"\{parts[1]} --tap:\{parts[3]}--> \{parts[2]}\"}"
       }
     "flows" => p.flow_json()
+    "unflow" =>
+      // 撤销单条导航流：unflow <from_ab> <to_ab> <node_id>（op_entries
+      // 注册表宣告的 CLI op 面，缺臂会让按 list-ops 逐字发令的 Agent
+      // 撞 unknown_command——与 flow 臂对称）
+      if parts.length() < 4 {
+        cli_err("usage: unflow <from_artboard> <to_artboard> <node_id>")
+      } else {
+        match
+          p.remove_flow(from=parts[1], to=parts[2], trigger="tap:\{parts[3]}") {
+          Ok(_) =>
+            "{\"ok\":true,\"unflow\":\"\{parts[1]} --tap:\{parts[3]}--> \{parts[2]}\"}"
+          Err(e) => cli_err(e)
+        }
+      }
     "group" =>
       if parts.length() < 5 {
         cli_err("usage: group <artboard> <group_id> <n1> <n2> [n3 ...]")
@@ -1196,10 +1155,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "set-state" =>
-      if parts.length() < 4 {
+      // 文法 set-state <node> <state_name> [toggle]：最小合法输入是 3 段
+      // （此前 <4 双重 off-by-one：最小形式被拒、toggle 永远打不开），
+      // 与 core/ops.mbt set-state 臂逐字对齐
+      if parts.length() < 3 {
         cli_err("usage: set-state <node> <state_name> [toggle]")
       } else {
-        let toggle = parts.length() >= 5 && parts[4] == "toggle"
+        let toggle = parts.length() >= 4 && parts[3] == "toggle"
         match p.set_node_state(node_id=parts[1], state_name=parts[2], toggle~) {
           Ok(json) => json
           Err(e) => cli_err(e)
@@ -1283,7 +1245,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
 }
 
 ///|
-/// 以下三个为 core/ops.mbt 的薄委托：cli_exec 等既有调用点无需改动。
+/// 以下为 core/ops.mbt 的薄委托：cli_exec 等既有调用点无需改动。
+/// （place 参数解析已整体上移为 @core.parse_place_args，place 臂直接
+/// 调用；本地的 place_token_is_number 副本随之删除。）
 fn split_cmd(line : String) -> Array[String] {
   @core.split_cmd(line)
 }
@@ -1291,18 +1255,6 @@ fn split_cmd(line : String) -> Array[String] {
 ///|
 fn index_of_str(s : String, sub : String) -> Int {
   @core.index_of_str(s, sub)
-}
-
-///|
-
-///|
-/// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）
-fn place_token_is_number(t : String) -> Bool {
-  t.length() > 0 &&
-  ({
-    let c0 = t.substring(start=0, end=1)
-    c0 >= "0" && c0 <= "9"
-  })
 }
 
 ///|
@@ -1340,7 +1292,7 @@ fn cli_help() -> String {
   "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h] [k=v ...]  Place at final size\n" +
   "  query <ab>           Query nodes in artboard\n" +
   "  lint <ab>            Run design lint\n" +
-  "  critique <ab>        Run 8-principle critique\n" +
+  "  critique <ab>        Run 9-principle critique\n" +
   "  benchmark            Run performance benchmark\n" +
   "  fix <ab>             Auto-fix violations\n" +
   "  theme <name>         Switch theme\n" +
@@ -1389,6 +1341,7 @@ fn cli_help() -> String {
   "  uninteract <ab> <node>            Clear node interactions\n" +
   "  interactions <ab>                 List (node/trigger/action)\n" +
   "  flow <from> <to> <node>           Add tap navigation edge\n" +
+  "  unflow <from> <to> <node>         Remove a tap navigation edge\n" +
   "  flows                             List navigation edges\n" +
   "  tap <ab> <x> <y>                  Simulate a tap, return state changes\n" +
   "\n" +
