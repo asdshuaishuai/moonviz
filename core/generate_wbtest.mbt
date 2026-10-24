@@ -309,3 +309,19 @@ test "generate multi：主题段/空组合/上限" {
     Ok(_) => assert_true(false)
   }
 }
+
+///|
+/// 交流模式：generate 信封带人话 summary（单通道与组合通道）。
+test "generate：信封 summary 摘要" {
+  let p = Project::new()
+  let j1 = match p.generate(intent_text="登录页") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j1.contains("\"summary\":\"生成登录页（93分，自愈"))
+  let j2 = match p.generate(intent_text="登录+注册") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j2.contains("\"summary\":\"组合生成 2 板：login → signup\""))
+}

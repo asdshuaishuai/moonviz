@@ -271,13 +271,14 @@ pub fn Project::generate(
     Ok(json) => json
     Err(_) => "{}"
   }
+  let summary = "生成" + intent.page_hint + "（" + json_int_field(score_json, "total", 0).to_string() + "分，自愈" + json_int_field(autofix_json, "fixes", 0).to_string() + "处，缺" + json_int_field(missing_json, "missing_count", 0).to_string() + "项）"
   let alts : Array[String] = []
   for a in intent.alternatives.iter() {
     alts.push("\"" + a + "\"")
   }
   let alts_j = alts.join(",")
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
   )
 }
 
@@ -685,8 +686,9 @@ pub fn Project::generate_multi(
     k = k + 1
   }
   let arts_j = arts.join(",")
+  let ms = "组合生成 " + ids.length().to_string() + " 板：" + ids.join(" → ")
   let flows_j = flows_json.join(",")
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"theme_applied\":\"\{theme_applied}\",\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
   )
 }

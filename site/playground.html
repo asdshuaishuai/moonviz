@@ -801,24 +801,27 @@ function genuiGenerate(){
     if(r.ok!==true)return setStatus(false,(r.error||'生成失败'));
     genuiApplyRefresh(r);
     if(r.mode==='multi'){
-      const grades=r.artboards.map(a=>a.score).join('/');
-      setStatus(true,`✦ 组合生成 ${r.count} 块画板（${r.artboards.map(a=>a.id).join(' → ')}）· 分数 ${grades}`);
+      setStatus(true,`✦ ${r.summary||('组合生成 '+r.count+' 块画板')}`);
     }else{
-      const g=(r.score&&r.score.total)!==undefined?r.score.total:'?';
-      setStatus(true,`✦ 生成 ${r.artboard}（${r.template} · ${g} 分）· 报告缺失 ${r.missing?r.missing.missing_count:0} 条，可点「补缺」`);
+      setStatus(true,`✦ ${r.summary||('生成 '+r.artboard)}`);
     }
   }catch(e){setStatus(false,String(e.message||e));}
 }
 function genuiAutofill(){
   if(!engine)return setStatus(false,'引擎未就绪');
   if(mode!=='design'||sessH<0)return setStatus(false,'补缺在设计模式（有活动会话）下可用');
-  const ab=curAb();
-  if(!ab)return setStatus(false,'无画板可补缺');
+  const abs=artboards();
+  if(!abs.length)return setStatus(false,'无画板可补缺');
   try{
-    const r=engine.session_apply_human(sessH,'autofill '+ab.id);
-    if(r.ok!==true)return setStatus(false,(r.error||'补缺被拒'));
-    genuiApplyRefresh(r);
-    setStatus(true,`✚ ${ab.id} 补缺完成（缺失物化 + auto_fix 清偿布局）`);
+    // 全板联动：组合生成后的多板一次补齐（逐板 autofill，auto_fix 随板清偿）
+    let done=0;
+    for(const a of abs){
+      const r=engine.session_apply_human(sessH,'autofill '+a.id);
+      if(r.ok===true){done++;if(r.mbt){mbt=r.mbt;$('src').value=mbt;}}
+    }
+    if(!done)return setStatus(false,'补缺被拒');
+    render();
+    setStatus(true,`✚ ${done}/${abs.length} 板补缺完成（缺失物化 + auto_fix 清偿布局）`);
   }catch(e){setStatus(false,String(e.message||e));}
 }
 window.genuiGenerate=genuiGenerate;

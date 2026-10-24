@@ -133,3 +133,64 @@ test "export_html：并列候选 shortlex tie-break" {
   assert_true(html.contains("\nshow('zz',true,0)\n"))
   assert_false(html.contains("\nshow('aaa',true,0)\n"))
 }
+
+///|
+/// 交互动画与精致化：haptic/play_sound 动作进绑定表（此前导出面静默
+/// 丢弃）、set_text tick / setState pop / boot 淡入、字体栈、color-scheme、
+/// focus-visible 无障碍。
+test "export_html：交互动画与精致化断言" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="btn",
+    x=10.0,
+    y=10.0,
+  )
+  let _ = p.attach_interaction(
+    artboard="home",
+    node_id="btn",
+    trigger="tap",
+    action_spec="haptic",
+  )
+  let html = p.export_html()
+  // haptic 动作进绑定表并在运行时反馈
+  assert_true(html.contains("\"haptic\""))
+  assert_true(html.contains("else if(k==='haptic')toast('📳 触觉反馈')"))
+  // 微动效三件套
+  assert_true(html.contains("@keyframes mv-pop"))
+  assert_true(html.contains("@keyframes mv-tick"))
+  assert_true(html.contains("@keyframes mv-boot"))
+  assert_true(html.contains("el.classList.add('mv-pop')"))
+  assert_true(html.contains("t.classList.add('mv-tick')"))
+  // UI 精致化：字体栈 / color-scheme / focus-visible
+  assert_true(html.contains("PingFang SC"))
+  assert_true(html.contains("color-scheme"))
+  assert_true(html.contains(":focus-visible{outline:2px solid"))
+}
+
+///|
+/// SetText 绑定的画板字段回归锚：第一个字段必须是 ab_id（画板），
+/// 不是 id2（目标节点）——此前错用 id2 使 set_text 绑定指向
+/// #board-<目标节点>，导出原型的 set_text 交互从未生效过。
+test "export_html：set_text 绑定的画板字段回归锚" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="btn_set",
+    x=10.0,
+    y=10.0,
+  )
+  let _ = p.attach_interaction(
+    artboard="home",
+    node_id="btn_set",
+    trigger="tap",
+    action_spec="set_text:welcome:已更新",
+  )
+  let html = p.export_html()
+  assert_true(html.contains("[\"home\",\"btn_set\",\"set_text\""))
+  assert_false(html.contains("[\"welcome\",\"btn_set\""))
+}

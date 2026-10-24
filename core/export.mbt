@@ -77,12 +77,14 @@ pub fn Project::export_html(self : Project) -> String {
   sb.write_string(
     "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n",
   )
+  // 暗底原型：声明 color-scheme，浏览器控件/滚动条不再闪白
+  sb.write_string("<meta name=\"color-scheme\" content=\"dark\">\n")
   sb.write_string("<title>MoonViz Prototype</title>\n")
   sb.write_string("<style>\n")
   // 动效令牌：时长刻度 + 引擎缓动曲线（animation.mbt 单一来源，不手写贝塞尔）
   sb.write_string("  \{motion_tokens_css()}\n")
   sb.write_string(
-    "  body{margin:0;font-family:-apple-system,sans-serif;background:#1a1c1e;color:#e0e0e0;display:flex;flex-direction:column;align-items:center;min-height:100vh}\n",
+    "  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Segoe UI','Noto Sans SC',Roboto,'Helvetica Neue',sans-serif;background:#1a1c1e;color:#e0e0e0;display:flex;flex-direction:column;align-items:center;min-height:100vh}\n",
   )
   sb.write_string("  .tabs{display:flex;gap:8px;padding:12px;flex-wrap:wrap}\n")
   sb.write_string(
@@ -128,7 +130,16 @@ pub fn Project::export_html(self : Project) -> String {
     "  #mv-toast{position:fixed;left:50%;bottom:10%;transform:translateX(-50%) translateY(20px);background:rgba(20,22,26,.92);color:#fff;padding:10px 22px;border-radius:99px;font-size:14px;opacity:0;transition:opacity var(--mv-dur) var(--mv-out),transform var(--mv-dur) var(--mv-spring);pointer-events:none;z-index:9}\n" +
     "  #mv-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}\n" +
     // 无障碍：系统开启减弱动态效果时全部动效关闭（精致感不含强制动）
-    "  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}\n",
+    "  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}\n" +
+    // 无障碍精致：键盘焦点可见
+    "  :focus-visible{outline:2px solid #4B6BFB;outline-offset:2px}\n" +
+    // 入场淡入 + 状态切换 pop + 文字更新 tick（令牌同源，reduced-motion 全覆盖）
+    "  @keyframes mv-boot{from{opacity:0}to{opacity:1}}\n" +
+    "  body{animation:mv-boot .36s var(--mv-out) backwards}\n" +
+    "  @keyframes mv-pop{0%{transform:scale(1)}45%{transform:scale(1.035)}100%{transform:scale(1)}}\n" +
+    "  .mv-pop{animation:mv-pop .24s var(--mv-spring)}\n" +
+    "  @keyframes mv-tick{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}\n" +
+    "  .mv-tick{animation:mv-tick .18s var(--mv-out)}\n",
   )
   // 状态多态 CSS：每个非 default 状态生成一份视觉覆盖（fill/text_color/
   // font_size）。SVG 表现属性可被 CSS 覆盖，g[#n_x] 挂 .st-<state> 类切换。
@@ -242,6 +253,14 @@ pub fn Project::export_html(self : Project) -> String {
                         acts.push(
                           "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"toast\",\"\{js_string_escape(msg)}\"]",
                         )
+                      Some(HapticFeedback) =>
+                        acts.push(
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"haptic\",\"\"]",
+                        )
+                      Some(PlaySound(name)) =>
+                        acts.push(
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"play_sound\",\"{js_string_escape(name)}\"]",
+                        )
                       Some(SetState(id2, st)) =>
                         acts.push(
                           "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"set_state\",\"\{js_string_escape(id2)}:\{js_string_escape(st)}\"]",
@@ -252,7 +271,7 @@ pub fn Project::export_html(self : Project) -> String {
                         )
                       Some(SetText(id2, txt)) =>
                         acts.push(
-                          "[\"\{js_string_escape(id2)}\",\"\{js_string_escape(nid)}\",\"set_text\",\"\{js_string_escape(id2)}:\{js_string_escape(txt)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"set_text\",\"\{js_string_escape(id2)}:\{js_string_escape(txt)}\"]",
                         )
                       _ => ()
                     }
@@ -301,10 +320,10 @@ pub fn Project::export_html(self : Project) -> String {
     "let mvTimer;function toast(m){const t=document.getElementById('mv-toast');t.textContent=m;t.classList.add('show');clearTimeout(mvTimer);mvTimer=setTimeout(()=>t.classList.remove('show'),1800)}\n",
   )
   sb.write_string(
-    "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st)}\n",
+    "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st);el.classList.remove('mv-pop');void el.getBoundingClientRect();el.classList.add('mv-pop');el.addEventListener('animationend',()=>el.classList.remove('mv-pop'),{once:true})}\n",
   )
   sb.write_string(
-    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t)t.textContent=s}})});\n",
+    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic')toast('📳 触觉反馈');else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}})});\n",
   )
   // 键盘返回：ESC = back()（与引擎内置返回导航语义对齐）
   sb.write_string(
