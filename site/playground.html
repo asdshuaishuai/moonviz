@@ -311,6 +311,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 #playbar.on{display:flex}
 .shot.playing svg g[id^="n_"]{cursor:pointer}
 .shot.playing svg g[id^="n_"]:hover{outline:1px dashed var(--acc)}
+/* 预览按压反馈：spring 回弹缩放（fill-box 居中）——令牌出自
+   core/animation.mbt（MOTION_FAST=120ms / Easing::Spring），导出面同刻度 */
+.shot.playing svg g[id^="n_"]{transform-box:fill-box;transform-origin:center;transition:transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1)}
+.shot.playing svg g[id^="n_"]:active{transform:scale(.96)}
 .retry{display:none;margin-left:6px;font-size:10px;padding:2px 10px;border-radius:99px;border:1px solid var(--err);color:var(--err);background:transparent}
 .retry.show{display:inline-block}
 .retry:hover{background:rgba(224,82,82,.1)}
@@ -819,6 +823,12 @@ function genuiAutofill(){
 }
 window.genuiGenerate=genuiGenerate;
 window.genuiAutofill=genuiAutofill;
+window.execAction=execAction;      // proto-back 按钮（⟵返回）
+window.downloadHtml=downloadHtml;  // 导出 HTML 原型按钮
+window.downloadSvg=downloadSvg;
+window.undo=undo;
+window.togglePlay=togglePlay;
+window.retryHuman=retryHuman;
 
 function select(id){selNode=id;renderLayers();renderProps();renderInteract();placeSelbox();}
 function placeSelbox(){
@@ -1405,7 +1415,7 @@ function enterPlay(){
   $('playbar').classList.add('on');$('playBtn').textContent='✕ 退出';
   if(selNode)select(null);
   artIndex=artboards().findIndex(a=>a.id===navStack[0]);if(artIndex<0)artIndex=0;
-  render();updateNavCrumb();setStatus(null,'演示模式：点击元素触发交互');
+  render();updateNavCrumb();playBoardAnim(0);setStatus(null,'演示模式：点击元素触发交互');
 }
 function exitPlay(){
   playing=false;navStack=[];
@@ -1445,7 +1455,20 @@ function playTap(nodeId){
 function gotoArtboard(id){
   const idx=artboards().findIndex(a=>a.id===id);
   if(idx<0){setStatus(false,'navigate_to: 画板 '+id+' 不存在');return;}
-  navStack.push(id);artIndex=idx;render();updateNavCrumb();
+  navStack.push(id);artIndex=idx;render();updateNavCrumb();playBoardAnim(1);
+}
+/* 预览转场：方向感知滑入（+1 前进 / −1 返回 / 0 纯淡入）。令牌出自
+   core/animation.mbt（MOTION_BASE=240ms / Easing::EaseOut），与导出 HTML
+   的 mv-board-in 同语义同刻度；prefers-reduced-motion 时跳过 */
+function playBoardAnim(dir){
+  if(mode!=='preview')return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const el=document.querySelector('#stage .shot.on');
+  if(!el||!el.animate)return;
+  el.animate(
+    [{opacity:0,transform:`translateX(${dir*28}px) scale(.99)`},{opacity:1,transform:'translateX(0) scale(1)'}],
+    {duration:240,easing:'cubic-bezier(0, 0, 0.2, 1)'}
+  );
 }
 function execAction(spec){
   const m=/^(\w+)(?::(.*))?$/.exec(spec);
@@ -1454,7 +1477,7 @@ function execAction(spec){
   switch(kind){
     case 'navigate_to':gotoArtboard(arg);break;
     case 'show_toast':showToast(arg.replace(/^"|"$/g,''));break;
-    case 'back':if(navStack.length>1){navStack.pop();artIndex=artboards().findIndex(a=>a.id===navStack[navStack.length-1]);render();updateNavCrumb();}break;
+    case 'back':if(navStack.length>1){navStack.pop();artIndex=artboards().findIndex(a=>a.id===navStack[navStack.length-1]);render();updateNavCrumb();playBoardAnim(-1);}break;
     case 'set_state':{
       const p=arg.split(':');
       if(humanOp('set-state '+p[0]+' '+p[1],true))showToast('状态 → '+p[1]);
