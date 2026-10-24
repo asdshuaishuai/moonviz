@@ -158,3 +158,81 @@ test "help surfaces the generative commands" {
   // core/agent_api.mbt 的 generate 描述同源，SKILL.md 不再是唯一入口
   assert_true(help.contains("composite → multi-artboard"))
 }
+
+///|
+/// 组合意图产物的 canonical 往返：generate(多画板+导航流) → export-mbt-agent
+/// → load-mbt-b64 重载，板与流零损失——genUI 的正确性根基（会话保存/重开
+/// 与 wasm canonical 交换同走此路径）。
+fn unescape_json_str(s : String) -> String {
+  let sb = StringBuilder::new()
+  let chars = s.to_array()
+  let mut i = 0
+  while i < chars.length() {
+    if chars[i] == '\\' && i + 1 < chars.length() {
+      let c = chars[i + 1]
+      if c == 'n' {
+        sb.write_char('\n')
+      } else if c == 'r' {
+        sb.write_char('\r')
+      } else if c == 't' {
+        sb.write_char('\t')
+      } else if c == '"' || c == '\\' || c == '/' {
+        sb.write_char(c)
+      } else {
+        sb.write_char('\\')
+        sb.write_char(c)
+      }
+      i = i + 2
+    } else {
+      sb.write_char(chars[i])
+      i = i + 1
+    }
+  }
+  sb.to_string()
+}
+
+///|
+fn envelope_mbt(envelope : String) -> String {
+  let key = "\"mbt\":\""
+  let i = match envelope.find(key) {
+    Some(x) => x + key.length()
+    None => return ""
+  }
+  let rest = envelope.substring(start=i)
+  let sb = StringBuilder::new()
+  let chars = rest.to_array()
+  let mut j = 0
+  while j < chars.length() {
+    if chars[j] == '\\' && j + 1 < chars.length() {
+      sb.write_char('\\')
+      sb.write_char(chars[j + 1])
+      j = j + 2
+    } else if chars[j] == '"' {
+      break
+    } else {
+      sb.write_char(chars[j])
+      j = j + 1
+    }
+  }
+  unescape_json_str(sb.to_string())
+}
+
+///|
+test "组合意图产物 canonical 往返：双板与导航流零损失" {
+  let p = @core.Project::new()
+  let gen = cli_exec(p, "generate 登录+注册")
+  assert_true(gen.contains("\"mode\":\"multi\""))
+  let exp = cli_exec(p, "export-mbt-agent")
+  let mbt = envelope_mbt(exp)
+  assert_true(mbt.contains("moonviz:artboard login"))
+  assert_true(mbt.contains("moonviz:artboard signup"))
+  // 重载到全新会话
+  let p2 = @core.Project::new()
+  let loaded = cli_exec(p2, "load-mbt-b64 " + cli_b64(mbt))
+  assert_true(loaded.contains("\"ok\":true"), msg="canonical 重载应成功: \{loaded}")
+  let list = cli_exec(p2, "list")
+  assert_true(list.contains("\"id\":\"login\"") && list.contains("\"id\":\"signup\""))
+  let flows = cli_exec(p2, "flows")
+  assert_true(flows.contains("\"from\":\"login\",\"to\":\"signup\""))
+  assert_true(flows.contains("tap:signup_btn"))
+}
