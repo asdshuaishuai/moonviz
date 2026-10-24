@@ -127,6 +127,9 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <table>
 <tr><th>命令</th><th>说明</th></tr>
 <tr><td><code>template &lt;tplId&gt; &lt;name&gt; &lt;w&gt; &lt;h&gt;</code></td><td>从内置模板实例化画板（登录页、仪表盘、Web 落地页、桌面应用等 14 个完整页面模板）</td></tr>
+<tr><td><code>generate &lt;意图一句话&gt; [as &lt;name&gt;]</code></td><td><b>生成式入口（第一优先）</b>：一句话 → 完整画板 + 报告（autofix/missing/score/候选）；组合意图 <code>登录+注册</code>（+ 连接 ≤4 段）展开多画板 + 相邻自动导航流，纯主题段（dark）全局生效不生成板</td></tr>
+<tr><td><code>autofill &lt;artboard&gt;</code></td><td>一键补缺：物化 infer_missing 报告为真实节点（幂等），auto_fix 清偿布局</td></tr>
+<tr><td><code>ops-batch-b64 &lt;b64&gt;</code></td><td>多条 op 一次提交（换行分隔 base64，≤64；遇错即停回传断点索引）</td></tr>
 <tr><td><code>create &lt;name&gt; &lt;w&gt; &lt;h&gt;</code></td><td>新建空白画板</td></tr>
 <tr><td><code>duplicate &lt;src&gt; &lt;newName&gt;</code></td><td>复制画板</td></tr>
 <tr><td><code>delete-artboard &lt;id&gt;</code></td><td>删除画板（至少保留一个，引擎侧校验）</td></tr>
@@ -149,6 +152,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（65 组件 × 115 变体）/ 主题 / 设计 token</td></tr>
 <tr><td><code>constrain &lt;ab&gt; &lt;intent&gt;</code></td><td>布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N（层级/z-order 走 reorder；全包含背景直通）</td></tr>
 <tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
+<tr><td><code>export-design-system &lt;ab&gt;</code></td><td>设计系统导出：tokens JSON + CSS 自定义属性（交付物形态）</td></tr>
 <tr><td><code>responsive</code> / <code>spec</code> / <code>benchmark</code></td><td>响应式断点 / 设计标注 / 性能基准</td></tr>
 <tr><td><code>list-ops</code></td><td>27 条 mutating op 字典（usage/分类/双门禁）</td></tr>
 <tr><td><code>help</code> / <code>list-tools</code> / <code>exit</code></td><td>帮助 / 55 工具字典 / 退出</td></tr>

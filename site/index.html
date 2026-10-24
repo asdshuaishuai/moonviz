@@ -195,6 +195,16 @@ render-mbt-b64 &lt;base64-mbt&gt;
 echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/release/ddp_codec</code></pre>
 </div></section>
 
+<section><div class="wrap">
+  <h2 class="sec">生成式 UI：一句话出整页（genUI 第一公民，工具模式兜底）</h2>
+  <p class="lead">Agent 声明意图，引擎负责页面结构、组件选择、间距规范与布局——完整逐节点词汇表（55 工具 / 27 op）原样保留，作为自由形态构建的兜底通道。</p>
+  <div class="grid c3">
+    <div class="card"><h3>✦ 一句话生成</h3><p><code>generate "登录+注册"</code> → 双画板 + 自动导航流；引擎选语义模板、自愈规范，报告（autofix / missing / A–D 评分）随行。CLI / MCP / WASM 全渠道同构。</p></div>
+    <div class="card"><h3>✚ 报告驱动补缺</h3><p><code>autofill</code> 把缺失报告物化为真实节点（幂等，auto_fix 清偿布局）；<code>batch_apply</code> 确定精修一次提交（断点续批）。</p></div>
+    <div class="card"><h3>◈ 自渲染 + 动效</h3><p>客户端提供 webview、引擎渲染自包含交互原型（零客户端渲染代码）；方向感知转场 / spring 按压 / 入场阶梯动效内嵌，prefers-reduced-motion 友好。</p></div>
+  </div>
+</div></section>
+
 <section class="alt"><div class="wrap">
   <h2 class="sec">零工具链：WASM 与预编译二进制</h2>
   <p class="lead">两种 WASM 产物 + 四平台预编译二进制——按宿主选择，全部由 GitHub Actions 自动构建并归档于 <a href="https://github.com/asdshuaishuai/moonviz/releases">Releases</a>。</p>

@@ -425,6 +425,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <span class="pill idle" id="pill">…</span><span id="debt" class="debt zero" title="视觉债：引擎容忍但 AgentGate 不放行的违规数">债 0</span><span id="msg">加载引擎中</span>
   <button class="retry" id="retryBtn" onclick="retryHuman()">↻ HumanGate 重试</button>
   <button id="undobtn" onclick="undo()">↩ 撤销</button>
+  <input id="genuiIntent" placeholder="✦ 一句话生成：登录+注册（+ 连接多页）" style="width:270px;font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx)">
+  <button onclick="genuiGenerate()" title="genUI 第一公民：一句话意图 → 完整画板 + 报告">✦ 生成</button>
+  <button onclick="genuiAutofill()" title="把 infer_missing 报告物化为真实节点（幂等，auto_fix 清偿布局）">✚ 补缺</button>
   <button onclick="togglePlay()" id="playBtn">▶ 演示</button>
   <button onclick="downloadSvg()">导出 SVG</button>
   <button onclick="downloadHtml()" title="单文件可交互原型：节点级导航 / 状态切换 / toast">导出 HTML 原型</button>
@@ -770,6 +773,52 @@ function humanOp(op,silentOk){
     return false;
   }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
 }
+
+/* ---------- 生成式 UI（genUI 第一公民）：一句话生成 / 报告驱动补缺 ---------- */
+function genuiApplyRefresh(r){
+  if(r.mbt){mbt=r.mbt;$('src').value=mbt;}
+  render();
+  // 单段信封带 artboard，组合信封带 artboards[]——生成后跳到首块新板
+  let want=null;
+  if(r.artboard)want=r.artboard;
+  else if(r.artboards&&r.artboards.length)want=r.artboards[0].id;
+  if(want){
+    const idx=artboards().findIndex(a=>a.id===want);
+    if(idx>=0){artIndex=idx;render();}
+  }
+}
+function genuiGenerate(){
+  if(!engine)return setStatus(false,'引擎未就绪');
+  if(mode!=='design'||sessH<0)return setStatus(false,'生成式入口在设计模式（有活动会话）下可用');
+  const intent=$('genuiIntent').value.trim();
+  if(!intent)return setStatus(false,'先输入一句话意图（如：登录+注册 / 设置 dark / web 落地页）');
+  try{
+    const r=engine.session_generate(sessH,intent,'');
+    if(r.ok!==true)return setStatus(false,(r.error||'生成失败'));
+    genuiApplyRefresh(r);
+    if(r.mode==='multi'){
+      const grades=r.artboards.map(a=>a.score).join('/');
+      setStatus(true,`✦ 组合生成 ${r.count} 块画板（${r.artboards.map(a=>a.id).join(' → ')}）· 分数 ${grades}`);
+    }else{
+      const g=(r.score&&r.score.total)!==undefined?r.score.total:'?';
+      setStatus(true,`✦ 生成 ${r.artboard}（${r.template} · ${g} 分）· 报告缺失 ${r.missing?r.missing.missing_count:0} 条，可点「补缺」`);
+    }
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+function genuiAutofill(){
+  if(!engine)return setStatus(false,'引擎未就绪');
+  if(mode!=='design'||sessH<0)return setStatus(false,'补缺在设计模式（有活动会话）下可用');
+  const ab=curAb();
+  if(!ab)return setStatus(false,'无画板可补缺');
+  try{
+    const r=engine.session_apply_human(sessH,'autofill '+ab.id);
+    if(r.ok!==true)return setStatus(false,(r.error||'补缺被拒'));
+    genuiApplyRefresh(r);
+    setStatus(true,`✚ ${ab.id} 补缺完成（缺失物化 + auto_fix 清偿布局）`);
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+window.genuiGenerate=genuiGenerate;
+window.genuiAutofill=genuiAutofill;
 
 function select(id){selNode=id;renderLayers();renderProps();renderInteract();placeSelbox();}
 function placeSelbox(){
