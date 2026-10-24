@@ -323,7 +323,7 @@ moonviz/
 ├── site/              Website (GitHub Pages: asdshuaishuai.github.io/moonviz/)
 ├── scripts/           publish-npm.sh and other release scripts
 ├── examples/          DDP2 parse/render replica samples (CI example repro)
-└── docs/              Design documents 01–11 + wasm-abi.md
+└── docs/              Design documents 01–12 + wasm-abi.md
 ```
 
 ## Webview Self-Rendering (desktop/, client-guided)

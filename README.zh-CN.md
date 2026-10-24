@@ -304,7 +304,7 @@ moonviz/
 ├── site/              官网（GitHub Pages：asdshuaishuai.github.io/moonviz/）
 ├── scripts/           publish-npm.sh 等发布脚本
 ├── examples/          DDP2 解析/渲染复刻样例（CI 示例复现）
-└── docs/              设计文档 01–11
+└── docs/              设计文档 01–12
 ```
 
 ## Webview 自渲染（desktop/，客户端引导模型）
