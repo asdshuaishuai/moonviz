@@ -280,7 +280,7 @@ moonviz/
 │   ├── responsive.mbt 响应式断点（手机/平板/桌面自动适配）
 │   ├── collab.mbt     多Agent协作（操作变换OT/冲突检测/三方合并）
 │   ├── history.mbt    设计版本控制（时间旅行/分支/变更回放/undo-redo）
-│   ├── critique.mbt   AI设计批评（8项设计原则自动评审）
+│   ├── critique.mbt   AI设计批评（9项设计原则自动评审）
 │   ├── annotate.mbt   设计标注（自动生成Spec文档/CSS变量/间距颜色字体标注）
 │   ├── animation.mbt  属性动画（关键帧/缓动函数/时间线编排/CSS导出）
 │   ├── extract.mbt    设计系统反向提取（从现有设计推推断牌+组件模式）
@@ -493,7 +493,7 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 
 ## AI 设计批评引擎
 
-引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 8 项设计原则给出整体评价：
+引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 9 项设计原则给出整体评价（第 9 维 `norms` 对组件工艺偏差计分）：
 
 | 原则 | 检查什么 |
 |:---|:---|
@@ -505,12 +505,13 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 | 平衡 | 左右视觉重量是否均衡 |
 | 焦点 | 是否有明确的主 CTA（primary 按钮） |
 | 节奏 | 间距值是否统一到标准令牌 |
+| 规范 | 组件规范：按钮不卡文案、撞色、齐缝分隔、触控目标（norms） |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":8,"results":[
+// → {"principles":9,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"balance","score":6,"verdict":"fair",...},...]}
+//     {"principle":"norms","score":8,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -696,7 +697,7 @@ p.suggest_optimizations(artboard="dashboard")
 | **DDP 容器** | Rust `ddp_codec`（DDP1 加密 / DDP2 免密） | 设计文档加密分发、只读查看器 |
 | **WASM（classic）** | `moon build --target wasm` —— 纯 WASM MVP（0 imports、线性内存），wasmtime/wasmi 等任意规范运行时可实例化 | Rust 宿主、服务端嵌入 |
 
-每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-0.1.3.wasm` / `moonviz-wasm-classic-0.1.3.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
+每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-<ver>.wasm` / `moonviz-wasm-classic-<ver>.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
 
 MCP 客户端配置（npx 预编译路线）：
 

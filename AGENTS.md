@@ -38,7 +38,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ### 同步产物时的检查单（每项都过，缺一项即未完成）
 
 1. **计数类**：组件/变体/工具/测试数改动时，同步清扫 `README.md`、`README.zh-CN.md`、
-   `site/docs.html`(`52 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
+   `site/docs.html`(`55 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
    以及测试断言（如 `core/agent_test.mbt` 的 catalog 数量测试）。
 2. **playground**：`COMP_ZH` / `COMP_ICON` 随组件目录补全（JS 语法自校验：两表 key 数
    必须与 `builtin_components()` 一致）；界面方法表与 wasm 导出面对齐。

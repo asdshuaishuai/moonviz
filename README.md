@@ -298,7 +298,7 @@ moonviz/
 │   ├── responsive.mbt Responsive breakpoints (phone/tablet/desktop auto-adaptation)
 │   ├── collab.mbt     Multi-agent collaboration (operational transform/conflict detection/three-way merge)
 │   ├── history.mbt    Design version control (time travel/branching/change replay/undo-redo)
-│   ├── critique.mbt   AI design critique (automatic review against 8 design principles)
+│   ├── critique.mbt   AI design critique (automatic review against 9 design principles)
 │   ├── annotate.mbt   Design annotation (auto-generated spec docs/CSS variables/spacing-color-type annotations)
 │   ├── animation.mbt  Property animation (keyframes/easing/timeline choreography/CSS export)
 │   ├── extract.mbt    Design-system reverse extraction (infer tokens + component patterns from existing designs)
@@ -516,7 +516,7 @@ h.diff(0, 2)     // → semantic diff between two revisions
 
 ## AI Design Critique Engine
 
-The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 8 design principles:
+The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 9 design principles (the 9th, `norms`, scores component-craft deviations):
 
 | Principle | What is checked |
 |:---|:---|
@@ -528,12 +528,13 @@ The engine reviews prototypes like a **senior designer** — not rule checking (
 | Balance | Left/right visual weight is balanced |
 | Focus | A clear primary CTA exists (primary button) |
 | Rhythm | Spacing values unify to standard tokens |
+| Norms | Component norms: button-label fit, contrast, seam dividers, touch targets |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":8,"results":[
+// → {"principles":9,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"balance","score":6,"verdict":"fair",...},...]}
+//     {"principle":"norms","score":8,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
