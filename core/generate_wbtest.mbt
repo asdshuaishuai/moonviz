@@ -1,4 +1,44 @@
 ///|
+/// 意图词表纪律（2026-10-26）：一个模板只能声明它**真的是什么**。
+/// 历史 bug：list_detail 把裸「列表」「详情」都收进词表，而它渲染的是聊天界面
+/// （app_bar "Chats" + Alice/Bob 会话）——「首页 列表」「装备详情」都被解析成
+/// 同一个聊天页，用户拿到的原型与需求无关。锁死三类语义的落点分离。
+test "generate：列表/详情/聊天三类语义必须落到不同模板" {
+  assert_true(parse_generate_intent("首页 列表").template_id == "list")
+  assert_true(parse_generate_intent("商品列表").template_id == "list")
+  assert_true(parse_generate_intent("装备详情").template_id == "detail")
+  assert_true(parse_generate_intent("商品详情页").template_id == "detail")
+  assert_true(parse_generate_intent("聊天列表").template_id == "list_detail")
+  // 订单/结算族 → checkout（此前全部落到 empty_state 兜底）
+  assert_true(parse_generate_intent("确认订单").template_id == "checkout")
+  assert_true(parse_generate_intent("购物车").template_id == "checkout")
+  assert_true(parse_generate_intent("结算页").template_id == "checkout")
+  let a = parse_generate_intent("列表").template_id
+  let b = parse_generate_intent("详情").template_id
+  let c = parse_generate_intent("聊天").template_id
+  assert_true(a != b && b != c && a != c)
+}
+
+///|
+/// 新模板必须能真正实例化并产出内容（不是只注册了 id）。
+test "generate：list / detail 模板产物结构正确" {
+  let p = Project::new()
+  let rl = match p.generate(intent_text="商品列表", name="lst") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(rl.contains("\"ok\":true"), msg="list 生成应成功：\{rl}")
+  assert_true(rl.contains("\"template\":\"list\""), msg="list 意图应落到 list 模板：\{rl}")
+  let p2 = Project::new()
+  let rd = match p2.generate(intent_text="商品详情", name="det") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(rd.contains("\"ok\":true"), msg="detail 生成应成功：\{rd}")
+  assert_true(rd.contains("\"template\":\"detail\""), msg="detail 意图应落到 detail 模板：\{rd}")
+}
+
+///|
 /// 生成式 UI：意图解析确定性 + 一调用生成管线（模板 → 自愈 → 报告）
 test "generate：意图解析与生成信封" {
   // 意图解析：中英关键词 + 主题/设备暗示（确定性，同输入恒同决策）

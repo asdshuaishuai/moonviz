@@ -61,11 +61,35 @@ pub fn list_templates() -> Array[TemplateInfo] {
       device: "mobile",
     },
     {
-      id: "list_detail",
-      name: "列表-详情",
-      description: "列表页（卡片流）+ 详情页（大图 + 信息 + 操作）",
+      id: "list",
+      name: "列表页",
+      description: "App Bar + 搜索栏 + 分类标签 + 条目列表（行底分割线）+ 底部导航",
       category: "content",
-      tags: ["master-detail", "cards"],
+      tags: ["list", "search", "feed"],
+      device: "mobile",
+    },
+    {
+      id: "detail",
+      name: "详情页",
+      description: "返回栏 + 大图区 + 标题 + 规格参数 + 描述 + 底部主按钮",
+      category: "content",
+      tags: ["detail", "product", "hero"],
+      device: "mobile",
+    },
+    {
+      id: "checkout",
+      name: "确认订单",
+      description: "返回栏 + 订单摘要 + 表单字段 + 费用明细（行底分割线）+ 提交按钮",
+      category: "commerce",
+      tags: ["checkout", "order", "form"],
+      device: "mobile",
+    },
+    {
+      id: "list_detail",
+      name: "聊天列表",
+      description: "会话列表（头像 + 消息预览）+ 底部详情占位卡（IM 语义专用）",
+      category: "content",
+      tags: ["chat", "im", "master-detail"],
       device: "mobile",
     },
     {
@@ -170,6 +194,9 @@ pub fn Project::apply_template(
     "dashboard" => Ok(self.template_dashboard(ab_name))
     "profile" => Ok(self.template_profile(ab_name))
     "settings" => Ok(self.template_settings(ab_name))
+    "list" => Ok(self.template_list(ab_name))
+    "detail" => Ok(self.template_detail(ab_name))
+    "checkout" => Ok(self.template_checkout(ab_name))
     "list_detail" => Ok(self.template_list_detail(ab_name))
     "onboarding" => Ok(self.template_onboarding(ab_name))
     "empty_state" => Ok(self.template_empty_state(ab_name))
@@ -648,6 +675,165 @@ fn Project::template_settings(self : Project, name : String) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// 通用列表页（电商/内容/信息流等「一列条目」场景）
+//
+// 与 list_detail 的区别：后者是**聊天**模板（会话头像 + 消息预览 + 详情占位卡），
+// 只适合 IM 语义。裸「列表」意图此前被它吞掉，产出的是聊天界面——这里补一个
+// 真正的通用列表：搜索栏 + 分类横向标签 + 带分割线的条目列表。
+// ---------------------------------------------------------------------------
+fn Project::template_list(self : Project, name : String) -> String {
+  let ab = self.create_artboard(name~, width=390.0, height=844.0)
+  self.place_required(ab, "app_bar", "top_bar", x=0.0, y=0.0, w=390.0, h=56.0)
+  self.set_text(ab, "top_bar", "Discover")
+
+  // 搜索栏（锚在 app_bar 下方；autofill 的配方会认这个位置）
+  self.place_required(ab, "search_bar", "search_bar", x=16.0, y=68.0, w=358.0, h=40.0)
+  self.set_text(ab, "search_bar", "Search")
+
+  // 分类横向标签（chip 档：高度按 NORM 的 chip 28）
+  // 等宽 chip：宽度固定 72、间隔 8 → 4 个共 312，从 x=16 起止于 328，
+  // 严格落在 390 宽画板内。此前按文案长度算宽（44 + len*8），"Camping" 这类
+  // 长词会把最后一个 chip 推出画板右缘，place 被 contained_in_parent 拒绝——
+  // 而模板当时用 `let _ =` 吞掉了返回值，结果整排 chip 静默消失。
+  let cats = ["All", "Outdoor", "Camping", "Gear"]
+  let mut cx = 16.0
+  for ci in 0..<cats.length() {
+    let cid = "cat_\{ci}"
+    self.place_required(ab, "chip", cid, x=cx, y=118.0, w=72.0, h=28.0)
+    self.set_text(ab, cid, cats[ci])
+    cx = cx + 80.0
+  }
+
+  // 条目列表：卡片 + 行底分割线（≥3 行齐缝必须有 divider，norms 会查）
+  let mut y = 162.0
+  for i in 0..<5 {
+    let rid = "item_\{i}"
+    self.place_required(ab, "list_item", rid, x=16.0, y~, w=358.0, h=72.0)
+    self.set_text(ab, rid, "Item \{i + 1} — short description of this entry")
+    y = y + 72.0
+    let did = "divider_\{i}"
+    self.place_required(ab, "divider", did, x=16.0, y~, w=358.0, h=1.0)
+    y = y + 1.0
+  }
+
+  // 底部导航（tab_bar 全宽直角）
+  // y=780 + 64 = 844 正好顶到画板下边界，contained_in_parent 要求严格包含，
+  // 差 0 也会被拒——上移到 776 留 4px 余量（视觉上仍贴底）
+  self.place_required(ab, "tab_bar", "tab_bar", x=0.0, y=776.0, w=390.0, h=64.0)
+  self.set_text(ab, "tab_bar", "Home · Discover · Cart · Me")
+  ab
+}
+
+// ---------------------------------------------------------------------------
+// 通用详情页（商品/内容/条目详情）
+//
+// 结构：返回 + 标题栏 / 大图区 / 标题与价格 / 规格参数表 / 描述 / 底部主 CTA。
+// 这条是「详情」意图的落点——此前这类意图被 list_detail 当聊天页处理。
+// ---------------------------------------------------------------------------
+fn Project::template_detail(self : Project, name : String) -> String {
+  let ab = self.create_artboard(name~, width=390.0, height=844.0)
+  // 顶栏带返回钮（引擎内置返回会识别，无需 flow）
+  self.place_required(ab, "app_bar", "top_bar", x=0.0, y=0.0, w=390.0, h=56.0)
+  self.set_text(ab, "top_bar", "Back")
+  // 大图区（占位 rect，Agent 可换成 image / 改 fill）
+  self.place_required(ab, "rect", "hero", x=0.0, y=56.0)
+  self.resize_node(ab, "hero", 390.0, 260.0, 0.0)
+
+  // 标题 + 副标题
+  self.place_required(ab, "heading", "title", x=24.0, y=332.0)
+  self.resize_node(ab, "title", 342.0, 32.0, 0.0)
+  self.set_text(ab, "title", "Product Name")
+  self.place_required(ab, "body_text", "subtitle", x=24.0, y=370.0)
+  self.resize_node(ab, "subtitle", 342.0, 20.0, 0.0)
+  self.set_text(ab, "subtitle", "Short supporting line")
+
+  // 规格参数（三行 key-value，行底分割线）
+  let specs = [("Spec", "Value"), ("Size", "Standard"), ("Stock", "Available")]
+  let mut y = 402.0
+  for i in 0..<specs.length() {
+    let (k, v) = specs[i]
+    let sid = "spec_\{i}"
+    self.place_required(ab, "body_text", sid, x=24.0, y~)
+    self.resize_node(ab, sid, 342.0, 36.0, 0.0)
+    self.set_text(ab, sid, k + "    " + v)
+    y = y + 36.0
+    let did = "divider_\{i}"
+    self.place_required(ab, "divider", did, x=24.0, y~)
+    self.resize_node(ab, did, 342.0, 1.0, 0.0)
+    y = y + 1.0
+  }
+
+  // 描述段
+  self.place_required(ab, "body_text", "desc", x=24.0, y=y + 16.0)
+  self.resize_node(ab, "desc", 342.0, 60.0, 0.0)
+  self.set_text(
+    ab,
+    "desc",
+    "A short paragraph describing this item in two or three lines of real copy.",
+  )
+
+  // 底部主 CTA（全宽，避开 iPhone 底部安全区）
+  self.place_required(ab, "button", "primary_btn", x=24.0, y=760.0, w=342.0, h=52.0)
+  self.set_text(ab, "primary_btn", "Continue")
+  ab
+}
+
+// ---------------------------------------------------------------------------
+// 结算/确认订单页（电商下单流程的收口页）
+//
+// 语义：用户已选好商品，正在确认信息并提交。结构与详情页的区别在于
+// 「摘要 + 表单字段 + 费用明细 + 提交」而不是「大图 + 描述」。
+// ---------------------------------------------------------------------------
+fn Project::template_checkout(self : Project, name : String) -> String {
+  let ab = self.create_artboard(name~, width=390.0, height=844.0)
+  self.place_required(ab, "app_bar", "top_bar", x=0.0, y=0.0, w=390.0, h=56.0)
+  self.set_text(ab, "top_bar", "Back")
+
+  // 订单摘要卡
+  self.place_required(ab, "card", "summary", x=16.0, y=72.0)
+  self.resize_node(ab, "summary", 358.0, 96.0, 12.0)
+  self.set_text(ab, "summary", "Order summary — 2 items")
+
+  // 表单字段（确认订单的真实形态：联系人/时间/地点）
+  let fields = [
+    ("field_contact", "Contact"),
+    ("field_time", "Pickup time"),
+    ("field_place", "Pickup location"),
+  ]
+  let mut y = 184.0
+  for f in fields {
+    let (fid, label) = f
+    self.place_required(ab, "text_input", fid, x=16.0, y~)
+    self.resize_node(ab, fid, 358.0, 52.0, 12.0)
+    self.set_text(ab, fid, label)
+    y = y + 60.0
+  }
+
+  // 费用明细（三行 + 行间分割线：齐缝列表的 norms 纪律）
+  let rows = [("Subtotal", "¥ 320"), ("Deposit", "¥ 200"), ("Total", "¥ 520")]
+  y = y + 8.0
+  for i in 0..<rows.length() {
+    let (k, v) = rows[i]
+    let rid = "fee_\{i}"
+    self.place_required(ab, "body_text", rid, x=16.0, y~)
+    self.resize_node(ab, rid, 358.0, 40.0, 0.0)
+    self.set_text(ab, rid, k + "          " + v)
+    y = y + 40.0
+    if i < rows.length() - 1 {
+      let did = "fee_div_\{i}"
+      self.place_required(ab, "divider", did, x=16.0, y~)
+      self.resize_node(ab, did, 358.0, 1.0, 0.0)
+      y = y + 1.0
+    }
+  }
+
+  // 提交按钮
+  self.place_required(ab, "button", "submit_btn", x=24.0, y=752.0, w=342.0, h=52.0)
+  self.set_text(ab, "submit_btn", "Place Order")
+  ab
+}
+
+// ---------------------------------------------------------------------------
 // 列表-详情模板（微信/IM 类社交应用的核心结构）
 // ---------------------------------------------------------------------------
 
@@ -834,6 +1020,44 @@ fn Project::place_comp(
     x~,
     y~,
   )
+}
+
+///|
+/// place_comp 的**强制版本**：放置失败即 panic。
+///
+/// 为什么需要它：模板里到处写 `let _ = self.place_comp(...)`，一旦组件名或
+/// variant 写错（2026-10-26 真实事故：新模板用了不存在的 variant="surface"，
+/// 5 个节点全被拒绝却静默通过），产出画板只剩少量节点却没有任何报错，
+/// 直到用户看到"空页面"才发现。模板是确定性构造，失败必然是实现错误——
+/// 让它在这里炸掉，而不是把半成品交出去。
+fn Project::place_required(
+  self : Project,
+  ab : String,
+  comp : String,
+  id : String,
+  variant? : String = "",
+  x? : Double = 0.0,
+  y? : Double = 0.0,
+  w? : Double = 0.0,
+  h? : Double = 0.0,
+) -> Unit {
+  // w/h 在**放置时**传入（不是放完再 resize）：门评估的是 place 那一刻的 bbox，
+  // 组件默认尺寸往往大于目标槽位，先放后缩会让默认尺寸与邻居重叠而被拒
+  // （2026-10-26 真实事故：新模板全部 place 失败，节点静默丢失）。
+  match
+    self.place_component(
+      artboard=ab,
+      component_id=comp,
+      instance_id=id,
+      variant~,
+      x~,
+      y~,
+      w~,
+      h~,
+    ) {
+    Ok(_) => ()
+    Err(e) => abort("template_place_failed: \{comp} in \{ab}: \{e}")
+  }
 }
 
 ///|

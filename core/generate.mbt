@@ -99,6 +99,13 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
     ""
   }
   // 页面语义计分（关键词 → 候选模板）。顺序即稳定性：先具体后泛化。
+  //
+  // **词表纪律**（2026-10-26 修正）：一个模板只能声明它**真的是什么**。
+  // 此前 list_detail 把裸「列表」「详情」都收进词表，而它实际渲染的是聊天列表
+  // （app_bar "Chats" + Alice/Bob 会话 + "Select a chat to view details" 占位卡）——
+  // 结果「首页 列表」「装备详情」全被解析成同一个聊天界面，用户拿到的原型与需求无关。
+  // 现在 list_detail 收窄到「聊天/会话/消息」这一族；裸「列表」「详情」归 detail/list。
+  // 同理 empty_state 只收真正的空状态语义，不再用「无数据」这类会被误中的宽词兜住。
   let candidates : Array[(String, String, Array[String])] = [
     (
       "signup",
@@ -106,7 +113,7 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
       ["signup", "sign up", "注册", "register", "创建账号"],
     ),
     ("onboarding", "引导页", ["onboarding", "引导", "欢迎页", "首次"]),
-    ("empty_state", "空状态页", ["empty", "空状态", "无数据", "占位"]),
+    ("empty_state", "空状态页", ["empty", "空状态", "占位", "暂无内容"]),
     ("settings", "设置页", ["settings", "设置", "偏好", "preferences"]),
     (
       "dashboard",
@@ -118,10 +125,31 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
       "个人主页",
       ["profile", "个人主页", "个人中心", "资料", "我的"],
     ),
+    // 聊天族必须排在 detail/list 之前：「聊天列表」同时命中「聊天」和「列表」，
+    // 各计 1 分打成平手——评分是严格大于才更新 best，平局由**候选顺序**裁决。
+    // 更具体的语义必须排在更泛的语义前面，否则「聊天列表」会被判成通用列表页。
     (
       "list_detail",
-      "列表详情",
-      ["列表", "详情", "list", "detail", "feed", "信息流"],
+      "聊天列表",
+      ["聊天", "会话", "消息", "chat", "inbox", "收件箱"],
+    ),
+    (
+      "detail",
+      "详情页",
+      ["详情", "商品详情", "内容详情", "detail", "详细", "订单详情"],
+    ),
+    (
+      "list",
+      "列表页",
+      ["列表", "list", "信息流", "feed", "搜索结果", "分类浏览"],
+    ),
+    (
+      "checkout",
+      "确认订单",
+      [
+        "确认订单", "订单确认", "结算", "checkout", "购物车", "下单", "提交订单",
+        "cart", "place order", "payment", "支付",
+      ],
     ),
     (
       "login",
@@ -375,6 +403,12 @@ fn egress_template_keywords(template_id : String) -> Array[String] {
     ["profile", "account"]
   } else if template_id == "list_detail" {
     ["list", "detail", "feed"]
+  } else if template_id == "list" {
+    ["list", "discover", "search", "browse"]
+  } else if template_id == "detail" {
+    ["detail", "product", "continue"]
+  } else if template_id == "checkout" {
+    ["checkout", "cart", "order", "submit"]
   } else if template_id == "onboarding" {
     ["onboarding", "get started"]
   } else {
