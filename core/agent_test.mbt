@@ -167,7 +167,11 @@ test "place_component：未知变体报错（与用户组件路径对齐，回�
       variant="outlined",
     ) {
     Ok(_) => assert_true(false, msg="未知变体应报错")
-    Err(e) => assert_true(e.contains("unknown_variant:outlined"))
+    Err(e) => {
+      assert_true(e.contains("unknown_variant:outlined"))
+      // 错误即文档：消息必须携带语法模板，模型漏 '-' 占位时一轮自纠
+      assert_true(e.contains("[variant|-]"), msg="unknown_variant 应携带 place 语法模板: \{e}")
+    }
   }
   // 存在的变体（含显式默认变体）仍然合法
   match

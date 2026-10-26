@@ -50,7 +50,15 @@ fn resolve_args(
   // default_variant 本身始终合法（零变体组件的回退）；显式传入的
   // 其他未知变体名才拒绝（拼写错误不再静默吞掉）
   if v != def.default_variant && def.variants.contains(v) == false {
-    return Err("unknown_variant:" + v)
+    // 错误即文档（对齐 constrain 词表先例）：variant 槽最常被漏 '-' 占位，
+    // 坐标串滑进来当变体名——就地携带合法变体与语法模板，模型一轮自纠
+    let mut names = ""
+    for k in def.variants.keys() {
+      names = names + k + " "
+    }
+    return Err(
+      "unknown_variant:\{v}（组件 \{def.id} 合法变体：\{names}默认：\{def.default_variant}）——place 语法：place <板> <组件> <id> [variant|-] [x] [y] [w] [h] [k=v...]，不需要变体时该槽写 -",
+    )
   }
   match def.variants.get(v) {
     Some(overrides_v) =>
