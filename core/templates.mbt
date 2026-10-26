@@ -691,17 +691,21 @@ fn Project::template_list(self : Project, name : String) -> String {
   self.set_text(ab, "search_bar", "Search")
 
   // 分类横向标签（chip 档：高度按 NORM 的 chip 28）
-  // 等宽 chip：宽度固定 72、间隔 8 → 4 个共 312，从 x=16 起止于 328，
-  // 严格落在 390 宽画板内。此前按文案长度算宽（44 + len*8），"Camping" 这类
-  // 长词会把最后一个 chip 推出画板右缘，place 被 contained_in_parent 拒绝——
-  // 而模板当时用 `let _ =` 吞掉了返回值，结果整排 chip 静默消失。
+  // chip 宽度必须**按规范预留**：norm 要求宽 ≥ 文案宽 + 24（左右各 12）。
+  // 中文按 1 字 ≈ 14pt、拉丁按 1 字 ≈ 8pt 保守估计，加 24 留白。
+  // 间距用 12：auto_fix 会把不达标的 chip 撑到合规宽度，如果排布时贴得太紧
+  // （曾用 72 宽 + 80 间距），撑宽后就会与右侧邻居重叠，整页被
+  // no_sibling_overlap 判债——生成完的页面再也不能接受任何新 flow。
   let cats = ["All", "Outdoor", "Camping", "Gear"]
   let mut cx = 16.0
   for ci in 0..<cats.length() {
     let cid = "cat_\{ci}"
-    self.place_required(ab, "chip", cid, x=cx, y=118.0, w=72.0, h=28.0)
-    self.set_text(ab, cid, cats[ci])
-    cx = cx + 80.0
+    let label = cats[ci]
+    let text_w = label.length().to_double() * 8.0
+    let w = text_w + 24.0
+    self.place_required(ab, "chip", cid, x=cx, y=118.0, w~, h=28.0)
+    self.set_text(ab, cid, label)
+    cx = cx + w + 12.0
   }
 
   // 条目列表：卡片 + 行底分割线（≥3 行齐缝必须有 divider，norms 会查）
