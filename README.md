@@ -1,5 +1,22 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.10
+
+- **Full-domain audit & repair wave** — 83 confirmed findings fixed across the
+  engine: data fidelity (save/open escape round-trip, Document JSON now carries
+  all node style fields), envelope JSON legality (`json_escape` sweeps across
+  wasm/CLI/MCP exports), wasm slot contract aligned with `docs/wasm-abi.md`,
+  robustness (nested snap-to-grid, responsive variant tree validity, SVG
+  transform/filter merging, `export_react` JSX), export surfaces (CLI `unflow`
+  arm, CLI set-state off-by-one, MCP JSON-RPC id/notification semantics,
+  missing-param validation), norms v2 touch rule reconciled with v1 tiers, and
+  SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
+  platform-package version alignment).
+- **Docs & site full sync** — every count re-anchored to live engine output
+  (55 tools / 27 ops / 73 wasm exports / 9-dimension critique / 52 core
+  modules), version examples moved to `<ver>` placeholders.
+- Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
+
 ## What's New in 0.1.9-fix
 
 - **Hardening patch** — component norms + built-in back navigation (merged from dev),

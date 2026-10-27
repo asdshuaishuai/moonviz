@@ -1,6 +1,6 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.9-fix**（moonc ≥ 0.10.14 · GitHub Release + mooncakes 0.1.9-fix-2 已上架） · `moon test` 全绿（默认目标 + native） · 组件目录 65×115 · 仓库 170+ commits
+> 当前基线：**v0.1.10**（moonc ≥ 0.10.14 · tag engine-v0.1.10 已挂，GitHub Release / mooncakes 待发布） · `moon test` 全绿（默认目标 + native） · 组件目录 65×115 · 仓库 170+ commits
 
 ## 0.1.9 · 组件规范（norms）——弱模型的"能用但不精致"三类根因
 

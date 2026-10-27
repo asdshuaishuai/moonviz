@@ -1,4 +1,17 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.10 新特性
+
+- **全域审查修复波**——83 项确认问题全部修复：数据保真（save/open 转义往返、
+  Document JSON 补全节点样式字段）、信封 JSON 合法性（wasm/CLI/MCP 出口
+  `json_escape` 清扫）、wasm 槽位契约与 `docs/wasm-abi.md` 对齐、健壮性修复
+  （嵌套 snap_to_grid、响应式变体树合法性、SVG transform/filter 合并、
+  export_react JSX）、出口面修复（CLI `unflow` 臂、set-state off-by-one、MCP
+  JSON-RPC id/通知语义、缺参校验）、norms v2 触控规则与 v1 档位调和、SDK 修复
+  （Project 六方法、sessionGenerate、DDP decrypt mode、npm 平台包版本对齐）。
+- **文档与官网全量同步**——全部计数锚定引擎实测（55 工具 / 27 op / 73 wasm
+  导出 / 九维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
+- 测试矩阵增至 298（默认目标）/ 314（`--target native`），全绿。
+
 ## 0.1.9-fix 新特性
 
 - **加固补丁**——组件规范 + 内置返回导航（dev 合入）、本设备 Git 操作规定
