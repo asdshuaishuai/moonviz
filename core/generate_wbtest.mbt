@@ -365,3 +365,42 @@ test "generate：信封 summary 摘要" {
   }
   assert_true(j2.contains("\"summary\":\"组合生成 2 板：login → signup\""))
 }
+
+///|
+/// 兜底可见性（2026-10-27 genUI 审计）：组合意图里未识别的段被当作主题
+/// 修饰丢弃是设计意图（防 "登录+dark" 造出空板），但丢段必须进信封——
+/// "登录+帮助中心" 静默丢段 = 帮助中心页无声消失，Agent 无从向用户复述。
+test "generate multi：未知段丢弃进 skipped 字段（单通道退化与多板同权可见）" {
+  let p = Project::new()
+  // 退化单通道（仅 1 个页面段）：单通道信封头部注入 skipped
+  let j1 = match p.generate(intent_text="登录+帮助中心") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j1.contains("\"skipped\":[\"帮助中心\"]"), msg="单通道退化必须带 skipped: \{j1}")
+  assert_true(j1.contains("\"template\":\"login\""))
+  // JSON 仍合法（前缀手术不破坏结构）：skipped 后紧跟原有 ok/op 键
+  assert_true(j1.contains("\"skipped\":[\"帮助中心\"],\"ok\":true,\"op\":\"generate\""))
+  // 纯主题修饰组合（"登录+dark"）：dark 是主题词不是丢段——不进 skipped
+  let p2 = Project::new()
+  let j2 = match p2.generate(intent_text="登录+dark") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_false(j2.contains("skipped\":[\"dark\""), msg="主题词不得算丢段: \{j2}")
+  // 多板组合夹未知段：multi 信封 skipped 恒在场
+  let p3 = Project::new()
+  let j3 = match p3.generate(intent_text="登录+注册+乱七八糟") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j3.contains("\"skipped\":[\"乱七八糟\"]"), msg="multi 必须带 skipped: \{j3}")
+  assert_true(j3.contains("\"count\":2"))
+  // 无未知段：skipped 空数组（形状恒定，消费者免判空缺）
+  let p4 = Project::new()
+  let j4 = match p4.generate(intent_text="登录+注册") {
+    Ok(j) => j
+    Err(_) => ""
+  }
+  assert_true(j4.contains("\"skipped\":[]"), msg="无丢段时应为空数组: \{j4}")
+}

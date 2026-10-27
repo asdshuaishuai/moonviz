@@ -589,14 +589,22 @@ pub fn Project::generate_multi(
   //    页面段原文必须记账：退化单通道时拿页面段重拼——写死 segments[0]
   //    会把主题词在前的组合（"dark+登录"）退化成 "dark dark"，页面段
   //    被丢弃、静默落到空状态兜底板。
+  //    丢弃必须**可见**（2026-10-27 兜底审计）：组合里的未知段可能承载
+  //    真实页面语义（"登录+帮助中心"），静默丢段 = 页面无声消失。skipped
+  //    记账进信封，Agent 可见后可向用户复述或换说法重试。
   let boards : Array[GenIntent] = []
   let page_segs : Array[String] = []
+  let skipped : Array[String] = []
   let mut theme = ""
   for seg in segments.iter() {
     let gi = parse_generate_intent(seg)
     if gi.page_hint.contains("未识别") {
       if gi.theme != "" && theme == "" {
+        // 主题词被消费（theme_applied 可见）——不算丢段
         theme = gi.theme
+      } else {
+        // 未被任何方式消费的段才进 skipped
+        skipped.push(seg)
       }
       continue
     }
@@ -612,10 +620,28 @@ pub fn Project::generate_multi(
   if boards.length() == 1 {
     // 退化为单段：走单通道保持信封形状兼容。页面段原文 + 被丢弃的
     // 主题修饰段关键词拼回意图，单通道重新解析即生效（顺序无关：
-    // "dark+登录" 与 "登录+dark" 同得 login + dark 主题）
+    // "dark+登录" 与 "登录+dark" 同得 login + dark 主题）。
+    // 单通道信封不含 skipped——有丢段时在结果头部注入，保持可见性。
     let only = page_segs[0]
     let with_theme = if theme != "" { "\{only} \{theme}" } else { only }
-    return self.generate(intent_text=with_theme, name=name)
+    let r = self.generate(intent_text=with_theme, name=name)
+    if skipped.length() == 0 {
+      return r
+    }
+    match r {
+      Err(e) => return Err(e)
+      Ok(json) => {
+        let parts : Array[String] = []
+        for s in skipped.iter() {
+          parts.push("\"" + json_escape(s) + "\"")
+        }
+        // 前缀手术：单通道信封恒以 {"ok":true 开头（10 个 ASCII 码元），
+        // 跳过重建为 {"skipped":[...],"ok":true…（substring 惯用法同 variants.mbt）
+        return Ok(
+          "{\"skipped\":[" + parts.join(",") + "],\"ok\":true" + json.substring(start=10),
+        )
+      }
+    }
   }
   // 2) 主题一次全局生效（先换主题再实例化，模板取色一致）
   let mut theme_applied = ""
@@ -722,7 +748,13 @@ pub fn Project::generate_multi(
   let arts_j = arts.join(",")
   let ms = "组合生成 " + ids.length().to_string() + " 板：" + ids.join(" → ")
   let flows_j = flows_json.join(",")
+  // 丢段可见性：未知段在信封显式列出（Agent 可向用户复述或换说法重试），
+  // 全部段都有语义时字段为空数组（形状恒定，消费者免判空缺）
+  let skipped_j : Array[String] = []
+  for s in skipped.iter() {
+    skipped_j.push("\"" + json_escape(s) + "\"")
+  }
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
   )
 }
