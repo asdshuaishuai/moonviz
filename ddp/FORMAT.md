@@ -47,9 +47,19 @@ section_table[ section_count ]：每项
 | 段名 | 必带 | 内容 | 写入方 |
 |---|---|---|---|
 | `mbt.md` | ✅ 唯一真相源 | 完整 `.mbt.md` 源码（UTF-8） | codec |
-| `design-spec/components.json` | 可选 | 组件设计规范目录：65 组件 × `{id,kind,category,variants,default_size,description,norm}`——客户端「规范先行」的指导文件 | 客户端/codec |
-| `design-spec/engine-manifest.json` | 可选 | 引擎能力锚定清单：version / wasm_sha512 / exports / session / templates / components | 客户端/codec |
-| `meta.json` | 可选 | 预留：来源、生成时间、作者标签（v1 曾明确的「不含 manifest」仅指**真相源语义**；v2 的 meta 只描述容器自身，不描述项目内容） | codec |
+| `design/ui.md` | 可选 | **UI 说明**（UI 设计文档）：客户端 `write_doc kind="ui"` 的产物，可执行设计规范 + 一致性检查清单（Markdown） | 客户端 |
+| `design/design.json` | 可选 | **设计规范**（DESIGN.md 的 JSON 形态）：`{v, palette, typography, spacing, radius, rules[], notes}`——整体一致性的约束源，RULES 可被引擎 norms 执行 | 客户端 |
+| `design/prd.md` | 可选（预留） | 需求文档（`write_doc kind="prd"` 产物）；v2 先注册段名，写入方按需携带 | 客户端 |
+| `meta.json` | 可选（预留） | 来源、生成时间、作者标签（只描述容器自身，不描述项目内容） | codec |
+
+**动机（客户端现状的痛点）**：deepDesign 目前把 `docs:{prd,ui}` 与设计规范 JSON 塞进
+`.mbt.md` 末尾的 HTML 注释块（`<!-- deepdesign:design … -->`）蹭 DDP 携带，实测五条
+硬约束：① `-->` 会截断注释（须把 `>` 转义 `>`）；② 引擎压平注释内行首缩进；
+③ 未闭合围栏会吞掉其后真实块；④ 注释标记不得以 moonviz 开头；⑤ 块必须贴文末。
+v2 分段把这些文档升级为一等载荷：无需转义技巧、天然可枚举、逐段校验。
+
+**过渡规则**：v2 写入方在过渡期可继续在 `mbt.md` 内嵌注释块（兼容旧查看器）；
+v2 读取器**优先读段**，段缺失时回退解析注释块（`deepdesign:design` 取最后一块）。
 
 规则：
 - **读取器以 `mbt.md` 段为项目真相**；规范段只作指导/校验输入，不参与场景重建。
@@ -71,12 +81,17 @@ section_table[ section_count ]：每项
 - DDP1 下段数据与 v1 同强度：XChaCha20-Poly1305 + Argon2id（19 MiB, t=2, p=1）。
 - CRC32 仅用于 DDP2 意外损坏检测，不是安全边界。
 
-## 4. 「规范先行」工作流（本规范服务的流程）
+## 4. 「规范先行」工作流（对齐 deepDesign 客户端管线）
 
-1. **设计规范**：客户端/设计师产出或更新 `design-spec/*` 段内容（组件 norm、引擎锚定）。
-2. **按规范实现**：Agent/人以规范段为指导生成/修改 `mbt.md` 主负载。
-3. **对齐修复**：解码方比对规范段与主负载（组件是否存在、norm 是否满足、
-   引擎版本是否匹配），偏差进入修复循环。
+客户端现状：一句话 → ① PRD（`write_doc kind="prd"`）→ ② UI 设计文档
+（`write_doc kind="ui"`，基于 PRD + DESIGN.md 约束）→ ③ buildFromDocs 建画布 →
+④ 从画布自动提取 DESIGN.md（用户无手写规范时）。本规范把 ②④ 的产物升级为
+DDP 一等段，形成闭环：
+
+1. **设计规范**：`design/design.json`（画布提取或手写）+ `design/ui.md`（UI 说明）入段。
+2. **按规范实现**：Agent 以规范段为指导生成/修改 `mbt.md` 主负载（RULES 受 norms 执行）。
+3. **对齐修复**：解码方比对规范段与主负载——组件/令牌/规则偏差进入修复循环；
+   `design.json.rules` 与引擎 norms 检查同源，可机器校验。
 
 ## 5. 实现面清单（按本规范落地时）
 
