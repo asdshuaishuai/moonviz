@@ -1,0 +1,123 @@
+
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1920px;height:1080px;background:#0A1220;color:#E7EEF8;font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;overflow:hidden}
+.slide{position:absolute;inset:0;display:none;padding:90px 120px;flex-direction:column}
+.slide.on{display:flex}
+.glow{position:absolute;width:900px;height:900px;border-radius:50%;filter:blur(160px);opacity:.16;background:radial-gradient(circle,#38BDF8,transparent 65%);top:-300px;right:-200px}
+.glow2{position:absolute;width:700px;height:700px;border-radius:50%;filter:blur(150px);opacity:.12;background:radial-gradient(circle,#C084FC,transparent 65%);bottom:-280px;left:-160px}
+.kicker{font-size:30px;letter-spacing:6px;color:#7DD3FC;font-weight:600}
+h1{font-size:104px;line-height:1.15;margin:26px 0 20px}
+h2{font-size:64px;margin-bottom:14px}
+.sub{font-size:38px;color:#B7C6DE;line-height:1.5}
+.chips{display:flex;gap:22px;margin-top:56px;flex-wrap:wrap}
+.chip{border:1px solid #27405F;border-radius:999px;padding:14px 30px;font-size:30px;color:#A9E2FF;background:#0E1B31}
+.cols{display:flex;gap:64px;flex:1;align-items:center;margin-top:34px}
+.panel{flex:1;min-width:0}
+.code{background:#0D1626;border:1px solid #1E3350;border-radius:18px;padding:30px 34px;font:20px/1.5 "SF Mono",Menlo,monospace;color:#9FD3FF;white-space:pre;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.code .c{color:#5B7A9D}
+.shot{background:#F4F7FB;border-radius:30px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.55);display:flex;justify-content:center}
+.shot svg{width:100%;height:auto;max-height:660px;border-radius:16px}
+.cap{font-size:30px;color:#8FA8C9;margin-top:26px;line-height:1.5}
+.bar{background:#0E1B31;border:1px solid #27405F;border-radius:14px;padding:22px 30px;font:28px "SF Mono",Menlo,monospace;color:#8BE9FD}
+.bar b{color:#FFD479}
+.arrow{font-size:64px;color:#7DD3FC;padding:0 10px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:40px}
+.tile{background:#0E1B31;border:1px solid #22395A;border-radius:20px;padding:38px 34px}
+.tile b{display:block;font-size:56px;color:#A9E2FF}
+.tile span{font-size:28px;color:#8FA8C9}
+.json{background:#0D1626;border:1px solid #1E3350;border-radius:18px;padding:28px 32px;font:25px/1.6 "SF Mono",Menlo,monospace;color:#9FD3FF;white-space:pre}
+.json .g{color:#7CE8B5} .json .y{color:#FFD479}
+.end{align-items:center;justify-content:center;text-align:center}
+.end .big{font-size:96px;margin:30px 0}
+.end .lnk{font-size:40px;color:#7DD3FC;margin-top:14px}
+#s2 .cols{margin-top:26px} #s2 .shot svg{max-height:470px} #s2 .chips{margin-top:20px} #s2 .cap{margin-top:12px;font-size:26px}
+</style></head><body>
+
+<section class="slide" id="s0"><div class="glow"></div><div class="glow2"></div>
+  <div class="kicker">RELEASE · engine-v0.1.10</div>
+  <h1>MoonViz 0.1.10</h1>
+  <div class="sub">AI 时代的 Agent 驱动原型设计引擎 —— .mbt.md 是唯一事实源，<br>人类画布与 Agent 修改回写同一份可编译的 literate 源码。</div>
+  <div class="chips"><div class="chip">65 × 115 组件</div><div class="chip">55 工具 / 27 op</div><div class="chip">WASM 73 导出 ×2</div><div class="chip">纯 MoonBit · 单二进制</div></div>
+</section>
+
+<section class="slide" id="s1"><div class="glow"></div>
+  <h2>单一事实源：<span style="color:#7DD3FC">.mbt.md</span></h2>
+  <div class="cols">
+    <div class="panel"><div class="code">---
+moonbit:
+  backend: native
+  import:
+    - path: moonviz/decl
+      alias: decl
+moonviz:
+  format: visual-document
+  revision: 65
+  title: MoonViz 文档
+  entry: t_login
+  artboards:
+    - t_login
+    - t_home
+    - t_prof
+  flows:
+    - from: t_login
+      to: t_home</div></div>
+    <div class="panel"><div class="shot"><svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}#s2 .cols{margin-top:26px} #s2 .shot svg{max-height:470px} #s2 .chips{margin-top:20px} #s2 .cap{margin-top:12px;font-size:26px}
+</style><defs><filter id="e1" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.07"/></filter><filter id="e2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-opacity="0.10"/></filter><filter id="e3" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="14" stdDeviation="28" flood-opacity="0.16"/></filter></defs><rect x="0" y="0" width="390" height="844" fill="#FFFFFF" pointer-events="none"/><g id="n_root" data-kind="frame"><rect x="0" y="0" width="390" height="844" rx="0" fill="none" stroke="#C8CDD6" stroke-width="1" stroke-dasharray="4 3"/><g id="n_logo" data-kind="rect"><rect x="163" y="120" width="64" height="64" rx="999" fill="#4B6BFB"/></g><g id="n_welcome_title" data-kind="text"><text x="95" y="244" font-size="24" font-weight="normal" letter-spacing="0" fill="#1A1C1E">欢迎回来</text></g><g id="n_subtitle" data-kind="text"><text x="95" y="270" font-size="12" font-weight="normal" letter-spacing="0" fill="#9098A1">登录以继续</text></g><g id="n_email_input" data-kind="rect"><rect x="24" y="340" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="370.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">邮箱地址</text></g><g id="n_password_input" data-kind="rect"><rect x="24" y="404" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="434.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">密码</text></g><g id="n_forgot_link" data-kind="text"><text x="230" y="480" font-size="12" font-weight="normal" letter-spacing="0" fill="#9098A1">忘记密码？</text></g><g id="n_login_btn" data-kind="rect"><rect x="24" y="520" width="342" height="52" rx="12" fill="#4B6BFB"/><text x="36" y="550.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#FFFFFF">登 录</text></g><g id="n_divider1" data-kind="rect"><rect x="24" y="600" width="342" height="1" rx="0" fill="#E0E0E0"/></g><g id="n_signup_btn" data-kind="rect"><rect x="24" y="630" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="660.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#1A1C1E">没有账号？立即注册</text></g></g></svg></div>
+      <div class="cap">同一份源码：人画的是它，Agent 写的是它，预览从源码重建。</div></div>
+  </div>
+</section>
+
+<section class="slide" id="s2"><div class="glow"></div>
+  <h2>一句话生成 · <span style="color:#7DD3FC">组合意图</span></h2>
+  <div class="bar">&gt; generate <b>"登录页+注册页"</b> as genauth</div>
+  <div class="cols" style="margin-top:44px">
+    <div class="panel"><div class="shot"><svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}#s2 .cols{margin-top:26px} #s2 .shot svg{max-height:470px} #s2 .chips{margin-top:20px} #s2 .cap{margin-top:12px;font-size:26px}
+</style><defs><filter id="e1" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.07"/></filter><filter id="e2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-opacity="0.10"/></filter><filter id="e3" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="14" stdDeviation="28" flood-opacity="0.16"/></filter></defs><rect x="0" y="0" width="390" height="844" fill="#FFFFFF" pointer-events="none"/><g id="n_root" data-kind="frame"><rect x="0" y="0" width="390" height="844" rx="0" fill="none" stroke="#C8CDD6" stroke-width="1" stroke-dasharray="4 3"/><g id="n_logo" data-kind="rect"><rect x="163" y="120" width="64" height="64" rx="999" fill="#4B6BFB"/></g><g id="n_welcome_title" data-kind="text"><text x="95" y="244" font-size="24" font-weight="normal" letter-spacing="0" fill="#1A1C1E">Welcome Back</text></g><g id="n_subtitle" data-kind="text"><text x="95" y="270" font-size="12" font-weight="normal" letter-spacing="0" fill="#9098A1">Sign in to continue</text></g><g id="n_email_input" data-kind="rect"><rect x="24" y="340" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="370.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">Email address</text></g><g id="n_password_input" data-kind="rect"><rect x="24" y="404" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="434.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">Password</text></g><g id="n_forgot_link" data-kind="text"><text x="230" y="480" font-size="12" font-weight="normal" letter-spacing="0" fill="#9098A1">Forgot password?</text></g><g id="n_login_btn" data-kind="rect"><rect x="24" y="520" width="342" height="52" rx="12" fill="#4B6BFB"/><text x="36" y="550.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#FFFFFF">Sign In</text></g><g id="n_divider1" data-kind="rect"><rect x="24" y="600" width="342" height="1" rx="0" fill="#E0E0E0"/></g><g id="n_signup_btn" data-kind="rect"><rect x="24" y="630" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="660.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#1A1C1E">Create Account</text></g></g></svg></div><div class="cap">genauth · 登录</div></div>
+    <div class="arrow">→</div>
+    <div class="panel"><div class="shot"><svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}#s2 .cols{margin-top:26px} #s2 .shot svg{max-height:470px} #s2 .chips{margin-top:20px} #s2 .cap{margin-top:12px;font-size:26px}
+</style><defs><filter id="e1" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.07"/></filter><filter id="e2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-opacity="0.10"/></filter><filter id="e3" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="14" stdDeviation="28" flood-opacity="0.16"/></filter></defs><rect x="0" y="0" width="390" height="844" fill="#FFFFFF" pointer-events="none"/><g id="n_root" data-kind="frame"><rect x="0" y="0" width="390" height="844" rx="0" fill="none" stroke="#C8CDD6" stroke-width="1" stroke-dasharray="4 3"/><g id="n_title" data-kind="text"><text x="24" y="84" font-size="24" font-weight="normal" letter-spacing="0" fill="#1A1C1E">Create Account</text></g><g id="n_field_0" data-kind="rect"><rect x="24" y="140" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="170.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">Full Name</text></g><g id="n_field_1" data-kind="rect"><rect x="24" y="208" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="238.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">Email</text></g><g id="n_field_2" data-kind="rect"><rect x="24" y="276" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="306.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">Password</text></g><g id="n_field_3" data-kind="rect"><rect x="24" y="344" width="342" height="52" rx="12" fill="#E8EAF6"/><text x="36" y="374.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#111111">Confirm Password</text></g><g id="n_create_btn" data-kind="rect"><rect x="24" y="432" width="342" height="52" rx="12" fill="#4B6BFB"/><text x="36" y="462.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#FFFFFF">Sign Up</text></g><g id="n_have_account" data-kind="text"><text x="95" y="514" font-size="12" font-weight="normal" letter-spacing="0" fill="#9098A1">Already have an account? Sign In</text></g></g></svg></div><div class="cap">signup · 注册</div></div>
+  </div>
+  <div class="chips"><div class="chip">mode: multi · 2 板</div><div class="chip">自动导航流 genauth → signup</div><div class="chip">AgentGate 通过 · debt 0</div><div class="chip">norms 自愈</div></div>
+</section>
+
+<section class="slide" id="s3"><div class="glow"></div>
+  <h2>组件规范 · <span style="color:#7DD3FC">九维设计批评</span></h2>
+  <div class="cols">
+    <div class="panel"><div class="shot" style="background:#101A2C"><svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844"><style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}#s2 .cols{margin-top:26px} #s2 .shot svg{max-height:470px} #s2 .chips{margin-top:20px} #s2 .cap{margin-top:12px;font-size:26px}
+</style><defs><filter id="e1" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.07"/></filter><filter id="e2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="10" flood-opacity="0.10"/></filter><filter id="e3" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="14" stdDeviation="28" flood-opacity="0.16"/></filter></defs><rect x="0" y="0" width="390" height="844" fill="#1A1C1E" pointer-events="none"/><g id="n_root" data-kind="frame"><rect x="0" y="0" width="390" height="844" rx="0" fill="none" stroke="#42474F" stroke-width="1" stroke-dasharray="4 3"/><g id="n_logo" data-kind="rect"><rect x="163" y="120" width="64" height="64" rx="999" fill="#A5B4FC"/></g><g id="n_welcome_title" data-kind="text"><text x="95" y="244" font-size="24" font-weight="normal" letter-spacing="0" fill="#E0E0E0">欢迎回来</text></g><g id="n_subtitle" data-kind="text"><text x="95" y="270" font-size="12" font-weight="normal" letter-spacing="0" fill="#6B7078">登录以继续</text></g><g id="n_email_input" data-kind="rect"><rect x="24" y="340" width="342" height="52" rx="12" fill="#3949AB"/><text x="36" y="370.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#E0E0E0">邮箱地址</text></g><g id="n_password_input" data-kind="rect"><rect x="24" y="404" width="342" height="52" rx="12" fill="#3949AB"/><text x="36" y="434.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#E0E0E0">密码</text></g><g id="n_forgot_link" data-kind="text"><text x="230" y="480" font-size="12" font-weight="normal" letter-spacing="0" fill="#6B7078">忘记密码？</text></g><g id="n_login_btn" data-kind="rect"><rect x="24" y="520" width="342" height="52" rx="12" fill="#A5B4FC"/><text x="36" y="550.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#1A1C1E">登 录</text></g><g id="n_divider1" data-kind="rect"><rect x="24" y="600" width="342" height="1" rx="0" fill="#2A2C2E"/></g><g id="n_signup_btn" data-kind="rect"><rect x="24" y="630" width="342" height="52" rx="12" fill="#3949AB"/><text x="36" y="660.9" text-anchor=" start" font-size="14" font-weight="normal" fill="#E0E0E0">没有账号？立即注册</text></g></g></svg></div><div class="cap">theme dark · 一次重着色 85 节点</div></div>
+    <div class="panel"><div class="json">p.critique(artboard="genauth")
+{
+  <span class="y">"principles"</span>: 9,
+  <span class="y">"visual_hierarchy"</span>: { "score": <span class="g">9</span>, "3 种字号" },
+  <span class="y">"consistency"</span>:     { "score": <span class="g">10</span>, "6/6 颜色使用令牌" },
+  <span class="y">"norms"</span>:           { "score": <span class="g">9</span>, "0 处规范偏差" }
+}</div>
+      <div class="cap">第 9 维 norms：按钮不卡文案 · 撞色零容忍 · 齐缝列表 · 触控 44 ——<br>critique 给分，auto_fix 一键修复。</div></div>
+  </div>
+</section>
+
+<section class="slide" id="s4"><div class="glow"></div>
+  <h2>一个引擎 · <span style="color:#7DD3FC">全出口生态</span></h2>
+  <div class="tiles">
+    <div class="tile"><b>63</b><span>CLI 行协议命令</span></div>
+    <div class="tile"><b>55</b><span>MCP 工具（含 inputSchema）</span></div>
+    <div class="tile"><b>73 × 2</b><span>WASM 双产物导出（MVP + GC）</span></div>
+    <div class="tile"><b>SDK</b><span>Node / mooncakes 一站式内嵌</span></div>
+    <div class="tile"><b>298 + 314</b><span>双目标测试全绿</span></div>
+    <div class="tile"><b>83 → 0</b><span>0.1.10 全域审查：确认问题清零</span></div>
+  </div>
+  <div class="cap">0.1.10 发布波：数据保真 · 信封 JSON 合法性 · 契约对齐 · 出口面修复 · 文档官网全量同步。</div>
+</section>
+
+<section class="slide end" id="s5"><div class="glow"></div><div class="glow2"></div>
+  <div class="kicker">NOW SHIPPING</div>
+  <div class="big">engine-v0.1.10</div>
+  <div class="sub">GitHub Releases 全产物 · mooncakes.io 已上架</div>
+  <div class="lnk">asdshuaishuai.github.io/moonviz · 在线 Playground 即开即用</div>
+</section>
+
+<script>
+function show(n){ document.querySelectorAll('.slide').forEach((s,i)=>s.classList.toggle('on', i===n)); }
+show(0);
+</script></body></html>

@@ -739,11 +739,11 @@ pub fn session_component_compile_b64(handle : Int, decl_b64 : String) -> String 
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
-      let decoded = try? @base64.decode(decl_b64)
+      let decoded = try Ok(@base64.decode(decl_b64)) catch { e => Err(e) }
       match decoded {
         Err(_) => "{\"ok\":false,\"error\":\"invalid_base64\"}"
         Ok(bytes) => {
-          let text = try? @utf8.decode(bytes)
+          let text = try Ok(@utf8.decode(bytes)) catch { e => Err(e) }
           match text {
             Err(_) => "{\"ok\":false,\"error\":\"invalid_utf8\"}"
             Ok(txt) =>
