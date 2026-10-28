@@ -49,7 +49,9 @@ section_table[ section_count ]：每项
 | `mbt.md` | ✅ 唯一真相源 | 完整 `.mbt.md` 源码（UTF-8） | codec |
 | `design/ui.md` | 可选 | **UI 说明**（UI 设计文档）：客户端 `write_doc kind="ui"` 的产物，可执行设计规范 + 一致性检查清单（Markdown） | 客户端 |
 | `design/design.json` | 可选 | **设计规范**（DESIGN.md 的 JSON 形态）：`{v, palette, typography, spacing, radius, rules[], notes}`——整体一致性的约束源，RULES 可被引擎 norms 执行 | 客户端 |
-| `design/prd.md` | 可选（预留） | 需求文档（`write_doc kind="prd"` 产物）；v2 先注册段名，写入方按需携带 | 客户端 |
+
+**明确排除**：PRD（需求文档）**不入容器**——体积通常很大，且引擎只对交互 UI
+负责；需求文本留在客户端侧，不入分发链。读取器见到未知段按 §3.1 跳过即可。
 | `meta.json` | 可选（预留） | 来源、生成时间、作者标签（只描述容器自身，不描述项目内容） | codec |
 
 **动机（客户端现状的痛点）**：deepDesign 目前把 `docs:{prd,ui}` 与设计规范 JSON 塞进
