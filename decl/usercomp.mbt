@@ -199,7 +199,7 @@ pub fn parse_user_component(
                 source: text,
               }
               // 参数闭合：所有 ${name} 引用必须已声明
-              let refs = match (try? @core.collect_param_refs(def)) {
+              let refs = match (try Ok(@core.collect_param_refs(def)) catch { e => Err(e) }) {
                 Ok(rs) => rs
                 Err(_) => return Err("usercomp_ref_scan_failed")
               }
@@ -220,13 +220,13 @@ pub fn parse_user_component(
                 height: def.height + 400.0,
               })
               match
-                (try? @core.place_user_component(
+                (try Ok(@core.place_user_component(
                   probe,
                   def,
                   "__probe",
                   dx=10.0,
                   dy=10.0,
-                )) {
+                )) catch { e => Err(e) }) {
                 Ok(r) =>
                   if r.is_ok() == false {
                     return Err("usercomp_probe_failed")

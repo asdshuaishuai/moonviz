@@ -1,0 +1,24 @@
+---
+moonbit:
+  backend: native
+  import:
+    - path: moonviz/decl
+      alias: decl
+moonviz:
+  format: visual-document
+  revision: 65
+  title: MoonViz 文档
+  entry: t_login
+  artboards:
+    - t_login
+    - t_home
+    - t_prof
+  flows:
+    - from: t_login
+      to: t_home
+      trigger: tap:login_btn
+    - from: t_home
+      to: t_prof
+      trigger: tap:activity_0
+---
+
