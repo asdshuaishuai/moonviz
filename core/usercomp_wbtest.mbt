@@ -34,9 +34,9 @@ test "usercomp: consecutive places on same document" {
     source: "",
   }
   let r1 = place_user_component(doc, def, "a", dx=10.0, dy=10.0)
-  inspect(r1.is_ok(), content="true")
+  inspect(r1 is Ok(_), content="true")
   let r2 = place_user_component(doc, def, "b", dx=100.0, dy=100.0)
-  inspect(r2.is_ok(), content="true")
+  inspect(r2 is Ok(_), content="true")
   inspect(doc.has("a::icon_bg"), content="true")
   inspect(doc.has("b::icon_bg"), content="true")
   // 参数代入

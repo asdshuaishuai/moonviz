@@ -220,17 +220,14 @@ pub fn parse_user_component(
                 height: def.height + 400.0,
               })
               match
-                (try Ok(@core.place_user_component(
+                @core.place_user_component(
                   probe,
                   def,
                   "__probe",
                   dx=10.0,
                   dy=10.0,
-                )) catch { e => Err(e) }) {
-                Ok(r) =>
-                  if r.is_ok() == false {
-                    return Err("usercomp_probe_failed")
-                  }
+                ) {
+                Ok(_) => ()
                 Err(_) => return Err("usercomp_probe_failed")
               }
               Ok(def)
