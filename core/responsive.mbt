@@ -73,18 +73,15 @@ pub fn Project::generate_responsive(
         let _ = self.create_artboard(name=vid, width=bp.width, height=bp.height)
         match self.artboards.get(vid) {
           Some(vab) => {
-            for nid in base_ab.doc.nodes.keys() {
-              if nid != "root" {
-                match base_ab.doc.nodes.get(nid) {
-                  Some(n) => {
-                    let _ = vab.doc.insert_node({ ..n, children: [], }, "root")
-                    let _ = vab.doc.update_node(nid, fn(x) {
-                      { ..x, children: n.children.copy(), }
-                    })
-                  }
-                  None => ()
+            // 按原树递归重建层级：顶层挂 root，子节点挂回各自父节点。
+            // 旧实现把所有节点平铺挂到 root 下却保留原 children 表，
+            // TreeValid 报重复引用、几何错乱——自产变体过不了引擎自身门禁。
+            match base_ab.doc.nodes.get(base_ab.doc.root_id) {
+              Some(r) =>
+                for cid in r.children.iter() {
+                  copy_subtree(base_ab.doc, vab.doc, cid, vab.doc.root_id)
                 }
-              }
+              None => ()
             }
             adapt_layout(vab.doc, bp)
             created.push("\"\{vid}\"")
@@ -94,6 +91,26 @@ pub fn Project::generate_responsive(
       }
       let j = jstr17(created)
       Ok("{\"ok\":true,\"base\":\"\{artboard}\",\"variants\":[\{j}]}")
+    }
+  }
+}
+
+///|
+/// 源文档子树 → 目标文档的递归重建：保持原父子层级与节点 id，
+/// insert_node 负责防重复注册（目标文档已存在同 id 时跳过）
+fn copy_subtree(
+  src : Document,
+  dst : Document,
+  id : String,
+  parent_id : String,
+) -> Unit {
+  match src.nodes.get(id) {
+    None => ()
+    Some(n) => {
+      let _ = dst.insert_node({ ..n, children: [], }, parent_id)
+      for cid in n.children.iter() {
+        copy_subtree(src, dst, cid, id)
+      }
     }
   }
 }

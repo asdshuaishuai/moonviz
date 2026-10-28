@@ -34,7 +34,54 @@ test "标注：Spec JSON（机器可读）" {
     Ok(json) => {
       assert_true(json.contains("\"btn1\""))
       assert_true(json.contains("\"component\":\"button\""))
+      // rect 必须是合法 JSON 值：数组 [x,y,w,h]（曾是 {x,y,w,h} 裸数字
+      // 花括号，任何 JSON 消费端解析即崩）
+      assert_true(json.contains("\"rect\":["))
+      assert_false(json.contains("\"rect\":{"))
+      // 首尾结构合法（数组信封 + 对象字段完整闭合）
+      assert_true(json.has_prefix("["))
+      assert_true(json.has_suffix("]"))
+      assert_true(json.contains("\"fill\":"))
+      assert_true(json.contains("\"text\":"))
     }
+    Err(_) => assert_true(false)
+  }
+  // id/text 含引号/反斜杠时必须过转义（否则照样打崩消费端）
+  match p.artboards.get("spec_test") {
+    None => assert_true(false)
+    Some(ab) => {
+      let _ = ab.doc.update_node("btn1", fn(n) {
+        { ..n, text: "他说\"hi\"" }
+      })
+      match p.spec_json(artboard="spec_test") {
+        Ok(json) => assert_true(json.contains("他说\\\"hi\\\""))
+        Err(_) => assert_true(false)
+      }
+    }
+  }
+}
+
+///|
+/// 回归（评审 F41）：Interactions 段曾有死变量 has_interactions——本画板
+/// 无出边但项目其他画板有 flow 时，既不列条目也不输出空态，段落为空。
+test "标注：Interactions 段——出边列出 / 无出边显示空态" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="spec_a")
+  let _ = p.create_artboard(name="spec_b")
+  let _ = p.place_component(
+    artboard="spec_a",
+    component_id="button",
+    instance_id="go_btn",
+  )
+  let _ = apply_operation(p, "flow spec_a spec_b go_btn")
+  // 源画板：列出本画板出边
+  match p.generate_spec(artboard="spec_a") {
+    Ok(spec) => assert_true(spec.contains("navigate to `spec_b`"))
+    Err(_) => assert_true(false)
+  }
+  // 目标画板（无出边）：显示空态而不是空段落
+  match p.generate_spec(artboard="spec_b") {
+    Ok(spec) => assert_true(spec.contains("No interactions defined"))
     Err(_) => assert_true(false)
   }
 }

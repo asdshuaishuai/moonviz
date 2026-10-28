@@ -2,6 +2,9 @@
 name = "moonviz-ddp"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "MoonViz DDP encrypted document container codec"
+repository = "https://github.com/asdshuaishuai/moonviz"
 
 [dependencies]
 argon2 = "0.5"

@@ -90,6 +90,7 @@ fn parse_node_obj(
   let mut id = ""
   let mut kind = "frame"
   let mut name = ""
+  let mut component = ""
   let mut width : SizeSpec = Fixed(100.0)
   let mut height : SizeSpec = Fixed(100.0)
   let mut x : PosSpec = Fixed(0.0)
@@ -100,6 +101,7 @@ fn parse_node_obj(
   let mut font_weight = "normal"
   let mut corner_radius = 0.0
   let mut stroke = "none"
+  let mut stroke_width = 0.0
   let mut shadow = "none"
   let mut opacity = 1.0
   let mut text_color = "#111111"
@@ -108,6 +110,10 @@ fn parse_node_obj(
   let mut blend = "normal"
   let mut line_height = 1.5
   let mut tracking = 0.0
+  let mut text_align = "left"
+  let mut font_style = "normal"
+  let mut stroke_dash = "solid"
+  let mut visible = true
   let mut constraint = "lt"
   let mut flip = "none"
   let kids : Array[Node] = []
@@ -119,7 +125,7 @@ fn parse_node_obj(
       pos = pos + 1
       break
     }
-    // 字段名
+    // 字段名（parse_string 已按 JSON 转义规则解码，无需二次 unescape）
     let (key, p1) = parse_string(s, pos)
     pos = p1
     pos = skip_ws2(s, pos)
@@ -128,7 +134,7 @@ fn parse_node_obj(
     }
     pos = pos + 1
     pos = skip_ws2(s, pos)
-    let key_t = unescape_json(key)
+    let key_t = key
     if key_t == "children" {
       seen_children = true
       if char_at2(s, pos) != "[" {
@@ -165,6 +171,7 @@ fn parse_node_obj(
           stroke = sp.stroke
         }
         corner_radius = sp.radius
+        stroke_width = sp.stroke_width
         opacity = sp.opacity
         font_size = sp.font_size
         if sp.text_color != "" {
@@ -188,6 +195,16 @@ fn parse_node_obj(
         if sp.flip != "" {
           flip = sp.flip
         }
+        if sp.text_align != "" {
+          text_align = sp.text_align
+        }
+        if sp.font_style != "" {
+          font_style = sp.font_style
+        }
+        if sp.stroke_dash != "" {
+          stroke_dash = sp.stroke_dash
+        }
+        visible = sp.visible
         pos = send
       } else {
         return ParseFail("style_not_object")
@@ -195,11 +212,12 @@ fn parse_node_obj(
     } else if char_at2(s, pos) == "\"" {
       let (v, p2) = parse_string(s, pos)
       pos = p2
-      let vt = unescape_json(v)
+      let vt = v
       match key_t {
         "id" => id = vt
         "kind" => kind = vt
         "name" => name = vt
+        "component" => component = vt
         "text" => text = vt
         "root_id" => id = "root"
         "fill" => fill = vt
@@ -251,6 +269,11 @@ fn parse_node_obj(
     } else {
       name
     },
+    component: if component == "" {
+      kind_component(k)
+    } else {
+      component
+    },
     width,
     height,
     x,
@@ -260,6 +283,7 @@ fn parse_node_obj(
       ..NodeStyle::default(),
       fill,
       stroke,
+      stroke_width,
       corner_radius,
       opacity,
       font_size,
@@ -272,6 +296,10 @@ fn parse_node_obj(
       line_height,
       tracking,
       flip,
+      text_align,
+      font_style,
+      stroke_dash,
+      visible,
     },
     constraint,
   }
@@ -287,7 +315,10 @@ fn parse_node_obj(
 }
 
 ///|
-/// 解析字符串字面量（含转义），返回原始内容（仍带转义）与结束位置
+/// 解析字符串字面量并按 JSON 转义规则完整解码：
+/// \n \t \r \b \f \\ \" \/ 与 \uXXXX（含代理对合成）。
+/// 返回解码后的内容与结束位置——调用侧不得再做二次 unescape，
+/// 否则解码结果中的字面反斜杠会被再次吃掉。
 fn parse_string(s : String, start : Int) -> (String, Int) {
   let sb = StringBuilder::new()
   let mut pos = start + 1 // 跳过开引号
@@ -295,8 +326,60 @@ fn parse_string(s : String, start : Int) -> (String, Int) {
   while pos < n {
     let c = char_at2(s, pos)
     if c == "\\" {
-      sb.write_string(char_at2(s, pos + 1))
-      pos = pos + 2
+      if pos + 1 >= n {
+        break
+      }
+      let e = char_at2(s, pos + 1)
+      match e {
+        "n" => {
+          sb.write_char('\n')
+          pos = pos + 2
+        }
+        "t" => {
+          sb.write_char('\t')
+          pos = pos + 2
+        }
+        "r" => {
+          sb.write_char('\r')
+          pos = pos + 2
+        }
+        "b" => {
+          sb.write_char(Char::from_int(8))
+          pos = pos + 2
+        }
+        "f" => {
+          sb.write_char(Char::from_int(12))
+          pos = pos + 2
+        }
+        "u" => {
+          // \uXXXX：4 位十六进制码点；高代理后紧跟低代理时合成真实码点
+          let hi = hex4_at(s, pos + 2)
+          if hi < 0 {
+            // 畸形 \u：原样保留前缀，跳过反斜杠继续
+            sb.write_string("\\u")
+            pos = pos + 2
+          } else {
+            pos = pos + 6
+            let mut cp = hi
+            if hi >= 0xD800 && hi <= 0xDBFF &&
+              pos + 1 < n &&
+              char_at2(s, pos) == "\\" &&
+              char_at2(s, pos + 1) == "u" {
+              let lo = hex4_at(s, pos + 2)
+              if lo >= 0xDC00 && lo <= 0xDFFF {
+                cp = 0x10000 + (hi - 0xD800) * 0x400 + (lo - 0xDC00)
+                pos = pos + 6
+              }
+            }
+            sb.write_char(Char::from_int(cp))
+          }
+        }
+        other => {
+          // \" \\ \/ 等转义还原为字面字符
+          sb.write_string(other)
+          pos = pos + 2
+        }
+      }
     } else if c == "\"" {
       pos = pos + 1
       break
@@ -306,6 +389,33 @@ fn parse_string(s : String, start : Int) -> (String, Int) {
     }
   }
   (sb.to_string(), pos)
+}
+
+///|
+/// 从 pos 起读 4 位十六进制（\uXXXX 的 XXXX），非法返回 -1
+fn hex4_at(s : String, pos : Int) -> Int {
+  let n = s.length()
+  if pos + 4 > n {
+    return -1
+  }
+  let mut v = 0
+  for i in 0..<4 {
+    let code = char_code2(s, pos + i)
+    let d = if code >= 48 && code <= 57 {
+      code - 48
+    } else if code >= 97 && code <= 102 {
+      code - 87
+    } else if code >= 65 && code <= 70 {
+      code - 55
+    } else {
+      -1
+    }
+    if d < 0 {
+      return -1
+    }
+    v = v * 16 + d
+  }
+  v
 }
 
 ///|
@@ -348,7 +458,7 @@ fn parse_value(s : String, start : Int) -> (ScalarOrSpec, Int) {
     let (v, p) = parse_string(s, start)
     let r : ScalarOrSpec = {
       num: 0.0,
-      str: unescape_json(v),
+      str: v,
       spec: Fixed(0.0),
       pos: Fixed(0.0),
     }
@@ -546,12 +656,14 @@ fn char_code2(s : String, i : Int) -> Int {
 }
 
 ///|
-/// 解析 style 子对象：返回 (fill, stroke, corner_radius, opacity, font_size,
-///                          text_color, font_weight, shadow, rotate, blur, blend,
-///                          line_height, tracking)
+/// 解析 style 子对象：返回 (fill, stroke, stroke_width, corner_radius, opacity,
+///                          font_size, text_color, font_weight, shadow, rotate,
+///                          blur, blend, line_height, tracking, flip,
+///                          text_align, font_style, stroke_dash, visible)
 struct StyleParse {
   fill : String
   stroke : String
+  stroke_width : Double
   radius : Double
   opacity : Double
   font_size : Double
@@ -564,12 +676,30 @@ struct StyleParse {
   line_height : Double
   tracking : Double
   flip : String
+  text_align : String
+  font_style : String
+  stroke_dash : String
+  visible : Bool
+}
+
+///|
+/// 位置 pos 处是否是 true/false 字面量（visible 等布尔字段解析用）
+fn match_bool_at(s : String, pos : Int) -> Bool? {
+  let n = s.length()
+  if pos + 4 <= n && s.substring(start=pos, end=pos + 4) == "true" {
+    Some(true)
+  } else if pos + 5 <= n && s.substring(start=pos, end=pos + 5) == "false" {
+    Some(false)
+  } else {
+    None
+  }
 }
 
 ///|
 fn parse_style_obj(obj : String) -> StyleParse {
   let mut fill = ""
   let mut stroke = ""
+  let mut stroke_width = 0.0
   let mut radius = 0.0
   let mut opacity = 1.0
   let mut font_size = 14.0
@@ -582,6 +712,10 @@ fn parse_style_obj(obj : String) -> StyleParse {
   let mut line_height = 1.5
   let mut tracking = 0.0
   let mut flip_s = ""
+  let mut text_align = ""
+  let mut font_style = ""
+  let mut stroke_dash = ""
+  let mut visible = true
   let n = obj.length()
   let mut pos = 1 // 跳过 {
   while pos < n {
@@ -589,6 +723,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
     if char_at2(obj, pos) == "}" {
       break
     }
+    // 键与字符串值均已由 parse_string 解码，无需二次 unescape
     let (key, p1) = parse_string(obj, pos)
     pos = p1
     pos = skip_ws2(obj, pos)
@@ -597,11 +732,11 @@ fn parse_style_obj(obj : String) -> StyleParse {
     }
     pos = pos + 1
     pos = skip_ws2(obj, pos)
-    let key_t = unescape_json(key)
+    let key_t = key
     if char_at2(obj, pos) == "\"" {
       let (v, p2) = parse_string(obj, pos)
       pos = p2
-      let vt = unescape_json(v)
+      let vt = v
       match key_t {
         "fill" => fill = vt
         "stroke" => stroke = vt
@@ -610,12 +745,29 @@ fn parse_style_obj(obj : String) -> StyleParse {
         "shadow" => shadow = vt
         "blend" => blend = vt
         "flip" => flip_s = vt
+        "text_align" => text_align = vt
+        "font_style" => font_style = vt
+        "stroke_dash" => stroke_dash = vt
         _ => ()
+      }
+    } else if key_t == "visible" {
+      // 布尔字面量 true/false
+      match match_bool_at(obj, pos) {
+        Some(b) => {
+          visible = b
+          if b {
+            pos = pos + 4
+          } else {
+            pos = pos + 5
+          }
+        }
+        None => ()
       }
     } else {
       let end = value_end(obj, pos)
       let num = parse_num_str(obj.substring(start=pos, end~))
       match key_t {
+        "stroke_width" => stroke_width = num
         "corner_radius" => radius = num
         "opacity" => opacity = num
         "font_size" => font_size = num
@@ -635,6 +787,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
   {
     fill,
     stroke,
+    stroke_width,
     radius,
     opacity,
     font_size,
@@ -647,6 +800,10 @@ fn parse_style_obj(obj : String) -> StyleParse {
     line_height,
     tracking,
     flip: flip_s,
+    text_align,
+    font_style,
+    stroke_dash,
+    visible,
   }
 }
 

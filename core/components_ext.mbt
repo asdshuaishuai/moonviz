@@ -441,12 +441,13 @@ pub fn extended_components(
   m
 }
 
-// ---------------- v5：namethatui.com 对标补全（14 组件） ----------------
+// ---------------- v5：namethatui.com 对标补全（13 组件） ----------------
 
 ///|
-/// 追加 v5 批次：avatar_group / bento_grid / chat_bubble / command_palette /
+/// 追加 v5 批次：bento_grid / chat_bubble / command_palette /
 /// hover_card / lightbox / marquee / masonry / multi_select / resize_handle /
 /// scrim / status_dot / steps / toggle_group
+/// （数量漂移由 agent_test 的 catalog 断言锚定，注释不承载权威计数）
 pub fn extended_components_v5(
   m : Map[String, ComponentDef],
 ) -> Map[String, ComponentDef] {

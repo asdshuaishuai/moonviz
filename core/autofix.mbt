@@ -34,6 +34,12 @@ pub fn Project::auto_fix(
       for f in norm_fix_pass(ab.doc, norm_layout).iter() {
         fixes.push(f)
       }
+      // Norms v2 触控目标（44×44）在同一先修段：norm_fix_pass 改过尺寸，
+      // 重新求解取真实 rect。放大同样可能引入溢出——交给下方谓词循环清偿。
+      let touch_layout = solve(ab.doc)
+      for f in norm_touch_fix_pass(ab.doc, touch_layout).iter() {
+        fixes.push(f)
+      }
       for f in self.norm_list_divider_fix(artboard=artboard).iter() {
         fixes.push(f)
       }

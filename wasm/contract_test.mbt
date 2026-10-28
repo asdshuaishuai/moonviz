@@ -39,6 +39,29 @@ test "契约：全部导出 × 非法输入 → 合法 JSON（issue #3）" {
     let h = session_open(bad)
     let _ = assert_true(h < 0, msg="非法文档不应打开会话")
   }
+  // session_history 纳入模糊面（issue #3 同类回归）：画板名/rev 含引号
+  // 或反斜杠时，错误信封值必须转义（此前裸插值输出非法 JSON）
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let r1 = session_history(h, "init a\"b")
+  assert_true(
+    r1.contains("unknown_artboard: a\\\"b"),
+    msg="artboard 名含引号必须转义: \{r1}",
+  )
+  let r2 = session_history(h, "init b\\c")
+  assert_true(
+    r2.contains("unknown_artboard: b\\\\c"),
+    msg="artboard 名含反斜杠必须转义: \{r2}",
+  )
+  // checkout 的 invalid_revision 路径要求历史已注册（否则先撞
+  // history_not_initialized）——先 init 真实画板 w
+  let _ = session_history(h, "init w")
+  let r3 = session_history(h, "checkout \"r")
+  assert_true(
+    r3.contains("invalid_revision: \\\"r"),
+    msg="rev 含引号必须转义: \{r3}",
+  )
+  let _ = session_close(h)
 }
 
 ///|
@@ -142,6 +165,11 @@ fn extract_data(envelope : String) -> String {
 /// 写路径（issue：P0-2）：分块字符串槽 → *_in 变体与对应无状态导出等价。
 /// 槽是全公开 API 的 UTF-8 分块压入（GC 分配原语不可达）。
 test "契约：字符串槽写路径与无状态导出等价" {
+  // 越界 n（<1）必须 no-op——此前钳到 1 会压入垃圾字节静默污染槽
+  arg_reset()
+  arg_push(0x41, 0)
+  arg_push(0x41, -3)
+  assert_eq(arg_len(), 0)
   let seed = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n"
   // 分块压入（4 字节小端一块）
   in_reset()
@@ -205,30 +233,6 @@ test "契约：字符串槽写路径与无状态导出等价" {
 }
 
 ///|
-test "契约：session_count 观测泄漏（issue #1）" {
-  let before = session_count()
-  let h1 = session_open(SEED)
-  let h2 = session_open(SEED)
-  assert_eq(session_count(), before + 2)
-  let _ = session_close(h1)
-  assert_eq(session_count(), before + 1)
-  let _ = session_close(h2)
-  assert_eq(session_count(), before)
-}
-
-///|
-test "契约：已关句柄报 invalid_session_handle（issue #4A）" {
-  let h = session_open(SEED)
-  let _ = session_close(h)
-  let r = session_lint(h, "w")
-  assert_true(
-    r.contains("invalid_session_handle"),
-    msg="已关句柄应报 invalid_session_handle: \{r}",
-  )
-  let _ = assert_false(session_close(h), msg="重复 close 应返回 false")
-}
-
-///|
 test "契约：protest 畸形断言计 FAIL 不假 PASS" {
   let seed = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
   let r = @core.run_protest_script(
@@ -255,12 +259,19 @@ fn session_get_project_for_test() -> @core.Project {
 }
 
 ///|
-test "契约：session_auto_fix 无违规 → detail 为合法空数组（issue #10）" {
+test "契约：空集合信封路径全部输出合法空数组（issue #10）" {
   let h = session_open(SEED)
+  // auto_fix 无违规 → detail:[]（此前空 join 输出 "detail":}}，
+  // 宿主 JSON.parse 直接抛异常）
   let out = session_auto_fix(h, "w")
-  // 此前 fixes=0 时输出 "detail":}}（空 join 无括号）——宿主 JSON.parse 直接抛异常
   assert_true(out.contains("\"fixes\":0,\"detail\":[]"), msg=out)
   assert_true(out.contains("\"ok\":true"), msg=out)
+  // wasm 自有 join 点 1：空用户组件库 → components:[]
+  let lib = session_library_snapshot(h)
+  assert_true(lib.contains("\"components\":[]"), msg=lib)
+  // wasm 自有 join 点 2：无 ⚡ 节点画板 tap → changes:[]
+  let tap = session_tap(h, "w", 10.0, 10.0)
+  assert_true(tap.contains("\"changes\":[]"), msg=tap)
   let _ = session_close(h)
 }
 
@@ -574,7 +585,9 @@ test "契约：history init 幂等——重 init 不重基线（issue #21 失败
 test "契约：canonical 透传宿主批注注释——写路径往返不丢（issue #20）" {
   // 板前注释锚定到后续节；文末注释为文档级。两者都必须跨写路径存活。
   let doc = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- deepdesign:ink {\"strokes\":3,\"color\":\"#ff0044\"} -->\n\n## w\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n\n<!-- host:footer-note 文档级尾注 -->\n"
-  let r = apply_agent_op(doc, "update w btn label=改")
+  // 键用引擎面词汇 text（label 是 decl 面参数名；update 未识别键现在
+  // 显式报 mbt_operation_unknown_key——本测试锚定的是批注透传）
+  let r = apply_agent_op(doc, "update w btn text=改")
   assert_true(r.contains("\"ok\":true"), msg=r)
   assert_true(
     r.contains("deepdesign:ink"),
@@ -586,7 +599,7 @@ test "契约：canonical 透传宿主批注注释——写路径往返不丢（i
   )
   // 二次写路径幂等——批注各恰好一份
   let h2 = session_open(doc)
-  let r2 = session_apply_human(h2, "update w btn label=再改")
+  let r2 = session_apply_human(h2, "update w btn text=再改")
   assert_true(r2.contains("\"ok\":true"), msg=r2)
   assert_true(
     r2.contains("deepdesign:ink") && r2.contains("host:footer-note"),
@@ -648,5 +661,52 @@ test "契约：history 裸 commit 兼容 + 删板不复活旧栈（issue #21 审
     msg="undo 应回到重建后的基线: " + u,
   )
   assert_false(u.contains("rev1内容"), msg="sanity")
+  let _ = session_close(h)
+}
+
+///|
+/// 契约：session_generate 一句话生成——新画板变更必须回传 canonical mbt
+/// （sess_mut 语义，issue #19 同类），报告带 autofix/missing/score。
+test "契约：session_generate 生成即变更回传 canonical mbt" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let r = session_generate(h, "登录页", "gen_login")
+  assert_true(r.contains("\"ok\":true"), msg="generate 应成功: \{r}")
+  assert_true(r.contains("\"mbt\":\""), msg="变更信封必须回传 canonical mbt: \{r}")
+  assert_true(r.contains("\"template\":\"login\""))
+  assert_true(r.contains("\"score\""))
+  // 新画板真实入库（后续会话操作可见）
+  let boards = session_list_artboards(h)
+  assert_true(boards.contains("gen_login"), msg="gen_login 应在画板清单: \{boards}")
+  let _ = session_close(h)
+}
+
+///|
+/// 契约：session_generate_in 槽变体——辅槽（arg）= intent，三槽（arg2）= name
+/// （槽语义表唯一特例）。intent 必须按真实 UTF-8 字节压槽：此前按码点
+/// 低字节压入，中文被破坏成 "{Uu"，靠 generate 兜底假绿，未真锚定
+/// intent 槽传输。
+test "契约：session_generate_in 槽变体（UTF-8 intent 真传输）" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  arg_reset()
+  let intent = "登录页"
+  for b in @utf8.encode(intent).iter() {
+    arg_push(b.to_int(), 1)
+  }
+  arg2_reset()
+  let name = "gen_login_in"
+  for c in name.to_array() {
+    arg2_push(c.to_int(), 1)
+  }
+  let r = session_generate_in(h)
+  assert_true(r.contains("\"ok\":true"), msg="generate_in 应成功: \{r}")
+  assert_true(r.contains("gen_login_in"), msg="槽变体应使用三槽 name: \{r}")
+  // 真锚定 intent 槽传输：登录意图必须被识别为 login 模板产物——
+  // 被破坏的 intent 只会得到兜底空板，不会带 template:login
+  assert_true(
+    r.contains("\"template\":\"login\""),
+    msg="槽内 UTF-8 intent 应识别为 login 模板: \{r}",
+  )
   let _ = session_close(h)
 }

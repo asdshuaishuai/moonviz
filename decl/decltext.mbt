@@ -187,43 +187,9 @@ fn split_params(s : String) -> Array[String] {
 }
 
 ///|
-/// 委托 core（转义还原已上移，供操作语法共用）
+/// 委托 core（转义还原已上移，供操作语法共用；含 \u00xx 对称解码）
 pub fn unescape_value(s : String) -> String {
   @core.unescape_value(s)
-}
-
-///|
-/// 还原声明转义：\" \\ \, \( \) \n \r \t
-fn unescape_decl(s : String) -> String {
-  let sb = StringBuilder::new()
-  let mut esc = false
-  for c in s.iter() {
-    match esc {
-      true => {
-        match c {
-          '"' => sb.write_char('"')
-          '\\' => sb.write_char('\\')
-          ',' => sb.write_char(',')
-          '(' => sb.write_char('(')
-          ')' => sb.write_char(')')
-          'n' => sb.write_char('\n')
-          'r' => sb.write_char('\r')
-          't' => sb.write_char('\t')
-          other => {
-            sb.write_char('\\')
-            sb.write_char(other)
-          }
-        }
-        esc = false
-      }
-      false =>
-        match c {
-          '\\' => esc = true
-          other => sb.write_char(other)
-        }
-    }
-  }
-  sb.to_string()
 }
 
 ///|
@@ -435,8 +401,9 @@ fn emit_children(
             if toplevel {
               sb.write_string("page.add(\{call})\n")
             } else {
+              // pid 与节点 id 同规转义：含引号/反斜杠的容器 id 往返不损坏
               sb.write_string(
-                "page.add_to(parent_id=\"\{pid}\", node=\{call})\n",
+                "page.add_to(parent_id=\"\{decl_escape(pid)}\", node=\{call})\n",
               )
             }
           }
@@ -518,7 +485,7 @@ fn str_val(v : String) -> String {
   } else {
     v
   }
-  unescape_decl(u)
+  unescape_value(u)
 }
 
 ///|
@@ -818,7 +785,7 @@ fn apply_decl_style(
     Some(v) => cur = { ..cur, style: { ..cur.style, blend: str_val(v), }, }
     None => ()
   }
-  match num_opt(params, "line", line) {
+  match num_opt(params, "line_height", line) {
     Ok(Some(v)) => cur = { ..cur, style: { ..cur.style, line_height: v, }, }
     Ok(None) => ()
     Err(error) => return Err(error)
@@ -1288,6 +1255,26 @@ fn p_add(page : Prototype, parent_id : String, n : @core.Node) -> Unit {
 }
 
 ///|
+/// 找未转义收尾引号：`\x` 转义序列不终止引号；返回 UTF-16 下标。
+/// 与 emit_children 的 decl_escape(pid) 配对，含引号容器 id 往返不损坏。
+fn find_closing_quote(s : String) -> Int? {
+  let mut esc = false
+  let mut i = 0
+  for c in s.iter() {
+    if esc {
+      esc = false
+    } else if c == '"' {
+      return Some(i)
+    } else if c == '\\' {
+      esc = true
+    }
+    // 代理对占 2 个 UTF-16 码元，下标按码元推进
+    i = i + (if c.to_int() > 0xFFFF { 2 } else { 1 })
+  }
+  None
+}
+
+///|
 /// 声明文本 → Prototype（含行级错误定位）
 pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
   let lines = lines_of(text)
@@ -1340,8 +1327,8 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
       } else if has_prefix_str(line, ADD_TO_PREFIX) {
         // 行形如：page.add_to(parent_id="card", node=@decl.rect(...))
         let inner = line.substring(start=ADD_TO_PREFIX.length())
-        let pid : String = match inner.find("\"") {
-          Some(q) => inner.substring(start=0, end=q)
+        let pid : String = match find_closing_quote(inner) {
+          Some(q) => unescape_value(inner.substring(start=0, end=q))
           None =>
             return Err({
               line: line_no,

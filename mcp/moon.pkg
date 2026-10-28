@@ -9,5 +9,5 @@ import {
 pkgtype(kind: "executable")
 
 options(
-  targets: { "main.mbt": [ "native" ], "main_stub.mbt": [ "not", "native" ] },
+  targets: { "main.mbt": [ "native" ], "main_stub.mbt": [ "not", "native" ], "main_wbtest.mbt": [ "native" ] },
 )

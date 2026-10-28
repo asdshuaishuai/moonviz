@@ -154,7 +154,7 @@ fn artifact_to_json(a : MoonVizArtifact) -> String {
       ) {
       (Some(decl), Some(name), Some((w, h))) =>
         board_parts.push(
-          "    \"\{id}\": {\n      \"name\": \"\{name}\",\n      \"size\": {\{w.to_int()}, \{h.to_int()}},\n      \"decl\": \"\{json_escape_str(decl)}\"\n    }",
+          "    \"\{json_escape(id)}\": {\n      \"name\": \"\{json_escape(name)}\",\n      \"size\": {\{w.to_int()}, \{h.to_int()}},\n      \"decl\": \"\{json_escape_str(decl)}\"\n    }",
         )
       _ => ()
     }
@@ -166,7 +166,7 @@ fn artifact_to_json(a : MoonVizArtifact) -> String {
   let flow_parts : Array[String] = []
   for f in a.flows.iter() {
     flow_parts.push(
-      "    {\"from\": \"\{f.0}\", \"to\": \"\{f.1}\", \"trigger\": \"\{f.2}\"}",
+      "    {\"from\": \"\{json_escape_str(f.0)}\", \"to\": \"\{json_escape_str(f.1)}\", \"trigger\": \"\{json_escape_str(f.2)}\"}",
     )
   }
   sb.write_string(jstr13(flow_parts, ",\n"))
@@ -184,7 +184,7 @@ fn artifact_to_json(a : MoonVizArtifact) -> String {
   let note_parts : Array[String] = []
   for n in a.notes.iter() {
     note_parts.push(
-      "    {\"artboard\": \"\{n.artboard}\", \"note\": \"\{json_escape_str(n.note)}\", \"priority\": \"\{n.priority}\"}",
+      "    {\"artboard\": \"\{json_escape_str(n.artboard)}\", \"note\": \"\{json_escape_str(n.note)}\", \"priority\": \"\{json_escape_str(n.priority)}\"}",
     )
   }
   sb.write_string(jstr13(note_parts, ",\n"))

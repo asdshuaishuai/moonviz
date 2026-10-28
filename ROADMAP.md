@@ -1,6 +1,6 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.9-fix**（moonc ≥ 0.10.14 · GitHub Release + mooncakes 0.1.9-fix-2 已上架） · `moon test` 231/231 · 组件目录 65×115 · 仓库 100+ commits
+> 当前基线：**v0.1.10**（moonc ≥ 0.10.14 · tag engine-v0.1.10 已挂，GitHub Release / mooncakes 待发布） · `moon test` 全绿（默认目标 + native） · 组件目录 65×115 · 仓库 170+ commits
 
 ## 0.1.9 · 组件规范（norms）——弱模型的"能用但不精致"三类根因
 
@@ -24,8 +24,8 @@
 
 | 维度 | 现状 |
 |---|---|
-| 引擎内核 | 100% MoonBit，48 个核心模块、275+ 公开函数；不崩谓词 5 项 + 双门禁 |
-| 工具面 | CLI 59 命令 · MCP 52 工具（含 inputSchema 字典）· WASM 双产物 71/71 导出（session 27）· Node SDK |
+| 引擎内核 | 100% MoonBit，52 个核心模块、300+ 公开函数；不崩谓词 5 项 + 双门禁 |
+| 工具面 | CLI 63 命令（cli_help 文档化口径）· MCP 55 工具（含 inputSchema 字典）· WASM 双产物 73/73 导出（session 49）· Node SDK |
 | 组件与模板 | 65 组件 × 115 变体 · 14 个整页模板（移动 + Web/桌面） |
 | 分发 | npm 7 包 + GitHub Releases 全产物 10 项（4 平台 tarball + 双 wasm + npm 全家族） |
 | 人类体验 | Playground 设计工作台（设计/预览双模式）+ deepDesign Studio 画布 |
@@ -37,16 +37,17 @@
 
 ### P0 · 能力平权（核心模块 → 边界全通）
 
-**1. 搁浅模块出井。** 以下模块已在 core 实现并经测试，但尚未到达任何调用边界（CLI/MCP/WASM/SDK 均不可达）：
+**1. 搁浅模块出井。** collab/history/animation/prototest 已于 0.1.x 补齐 CLI 命令 + MCP 工具边界（见文末附表）；**剩余真实缺口**是 wasm 会话面（仅 history 有 `session_history`，其余三者不可达）与最后的搁浅模块 `core/variants.mbt`（实测 CLI/MCP/WASM 均无调用）：
 
-| 模块 | 能力 | 缺口 |
-|---|---|---|
-| `core/collab.mbt` | 多 Agent 操作变换（OT）、冲突检测、三方合并 | 零暴露 |
-| `core/history.mbt` | 设计版本控制：时间旅行、分支、变更回放、undo/redo | 零暴露 |
-| `core/animation.mbt` | 属性动画：关键帧、缓动函数、时间线编排、CSS 导出 | 零暴露 |
-| `core/prototest.mbt` | 原型测试：断言式验证导航/输入/渲染/违规 | 零暴露 |
+| 模块 | 能力 | 已达边界 | 剩余缺口 |
+|---|---|---|---|
+| `core/collab.mbt` | 多 Agent 操作变换（OT）、冲突检测、三方合并 | CLI · MCP | wasm 会话面 |
+| `core/history.mbt` | 设计版本控制：时间旅行、分支、变更回放、undo/redo | CLI · MCP · WASM(`session_history`) | —— |
+| `core/animation.mbt` | 属性动画：关键帧、缓动函数、时间线编排、CSS 导出 | CLI · MCP | wasm 会话面 |
+| `core/prototest.mbt` | 原型测试：断言式验证导航/输入/渲染/违规 | CLI · MCP | wasm 会话面 |
+| `core/variants.mbt` | fork/score/merge 变体探索 | ——（无任何外部调用，实测仅 core 内部与测试引用） | CLI + MCP + wasm 会话面（最后搁浅模块） |
 
-交付：每个模块按既有模式补齐边界（CLI 命令 + MCP 工具 + 按需 session API），文档同步，测试锚定。
+交付：按既有模式补齐剩余缺口（collab/animation/prototest 的 wasm 会话面 + variants.mbt 全边界），文档同步，测试锚定。
 
 **2. classic wasm 写路径。** Rust/wasmtime 宿主目前只能读（无参调用）。补齐 `session_*` 入参方向：在 wasm 边界导出字符串分配辅助（宿主写入线性内存 → 引擎构造 MoonBit String），打通 `render_mbt` / `apply_*_op` / `session_apply_*` 的双向调用。
 
@@ -58,7 +59,7 @@
   「显式声明 A 压 B」需要节点级 layer 声明或 reorder 感知豁免；
   设计约束：声明走双门、序列化/decl 往返保持、不复活视觉债遮蔽。
 
-**4. deepDesign Studio 全面接入新引擎。** 引擎能力面（52 工具/26 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
+**4. deepDesign Studio 全面接入新引擎。** 引擎能力面（55 工具/27 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
 
 **5. Playground 能力补全。** 动画系统接入（`animation.mbt` → 预览模式实时动效）；用户组件编译入口（MCP `component_compile` 已有，Playground 缺 UI）；原型测试面板（`protest.mbt` 断言可视化运行）。
 

@@ -68,12 +68,14 @@ pub fn Project::component_lineage(
   let instances : Array[String] = []
   for ab_id in self.artboards.keys() {
     match self.artboards.get(ab_id) {
-      Some(ab) =>
+      Some(ab) => {
+        // 每画板解一次布局复用——曾把 solve 放在逐节点循环体内，每命中一个
+        // 实例就全量重解布局（O(n²)，50 个实例 = 50 次完整约束求解）
+        let layout = solve(ab.doc)
         for node_id in ab.doc.nodes.keys() {
           match ab.doc.nodes.get(node_id) {
             Some(n) =>
               if n.component == component_id {
-                let layout = solve(ab.doc)
                 let rect_str = match layout.rect_of(node_id) {
                   Some(r) =>
                     "(\{r.x.to_int()},\{r.y.to_int()}) \{r.width.to_int()}×\{r.height.to_int()}"
@@ -86,6 +88,7 @@ pub fn Project::component_lineage(
             None => ()
           }
         }
+      }
       None => ()
     }
   }

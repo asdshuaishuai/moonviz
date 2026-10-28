@@ -6,6 +6,60 @@ MoonViz is a prototype design engine built entirely in MoonBit. It treats one Mo
 
 `.mbt.md` follows MoonBit's official literate-source rules: `mbt` compiles, `mbt check` runs document tests, while `mbt nocheck` and `moonbit` are display-only. MoonViz adds explicit `moonviz:artboard` visual blocks and parses only supported public `@decl` declarations.
 
+## Execution Policy: genUI Is First-Class, Tools Are the Fallback
+
+MoonViz is a **generative UI engine**: the agent declares intent; the engine
+owns page structure, component choice, spacing norms, and visual consistency.
+
+**Two modes, one engine — both fully retained, roles differ:**
+
+- **genUI（第一公民 / primary）** — `generate` / `template` / `batch_apply` /
+  `autofill`. One sentence of intent in, a complete norms-healed page out.
+  The default path for anything a page recipe can express.
+- **tool mode（兜底 / fallback, 以前的不抛弃）** — the full per-node
+  vocabulary (`create` / `place` / `update` / `move` / `align` / `group` /
+  `flip` / `reorder` …, 55 tools / 27 ops) is retained unchanged and is the
+  legitimate channel for everything genUI does not cover: freeform
+  artboards, layouts no template matches, surgical single-node edits, and
+  exploratory probing.
+
+**The execution ladder (start from the top; fall through whenever a tier
+does not fit — falling through is correct behavior, not failure):**
+
+1. `generate` — one sentence of intent (`generate "登录页 dark"` /
+   `generate web landing page as landing`). One call returns a complete,
+   norms-healed artboard plus a report: `autofix` (what the engine repaired),
+   `missing` (what a page of this type usually has but lacks),
+   `score` (A–D design quality grade), and deterministic `alternatives`.
+   **Composite intents** (`generate "登录+注册"`) expand to multiple
+   artboards wired with auto navigation flows ("+"-separated, max 4;
+   theme-only segments like `dark` apply globally).
+2. `template` — when you already know the exact page template id
+   (`template dashboard home`). Same generative path, explicit selection.
+3. `ops-batch-b64` / MCP `batch_apply` — a determined refinement pass in ONE
+   call: newline-separated ops, base64-encoded (max 64). Aborts at the first
+   error and returns its index for resume-from-breakpoint.
+4. **Single tools (the fallback)** — freeform composition beyond the
+   template library, surgical edits, micro-adjustments, probes. Nothing here
+   is deprecated; the ladder ranks channels by cost, not by permission.
+
+**Read the report before re-generating.** `missing` and `score` are the
+engine telling you what a senior designer would add next; fix those with one
+batch — or with tools, freely — instead of re-running generate.
+
+**Anti-patterns (scoped to genUI-covered territory — tool mode itself is
+never the crime):**
+
+- Placing nodes one-by-one to build a standard page (login/settings/dashboard)
+  that `generate`/`template` already covers.
+- Hand-computing coordinates for content that `generate` produced — edit via
+  ops; the engine settles layout.
+- N single calls for a known list of edits where one batch would do.
+- Shipping without reading `score`/`missing` — the report is the review loop.
+
+Tie-breaker: does a template/recipe already express this intent? Yes →
+genUI. No → build it with tools, freely — that is what the fallback is for.
+
 ## Quick Start
 
 ```bash
@@ -75,6 +129,7 @@ Navigation / theme / tokens / debt:
 via `list-tokens`. Spacing/radii/typography names return `unknown_token`.
 An override recolors immediately, persists in the document's frontmatter
 `tokens:` section, and setting the default value back removes it) ·
+`autofill <ab>` (materialize the infer_missing report as real nodes; idempotent)
 `fix <ab>` (commits only when violations strictly decrease)
 
 Interaction targets are a data layer, never a styling layer: bind `flow` to

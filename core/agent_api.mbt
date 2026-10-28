@@ -58,7 +58,8 @@ fn no(name : String, desc : String) -> ToolArg {
 }
 
 ///|
-/// 引擎内置工具清单：与 mcp/main.mbt execute_tool 的 46 个分支一一对应。
+/// 引擎内置工具清单：与 mcp/main.mbt execute_tool 的分支一一对应
+///（不写死数字，分支数随工具注册演进，漂移由 wbtest 锚定）。
 pub fn list_tools() -> Array[AgentTool] {
   let tools : Array[AgentTool] = []
   let add = fn(name : String, description : String, args : Array[ToolArg]) {
@@ -251,9 +252,28 @@ pub fn list_tools() -> Array[AgentTool] {
     [s("artboard", "artboard id")],
   )
   add(
+    "export_design_system",
+    "Export an artboard's extracted design system as deliverables: tokens JSON (machine) + CSS custom properties (frontend-ready).",
+    [s("artboard", "artboard id")],
+  )
+  add(
     "generate_responsive",
     "Generate responsive variants (_tablet/_desktop) for an artboard.",
     [s("artboard", "artboard id")],
+  )
+  // ---- 生成式 UI（执行策略第一级：意图声明，引擎生成）----
+  add(
+    "generate",
+    "Generative UI entry: describe the page in one sentence; the engine picks a semantic template, self-heals norms/predicates, and returns a report (autofix/missing/score). Prefer this over placing nodes one by one — the agent declares intent, the engine generates. Composite intent: \"+\"-separated segments (e.g. \"登录+注册\", max 4) expand to multiple artboards wired with adjacent auto-navigation flows, returned as a mode:\"multi\" envelope (count/artboards/flows).",
+    [
+      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard); composite \"登录+注册\" splits on \"+\" (max 4 segments) → mode:\"multi\" envelope. NOTE: theme applies project-wide (recolors all existing artboards)"),
+      so("name", "artboard name (default = template id)"),
+    ],
+  )
+  add(
+    "batch_apply",
+    "Generative execution tier 2: apply multiple session ops in ONE call (newline-separated ops, base64 of the block). Executes in order, aborts at the first error and returns its index. Prefer over N single calls for deterministic refinements.",
+    [s("operations_b64", "base64 of newline-separated ops (e.g. update home title text=... lines), max 64")],
   )
   // ---- 交互 / 状态 ----
   add(
@@ -321,7 +341,7 @@ pub fn list_tools() -> Array[AgentTool] {
   add("ddp_view", "Report DDP codec status (read-only view).", [])
   add(
     "list_ops",
-    "Machine-readable CLI op surface: all 26 mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).",
+    "Machine-readable CLI op surface: all \{op_entries().length()} mutating ops with usage/category/gates/description (source of the moonviz-ops.json dictionary).",
     [],
   )
   add(
@@ -523,6 +543,12 @@ pub fn op_entries() -> Array[OpEntry] {
     "token", "token <name> <value>", "tokens", "Override a COLOR design token: recolors old-value literals, persists via frontmatter `tokens:`; setting the default value back reverts.",
   )
   add(
+    "autofill",
+    "autofill <artboard>",
+    "debt",
+    "Materialize the infer_missing report as real nodes (per page-type recipes), then auto_fix settles overlaps/overflows. Idempotent: filled text satisfies the detector.",
+  )
+  add(
     "fix", "fix <artboard>", "debt", "Debt-repayment auto-fix: commits only when total violations strictly decrease; the remainder is accepted as visual debt (HumanGate fallback).",
   )
   ops
@@ -532,8 +558,10 @@ pub fn op_entries() -> Array[OpEntry] {
 /// CLI op 面字典（list-ops / list_ops 输出）：
 /// [{"op","usage","category","description","gates":{"agent":true,"human":true}}]
 ///
-/// 全部 26 条 op 在双路线共享（差别在提交门禁的校验强度：AgentGate 硬拦
-/// 结构违规，HumanGate 放行视觉债）；fix 的还债特例写进 description。
+/// 全部 mutating op 在双路线共享（条数随注册表演进，由
+/// core/ops_registry_wbtest 锚定，不写死数字；差别在提交门禁的校验强度：
+/// AgentGate 硬拦结构违规，HumanGate 放行视觉债）；fix 的还债特例写进
+/// description。
 pub fn list_ops_json() -> String {
   let gates = "{\"agent\":true,\"human\":true}"
   let parts : Array[String] = []

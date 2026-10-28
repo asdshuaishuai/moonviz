@@ -45,7 +45,7 @@ Tools that need the engine directory (`read_mbt` / `render_mbt` / `apply_*` …)
 | Tool | Description |
 |---|---|
 | `read_mbt` / `render_mbt` | Source-side read/write: read canonical source / render all artboards from source |
-| `list_templates` / `list_components` / `list_themes` / `list_tokens` / `list_artboards` | Enumerate templates (8 pages) / components (8×22 variants) / themes / tokens / artboards |
+| `list_templates` / `list_components` / `list_themes` / `list_tokens` / `list_artboards` | Enumerate templates / components (by category, with variants) / themes / tokens / artboards |
 | `apply_template` / `apply_theme` / `set_token` | Instantiate a template / switch theme / override a design token |
 | `place_component` / `update_node` / `move_node` / `group_nodes` / `align_nodes` | Structural editing |
 | `interact` / `define_state` / `set_state` | Interactions (⚡trigger→action) and component state variants |
@@ -55,7 +55,7 @@ Tools that need the engine directory (`read_mbt` / `render_mbt` / `apply_*` …)
 | `export_svg` / `export_html` / `export_artifact` / `benchmark` | Exports and performance benchmark |
 | `ddp_view` | Read-only DDP container metadata |
 
-52 tools total, each with a full JSON-Schema input description — see `tools/list` or the [tools dictionary](https://asdshuaishuai.github.io/moonviz/assets/moonviz-tools.json).
+55 tools total, each with a full JSON-Schema input description — see `tools/list` or the [tools dictionary](https://asdshuaishuai.github.io/moonviz/assets/moonviz-tools.json).
 
 ## Building the binaries from source
 

@@ -122,7 +122,7 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
     <a class="btn ghost" href="docs.html">完整使用文档</a>
   </div>
   <div class="stats">
-    <div class="stat"><b>52</b><span>Agent 工具（含 inputSchema）</span></div>
+    <div class="stat"><b>55</b><span>Agent 工具（含 inputSchema）</span></div>
     <div class="stat"><b>65×115</b><span>组件 × 变体</span></div>
     <div class="stat"><b>2</b><span>WASM 产物（GC + 标准 MVP）</span></div>
     <div class="stat"><b>100%</b><span>MoonBit · 单二进制</span></div>
@@ -195,6 +195,16 @@ render-mbt-b64 &lt;base64-mbt&gt;
 echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/release/ddp_codec</code></pre>
 </div></section>
 
+<section><div class="wrap">
+  <h2 class="sec">生成式 UI：一句话出整页（genUI 第一公民，工具模式兜底）</h2>
+  <p class="lead">Agent 声明意图，引擎负责页面结构、组件选择、间距规范与布局——完整逐节点词汇表（55 工具 / 27 op）原样保留，作为自由形态构建的兜底通道。</p>
+  <div class="grid c3">
+    <div class="card"><h3>✦ 一句话生成</h3><p><code>generate "登录+注册"</code> → 双画板 + 自动导航流；引擎选语义模板、自愈规范，报告（autofix / missing / A–D 评分）随行。CLI / MCP / WASM 全渠道同构。</p></div>
+    <div class="card"><h3>✚ 报告驱动补缺</h3><p><code>autofill</code> 把缺失报告物化为真实节点（幂等，auto_fix 清偿布局）；<code>batch_apply</code> 确定精修一次提交（断点续批）。</p></div>
+    <div class="card"><h3>◈ 自渲染 + 动效</h3><p>客户端提供 webview、引擎渲染自包含交互原型（零客户端渲染代码）；方向感知转场 / spring 按压 / 入场阶梯动效内嵌，prefers-reduced-motion 友好。</p></div>
+  </div>
+</div></section>
+
 <section class="alt"><div class="wrap">
   <h2 class="sec">零工具链：WASM 与预编译二进制</h2>
   <p class="lead">两种 WASM 产物 + 四平台预编译二进制——按宿主选择，全部由 GitHub Actions 自动构建并归档于 <a href="https://github.com/asdshuaishuai/moonviz/releases">Releases</a>。</p>
@@ -211,7 +221,7 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
   <h2 class="sec">发展路线图</h2>
   <p class="lead">按「能力平权 → 体验深化 → 生态扩展」三层推进——每条路线以「数据模型已支持但边界不可达 / 体验未落地」为线索。完整版见仓库根 <a href="https://github.com/asdshuaishuai/moonviz/blob/main/ROADMAP.md">ROADMAP.md</a>。</p>
   <div class="grid c3">
-    <div class="card"><h3>P0 · 能力平权</h3><p>搁浅模块出井：collab 多 Agent 协作、history 版本控制、animation 动画、protest 原型测试——core 已实现的 52 个函数补齐 CLI/MCP/WASM 边界。classic wasm 写路径（Rust 宿主双向调用）。</p></div>
+    <div class="card"><h3>P0 · 能力平权</h3><p>搁浅模块出井：collab 多 Agent 协作、history 版本控制、animation 动画、protest 原型测试——core 已实现的能力补齐 CLI/MCP/WASM 边界。classic wasm 写路径（Rust 宿主双向调用）。</p></div>
     <div class="card"><h3>P1 · 体验深化</h3><p>deepDesign Studio 全面接入新引擎（撤销/组件库/交互面板）；Playground 补动画系统、用户组件编译、原型测试面板；ddpView 只读加密文档查看器。</p></div>
     <div class="card"><h3>P2 · 生态扩展</h3><p>npm 0.2.0 发版（session API 全量）；在线 API 参考与示例库；collab 落地双 Agent 同源协作；性能基线进 CI。</p></div>
   </div>
@@ -219,7 +229,7 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
 
 <section class="alt"><div class="wrap">
   <h2 class="sec">深度设计文档</h2>
-  <p class="lead">引擎仓库 <code>docs/</code> 内含 11 篇架构级文档，覆盖从源码格式到渲染管线的完整链路。</p>
+  <p class="lead">引擎仓库 <code>docs/</code> 内含 12 篇架构级文档（另附 <code>wasm-abi.md</code> classic ABI 契约），覆盖从源码格式到生成式 UI 的完整链路。</p>
   <div class="grid c3">
     <div class="card"><h3>01 · 架构总览</h3><p>分层设计、模块边界、数据流与架构红线。</p></div>
     <div class="card"><h3>02 · .mbt.md 格式</h3><p>literate 源码规则、moonviz:artboard 块、@decl 公开声明解析。</p></div>
@@ -231,6 +241,8 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
     <div class="card"><h3>08 · 路线图与风险</h3><p>演进计划（ROADMAP）与已知风险台账。</p></div>
     <div class="card"><h3>09 · 渲染生态</h3><p>导出 SVG / DDP / 声明物料的生态位。</p></div>
     <div class="card"><h3>10 · 渲染管线</h3><p>SVG / PNG / 终端三后端 + 技术栈 + 二进制分发与工具链风险。</p></div>
+    <div class="card"><h3>11 · 用户组件</h3><p>用户自定义组件系统：NL 生成、本地持久化、MCF 互交换。</p></div>
+    <div class="card"><h3>12 · 生成式 UI</h3><p>生成式 UI 与 Agent 执行策略：管线 / 报告驱动闭环 / 组合意图 / 接入面矩阵 / 不变量。</p></div>
   </div>
 </div></section>
 

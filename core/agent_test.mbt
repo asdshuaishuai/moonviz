@@ -72,7 +72,8 @@ test "Agent 工作流：发现组件 → 创建画板 → 放置组件 → 查�
   assert_true(abl.contains("\"login\""))
   assert_true(abl.contains("\"nodes\":5"))
 
-  // 8) Agent 工具清单（46 工具全量字典，MCP tools/list 同源）
+  // 8) Agent 工具清单（全量字典，MCP tools/list 同源；数量不写死，
+  //    漂移由 generate_wbtest 的 list_tools().length() 断言锚定）
   let tools = list_tools_json()
   assert_true(tools.contains("list_components"))
   assert_true(tools.contains("place_component"))
@@ -112,6 +113,22 @@ test "engine catalog contains all 65 predefined component presets" {
 }
 
 ///|
+test "engine catalog: chip/tag/toast 引用的令牌角色必须已注册（回归锚）" {
+  let t = DesignTokens::default()
+  // chip/tag default 用 on_secondary_container，toast 用 text_on_primary——
+  // 缺任一角色则 resolve_color 直通返回令牌名（非法 SVG fill / 黑字压黑底）
+  assert_true(t.colors.contains("on_secondary_container"))
+  assert_true(t.colors.contains("text_on_primary"))
+  // 浅色：容器浅底配深字、深底（text_primary 做 toast 底）配白字
+  assert_eq(t.resolve_color("on_secondary_container"), "#1A1C1E")
+  assert_eq(t.resolve_color("text_on_primary"), "#FFFFFF")
+  // 深色主题继承并翻转：容器深底配浅字、浅底（text_primary）配深字
+  let dark = Theme::dark()
+  assert_eq(dark.tokens.resolve_color("on_secondary_container"), "#E8EAF6")
+  assert_eq(dark.tokens.resolve_color("text_on_primary"), "#1A1C1E")
+}
+
+///|
 test "设计令牌解析：颜色/间距/圆角" {
   let t = DesignTokens::default()
   assert_eq(t.resolve_color("primary"), "#4B6BFB")
@@ -134,6 +151,38 @@ test "组件实例化：variant 样式正确应用" {
       assert_eq(node.component, "button")
     }
     None => assert_true(false)
+  }
+}
+
+///|
+test "place_component：未知变体报错（与用户组件路径对齐，回归锚）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  // 拼写错误的变体不再被静默回退吞掉
+  match
+    p.place_component(
+      artboard="a",
+      component_id="card",
+      instance_id="c1",
+      variant="outlined",
+    ) {
+    Ok(_) => assert_true(false, msg="未知变体应报错")
+    Err(e) => {
+      assert_true(e.contains("unknown_variant:outlined"))
+      // 错误即文档：消息必须携带语法模板，模型漏 '-' 占位时一轮自纠
+      assert_true(e.contains("[variant|-]"), msg="unknown_variant 应携带 place 语法模板: \{e}")
+    }
+  }
+  // 存在的变体（含显式默认变体）仍然合法
+  match
+    p.place_component(
+      artboard="a",
+      component_id="card",
+      instance_id="c2",
+      variant="elevated",
+    ) {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
   }
 }
 
@@ -167,6 +216,31 @@ test "设计 lint：触控目标 + 空容器检测" {
 }
 
 ///|
+/// 颜色形态断言助手：解析后的颜色必须已是 #RRGGBB 字面量——组件目录
+/// 若引用不存在的令牌名，resolve_color 直通返回令牌名（非法 SVG fill，
+/// issue：chip/tag/toast 引用不存在的 on_secondary_container/text_on_primary）。
+fn is_hex6(s : String) -> Bool {
+  if s.length() != 7 || s.get_char(0) != Some('#') {
+    return false
+  }
+  for i in 1..<7 {
+    match s.get_char(i) {
+      Some(c) => {
+        let code = c.to_int()
+        let ok = (code >= 48 && code <= 57) ||
+          (code >= 97 && code <= 102) ||
+          (code >= 65 && code <= 70)
+        if !ok {
+          return false
+        }
+      }
+      None => return false
+    }
+  }
+  true
+}
+
+///|
 test "engine catalog: 65 组件 × 全变体放置渲染冒烟（组件目录回归锚）" {
   let comps = builtin_components()
   let p = Project::new()
@@ -188,6 +262,25 @@ test "engine catalog: 65 组件 × 全变体放置渲染冒烟（组件目录回
             ) {
             Ok(_) => placed = placed + 1
             Err(e) => assert_true(false, msg="\{id}.\{vname}: \{e}")
+          }
+          // 解析后颜色必须是合法 #RRGGBB（fill 允许 "none"：文字类组件
+          // 的 patch_font 不设底色）；令牌名直通即目录引用了未注册令牌
+          match p.artboards.get("all") {
+            Some(ab) =>
+              match ab.doc.get("\{id}_\{vname}") {
+                Some(n) => {
+                  assert_true(
+                    n.style.fill == "none" || is_hex6(n.style.fill),
+                    msg="\{id}.\{vname} fill 未解析: \{n.style.fill}",
+                  )
+                  assert_true(
+                    is_hex6(n.style.text_color),
+                    msg="\{id}.\{vname} text_color 未解析: \{n.style.text_color}",
+                  )
+                }
+                None => assert_true(false, msg="\{id}.\{vname}: 节点缺失")
+              }
+            None => assert_true(false)
           }
           y = y + 80.0
         }

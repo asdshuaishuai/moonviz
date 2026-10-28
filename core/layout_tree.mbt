@@ -62,16 +62,24 @@ pub fn lt_h(
 }
 
 ///|
-/// 文本（按排版令牌定字号；宽 Fill 高 Hug）
+/// 文本（按排版令牌定字号；宽 Fill 高 Hug）。
+/// 字号/文字色一律查 DesignTokens——结构式模板与组件目录、手机模板共用
+/// 同一排版体系，不允许本文件自立字号表（双源漂移回归锚）。
 pub fn lt_text(id~ : String, role~ : String, s~ : String) -> LT {
-  let (size, weight) : (Double, String) = match role {
-    "h1" => (40.0, "700")
-    "h2" => (32.0, "700")
-    "h3" => (22.0, "600")
-    "h4" => (17.0, "600")
-    "body" => (15.0, "400")
-    "caption" => (12.5, "400")
-    _ => (15.0, "400")
+  let t = DesignTokens::default()
+  let size = match t.resolve_font(role) {
+    Some(v) => v
+    None =>
+      match t.resolve_font("body") {
+        Some(v) => v
+        None => 14.0
+      }
+  }
+  // 字重无令牌角色，保留本地表（DesignTokens.typography 只有字号）
+  let weight : String = match role {
+    "h1" | "h2" => "700"
+    "h3" | "h4" => "600"
+    _ => "400"
   }
   {
     node: {
@@ -82,7 +90,7 @@ pub fn lt_text(id~ : String, role~ : String, s~ : String) -> LT {
         ..NodeStyle::default(),
         font_size: size,
         font_weight: weight,
-        text_color: "#1F2328",
+        text_color: t.resolve_color("text_primary"),
       },
       text: s,
     },
@@ -133,16 +141,17 @@ pub fn lt_flex(id~ : String, fill? : String = "none") -> LT {
 }
 
 ///|
-/// 按钮（主/次）
+/// 按钮（主/次）——颜色查设计令牌，与组件目录 button 同源
 pub fn lt_btn(
   id~ : String,
   label~ : String,
   variant? : String = "primary",
 ) -> LT {
+  let t = DesignTokens::default()
   let (fill, tc) : (String, String) = if variant == "primary" {
-    ("#4B6BFB", "#FFFFFF")
+    (t.resolve_color("primary"), t.resolve_color("on_primary"))
   } else {
-    ("#EEF0F4", "#1F2328")
+    (t.resolve_color("surface_variant"), t.resolve_color("text_primary"))
   }
   {
     node: {
@@ -163,8 +172,9 @@ pub fn lt_btn(
 }
 
 ///|
-/// 输入框
+/// 输入框（占位文字用 text_hint，描边用 outline——与令牌体系同源）
 pub fn lt_input(id~ : String, ph~ : String) -> LT {
+  let t = DesignTokens::default()
   {
     node: {
       ..Node::make(id, Rect),
@@ -172,10 +182,10 @@ pub fn lt_input(id~ : String, ph~ : String) -> LT {
       height: Fixed(46.0),
       style: {
         ..NodeStyle::default(),
-        fill: "#FFFFFF",
-        text_color: "#8A919C",
+        fill: t.resolve_color("surface"),
+        text_color: t.resolve_color("text_hint"),
         corner_radius: 10.0,
-        stroke: "#DDE1E6",
+        stroke: t.resolve_color("outline"),
         shadow: "e1",
       },
       text: ph,
@@ -199,13 +209,14 @@ pub fn lt_dot(id~ : String, fill~ : String, d? : Double = 36.0) -> LT {
 }
 
 ///|
-/// 白卡（垂直栈 + 现代阴影 + 细边）
+/// 白卡（垂直栈 + 现代阴影 + 细边）——底色/描边查令牌
 pub fn lt_card(
   id~ : String,
   gap? : Double = 8.0,
   pad? : Double = 20.0,
   kids? : Array[LT] = [],
 ) -> LT {
+  let t = DesignTokens::default()
   {
     node: {
       ..Node::make(id, Frame),
@@ -219,13 +230,13 @@ pub fn lt_card(
       }),
       style: {
         ..NodeStyle::default(),
-        fill: "#FFFFFF",
+        fill: t.resolve_color("surface"),
         corner_radius: 14.0,
-        stroke: "#E5E7EB",
+        stroke: t.resolve_color("outline_variant"),
         shadow: "e2",
       },
     },
-    kids,
+    kids: [],
   }
 }
 

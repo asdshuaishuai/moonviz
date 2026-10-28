@@ -182,12 +182,12 @@ pub fn mcf_header_json(def : UserComponentDef) -> String {
   let ps : Array[String] = []
   for param in def.params.iter() {
     ps.push(
-      "{\"name\":\"\{json_escape(param.name)}\",\"kind\":\"\{param.kind}\",\"default\":\"\{json_escape(param.default_value)}\"}",
+      "{\"name\":\"\{json_escape(param.name)}\",\"kind\":\"\{json_escape(param.kind)}\",\"default\":\"\{json_escape(param.default_value)}\"}",
     )
   }
   let vs : Array[String] = []
   for v in def.variants.keys() {
-    vs.push("\"\{v}\"")
+    vs.push("\"\{json_escape(v)}\"")
   }
   let joined : Array[String] = []
   for i = 0; i < ps.length(); i = i + 1 {

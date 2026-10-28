@@ -192,3 +192,18 @@ test "冲突自动解决" {
   assert_true(resolved.clean)
   assert_eq(resolved.auto_resolved, 1)
 }
+
+///|
+/// 空集合信封红线（AGENTS.md）：0 冲突时 conflict_detail 键必须输出 []，
+/// 不得整个省略（与 infer_missing/prototest 的 canonical 惯例一致）。
+test "collab：0 冲突时 conflict_detail 恒输出 []" {
+  let ours = AgentSession::new("agent_a", 1)
+  let theirs = AgentSession::new("agent_b", 1)
+  ours.add_op(OpSetFill("login_btn", "#4B6BFB", "#FF0000"))
+  theirs.add_op(OpSetPosition("signup_btn", 24.0, 100.0, 400.0, 450.0))
+  let result = merge_sessions(ours, theirs)
+  assert_true(result.clean)
+  let json = result.to_json()
+  assert_true(json.contains("\"conflict_detail\":[]"))
+  assert_true(json.contains("\"conflicts\":0"))
+}

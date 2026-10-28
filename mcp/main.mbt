@@ -91,8 +91,13 @@ fn main {
 
 ///|
 fn handle_request(line : String) -> String {
+  // JSON-RPC 2.0：无 id 成员的请求是通知（含未知通知），必须静默不响应；
+  // extract_json_id 返回 None 即无 id（F54）
+  let id = match extract_json_id(line) {
+    Some(v) => v
+    None => return ""
+  }
   let method = extract_json_string(line, "method")
-  let id = extract_json_id(line)
   match method {
     "initialize" =>
       "{\"jsonrpc\":\"2.0\",\"id\":\{id},\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"moonviz\",\"version\":\"\{@core.ENGINE_VERSION}\"}}}"
@@ -117,15 +122,6 @@ fn handle_request(line : String) -> String {
 // ---------------------------------------------------------------------------
 // 工具定义
 // ---------------------------------------------------------------------------
-
-///|
-fn decode_mcp_b64(value : String) -> String {
-  let decoded = try? @base64.decode(value)
-  match decoded {
-    Ok(bytes) => @utf8.decode_lossy(bytes)
-    Err(_) => ""
-  }
-}
 
 ///|
 fn tools_definition() -> String {
@@ -155,6 +151,8 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
   let token = extract_arg_string(request_line, "token")
   let value = extract_arg_string(request_line, "value")
   let source_b64 = extract_arg_string(request_line, "source_b64")
+  let intent = extract_arg_string(request_line, "intent")
+  let operations_b64 = extract_arg_string(request_line, "operations_b64")
   let x = extract_arg_num(request_line, "x")
   let y = extract_arg_num(request_line, "y")
   let w = extract_arg_num(request_line, "w")
@@ -179,10 +177,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           Some(def) => {
             let vs : Array[String] = []
             for v in def.variants.keys() {
-              vs.push("\"\{v}\"")
+              vs.push("\"\{@core.json_escape(v)}\"")
             }
             user_items.push(
-              "{\"id\":\"\{id}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{mcp_join(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{@core.json_escape(def.category)}\",\"variants\":[\{mcp_join(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
             )
           }
           None => ()
@@ -222,12 +220,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           let ps : Array[String] = []
           for param in def.params.iter() {
             ps.push(
-              "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
+              "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{@core.json_escape(param.kind)}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
             )
           }
           let vs : Array[String] = []
           for v in def.variants.keys() {
-            vs.push("\"\{v}\"")
+            vs.push("\"\{@core.json_escape(v)}\"")
           }
           let kvs : Array[String] = []
           for param in def.params.iter() {
@@ -278,7 +276,9 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
             Err(e) => err_json(e)
             Ok(def) => {
               p.user_components.set(def.id, def)
-              "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header)}"
+              // header_json 由 mcf_header_json 产出，已是合法 JSON 对象文本：
+              // 原样嵌入（再转义会破坏结构），收尾 } 是信封闭合（F51）
+              "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{header}}"
             }
           }
       }
@@ -389,16 +389,24 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           }
         }
       }
+      // x/y 是 schema required：缺参报错而非静默落 0（F55）；
+      // w/h 是可选（no() 注册）：缺失保持 ≤0=默认尺寸语义
+      let (xv, yv) = match (x, y) {
+        (Some(a), Some(b)) => (a, b)
+        _ => return err_json("missing x/y (required numbers)")
+      }
+      let wv = w.unwrap_or(0.0)
+      let hv = h.unwrap_or(0.0)
       match
         p.place_component(
           artboard~,
           component_id~,
           instance_id~,
           variant~,
-          x~,
-          y~,
-          w~,
-          h~,
+          x=xv,
+          y=yv,
+          w=wv,
+          h=hv,
           args=kv,
         ) {
         Ok(msg) => "{\"ok\":true,\"result\":\"\{@core.json_escape(msg)}\"}"
@@ -421,6 +429,50 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       match p.lint(artboard~) {
         Ok(json) => json
         Err(e) => err_json(e)
+      }
+    }
+    "generate" => {
+      // 生成式 UI 入口（执行策略第一级）：意图一句话，引擎生成 + 报告
+      if intent == "" {
+        return err_json("missing intent")
+      }
+      match p.generate(intent_text=intent, name=name) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
+    "batch_apply" => {
+      // 执行策略第二级：多条确定精修一次提交（base64(换行分隔 ops)）。
+      // 严格解码（decode_b64_text 与 CLI decode_mbt_b64 同构：非法
+      // base64/UTF-8 直接报错透传）——此前 try?+decode_lossy 把非法输入
+      // 吞成空串再误报 ops_batch_empty，与 CLI 同输入的严格报错不同构，
+      // 误导 Agent 诊断方向。
+      if operations_b64 == "" {
+        return err_json("missing operations_b64")
+      }
+      let block = match decode_b64_text(operations_b64) {
+        Err(e) => return err_json(e)
+        Ok(text) => text
+      }
+      let lines : Array[String] = []
+      for line in block.split("\n").iter() {
+        let trimmed = line.trim().to_string()
+        if trimmed != "" {
+          lines.push(trimmed)
+        }
+      }
+      if lines.length() == 0 {
+        return err_json("ops_batch_empty")
+      }
+      match @core.apply_operations(p, lines) {
+        Ok(applied) =>
+          "{\"ok\":true,\"op\":\"batch_apply\",\"applied\":\{applied}}"
+        Err((index, error)) => {
+          // applied 语义是已应用条数；超限拒绝时 index=-1 是哨兵而非
+          // 条数，信封层与 index 解耦（不可能值会误导断点续批逻辑）
+          let applied = if index < 0 { 0 } else { index }
+          "{\"ok\":false,\"op\":\"batch_apply\",\"applied\":\{applied},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+        }
       }
     }
     "critique" => {
@@ -481,21 +533,29 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if source_b64 == "" {
         "{\"error\":\"source_b64_required\"}"
       } else {
-        match @decl.load_mbt_project(decode_mcp_b64(source_b64)) {
-          Ok(doc) =>
-            "{\"ok\":true,\"mbt\":\"" +
-            json_escape_text(doc.document.source) +
-            "\"}"
-          Err(e) => "{\"error\":\"" + json_escape_text(e) + "\"}"
+        match decode_b64_text(source_b64) {
+          Err(e) => err_json(e)
+          Ok(text) =>
+            match @decl.load_mbt_project(text) {
+              Ok(doc) =>
+                "{\"ok\":true,\"mbt\":\"" +
+                json_escape_text(doc.document.source) +
+                "\"}"
+              Err(e) => err_json(e)
+            }
         }
       }
     "render_mbt" =>
       if source_b64 == "" {
         "{\"error\":\"source_b64_required\"}"
       } else {
-        match @decl.load_mbt_project(decode_mcp_b64(source_b64)) {
-          Ok(doc) => doc.render_json()
-          Err(e) => "{\"error\":\"" + json_escape_text(e) + "\"}"
+        match decode_b64_text(source_b64) {
+          Err(e) => err_json(e)
+          Ok(text) =>
+            match @decl.load_mbt_project(text) {
+              Ok(doc) => doc.render_json()
+              Err(e) => err_json(e)
+            }
         }
       }
     "ddp_view" =>
@@ -515,18 +575,33 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           match g_project.artboards.get(artboard) {
             None => err_json("unknown_artboard: " + artboard)
             Some(ab) => {
-              // 允许 rebind：换目标画板即重置历史（与 CLI 语义对齐）
-              g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
-              g_history_board.val = artboard
-              "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\"}"
+              // 幂等（与 CLI 语义对齐，issue #21）：已注册同一目标板时
+              // init 不重基线、保留已累积历史栈；换板才重置（此前每次
+              // init 都清空撤销栈，注释与实现漂移——F57）
+              let kept = match g_history.val {
+                Some(_) => g_history_board.val == artboard
+                None => false
+              }
+              if !kept {
+                g_history.val = Some(@core.DesignHistory::new(ab.doc.clone()))
+                g_history_board.val = artboard
+              }
+              "{\"ok\":true,\"op\":\"history-init\",\"artboard\":\"\{artboard}\",\"kept\":\{kept}}"
             }
           }
         "commit" =>
           match g_history.val {
             None => err_json("history_not_initialized")
-            Some(h) =>
-              match g_project.artboards.get(artboard) {
-                None => err_json("unknown_artboard: " + artboard)
+            Some(h) => {
+              // schema 中 artboard 可省略：缺省回落当前 history 板（与
+              // CLI「history commit <msg> [artboard]」对齐——F57）
+              let target = if artboard != "" {
+                artboard
+              } else {
+                g_history_board.val
+              }
+              match g_project.artboards.get(target) {
+                None => err_json("unknown_artboard: " + target)
                 Some(ab) => {
                   let msg = extract_arg_string(request_line, "message")
                   let m = if msg == "" { "commit" } else { msg }
@@ -534,6 +609,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
                   "{\"ok\":true,\"op\":\"history-commit\",\"rev\":\{h.rev()},\"message\":\"\{@core.json_escape(m)}\"}"
                 }
               }
+            }
           }
         "log" =>
           match g_history.val {
@@ -668,6 +744,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         Err(e) => err_json(e)
       }
     }
+    "export_design_system" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      match p.export_design_system(artboard~) {
+        Ok(json) => json
+        Err(e) => err_json(e)
+      }
+    }
     "generate_responsive" => {
       if artboard == "" {
         return err_json("missing artboard")
@@ -715,7 +800,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if artboard == "" || node_id == "" {
         return err_json("missing artboard/node_id")
       }
-      match p.move_node(artboard~, node_id~, x~, y~) {
+      // x/y 是 schema required：缺参报错而非静默搬到 0（F55）
+      let (xv, yv) = match (x, y) {
+        (Some(a), Some(b)) => (a, b)
+        _ => return err_json("missing x/y (required numbers)")
+      }
+      match p.move_node(artboard~, node_id~, x=xv, y=yv) {
         Ok(json) => json
         Err(e) => err_json(e)
       }
@@ -771,7 +861,12 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if artboard == "" {
         return err_json("missing artboard")
       }
-      match p.resize_canvas(artboard~, width~, height~) {
+      // width/height 是 schema required：缺 height 报错而非静默重排成 0 高（F55）
+      let (wv, hv) = match (width, height) {
+        (Some(a), Some(b)) => (a, b)
+        _ => return err_json("missing width/height (required numbers)")
+      }
+      match p.resize_canvas(artboard~, width=wv, height=hv) {
         Ok(json) => json
         Err(e) => err_json(e)
       }
@@ -938,7 +1033,15 @@ fn find_arguments_body(line : String) -> Int? {
 }
 
 ///|
-/// 从 JSON-RPC params.arguments 中提取字符串参数
+/// 从 JSON-RPC params.arguments 中提取字符串参数（转义感知）。
+/// 闭引号扫描必须跳过 \ 转义并还原常用序列（\" \\ \n \t \r \b \f /）：
+/// generate 是首个以完整自然语句入参的工具，intent 含 \" 时裸 find("\"")
+/// 会在转义引号处截断、后半句静默丢失（{"intent":"生成\"欢迎\"引导页"}
+/// 实证只提取出 "生成\"）。JSON 标准 \uXXXX 同样按标准解码（含
+/// \uD83D\uDE00 代理对合成）——ensure_ascii 风格客户端发送的中文意图
+/// 关键词（登录页 → \u767b\u5f55\u9875）只有解码才能命中模板；非法
+/// 序列（hex 残缺/孤立代理项）与其余未知转义一样原样保留（不丢字符）。
+/// 无闭合引号返回 ""（与既有行为一致）。
 /// 输入行形如: {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apply_template","arguments":{"template_id":"login"}}}
 fn extract_arg_string(line : String, key : String) -> String {
   // 先定位 "arguments":{ ... }
@@ -958,10 +1061,68 @@ fn extract_arg_string(line : String, key : String) -> String {
       if args_body.get_char(start) != Some('"') {
         return ""
       }
+      // 扫描到第一个未转义的闭引号，途中还原 \X 转义序列
       let rest = args_body.substring(start=start + 1)
-      match rest.find("\"") {
-        Some(end) => rest.substring(start=0, end~)
-        None => ""
+      let sb = StringBuilder::new()
+      let mut i = 0
+      let n = rest.length()
+      let mut closed = false
+      while i < n {
+        match rest.get_char(i) {
+          Some('"') => {
+            closed = true
+            i = n
+          }
+          Some('\\') => {
+            if i + 1 < n && rest.get_char(i + 1) == Some('u') {
+              // JSON 标准 \uXXXX：解析 4 位十六进制还原码点（含代理对合成）
+              match decode_unicode_escape(rest, i, n) {
+                Some((ch, next_i)) => {
+                  sb.write_char(ch)
+                  i = next_i
+                }
+                None => {
+                  // 非法序列（hex 残缺/孤立代理项）：原样保留，不做有损丢弃
+                  sb.write_char('\\')
+                  i = i + 1
+                }
+              }
+            } else if i + 1 < n {
+              match rest.get_char(i + 1) {
+                Some('"') => sb.write_char('"')
+                Some('\\') => sb.write_char('\\')
+                Some('/') => sb.write_char('/')
+                Some('n') => sb.write_char('\n')
+                Some('t') => sb.write_char('\t')
+                Some('r') => sb.write_char('\r')
+                Some('b') => sb.write_char('\u{0008}')
+                Some('f') => sb.write_char('\u{000C}')
+                Some(other) => {
+                  // 其余未知转义：原样保留，不做有损丢弃
+                  // （\uXXXX 已在上方分支按 JSON 标准解码）
+                  sb.write_char('\\')
+                  sb.write_char(other)
+                }
+                None => sb.write_char('\\')
+              }
+              i = i + 2
+            } else {
+              // 行尾孤立反斜杠（截断的请求）：原样保留
+              sb.write_char('\\')
+              i = i + 1
+            }
+          }
+          Some(ch) => {
+            sb.write_char(ch)
+            i = i + 1
+          }
+          None => i = i + 1
+        }
+      }
+      if closed {
+        sb.to_string()
+      } else {
+        ""
       }
     }
     None => ""
@@ -969,11 +1130,89 @@ fn extract_arg_string(line : String, key : String) -> String {
 }
 
 ///|
-/// 从 params.arguments 中提取数值参数
-fn extract_arg_num(line : String, key : String) -> Double {
+/// 解析 rest 中自 i 起（rest[i]=='\\'、rest[i+1]=='u'）的 \uXXXX 转义。
+/// 成功返回（还原的字符, 消费后的下一游标）：4 位十六进制直接映射码点；
+/// 高代理项 \uD800-\uDBFF 后随低代理项转义 \uDC00-\uDFFF 时合成增补码点
+/// （emoji 等 BMP 外字符）。序列非法（hex 残缺、孤立代理项）返回 None，
+/// 由调用方原样保留整段文本（不做有损丢弃）。
+fn decode_unicode_escape(rest : String, i : Int, n : Int) -> (Char, Int)? {
+  // 至少要有 "\uXXXX" 6 个字符
+  if i + 6 > n {
+    return None
+  }
+  let code = match parse_hex4(rest, i + 2) {
+    Some(c) => c
+    None => return None
+  }
+  if code >= 0xD800 && code <= 0xDBFF {
+    // 高代理项：紧随 \uXXXX 低代理项（0xDC00-0xDFFF）才合成，否则非法
+    if
+      i + 12 <= n &&
+      rest.get_char(i + 6) == Some('\\') &&
+      rest.get_char(i + 7) == Some('u') {
+      match parse_hex4(rest, i + 8) {
+        Some(low) =>
+          if low >= 0xDC00 && low <= 0xDFFF {
+            let cp = 0x10000 + (code - 0xD800) * 0x400 + (low - 0xDC00)
+            return Some((Char::from_int(cp), i + 12))
+          }
+        None => ()
+      }
+    }
+    return None
+  }
+  if code >= 0xDC00 && code <= 0xDFFF {
+    // 孤立低代理项：非法序列
+    return None
+  }
+  Some((Char::from_int(code), i + 6))
+}
+
+///|
+/// 解析 s 自 start 起的 4 位十六进制（\uXXXX 的 XXXX）；含非 hex 字符
+/// 返回 None
+fn parse_hex4(s : String, start : Int) -> Int? {
+  let mut code = 0
+  let mut k = 0
+  while k < 4 {
+    match hex_digit_value(s.get_char(start + k)) {
+      Some(v) => code = code * 16 + v
+      None => return None
+    }
+    k = k + 1
+  }
+  Some(code)
+}
+
+///|
+/// 单个十六进制字符的数值（0-9 / a-f / A-F）；其余返回 None
+fn hex_digit_value(c : Char?) -> Int? {
+  match c {
+    Some(ch) => {
+      let code = ch.to_int()
+      if code >= '0'.to_int() && code <= '9'.to_int() {
+        Some(code - '0'.to_int())
+      } else if code >= 'a'.to_int() && code <= 'f'.to_int() {
+        Some(code - 'a'.to_int() + 10)
+      } else if code >= 'A'.to_int() && code <= 'F'.to_int() {
+        Some(code - 'A'.to_int() + 10)
+      } else {
+        None
+      }
+    }
+    None => None
+  }
+}
+
+///|
+/// 从 params.arguments 中提取数值参数：键缺失返回 None（schema 标注
+/// required 的 x/y、width/height 缺参必须报错，静默取 0.0 会把节点搬到
+/// 原点或把画板重排成 0 高——F55）；键存在但非数值仍解析为 0.0（容忍
+/// 字符串数字等历史形态，语义不变）。
+fn extract_arg_num(line : String, key : String) -> Double? {
   let args_idx = match find_arguments_body(line) {
     Some(i) => i
-    None => return 0.0
+    None => return None
   }
   let args_body = line.substring(start=args_idx)
   let pattern = "\"" + key + "\":"
@@ -1004,9 +1243,9 @@ fn extract_arg_num(line : String, key : String) -> Double {
           break
         }
       }
-      result
+      Some(result)
     }
-    None => 0.0
+    None => None
   }
 }
 
@@ -1039,32 +1278,50 @@ fn extract_json_string(json : String, key : String) -> String {
 }
 
 ///|
-fn extract_json_id(json : String) -> String {
+/// 提取 JSON-RPC 请求 id（F54）：
+/// - 数字 id（含负号）：原样回显；
+/// - 字符串 id：回显含引号形态（嵌入响应即合法 JSON 字符串），修复
+///   字符串 id 被回成 0 破坏请求-响应关联；
+/// - id 存在但非串/数（null 等）：以 null 回显；
+/// - 无 id 成员：返回 None——JSON-RPC 2.0 通知，调用方不得响应。
+fn extract_json_id(json : String) -> String? {
   match json.find("\"id\":") {
+    None => None
     Some(idx) => {
-      let start = idx + 5
-      let rest = json.substring(start~)
-      let mut i = 0
-      while i < rest.length() && rest.get_char(i) == Some(' ') {
-        i = i + 1
+      let mut start = idx + 5
+      while start < json.length() && json.get_char(start) == Some(' ') {
+        start = start + 1
       }
-      let digits = rest.substring(start=i)
-      let mut result = ""
-      for c in digits.iter() {
-        let code = c.to_int()
-        if (code >= 48 && code <= 57) || c == '-' {
-          result = result + c.to_string()
-        } else {
-          break
+      match json.get_char(start) {
+        Some('"') => {
+          // 字符串 id：扫描到闭引号，保留引号形态回显
+          let rest = json.substring(start=start + 1)
+          match rest.find("\"") {
+            Some(end) =>
+              Some("\"" + rest.substring(start=0, end~) + "\"")
+            None => None // 截断请求：无合法 id，按通知静默
+          }
         }
-      }
-      if result == "" {
-        "0"
-      } else {
-        result
+        Some(_) => {
+          let rest = json.substring(start~)
+          let mut result = ""
+          for c in rest.iter() {
+            let code = c.to_int()
+            if (code >= 48 && code <= 57) || c == '-' {
+              result = result + c.to_string()
+            } else {
+              break
+            }
+          }
+          if result == "" {
+            Some("null")
+          } else {
+            Some(result)
+          }
+        }
+        None => None
       }
     }
-    None => "0"
   }
 }
 

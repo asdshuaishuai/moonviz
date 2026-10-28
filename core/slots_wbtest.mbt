@@ -156,6 +156,66 @@ test "插槽：向槽位中放入组件（递归组合）" {
 }
 
 ///|
+test "插槽：accepts 约束生效（违约放置显式拒绝）" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="accepts_test")
+  let _ = p.place_slotted(artboard=ab, component_id="modal", instance_id="m2")
+  // modal.actions 只接受 button：放 chip 应被拒
+  match
+    p.fill_slot_with_component(
+      artboard=ab,
+      instance_id="m2",
+      slot_name="actions",
+      child_component="chip",
+      child_id="bad_chip",
+    ) {
+    Ok(_) => assert_true(false, msg="accepts 违约应报错")
+    Err(e) => assert_true(e.contains("slot_accepts_violation"))
+  }
+  // 空数组槽位（任意组件）：content 放 chip 合法
+  match
+    p.fill_slot_with_component(
+      artboard=ab,
+      instance_id="m2",
+      slot_name="content",
+      child_component="chip",
+      child_id="ok_chip",
+    ) {
+    Ok(_) => ()
+    Err(e) => assert_true(false, msg=e)
+  }
+}
+
+///|
+test "插槽：content 含引号/反斜杠仍产出合法 JSON envelope（回归锚）" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="escape_test")
+  let _ = p.place_slotted(artboard=ab, component_id="card", instance_id="ec")
+  let tricky = "say \"hi\" \\ back\nline"
+  match
+    p.fill_slot(
+      artboard=ab,
+      instance_id="ec",
+      slot_name="header",
+      content=tricky,
+    ) {
+    Ok(json) => {
+      // 裸引号/裸反斜杠不得出现在 value 区；必须以转义序列出现
+      assert_true(json.contains("\"content\":\"say \\\"hi\\\" \\\\ back\\nline\""))
+    }
+    Err(_) => assert_true(false)
+  }
+  // 回显路径同样转义
+  match p.list_slots(artboard=ab, instance_id="ec") {
+    Ok(json) =>
+      assert_true(
+        json.contains("\"content\":\"say \\\"hi\\\" \\\\ back\\nline\""),
+      )
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
 test "插槽：组合式组件清单 JSON" {
   let json = list_slotted_json()
   assert_true(json.contains("\"card\""))

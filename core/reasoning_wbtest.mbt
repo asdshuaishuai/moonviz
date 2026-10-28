@@ -65,6 +65,101 @@ test "布局推理：执行约束" {
 }
 
 ///|
+/// 回归（评审 F38）：MoveTop/MoveBottom 曾把父容器全部子节点压到同一个
+/// y（顶部全 0、底部写死 700）——必然重叠违规，且 700 与画板高度无关。
+/// 现按求解高度级联错开（保留相对次序），底边锚定父容器 bottom。
+test "布局推理：移到顶部（级联错开，不重叠）" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="edge_top", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="t1",
+    x=20.0,
+    y=500.0,
+    w=120.0,
+    h=44.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="t2",
+    x=20.0,
+    y=300.0,
+    w=120.0,
+    h=44.0,
+  )
+  match p.apply_intent(MoveTop, artboard=ab) {
+    Ok(json) => assert_true(json.contains("\"intent\":\"move_top\""))
+    Err(_) => assert_true(false)
+  }
+  match p.artboards.get(ab) {
+    None => assert_true(false)
+    Some(meta) => {
+      let layout = solve(meta.doc)
+      match (layout.rect_of("t1"), layout.rect_of("t2")) {
+        (Some(r1), Some(r2)) => {
+          // 首个贴顶，次序保留，级联间距 8：t1@0 → t2@52
+          assert_eq(r1.y, 0.0)
+          assert_eq(r2.y, 52.0)
+          // 不重叠（旧实现两个都压 y=0）
+          assert_true(r2.y >= r1.y + r1.height - 0.001)
+        }
+        _ => assert_true(false)
+      }
+    }
+  }
+}
+
+///|
+test "布局推理：移到底部（锚定父容器 bottom，不写死 700）" {
+  let p = Project::new()
+  // 画板高 600 ≠ 700：写死 700 会直接把节点推出画板
+  let ab = p.create_artboard(name="edge_bottom", width=390.0, height=600.0)
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="b1",
+    x=20.0,
+    y=100.0,
+    w=120.0,
+    h=44.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="b2",
+    x=20.0,
+    y=200.0,
+    w=120.0,
+    h=44.0,
+  )
+  match p.apply_intent(MoveBottom, artboard=ab) {
+    Ok(json) => assert_true(json.contains("\"intent\":\"move_bottom\""))
+    Err(_) => assert_true(false)
+  }
+  match p.artboards.get(ab) {
+    None => assert_true(false)
+    Some(meta) => {
+      let layout = solve(meta.doc)
+      match (layout.rect_of("b1"), layout.rect_of("b2")) {
+        (Some(r1), Some(r2)) => {
+          // 总高 44+8+44=96 → 起始 y = 600-96 = 504；末节点 bottom 贴父容器底
+          assert_eq(r1.y, 504.0)
+          assert_eq(r2.y, 556.0)
+          assert_true((r2.y + r2.height - 600.0).abs() <= 0.001)
+          // 全部留在画板内（旧实现写死 y=700 越界）
+          assert_true(r1.y >= 0.0)
+          assert_true(r2.y + r2.height <= 600.0 + 0.001)
+          assert_true(r2.y >= r1.y + r1.height - 0.001)
+        }
+        _ => assert_true(false)
+      }
+    }
+  }
+}
+
+///|
 test "响应式断点：默认断点" {
   let bps = default_breakpoints()
   assert_eq(bps.length(), 3)

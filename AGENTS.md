@@ -9,6 +9,7 @@ core/                引擎内核（组件目录、ops、令牌、谓词、门�
 decl/                声明式 DSL：MBT 扫描 ⇄ 场景图 ⇄ .mbt.md 双向往返
 wasm/                双 wasm 产物：wasm-gc（JS 宿主）+ classic 标准 MVP（wasmtime 等任意运行时）
 cli/ mcp/            行协议 CLI + MCP Server（stdio，含 protest proto DSL）
+desktop/             自渲染服务（客户端引导模型：引擎无 UI 不自取渲染面；客户端 webview 承载产物，无 webview 走系统层兜底；契约 desktop/shim/mv_shim.h）
 site/                官网 + 文档 + playground（GitHub Pages 部署）
 sdk/                 MoonBit SDK 门面包（mooncakes.io：moon add asdshuaishuai/moonviz
                      → @sdk.new/apply/validate/render_svg/canonical——宿主一站式内嵌）
@@ -37,7 +38,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ### 同步产物时的检查单（每项都过，缺一项即未完成）
 
 1. **计数类**：组件/变体/工具/测试数改动时，同步清扫 `README.md`、`README.zh-CN.md`、
-   `site/docs.html`(`52 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
+   `site/docs.html`(`55 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
    以及测试断言（如 `core/agent_test.mbt` 的 catalog 数量测试）。
 2. **playground**：`COMP_ZH` / `COMP_ICON` 随组件目录补全（JS 语法自校验：两表 key 数
    必须与 `builtin_components()` 一致）；界面方法表与 wasm 导出面对齐。
@@ -72,7 +73,9 @@ main 除合并节点与发布基线提交外，不直接承载开发/发布提�
 
 - `main` = 发布线（0.x 序列，Release 资产从 main 的 engine-v* tag 构建）
 - `dev` = 0.x 主线开发分支（从 main 切出；issue 修复与新能力先进 dev，
-  验证后合回 main 发布）
+  验证后合回 main 发布）。**dev 聚焦原型交互 UI 设计引擎**——不引入
+  release/1.0 的 Smart UX 扩展（数据绑定/终端渲染/桌面壳等属 1.0 线），
+  dev 的深化方向是 UI/UX 与规范优化、DSL 扩展
 - `release/1.0` = 1.0 长期开发分支（**不发布、暂不并入 main**），
   分支特有能力的文档随分支走；多分支都成立的能力才双写
 

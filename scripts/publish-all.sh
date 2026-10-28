@@ -6,14 +6,17 @@
 # - 首次发布会弹出浏览器，用 iCloud 钥匙串完成验证；
 #   认证 token 写入 ~/.npmrc，后续包不再弹窗。
 # - 若提示未登录：先跑一次 `npm login`（同样走浏览器），再重跑本脚本。
-# - 平台二进制 tarball 从 CI artifacts 下载（默认 run 35104131216，
-#   可用 MOONVIZ_CI_RUN 覆盖）。
+# - 平台二进制 tarball 从 CI artifacts 下载（历史基线 run id 见脚本内
+#   RUN_ID 默认值，可用 MOONVIZ_CI_RUN 覆盖）。
 # - 已发布过的版本自动跳过，可安全重复执行。
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RUN_ID="${MOONVIZ_CI_RUN:-35836654432}"  # engine-v0.1.4 全产物构建 run
 TGZ_DIR="${MOONVIZ_TGZ_DIR:-/tmp/mv-tgz}"
+# 版本基线（与 backup-release.sh 同款读取）：本地发布路径统一盖
+# binaries.yml 的 MOONVIZ_VERSION 基线戳，与 CI 打包路径口径一致
+VERSION="${MOONVIZ_VERSION:-$(grep -o 'MOONVIZ_VERSION: "[^"]*"' .github/workflows/binaries.yml | head -1 | cut -d'"' -f2)}"
 
 cd "$ROOT"
 
@@ -29,6 +32,8 @@ if ! npm whoami >/dev/null 2>&1; then
   exit 1
 fi
 echo "    已登录: $(npm whoami)"
+
+echo "==> MoonViz 基线版本：${VERSION}（binaries.yml MOONVIZ_VERSION）"
 
 echo "==> 准备平台二进制 tarball（CI run ${RUN_ID}）"
 if ls "$TGZ_DIR"/*/*.tgz >/dev/null 2>&1; then
@@ -73,6 +78,9 @@ done
 cp "$ROOT/SKILL.md" "$ROOT/npm/moonviz-skill/SKILL.md"
 for dir in sdk/node sdk/wasm npm/moonviz-skill npm/moonviz-mcp; do
   name="$(basename "$dir")"
+  # 基线版本戳：checked-in package.json 可能落后/超前基线，
+  # 发布前统一盖 MOONVIZ_VERSION（与 binaries.yml gh-release 打包路径同口径）
+  (cd "$ROOT/$dir" && npm pkg set version="$VERSION") || fails=$((fails+1))
   # 必须用绝对/./ 路径：裸 owner/repo 形式会被 npm 解析成 GitHub 简写
   publish_one "$name" "$ROOT/$dir" && done_list+=("$name") || fails=$((fails+1))
 done

@@ -354,12 +354,24 @@ pub(all) struct MbtProject {
 }
 
 ///|
+/// 括号平衡增量，扫描规则与 decltext 的 split_params 一致：引号内的
+/// `,()` 不计数，`\x` 转义序列整体跳过。否则节点文本含单个不配对括号
+/// （decl_escape 转义为 `\(`）时会被误计数，多行语句归并提前断句或永不
+/// 归并，引擎导出的 canonical .mbt.md 自己都无法重载。
 fn mbt_paren_delta(line : String) -> Int {
   let mut delta = 0
+  let mut in_quotes = false
+  let mut esc = false
   for c in line.iter() {
+    if esc {
+      esc = false
+      continue
+    }
     match c {
-      '(' => delta = delta + 1
-      ')' => delta = delta - 1
+      '\\' if in_quotes => esc = true
+      '"' => in_quotes = !in_quotes
+      '(' if !in_quotes => delta = delta + 1
+      ')' if !in_quotes => delta = delta - 1
       _ => ()
     }
   }
@@ -803,29 +815,28 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   }
   match self.project.token_overrides {
     Some(ov) => {
-      let mut count = 0
+      // 与默认调色板同值的覆盖不序列化：set 回原值即撤销自定义，
+      // canonical 里不该留下 primary: "#4B6BFB" 这类恒真条目
+      let entries : Array[(String, String)] = []
       for role in ov.keys() {
-        // 与默认调色板同值的覆盖不序列化：set 回原值即撤销自定义，
-        // canonical 里不该留下 primary: "#4B6BFB" 这类恒真条目
-        let is_default = match @core.DesignTokens::default().colors.get(role) {
-          Some(dv) =>
-            match ov.get(role) {
-              Some(v) => v == dv
+        match ov.get(role) {
+          Some(v) => {
+            let is_default = match @core.DesignTokens::default().colors.get(role) {
+              Some(dv) => v == dv
               None => false
             }
-          None => false
-        }
-        if !is_default {
-          count = count + 1
+            if !is_default {
+              entries.push((role, v))
+            }
+          }
+          None => ()
         }
       }
-      if count > 0 {
+      if entries.length() > 0 {
         out.write_string("  tokens:\n")
-        for role in ov.keys() {
-          match ov.get(role) {
-            Some(v) => out.write_string("    " + role + ": \"" + v + "\"\n")
-            None => ()
-          }
+        for entry in entries.iter() {
+          let (role, v) = entry
+          out.write_string("    " + role + ": \"" + v + "\"\n")
         }
       }
     }

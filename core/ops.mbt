@@ -12,33 +12,62 @@ pub fn unescape_value(s : String) -> String {
 }
 
 ///|
-/// 还原声明转义：\" \\ \, \( \) \n \r \t
+/// 还原声明转义：\" \\ \, \( \) \n \r \t，以及 json_escape 的 C0 控制符
+/// 编码段 \u00xx——decl_escape 经 json_escape 把控制符写成 \u00xx，解码端
+/// 必须对称还原，否则控制符文本往返后变成字面 backslash-u 序列。
 fn unescape_decl(s : String) -> String {
   let sb = StringBuilder::new()
-  let mut esc = false
-  for c in s.iter() {
-    match esc {
-      true => {
-        match c {
-          '"' => sb.write_char('"')
-          '\\' => sb.write_char('\\')
-          ',' => sb.write_char(',')
-          '(' => sb.write_char('(')
-          ')' => sb.write_char(')')
-          'n' => sb.write_char('\n')
-          'r' => sb.write_char('\r')
-          't' => sb.write_char('\t')
-          other => {
+  let it = s.iter()
+  let mut running = true
+  while running {
+    match it.next() {
+      None => running = false
+      Some('\\') =>
+        match it.next() {
+          None => sb.write_char('\\')
+          Some('"') => sb.write_char('"')
+          Some('\\') => sb.write_char('\\')
+          Some(',') => sb.write_char(',')
+          Some('(') => sb.write_char('(')
+          Some(')') => sb.write_char(')')
+          Some('n') => sb.write_char('\n')
+          Some('r') => sb.write_char('\r')
+          Some('t') => sb.write_char('\t')
+          Some('u') =>
+            match hex4(it) {
+              Some(code) => sb.write_char(Char::from_int(code))
+              None => sb.write_string("\\u")
+            }
+          Some(other) => {
             sb.write_char('\\')
             sb.write_char(other)
           }
         }
-        esc = false
-      }
-      false => if c == '\\' { esc = true } else { sb.write_char(c) }
+      Some(c) => sb.write_char(c)
     }
   }
   sb.to_string()
+}
+
+///|
+/// 从迭代器读 4 个十六进制字符（\uXXXX）；任一非法即 None（调用方按原文回填）。
+fn hex4(it : Iter[Char]) -> Int? {
+  let mut code = 0
+  for _ in 0..<4 {
+    match it.next() {
+      None => return None
+      Some(h) => {
+        let d = match h {
+          '0'..='9' => h.to_int() - 48
+          'a'..='f' => h.to_int() - 87
+          'A'..='F' => h.to_int() - 55
+          _ => return None
+        }
+        code = code * 16 + d
+      }
+    }
+  }
+  Some(code)
 }
 
 ///|
@@ -130,13 +159,104 @@ pub fn parse_op_double(s : String) -> Double {
 
 ///|
 /// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）。
-/// 与 cli_exec 的 place_token_is_number 同规则——双路线解析必须一致。
 fn place_token_is_number(t : String) -> Bool {
   t.length() > 0 &&
   ({
     let c0 = t.substring(start=0, end=1)
     c0 >= "0" && c0 <= "9"
   })
+}
+
+///|
+/// place 参数解析结果（variant/x/y/w/h 槽 + 尾部 k=v 用户参数槽）。
+pub(all) struct PlaceArgs {
+  variant : String
+  x : Double
+  y : Double
+  w : Double
+  h : Double
+  args : Map[String, String]
+  error : String // 非空 = 解析失败（place_invalid_arg:<token>）
+}
+
+///|
+/// place 尾部参数解析（issue #18 w/h 槽）：CLI（cli_exec 的 place 命令）
+/// 与 apply_operation 的 place 臂共用此实现——「双路线解析必须一致」
+/// 由单一实现结构性兑现，不再各持副本互相漂移。
+/// parts 为 split_cmd 产物，布局：
+/// [place, ab, comp, id, variant?, x?, y?, w?, h?, k=v...]。
+pub fn parse_place_args(parts : Array[String]) -> PlaceArgs {
+  let variant = if parts.length() >= 5 && parts[4] != "-" {
+    parts[4]
+  } else {
+    ""
+  }
+  let x = if parts.length() >= 6 {
+    parse_op_double(parts[5])
+  } else {
+    0.0
+  }
+  let y = if parts.length() >= 7 {
+    parse_op_double(parts[6])
+  } else {
+    0.0
+  }
+  // 位置参数 w/h（issue #18）：place 一步到位指定最终尺寸，
+  // AgentGate 在最终 bbox 上评估，消除中间态拒绝
+  let mut w = 0.0
+  let mut h = 0.0
+  let mut kv_error = ""
+  let mut kv_start = 7
+  if parts.length() >= 8 && parts[7].find("=") is None {
+    if parts[7] == "-" {
+      kv_start = 8
+    } else if place_token_is_number(parts[7]) {
+      w = parse_op_double(parts[7])
+      kv_start = 8
+      if parts.length() >= 9 && parts[8].find("=") is None {
+        if parts[8] == "-" {
+          kv_start = 9
+        } else if place_token_is_number(parts[8]) {
+          h = parse_op_double(parts[8])
+          kv_start = 9
+        } else {
+          kv_error = "place_invalid_arg:" + parts[8]
+        }
+      }
+    } else {
+      kv_error = "place_invalid_arg:" + parts[7]
+    }
+  }
+  // 尾部 k=v 对为用户组件参数槽
+  let kv : Map[String, String] = Map::new()
+  for i = kv_start; i < parts.length(); i = i + 1 {
+    if kv_error != "" {
+      break
+    }
+    match parts[i].find("=") {
+      None =>
+        if kv_error == "" {
+          kv_error = "place_invalid_arg:" + parts[i]
+        }
+      Some(pos) => {
+        let k = parts[i].substring(start=0, end=pos)
+        // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
+        let v = unescape_value(parts[i].substring(start=pos + 1))
+        if k != "" {
+          kv.set(k, v)
+        }
+      }
+    }
+  }
+  {
+    variant,
+    x,
+    y,
+    w,
+    h,
+    args: kv,
+    error: kv_error,
+  }
 }
 
 ///|
@@ -169,6 +289,7 @@ pub fn apply_operation(
         Err("mbt_operation_usage:update <artboard> <node> k=v")
       } else {
         let kvs : Array[(String, String)] = []
+        let mut bad_token = ""
         let mut i = 3
         while i < parts.length() {
           let kv = parts[i]
@@ -180,12 +301,20 @@ pub fn apply_operation(
                 unescape_value(kv.substring(start=eq + 1)),
               ),
             )
+          } else if bad_token == "" {
+            // 漏写 "=" 的 token 静默跳过 = Agent 收到成功却什么都没改
+            //（与 restyle 的 no_kv_pairs 防御对称）
+            bad_token = kv
           }
           i = i + 1
         }
-        match project.edit_node(artboard=parts[1], node_id=parts[2], kvs~) {
-          Ok(_) => Ok(())
-          Err(error) => Err(error)
+        if bad_token != "" {
+          Err("mbt_operation_invalid_kv:" + bad_token)
+        } else {
+          match project.edit_node(artboard=parts[1], node_id=parts[2], kvs~) {
+            Ok(_) => Ok(())
+            Err(error) => Err(error)
+          }
         }
       }
     "delete" =>
@@ -313,82 +442,22 @@ pub fn apply_operation(
           "mbt_operation_usage:place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]",
         )
       } else {
-        let variant = if parts.length() >= 5 && parts[4] != "-" {
-          parts[4]
-        } else {
-          ""
-        }
-        let x = if parts.length() >= 6 {
-          parse_op_double(parts[5])
-        } else {
-          0.0
-        }
-        let y = if parts.length() >= 7 {
-          parse_op_double(parts[6])
-        } else {
-          0.0
-        }
-        // 位置参数 w/h（issue #18）：place 一步到位指定最终尺寸，
-        // AgentGate 在最终 bbox 上评估，消除中间态拒绝
-        let mut w = 0.0
-        let mut h = 0.0
-        let mut kv_error = ""
-        let mut kv_start = 7
-        if parts.length() >= 8 && parts[7].find("=") is None {
-          if parts[7] == "-" {
-            kv_start = 8
-          } else if place_token_is_number(parts[7]) {
-            w = parse_op_double(parts[7])
-            kv_start = 8
-            if parts.length() >= 9 && parts[8].find("=") is None {
-              if parts[8] == "-" {
-                kv_start = 9
-              } else if place_token_is_number(parts[8]) {
-                h = parse_op_double(parts[8])
-                kv_start = 9
-              } else {
-                kv_error = "place_invalid_arg:" + parts[8]
-              }
-            }
-          } else {
-            kv_error = "place_invalid_arg:" + parts[7]
-          }
-        }
-        // 与 cli_exec 的 place 保持一致：尾部 k=v 对为用户组件参数槽
-        let kv : Map[String, String] = Map::new()
-        for i = kv_start; i < parts.length(); i = i + 1 {
-          if kv_error != "" {
-            break
-          }
-          match parts[i].find("=") {
-            None =>
-              if kv_error == "" {
-                kv_error = "place_invalid_arg:" + parts[i]
-              }
-            Some(pos) => {
-              let k = parts[i].substring(start=0, end=pos)
-              // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
-              let v = unescape_value(parts[i].substring(start=pos + 1))
-              if k != "" {
-                kv.set(k, v)
-              }
-            }
-          }
-        }
-        if kv_error != "" {
-          Err(kv_error)
+        // 参数解析走 parse_place_args——与 cli_exec 的 place 命令同一实现
+        let pa = parse_place_args(parts)
+        if pa.error != "" {
+          Err(pa.error)
         } else {
           match
             project.place_component(
               artboard=parts[1],
               component_id=parts[2],
               instance_id=parts[3],
-              variant~,
-              x~,
-              y~,
-              w~,
-              h~,
-              args=kv,
+              variant=pa.variant,
+              x=pa.x,
+              y=pa.y,
+              w=pa.w,
+              h=pa.h,
+              args=pa.args,
             ) {
             Ok(_) => Ok(())
             Err(error) => Err(error)
@@ -537,10 +606,18 @@ pub fn apply_operation(
         let mut text : String? = None
         let mut radius : Double? = None
         let mut font_size : Double? = None
+        // 与 update 臂同防御：漏 "=" 的 token 与未识别 key 显式报错，
+        // 不静默吞掉（Agent 否则收到成功却没定义任何字段）
+        let mut bad_token = ""
+        let mut unknown_key = ""
         let mut i = 4
         while i < parts.length() {
           let eq = index_of_str(parts[i], "=")
-          if eq > 0 {
+          if eq <= 0 {
+            if bad_token == "" {
+              bad_token = parts[i]
+            }
+          } else {
             let k = parts[i].substring(start=0, end=eq)
             let v = unescape_value(parts[i].substring(start=eq + 1))
             let d = parse_op_double(v)
@@ -551,29 +628,35 @@ pub fn apply_operation(
               "text" => text = Some(v)
               "radius" => radius = Some(d)
               "font_size" => font_size = Some(d)
-              _ => ()
+              _ => if unknown_key == "" { unknown_key = k }
             }
           }
           i = i + 1
         }
-        let patch : NodePatch = {
-          ..NodePatch::empty(),
-          fill,
-          text_color,
-          stroke,
-          text,
-          corner_radius: radius,
-          font_size,
-        }
-        match
-          project.define_component_state(
-            artboard=parts[1],
-            node_id=parts[2],
-            state_name=parts[3],
-            patch~,
-          ) {
-          Ok(_) => Ok(())
-          Err(error) => Err(error)
+        if bad_token != "" {
+          Err("mbt_operation_invalid_kv:" + bad_token)
+        } else if unknown_key != "" {
+          Err("mbt_operation_unknown_key:" + unknown_key)
+        } else {
+          let patch : NodePatch = {
+            ..NodePatch::empty(),
+            fill,
+            text_color,
+            stroke,
+            text,
+            corner_radius: radius,
+            font_size,
+          }
+          match
+            project.define_component_state(
+              artboard=parts[1],
+              node_id=parts[2],
+              state_name=parts[3],
+              patch~,
+            ) {
+            Ok(_) => Ok(())
+            Err(error) => Err(error)
+          }
         }
       }
     "set-state" =>
@@ -630,6 +713,15 @@ pub fn apply_operation(
           Err(error) => Err(error)
         }
       }
+    "autofill" =>
+      if parts.length() < 2 {
+        Err("mbt_operation_usage:autofill <artboard>")
+      } else {
+        match project.autofill_missing(artboard=parts[1]) {
+          Ok(_) => Ok(())
+          Err(error) => Err(error)
+        }
+      }
     "fix" =>
       if parts.length() < 2 {
         Err("mbt_operation_usage:fix <artboard>")
@@ -641,4 +733,29 @@ pub fn apply_operation(
       }
     _ => Err("mbt_operation_unsupported:" + parts[0])
   }
+}
+
+///|
+/// 批量执行上限：防滥用/防失控循环；64 条足够覆盖一次精修轮。
+pub const OPS_BATCH_LIMIT : Int = 64
+
+///|
+/// 批量执行 mutating ops（生成式执行策略第二级：确定的精修一次提交，
+/// 替代 N 次单调用往返）。顺序执行、遇错即停——与逐条执行语义完全一致
+/// （错误处之后的 op 不落，索引随错误返回供断点续批）。
+pub fn apply_operations(
+  project : Project,
+  operations : Array[String],
+) -> Result[Int, (Int, String)] {
+  if operations.length() > OPS_BATCH_LIMIT {
+    return Err((-1, "mbt_ops_batch_too_many:\{OPS_BATCH_LIMIT}"))
+  }
+  let mut i = 0
+  while i < operations.length() {
+    match apply_operation(project, operations[i]) {
+      Err(error) => return Err((i, error))
+      Ok(_) => i = i + 1
+    }
+  }
+  Ok(operations.length())
 }

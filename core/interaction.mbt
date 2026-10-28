@@ -221,6 +221,46 @@ fn states_to_markers(def : ComponentStateDef) -> Array[String] {
 }
 
 ///|
+/// 状态标记 spec 值的转义协议（标记格式自有，与 decl 层转义无关）：
+/// `\` → `\\`、`,` → `\,`、`[` → `\[`、`]` → `\]`。text 值经此写入
+/// [state:name:spec] 标记——裸写时 split_commas 逢逗号即切、标记解析
+/// 逢 ] 即收尾，含逗号/方括号的状态文本每次 canonical 重建都被截断。
+fn spec_escape(s : String) -> String {
+  let sb = StringBuilder::new()
+  for c in s.iter() {
+    match c {
+      '\\' => sb.write_string("\\\\")
+      ',' => sb.write_string("\\,")
+      '[' => sb.write_string("\\[")
+      ']' => sb.write_string("\\]")
+      _ => sb.write_char(c)
+    }
+  }
+  sb.to_string()
+}
+
+///|
+/// spec_escape 的逆（成对存在）。尾部孤立反斜杠原样保留，不做有损丢弃。
+fn spec_unescape(s : String) -> String {
+  let sb = StringBuilder::new()
+  let mut esc = false
+  for c in s.iter() {
+    if esc {
+      sb.write_char(c)
+      esc = false
+    } else if c == '\\' {
+      esc = true
+    } else {
+      sb.write_char(c)
+    }
+  }
+  if esc {
+    sb.write_char('\\')
+  }
+  sb.to_string()
+}
+
+///|
 /// NodePatch → 紧凑规格 "k=v,k=v"（与 marker_to_patch 对称）。
 fn patch_to_spec(p : NodePatch) -> String {
   let parts : Array[String] = []
@@ -237,7 +277,7 @@ fn patch_to_spec(p : NodePatch) -> String {
     None => ()
   }
   match p.text {
-    Some(v) => parts.push("text=" + v)
+    Some(v) => parts.push("text=" + spec_escape(v))
     None => ()
   }
   match p.corner_radius {
@@ -345,8 +385,9 @@ pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit 
               let (sname, patch) = kv
               def.states.set(sname, patch)
             }
-            // [cur:<name>]：重载时恢复当前激活状态
-            match n.name.find("[cur:") {
+            // [cur:<name>]：重载时恢复当前激活状态（定位转义感知——
+            // 前面 state spec 的 text 值里可有 \[cur: 形态的转义文本）
+            match find_unescaped_seq(n.name, 0, "[cur:") {
               Some(ci) => {
                 let rest_name = n.name.substring(start=ci + 5)
                 match rest_name.find("]") {
@@ -371,16 +412,18 @@ pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit 
 }
 
 ///|
-/// 解析名字中的全部 [state:name:spec] 标记 → (state_name, patch) 列表。
+/// 解析名字中的全部 [state:name:spec] 标记 → (state_name, NodePatch) 列表。
+/// 标记定位转义感知（find_unescaped_seq）：spec 的 text 值经 spec_escape
+/// 写入，值里的 \] / \[state: 不是结构字符。
 pub fn parse_state_markers(name : String) -> Array[(String, NodePatch)]? {
   let out : Array[(String, NodePatch)] = []
   let mut rest = name
   while true {
-    match rest.find("[state:") {
+    match find_unescaped_seq(rest, 0, "[state:") {
       None => break
       Some(i) => {
         let tail = rest.substring(start=i + 7, end=rest.length())
-        match tail.find("]") {
+        match find_unescaped_seq(tail, 0, "]") {
           None => break
           Some(j) => {
             let body = tail.substring(start=0, end=j)
@@ -422,7 +465,8 @@ fn spec_to_patch(spec : String) -> NodePatch {
       None => ()
       Some(eq) => {
         let k = kv.substring(start=0, end=eq)
-        let v = kv.substring(start=eq + 1, end=kv.length())
+        // 值反转义（text 经 spec_escape 写入；其余值不含转义字符，原样通过）
+        let v = spec_unescape(kv.substring(start=eq + 1, end=kv.length()))
         match k {
           "fill" => fill = Some(v)
           "text_color" => text_color = Some(v)
@@ -449,11 +493,20 @@ fn spec_to_patch(spec : String) -> NodePatch {
 }
 
 ///|
+/// 转义感知的逗号切分：`\,` 不切（spec_escape 协议），其余逗号照切。
+/// 反斜杠保留在 token 里，由调用方对值做 spec_unescape。
 fn split_commas(s : String) -> Array[String] {
   let out : Array[String] = []
   let cur = StringBuilder::new()
+  let mut esc = false
   for c in s.iter() {
-    if c == ',' {
+    if esc {
+      cur.write_char(c)
+      esc = false
+    } else if c == '\\' {
+      cur.write_char(c)
+      esc = true
+    } else if c == ',' {
       out.push(cur.to_string())
       cur.reset()
     } else {
@@ -462,6 +515,41 @@ fn split_commas(s : String) -> Array[String] {
   }
   out.push(cur.to_string())
   out
+}
+
+///|
+/// 自 start 起查找未被反斜杠转义的子串 seq 首现下标（无则 None）。
+/// 状态标记 spec 的 text 值走 spec_escape 协议——裸 find 会把值里的
+/// \] 当成标记收尾、\[state: 当成下一个标记，往返即截断/误读。
+fn find_unescaped_seq(s : String, start : Int, seq : String) -> Int? {
+  let n = s.length()
+  let m = seq.length()
+  if m == 0 || m > n {
+    return None
+  }
+  let first = match seq.get_char(0) {
+    Some(c) => c
+    None => return None
+  }
+  let mut esc = false
+  let mut i = start
+  while i < n {
+    match s.get_char(i) {
+      Some(c) =>
+        if esc {
+          esc = false
+        } else if c == '\\' {
+          esc = true
+        } else if c == first &&
+          i + m <= n &&
+          s.substring(start=i, end=i + m) == seq {
+          return Some(i)
+        }
+      None => esc = false
+    }
+    i = i + 1
+  }
+  None
 }
 
 ///|
@@ -640,8 +728,11 @@ pub fn Project::list_interactions(
         match ab.doc.nodes.get(id) {
           Some(n) =>
             if n.name.contains("⚡") {
+              // id/name/artboard 过 json_escape（与 query_node_json 同一
+              // 约定）：update name= 值可含字面双引号，裸插值产出非法
+              // JSON 信封（issue #10 同类事故源）
               items.push(
-                "{\"node\":\"\{id}\",\"name\":\"\{n.name}\",\"artboard\":\"\{artboard}\"}",
+                "{\"node\":\"\{json_escape(id)}\",\"name\":\"\{json_escape(n.name)}\",\"artboard\":\"\{json_escape(artboard)}\"}",
               )
             }
           None => ()
@@ -654,7 +745,7 @@ pub fn Project::list_interactions(
           Some(n) =>
             if !n.name.contains("⚡") && is_back_like_node(n) {
               items.push(
-                "{\"node\":\"\{id}\",\"name\":\"\{n.name}\",\"artboard\":\"\{artboard}\",\"builtin\":\"back\"}",
+                "{\"node\":\"\{json_escape(id)}\",\"name\":\"\{json_escape(n.name)}\",\"artboard\":\"\{json_escape(artboard)}\",\"builtin\":\"back\"}",
               )
             }
           None => ()
@@ -927,8 +1018,10 @@ pub fn Project::interactions_json(
           Some(n) =>
             match parse_interaction_marker(n.name) {
               Some((trig, spec)) =>
+                // trigger/action spec 来自节点名，值可含引号——与
+                // query_node_json 同约定过 json_escape（信封合法性）
                 items.push(
-                  "{\"node\":\"\{id}\",\"trigger\":\"\{trig}\",\"action\":\"\{spec}\"}",
+                  "{\"node\":\"\{json_escape(id)}\",\"trigger\":\"\{json_escape(trig)}\",\"action\":\"\{json_escape(spec)}\"}",
                 )
               None => ()
             }

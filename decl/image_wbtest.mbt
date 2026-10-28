@@ -7,22 +7,13 @@ test "Image：src 经 canonical MBT 往返" {
     Ok(m) => {
       let ab = match m.project.artboards.get("a") {
         Some(x) => x
-        None => {
-          println("no artboard")
-          return
-        }
+        None => fail("往返后画板缺失：a")
       }
       match ab.doc.get("pic") {
         Some(n) => assert_eq(n.text, "https://example.com/a.png")
-        None => {
-          println("no pic node")
-          return
-        }
+        None => fail("往返后节点缺失：pic")
       }
     }
-    Err(e) => {
-      println(e)
-      return
-    }
+    Err(e) => fail("image src canonical 载入失败：\{e}")
   }
 }

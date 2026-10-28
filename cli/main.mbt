@@ -347,10 +347,10 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Some(def) => {
             let vs : Array[String] = []
             for v in def.variants.keys() {
-              vs.push("\"\{v}\"")
+              vs.push("\"\{@core.json_escape(v)}\"")
             }
             user_items.push(
-              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{def.category}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
+              "{\"id\":\"\{@core.json_escape(id)}\",\"kind\":\"user-component\",\"category\":\"\{@core.json_escape(def.category)}\",\"variants\":[\{join_arr(vs)}],\"source\":\"user\",\"description\":\"\{@core.json_escape(def.description)}\"}",
             )
           }
           None => ()
@@ -567,78 +567,23 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           "usage: place <artboard> <component> <id> [variant|-] [x] [y] [w] [h] [k=v ...]",
         )
       } else {
-        let ab = parts[1]
-        let comp = parts[2]
-        let nid = parts[3]
-        // "-" 占位 = 使用组件默认 variant
-        let variant = if parts.length() >= 5 && parts[4] != "-" {
-          parts[4]
-        } else {
-          ""
-        }
-        let x = if parts.length() >= 6 { parse_d(parts[5]) } else { 0.0 }
-        let y = if parts.length() >= 7 { parse_d(parts[6]) } else { 0.0 }
-        // 位置参数 w/h（issue #18）：与 op 面（core/ops.mbt place 臂）同规则——
-        // 槽 7/8 的无 "=" 数字 token 视为宽/高；"-" 表示沿用默认尺寸
-        let mut w = 0.0
-        let mut h = 0.0
-        let mut kv_error = ""
-        let mut kv_start = 7
-        if parts.length() >= 8 && parts[7].find("=") is None {
-          if parts[7] == "-" {
-            kv_start = 8
-          } else if place_token_is_number(parts[7]) {
-            w = parse_d(parts[7])
-            kv_start = 8
-            if parts.length() >= 9 && parts[8].find("=") is None {
-              if parts[8] == "-" {
-                kv_start = 9
-              } else if place_token_is_number(parts[8]) {
-                h = parse_d(parts[8])
-                kv_start = 9
-              } else {
-                kv_error = "place_invalid_arg:" + parts[8]
-              }
-            }
-          } else {
-            kv_error = "place_invalid_arg:" + parts[7]
-          }
-        }
-        // 尾部 k=v 对：用户组件参数槽传参（内置组件忽略）
-        let kv : Map[String, String] = Map::new()
-        for i = kv_start; i < parts.length(); i = i + 1 {
-          if kv_error != "" {
-            break
-          }
-          match parts[i].find("=") {
-            None =>
-              if kv_error == "" {
-                kv_error = "place_invalid_arg:" + parts[i]
-              }
-            Some(pos) => {
-              let k = parts[i].substring(start=0, end=pos)
-              // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
-              let v = @decl.unescape_value(parts[i].substring(start=pos + 1))
-              if k != "" {
-                kv.set(k, v)
-              }
-            }
-          }
-        }
-        if kv_error != "" {
-          cli_err(kv_error)
+        // 参数解析走 @core.parse_place_args——与 op 面（apply_operation
+        // 的 place 臂）同一实现，「双路线解析必须一致」结构性兑现
+        let pa = @core.parse_place_args(parts)
+        if pa.error != "" {
+          cli_err(pa.error)
         } else {
           match
             p.place_component(
-              artboard=ab,
-              component_id=comp,
-              instance_id=nid,
-              variant~,
-              x~,
-              y~,
-              w~,
-              h~,
-              args=kv,
+              artboard=parts[1],
+              component_id=parts[2],
+              instance_id=parts[3],
+              variant=pa.variant,
+              x=pa.x,
+              y=pa.y,
+              w=pa.w,
+              h=pa.h,
+              args=pa.args,
             ) {
             Ok(msg) => msg
             Err(e) => cli_err(e)
@@ -685,6 +630,78 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Err(e) => cli_err(e)
         }
       }
+    "generate" =>
+      // 生成式 UI 入口（执行策略第一级）：一句话意图 → 引擎生成完整画板
+      // + 报告信封。意图支持引号包裹（split_cmd 还原）；未加引号时把余下
+      // token 空格拼接；仅行尾 "as <name>" 指定画板名（真尾部语义）——
+      // 居中的 as 是意图内容（"login as hero page"），按普通词并入意图，
+      // 否则意图被截断且 "as" 之后的 token 被整体劫持为画板名。
+      if parts.length() < 2 {
+        cli_err("usage: generate <意图一句话> [as <name>]")
+      } else {
+        let mut intent = parts[1]
+        let mut artboard_name = ""
+        let mut i = 2
+        while i < parts.length() {
+          // 真尾部语义：仅 "as" 是倒数第二个 token（"as <name>" 恰好占满
+          // 行尾两个 token）才消费为画板名分隔符，与 usage 声明一致
+          if parts[i] == "as" && i + 2 == parts.length() {
+            artboard_name = parts[i + 1]
+            i = i + 2
+          } else {
+            intent = intent + " " + parts[i]
+            i = i + 1
+          }
+        }
+        match p.generate(intent_text=intent, name=artboard_name) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "ops-batch-b64" =>
+      // 执行策略第二级：确定的多条精修一次提交（base64(换行分隔 ops)）。
+      // 顺序执行、遇错即停（index 随错误返回，供断点续批）。
+      if parts.length() < 2 {
+        cli_err("usage: ops-batch-b64 <utf8_base64_of_newline_separated_ops>")
+      } else {
+        match decode_mbt_b64(parts[1]) {
+          Err(error) => cli_err(error)
+          Ok(block) => {
+            let ops : Array[String] = []
+            for line in block.split("\n").iter() {
+              let trimmed = mbt_trim_ws(line.to_string())
+              if trimmed.length() > 0 {
+                ops.push(trimmed)
+              }
+            }
+            if ops.length() == 0 {
+              cli_err("ops_batch_empty")
+            } else {
+              match @core.apply_operations(p, ops) {
+                Ok(applied) =>
+                  "{\"ok\":true,\"op\":\"batch_apply\",\"applied\":\{applied}}"
+                Err((index, error)) => {
+                  // applied 语义是已应用条数；超限拒绝时 index=-1 是哨兵
+                  // 而非条数，信封层与 index 解耦（不可能值会误导断点续批
+                  // 逻辑）。op 用工具字典规范名 batch_apply（与 MCP 臂/
+                  // list_tools 同名，两臂信封同构）。
+                  let applied = if index < 0 { 0 } else { index }
+                  "{\"ok\":false,\"op\":\"batch_apply\",\"applied\":\{applied},\"index\":\{index},\"error\":\"\{@core.json_escape(error)}\"}"
+                }
+              }
+            }
+          }
+        }
+      }
+    "autofill" =>
+      if parts.length() < 2 {
+        cli_err("usage: autofill <artboard>")
+      } else {
+        match p.autofill_missing(artboard=parts[1]) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
     "theme" =>
       if parts.length() < 2 {
         cli_err("usage: theme <name>")
@@ -714,7 +731,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "export-html" => {
       let html = p.export_html()
-      "{\"ok\":true,\"html_length\":\{html.length()},\"html\":\"\{cli_json_escape(html)}\"}"
+      "{\"ok\":true,\"html_length\":\{html.length()},\"html\":\"\{@core.json_escape(html)}\"}"
     }
     "token" =>
       if parts.length() < 3 {
@@ -731,7 +748,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       } else {
         match p.export_svg(artboard=parts[1]) {
           Ok(svg) =>
-            "{\"ok\":true,\"svg_length\":\{svg.length()},\"svg\":\"\{cli_json_escape(svg)}\"}"
+            "{\"ok\":true,\"svg_length\":\{svg.length()},\"svg\":\"\{@core.json_escape(svg)}\"}"
           Err(e) => cli_err(e)
         }
       }
@@ -820,7 +837,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Some(ab) => {
             let proto = @decl.from_document(ab.doc)
             let t = proto.to_decl_text()
-            "{\"ok\":true,\"decl\":\"\{cli_json_escape(t)}\"}"
+            "{\"ok\":true,\"decl\":\"\{@core.json_escape(t)}\"}"
           }
         }
       }
@@ -831,7 +848,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         match p.artboards.get(parts[1]) {
           None => cli_err("unknown_artboard: \{parts[1]}")
           Some(ab) =>
-            "{\"ok\":true,\"json\":\"\{cli_json_escape(ab.doc.to_json())}\"}"
+            "{\"ok\":true,\"json\":\"\{@core.json_escape(ab.doc.to_json())}\"}"
         }
       }
     "duplicate" =>
@@ -866,6 +883,20 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         "{\"ok\":true,\"flow\":\"\{parts[1]} --tap:\{parts[3]}--> \{parts[2]}\"}"
       }
     "flows" => p.flow_json()
+    "unflow" =>
+      // 撤销单条导航流：unflow <from_ab> <to_ab> <node_id>（op_entries
+      // 注册表宣告的 CLI op 面，缺臂会让按 list-ops 逐字发令的 Agent
+      // 撞 unknown_command——与 flow 臂对称）
+      if parts.length() < 4 {
+        cli_err("usage: unflow <from_artboard> <to_artboard> <node_id>")
+      } else {
+        match
+          p.remove_flow(from=parts[1], to=parts[2], trigger="tap:\{parts[3]}") {
+          Ok(_) =>
+            "{\"ok\":true,\"unflow\":\"\{parts[1]} --tap:\{parts[3]}--> \{parts[2]}\"}"
+          Err(e) => cli_err(e)
+        }
+      }
     "group" =>
       if parts.length() < 5 {
         cli_err("usage: group <artboard> <group_id> <n1> <n2> [n3 ...]")
@@ -1124,10 +1155,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "set-state" =>
-      if parts.length() < 4 {
+      // 文法 set-state <node> <state_name> [toggle]：最小合法输入是 3 段
+      // （此前 <4 双重 off-by-one：最小形式被拒、toggle 永远打不开），
+      // 与 core/ops.mbt set-state 臂逐字对齐
+      if parts.length() < 3 {
         cli_err("usage: set-state <node> <state_name> [toggle]")
       } else {
-        let toggle = parts.length() >= 5 && parts[4] == "toggle"
+        let toggle = parts.length() >= 4 && parts[3] == "toggle"
         match p.set_node_state(node_id=parts[1], state_name=parts[2], toggle~) {
           Ok(json) => json
           Err(e) => cli_err(e)
@@ -1157,6 +1191,15 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       } else {
         match p.generate_spec(artboard=parts[1]) {
           Ok(spec) => "{\"ok\":true,\"spec_length\":\{spec.length()}}"
+          Err(e) => cli_err(e)
+        }
+      }
+    "export-design-system" =>
+      if parts.length() < 2 {
+        cli_err("usage: export-design-system <artboard>")
+      } else {
+        match p.export_design_system(artboard=parts[1]) {
+          Ok(json) => json
           Err(e) => cli_err(e)
         }
       }
@@ -1202,7 +1245,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
 }
 
 ///|
-/// 以下三个为 core/ops.mbt 的薄委托：cli_exec 等既有调用点无需改动。
+/// 以下为 core/ops.mbt 的薄委托：cli_exec 等既有调用点无需改动。
+/// （place 参数解析已整体上移为 @core.parse_place_args，place 臂直接
+/// 调用；本地的 place_token_is_number 副本随之删除。）
 fn split_cmd(line : String) -> Array[String] {
   @core.split_cmd(line)
 }
@@ -1210,18 +1255,6 @@ fn split_cmd(line : String) -> Array[String] {
 ///|
 fn index_of_str(s : String, sub : String) -> Int {
   @core.index_of_str(s, sub)
-}
-
-///|
-
-///|
-/// place 的 w/h 位置 token 是否数字（首字符 0-9；"-" 单独出现表示默认）
-fn place_token_is_number(t : String) -> Bool {
-  t.length() > 0 &&
-  ({
-    let c0 = t.substring(start=0, end=1)
-    c0 >= "0" && c0 <= "9"
-  })
 }
 
 ///|
@@ -1259,13 +1292,19 @@ fn cli_help() -> String {
   "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h] [k=v ...]  Place at final size\n" +
   "  query <ab>           Query nodes in artboard\n" +
   "  lint <ab>            Run design lint\n" +
-  "  critique <ab>        Run 8-principle critique\n" +
+  "  critique <ab>        Run 9-principle critique\n" +
   "  benchmark            Run performance benchmark\n" +
   "  fix <ab>             Auto-fix violations\n" +
   "  theme <name>         Switch theme\n" +
   "  export-svg <ab>      Export artboard as SVG\n" +
   "  export-artifact      Export .moonviz artifact\n" +
   "  spec <ab>            Generate design spec\n" +
+  "\n" +
+  "Generative (execution ladder, always start from the top):\n" +
+  "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score); \"a+b\" composite → multi-artboard + auto nav flows (max 4)\n" +
+  "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
+  "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
+  "  autofill <ab>        Materialize the infer_missing report as real nodes, then auto_fix settles layout\n" +
   "\n" +
   "Node editing (both gates share this grammar):\n" +
   "  move <ab> <node> <x> <y>          Move node\n" +
@@ -1302,6 +1341,7 @@ fn cli_help() -> String {
   "  uninteract <ab> <node>            Clear node interactions\n" +
   "  interactions <ab>                 List (node/trigger/action)\n" +
   "  flow <from> <to> <node>           Add tap navigation edge\n" +
+  "  unflow <from> <to> <node>         Remove a tap navigation edge\n" +
   "  flows                             List navigation edges\n" +
   "  tap <ab> <x> <y>                  Simulate a tap, return state changes\n" +
   "\n" +
@@ -1316,8 +1356,12 @@ fn cli_help() -> String {
 }
 
 ///|
+/// 错误信封统一出口：msg 必须经 JSON 转义——错误串携带原始用户 token
+/// （template/history 的画板名、state 的 k=v 等），含反斜杠/引号时裸
+/// 插值会产出非法 JSON；与 batch_apply 臂的 @core.json_escape、MCP 臂
+/// err_json（json_escape_text）同构。调用方一律传原文，不预转义。
 fn cli_err(msg : String) -> String {
-  "{\"error\":\"\{msg}\"}"
+  "{\"error\":\"\{@core.json_escape(msg)}\"}"
 }
 
 ///|
@@ -1339,49 +1383,8 @@ fn char_at_str(s : String, i : Int) -> String {
   s.substring(start=i, end=i + 1)
 }
 
-///|
-/// JSON 字符串转义（export-svg 内嵌完整 SVG 用）
-fn cli_json_escape(s : String) -> String {
-  let sb = StringBuilder::new()
-  for c in s.iter() {
-    match c {
-      '"' => sb.write_string("\\\"")
-      '\\' => sb.write_string("\\\\")
-      '\n' => sb.write_string("\\n")
-      '\r' => sb.write_string("\\r")
-      '\t' => sb.write_string("\\t")
-      _ => {
-        let code = c.to_int()
-        if code < 32 {
-          let hex = "0123456789abcdef"
-          let h1 = char_at(hex, code / 16)
-          let h2 = char_at(hex, code % 16)
-          sb.write_string("\\u00\{h1}\{h2}")
-        } else {
-          sb.write_char(c)
-        }
-      }
-    }
-  }
-  sb.to_string()
-}
-
-///|
-fn char_at(s : String, i : Int) -> String {
-  let buf : Array[String] = []
-  let mut idx = 0
-  for c in s.iter() {
-    if idx == i {
-      buf.push(c.to_string())
-    }
-    idx = idx + 1
-  }
-  if buf.length() > 0 {
-    buf[0]
-  } else {
-    "0"
-  }
-}
+// JSON 字符串转义直接复用 @core.json_escape（core/json.mbt：引号/反斜杠/
+// \n\r\t + C0 控制符 \u00xx 小写 hex，逐字节同语义）——不再维护 cli 本地副本。
 
 ///|
 fn join_arr(parts : Array[String]) -> String {

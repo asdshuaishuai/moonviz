@@ -1,6 +1,6 @@
 {
   "name": "moonviz-bin-darwin-arm64",
-  "version": "0.1.0",
+  "version": "0.1.10",
   "description": "Prebuilt self-contained MoonViz engine binaries (MCP server + stateful CLI) for darwin/arm64 (macOS Apple Silicon). Installed automatically by moonviz-mcp / moonviz-engine-sdk — do not depend on this package directly.",
   "type": "module",
   "os": ["darwin"],

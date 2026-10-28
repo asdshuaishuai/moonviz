@@ -283,6 +283,22 @@ pub fn Project::place_component(
           match self.components.get(component_id) {
             None => Err("unknown_component: \{component_id}")
             Some(def) => {
+              // 未知变体与用户组件路径同权报错（usercomp.mbt 同名检查）：
+              // 拼写错误不再被静默回退吞掉
+              let v = if variant == "" { def.default_variant } else { variant }
+              if v != def.default_variant && def.variants.contains(v) == false {
+                // 错误即文档（对齐 constrain 词表先例）：真实 run 里模型最常犯的是
+                // 漏写 variant 槽——坐标串滑进变体槽（如 `place ab rect id 200 100`
+                // 的 "200" 被当变体名），只回 `unknown_variant:200` 模型要再烧
+                // 2-3 轮试错才摸到语法。消息就地携带合法变体与语法模板。
+                let mut names = ""
+                for k in def.variants.keys() {
+                  names = names + k + " "
+                }
+                return Err(
+                  "unknown_variant:\{v}（组件 \{component_id} 合法变体：\{names}默认：\{def.default_variant}）——place 语法：place <板> <组件> <id> [variant|-] [x] [y] [w] [h] [k=v...]，不需要变体时该槽写 -",
+                )
+              }
               let node = instantiate_component(
                 def,
                 instance_id,

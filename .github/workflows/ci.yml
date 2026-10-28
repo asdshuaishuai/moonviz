@@ -5,9 +5,9 @@ name: CI
 # 示例可复现（examples/login-demo + README Quick Start）
 on:
   push:
-    branches: [main, release/1.0]
+    branches: [main, dev, release/1.0]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 jobs:
@@ -44,6 +44,8 @@ jobs:
 
       - name: Example repro (examples/login-demo.mbt.md)
         run: |
+          # pipefail：ubuntu 默认 bash -e 不含 pipefail，cli.exe 非零退出但输出恰含标记时步骤会假绿
+          set -o pipefail
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --target native cli
           B64="$(base64 -w0 examples/login-demo.mbt.md)"
@@ -52,13 +54,31 @@ jobs:
 
       - name: README Quick Start repro
         run: |
+          set -o pipefail
           export PATH="$HOME/.moon/bin:$PATH"
           printf 'template login t_login 390 844\ncreate t_home 390 844\nupdate t_login welcome_title text="Welcome back"\nflow t_login t_home login_btn\nexport-mbt-human\nexit\n' \
             | _build/native/debug/build/cli/cli.exe | grep -q '"debt":'
+
+      - name: Setup Node 24 (wasm-gc + js-string builtins 断言需 ≥ 24)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Dual wasm build
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           moon build --release --target wasm-gc wasm
           moon build --release --target wasm wasm
-          node scripts/check-wasm-abi.mjs _build/wasm/release/build/wasm/wasm.wasm
+          node scripts/check-wasm-abi.mjs _build/wasm/release/build/wasm/wasm.wasm _build/wasm-gc/release/build/wasm/wasm.wasm
+
+      - name: Desktop self-render build + smoke (client-guided, no UI)
+        run: |
+          set -o pipefail
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon build --target native desktop
+          # pipefail：smoke 失败时 desktop.exe 经 mv_exit(1) 的非零退出不被 tee 吞掉
+          MOONVIZ_SMOKE=1 ./_build/native/debug/build/desktop/desktop.exe | tee /tmp/mv-smoke.log
+          grep -q '\[smoke\] PASS' /tmp/mv-smoke.log
+          # 无引导必须惰性：只回 not_guided 信封（exit 0），不渲染不写文件
+          ./_build/native/debug/build/desktop/desktop.exe | grep -q '"error":"not_guided"'
+          test ! -f moonviz-render.html

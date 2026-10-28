@@ -1,13 +1,13 @@
-///|
-/// 主题系统：深色/浅色/自定义一键切换，令牌级主题变体管理。
-///
-/// 核心洞察：主题 = 同一组令牌名映射到不同的值。
-/// Agent 只需引用令牌（`"primary"`），切换主题时所有节点自动更新。
-///
-/// - 预定义主题：light / dark / high_contrast / sepia / nord / sunset
-/// - 自动暗色：从亮色主题自动推导暗色版本（反转亮度，保留色相）
-/// - 自定义主题：Agent 给一个 partial override Map → 合并到基础主题
-/// - 令牌级切换：`set_token("primary", "#FF5722")` → 全局生效
+// ---------------------------------------------------------------------------
+// 主题系统：深色/浅色/自定义一键切换，令牌级主题变体管理。
+//
+// 核心洞察：主题 = 同一组令牌名映射到不同的值。
+// Agent 只需引用令牌（`"primary"`），切换主题时所有节点自动更新。
+//
+// - 预定义主题：light / dark / high_contrast / sepia / nord / sunset
+// - 自动暗色：从当前主题反相推导暗色版本（RGB 通道反转，色相旋转 180°）
+// - 自定义主题：Agent 给一个 partial override Map → 合并到基础主题
+// - 令牌级切换：`set_token("primary", "#FF5722")` → 全局生效
 
 // ---------------------------------------------------------------------------
 // 主题定义
@@ -50,8 +50,10 @@ pub fn Theme::dark() -> Theme {
   t.colors.set("primary", "#A5B4FC")
   t.colors.set("primary_container", "#3B4A8C")
   t.colors.set("on_primary", "#1A1C1E")
+  t.colors.set("on_secondary_container", "#E8EAF6")
   t.colors.set("secondary", "#C5CAE9")
   t.colors.set("secondary_container", "#3949AB")
+  t.colors.set("text_on_primary", "#1A1C1E")
   t.colors.set("surface", "#1A1C1E")
   t.colors.set("surface_variant", "#2A2C2E")
   t.colors.set("background", "#0F1114")
@@ -113,8 +115,10 @@ pub fn Theme::nord() -> Theme {
   t.colors.set("primary", "#88C0D0")
   t.colors.set("primary_container", "#4C566A")
   t.colors.set("on_primary", "#2E3440")
+  t.colors.set("on_secondary_container", "#ECEFF4")
   t.colors.set("secondary", "#81A1C1")
   t.colors.set("secondary_container", "#434C5E")
+  t.colors.set("text_on_primary", "#2E3440")
   t.colors.set("surface", "#3B4252")
   t.colors.set("surface_variant", "#434C5E")
   t.colors.set("background", "#2E3440")
@@ -155,7 +159,8 @@ pub fn Theme::sunset() -> Theme {
 // ---------------------------------------------------------------------------
 
 ///|
-/// 从亮色主题自动生成暗色版本（反转亮度，保留色相）
+/// 从主题自动生成暗色版本（RGB 通道反转——即色相旋转 180°，非保留色相的
+/// 亮度反演；HSL 语义的反转需要感知色相空间，v1 不引入）
 pub fn Theme::auto_dark(base : Theme) -> Theme {
   let dark_tokens = base.tokens
   // 反转每个颜色令牌的亮度
@@ -177,7 +182,8 @@ pub fn Theme::auto_dark(base : Theme) -> Theme {
 }
 
 ///|
-/// 反转颜色亮度：保留色相和饱和度，反转亮度
+/// RGB 三通道反转（255-v）：视觉上是色相旋转 180° 的反相，不是 HSL 意义
+/// 的「保色相反亮度」——命名沿用历史，语义以此注释为准
 fn invert_luminance(hex : String) -> String {
   let (r, g, b) = parse_rgb5(hex)
   // 反转 RGB
@@ -232,96 +238,20 @@ fn hd5(c : Char?) -> Int {
 
 ///|
 fn to_hex(r : Int, g : Int, b : Int) -> String {
-  let rh = if r < 16 { "0" + r.to_string() } else { r.to_string() }
-  let gh = if g < 16 { "0" + g.to_string() } else { g.to_string() }
-  let bh = if b < 16 { "0" + b.to_string() } else { b.to_string() }
   // 转为 hex
   "#" + int_to_hex(r) + int_to_hex(g) + int_to_hex(b)
 }
 
 ///|
 fn int_to_hex(v : Int) -> String {
+  // Int::to_char 返回 Char?，直接 .to_string() 会产出 "Some(c)" 形态的垃圾
+  // 十六进制——用 Char::from_int 构造（与 json.mbt write_c0_u_escape 同款）
   let hi = v / 16
   let lo = v % 16
-  let h = if hi < 10 {
-    (hi + 48).to_char().to_string()
-  } else {
-    (hi + 87).to_char().to_string()
-  }
-  let l = if lo < 10 {
-    (lo + 48).to_char().to_string()
-  } else {
-    (lo + 87).to_char().to_string()
-  }
-  h + l
-}
-
-// ---------------------------------------------------------------------------
-// 主题注册表（Project 级）
-// ---------------------------------------------------------------------------
-
-///|
-pub(all) struct ThemeRegistry {
-  themes : Map[String, Theme]
-  mut current : String
-}
-
-///|
-pub fn ThemeRegistry::new() -> ThemeRegistry {
-  let r : ThemeRegistry = { themes: Map::new(), current: "light", }
-  for t in builtin_themes().iter() {
-    r.themes.set(t.name, t)
-  }
-  r
-}
-
-///|
-/// 注册自定义主题
-pub fn ThemeRegistry::register(self : ThemeRegistry, theme : Theme) -> Unit {
-  self.themes.set(theme.name, theme)
-}
-
-///|
-/// 切换主题
-pub fn ThemeRegistry::switch(
-  self : ThemeRegistry,
-  name : String,
-) -> Result[DesignTokens, String] {
-  match self.themes.get(name) {
-    Some(t) => {
-      self.current = name
-      Ok(t.tokens)
-    }
-    None => Err("unknown_theme: " + name)
-  }
-}
-
-///|
-/// 获取当前主题
-pub fn ThemeRegistry::current_theme(
-  self : ThemeRegistry,
-) -> Result[Theme, String] {
-  match self.themes.get(self.current) {
-    Some(t) => Ok(t)
-    None => Err("no_current_theme")
-  }
-}
-
-///|
-/// 列出所有可用主题
-pub fn ThemeRegistry::list(self : ThemeRegistry) -> String {
-  let parts : Array[String] = []
-  for name in self.themes.keys() {
-    match self.themes.get(name) {
-      Some(t) => {
-        let is_cur = if name == self.current { " ←current" } else { "" }
-        parts.push("\"" + name + "\" (\"" + t.display_name + "\")" + is_cur)
-      }
-      None => ()
-    }
-  }
-  let j = jstr21(parts)
-  "[\{j}]"
+  let sb = StringBuilder::new()
+  sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
+  sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+  sb.to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -380,7 +310,6 @@ fn role_rank_for_text(role : String) -> Int {
     2
   } else if role == "surface" ||
     role == "surface_variant" ||
-    role == "surface_alt" ||
     role == "background" {
     3
   } else if role_has_suffix(role, "_container") {
@@ -415,7 +344,6 @@ fn role_rank_for_text_on(role : String) -> Int {
 fn role_rank_for_fill(role : String) -> Int {
   if role == "surface" ||
     role == "surface_variant" ||
-    role == "surface_alt" ||
     role == "background" {
     1
   } else if role_has_suffix(role, "_container") {
@@ -623,10 +551,12 @@ pub fn Project::set_token(
     None => ()
   }
   // recolor_with 在 changed>0 时已 +1；值未变化的重复 set（load 路径）
-  // 不会虚涨 revision
+  // 不会虚涨 revision。
+  // envelope 合法性红线：value 是 Agent 可控文本，含引号/反斜杠时裸拼
+  // 会产出非法 JSON（与 fill_slot 同类事故面）——统一过 json_escape
   let changed = self.recolor_with(self.tokens, prior=Some(prior))
   Ok(
-    "{\"ok\":true,\"token\":\"\{token_name}\",\"old\":\"\{previous}\",\"value\":\"\{value}\",\"recolored\":\{changed}}",
+    "{\"ok\":true,\"token\":\"\{token_name}\",\"old\":\"\{json_escape(previous)}\",\"value\":\"\{json_escape(value)}\",\"recolored\":\{changed}}",
   )
 }
 
@@ -643,16 +573,40 @@ pub fn Project::get_token(
 }
 
 ///|
-/// 预览节点在不同主题下的颜色
+/// 预览节点在各主题下的颜色：按默认调色板把节点 fill 反查为角色，再逐
+/// 主题取该角色的值（找不到节点或角色时回退 primary）——与 README
+/// 「preview the node under each theme」的承诺一致，而非无视 node_id 的
+/// 全局 primary 表。
 pub fn Project::preview_themes(
   self : Project,
   node_id : String,
 ) -> Result[String, String] {
+  let mut role = "primary"
+  for ab_id in self.artboards.keys() {
+    match self.artboards.get(ab_id) {
+      Some(ab) =>
+        match ab.doc.get(node_id) {
+          Some(n) => {
+            let d = DesignTokens::default()
+            for r in d.colors.keys() {
+              match d.colors.get(r) {
+                Some(v) => if v == n.style.fill {
+                  role = r
+                }
+                None => ()
+              }
+            }
+          }
+          None => ()
+        }
+      None => ()
+    }
+  }
   let results : Array[String] = []
   for theme in builtin_themes().iter() {
-    let fill = theme.tokens.resolve_color("primary")
+    let color = theme.tokens.resolve_color(role)
     results.push(
-      "{\"theme\":\"\{theme.name}\",\"display\":\"\{theme.display_name}\",\"primary\":\"\{fill}\"}",
+      "{\"theme\":\"\{theme.name}\",\"display\":\"\{theme.display_name}\",\"role\":\"\{role}\",\"color\":\"\{color}\"}",
     )
   }
   let j = jstr21(results)
@@ -660,12 +614,41 @@ pub fn Project::preview_themes(
 }
 
 ///|
-/// 自动生成当前主题的暗色版本并应用
+/// 自动生成当前主题的暗色版本并应用。
+///
+/// 从 active_theme 对应主题推导（而非恒从 light），并与 apply_theme/set_token
+/// 对齐状态三元组：tokens / active_theme / token_overrides——派生主题的全部
+/// 角色值记入 token_overrides，随 canonical MBT frontmatter `tokens:` 段往返，
+/// 节点字面量经 recolor_with 重着色，保持状态与 canonical 一致。
 pub fn Project::enable_auto_dark(self : Project) -> Result[String, String] {
-  let current = Theme::light() // 简化：始终从 light 推导
+  let mut base : Theme? = None
+  for theme in builtin_themes().iter() {
+    if theme.name == self.active_theme {
+      base = Some(theme)
+      break
+    }
+  }
+  let current = match base {
+    Some(t) => t
+    None => Theme::light()
+  }
   let dark = Theme::auto_dark(current)
+  let prior = self.tokens_snapshot()
   self.tokens = dark.tokens
-  Ok("{\"ok\":true,\"theme\":\"auto_dark\",\"original\":\"\{current.name}\"}")
+  // 派生主题的整个令牌面即本次覆盖意图：整体记入 token_overrides
+  let ov : Map[String, String] = Map::new()
+  for role in dark.tokens.colors.keys() {
+    match dark.tokens.colors.get(role) {
+      Some(v) => ov.set(role, v)
+      None => ()
+    }
+  }
+  self.token_overrides = Some(ov)
+  self.active_theme = dark.name
+  let changed = self.recolor_with(dark.tokens, prior=Some(prior))
+  Ok(
+    "{\"ok\":true,\"theme\":\"\{dark.name}\",\"original\":\"\{current.name}\",\"recolored\":\{changed}}",
+  )
 }
 
 ///|

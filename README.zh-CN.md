@@ -1,8 +1,21 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.10 新特性
+
+- **全域审查修复波**——83 项确认问题全部修复：数据保真（save/open 转义往返、
+  Document JSON 补全节点样式字段）、信封 JSON 合法性（wasm/CLI/MCP 出口
+  `json_escape` 清扫）、wasm 槽位契约与 `docs/wasm-abi.md` 对齐、健壮性修复
+  （嵌套 snap_to_grid、响应式变体树合法性、SVG transform/filter 合并、
+  export_react JSX）、出口面修复（CLI `unflow` 臂、set-state off-by-one、MCP
+  JSON-RPC id/通知语义、缺参校验）、norms v2 触控规则与 v1 档位调和、SDK 修复
+  （Project 六方法、sessionGenerate、DDP decrypt mode、npm 平台包版本对齐）。
+- **文档与官网全量同步**——全部计数锚定引擎实测（55 工具 / 27 op / 73 wasm
+  导出 / 九维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
+- 测试矩阵增至 298（默认目标）/ 314（`--target native`），全绿。
+
 ## 0.1.9-fix 新特性
 
 - **加固补丁**——组件规范 + 内置返回导航（dev 合入）、本设备 Git 操作规定
-  入档（优先 gh / SSH 降级链）。默认目标 231 测试全绿。
+  入档（优先 gh / SSH 降级链）。全量测试绿（默认目标 + `--target native`）。
 
   （勘误：本节早先版本误列了 Smart UX 消费面条目——那些在 release/1.0
   分支上，不属于 0.1.9-fix。已发布的二进制与包不受影响。）
@@ -77,7 +90,7 @@
 │  Agent (任意 LLM)                                            │
 │  发现组件 → 创建画板 → 放置元素 → lint → 修复 → 导出         │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (52 tools, JSON in/out)
+               │ Agent Tools API (55 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -100,36 +113,49 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent 工具清单（52 个）
+## Agent 工具清单（55 个，节选）
+
+下表每个名字都与运行面字典逐字一致（CLI `list-tools` / MCP `tools/list`，55 个）——没有一个占位名。
 
 | 工具 | 语义 |
 | :--- | :--- |
-| `list_components` | 列出所有可用 UI 组件（含变体/描述/分类） |
-| `list_tokens` | 列出设计令牌（颜色/间距/圆角/字号） |
-| `create_artboard` | 创建新画板（name, width, height） |
-| `list_artboards` | 列出项目中的所有画板及元数据 |
-| `place_component` | 在画板上放置组件实例 |
-| `query_nodes` | 按类型/组件/文字内容查询节点 |
-| `lint_design` | 设计质量检查（对比度/触控/间距/一致性） |
-| `get_violations` | 获取不崩谓词违规列表 |
-| `suggest_fix` | 针对违规给出可执行修复补丁 |
-| `export_svg` | 导出画板为引擎派生 SVG |
+| `list_components` | 列出所有 UI 组件（内置 + 用户）含变体/分类/描述 |
+| `list_tokens` | 列出设计令牌（颜色/间距/圆角/字体） |
+| `list_artboards` | 列出项目中的所有画板及元数据与节点数 |
+| `apply_template` | 以模板实例化新画板（id 默认取 template_id） |
+| `place_component` | 在画板上按最终尺寸放置组件实例（w/h 在 place 时落定，门在最终 bbox 上评估） |
+| `update_node` | 以空格分隔的 k=v 对编辑节点属性 |
+| `query_nodes` | 查询画板节点（id/类型/组件/矩形/样式/文字） |
+| `lint_design` | 设计质量 lint（对比度/触控目标/间距/可读性），返回结构化建议 |
+| `auto_fix` | 自动修复画板上可修复的违规 |
+| `align_nodes` | 对齐 ≥2 个节点（模式：left / right / top / bottom / hcenter / vcenter） |
+| `suggest_alignment` | 为画板建议对齐修复 |
+| `export_html` | 导出整个项目为自包含可交互 HTML 原型（节点级导航流/状态 CSS/导航栈/toast） |
+| `export_svg` | 导出单个画板为 SVG（主题化 surface/描边） |
+| `export_design_system` | 设计系统导出：把画板反向提取的设计系统打包为交付物——tokens JSON + CSS 自定义属性 |
 | `collab_merge` | 多 Agent 三方合并：提交 N 个 Agent 的操作序列，返回冲突与自动解决 |
 | `history` | 设计版本控制：init/commit/log/undo/redo/checkout/diff（时间旅行 + 语义 diff） |
 | `animation_presets` / `animation_css` | 动画预设清单 / 为节点生成 CSS @keyframes |
 | `protest` | 运行原型测试脚本（断言式验证导航/输入/渲染/违规） |
-| `read_mbt` | 读取并校验完整 `.mbt.md` 源码 |
-| `render_mbt` | 从 `.mbt.md` 重新解析并渲染 |
-| `ddp_view` | 只读 DDP 查看与渲染契约 |
-| `export_react` | React TSX 组件桩（仅代码生成，不是事实源） |
-| `apply_template` | 从模板生成完整画板（一句话→整页面） |
-| `fork_variants` | 分叉设计变体（A/B 测试并行探索） |
-| `score_variants` | 对所有变体评分（违规/lint/对齐/丰富度） |
-| `merge_variant` | 合并最优变体回主分支 |
-| `auto_arrange` | 垂直等间距自动排列 |
-| `snap_to_grid` | 吸附到 N px 网格 |
-| `center_in_parent` | 父容器居中 |
-| `suggest_alignment` | 检测近似对齐并建议吸附 |
+| `read_mbt` | 从 base64 文档返回 canonical `.mbt.md` 源码 |
+| `render_mbt` | 校验并渲染 canonical `.mbt.md`（完整画板 JSON） |
+| `ddp_view` | 回报 DDP 编解码状态（只读视图） |
+| `generate` | **生成式 UI 入口（执行策略第一级）**：一句话意图 → 引擎选语义模板 + 规范/谓词自愈 + 返回报告（autofix/missing/score）——优先于逐节点摆放 |
+| `batch_apply` | **执行策略第二级**：多条会话 op 一次提交（换行分隔 base64，最多 64 条）；按序执行，遇错即停并回传断点索引 |
+
+`create` / `fix` / `autofill` 等更底层原语是 **op** 而非工具——它们在 27 条 op 字典（`list_ops`）里，经 `batch_apply` 或 CLI 行协议触达。
+
+## 生成式 UI：genUI 第一公民，工具模式兜底
+
+双模一引擎——两者都完整保留：
+
+- **genUI（主通道）**——`generate` 一句话意图 → 完整画板 + 报告
+  （autofix/missing/score）；`autofill` 把报告缺失物化为真实节点；
+  `batch_apply` 确定精修一次提交。
+- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（55 工具 / 27 op）
+  原样保留：自由形态画板、模板之外的布局、外科手术式修改、探查。阶梯按
+  成本排通道、不设权限门槛——配方表达不了你的意图时，逐层下探用工具
+  就是正确行为。
 
 ## 内置页面模板（14 个完整页面）
 
@@ -189,7 +215,7 @@ cd ddp && cargo build --release && cd ..
 #    产物 ddp/target/release/ddp_codec（stdin JSON → stdout JSON）
 #    可用 MOONVIZ_DDP_HELPER 指定路径；SDK 会自动在 ddp/target/{debug,release} 下查找
 
-# 4. 全量测试（默认目标 205 项；--target native 全量 209 项）
+# 4. 全量测试（动态口径：`moon test --target native` 为全量，测试数随版本增长）
 moon test
 ```
 
@@ -252,7 +278,7 @@ moonviz/
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
 │   ├── component.mbt  组件系统（65 组件×115 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（52 工具 + list-ops 字典）
+│   ├── agent_api.mbt  Agent 工具 API（55 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
 │   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
 │   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）
@@ -267,7 +293,7 @@ moonviz/
 │   ├── responsive.mbt 响应式断点（手机/平板/桌面自动适配）
 │   ├── collab.mbt     多Agent协作（操作变换OT/冲突检测/三方合并）
 │   ├── history.mbt    设计版本控制（时间旅行/分支/变更回放/undo-redo）
-│   ├── critique.mbt   AI设计批评（8项设计原则自动评审）
+│   ├── critique.mbt   AI设计批评（9项设计原则自动评审）
 │   ├── annotate.mbt   设计标注（自动生成Spec文档/CSS变量/间距颜色字体标注）
 │   ├── animation.mbt  属性动画（关键帧/缓动函数/时间线编排/CSS导出）
 │   ├── extract.mbt    设计系统反向提取（从现有设计推推断牌+组件模式）
@@ -279,9 +305,9 @@ moonviz/
 │   ├── svg.mbt        SVG 渲染
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
-├── cli/               Agent 命令行接口（换行分帧 JSON 行协议，一个进程 = 一个有状态会话）
-├── mcp/               MCP Server（stdio JSON-RPC，52 工具，工具面同 CLI）
-├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 27 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
+├── desktop/           自渲染服务（客户端引导：引擎无 UI，渲染面由客户端 webview 承载；无 webview 走系统层兜底返回结果）
+├── mcp/               MCP Server（stdio JSON-RPC，55 工具，工具面同 CLI）
+├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 28 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
@@ -289,10 +315,26 @@ moonviz/
 ├── npm/               npm 分发：moonviz-mcp（启动器）+ moonviz-skill + moonviz-bin-<platform>（预编译平台包）
 ├── playground/        终端画布 + PNG 渲染 + REPL
 ├── site/              官网（GitHub Pages：asdshuaishuai.github.io/moonviz/）
-├── scripts/           publish-npm.sh 等发布脚本
+├── scripts/           publish-all.sh / backup-release.sh 等发布脚本 + check-wasm-abi.mjs
 ├── examples/          DDP2 解析/渲染复刻样例（CI 示例复现）
-└── docs/              设计文档 01–11
+└── docs/              设计文档 01–12 + wasm-abi.md
 ```
+
+## Webview 自渲染（desktop/，客户端引导模型）
+
+引擎提供渲染能力，但**不能自己取用**：引擎无 UI、无窗口、不自行获取渲染面，
+自渲染必须依托客户端的引导——客户端（Tauri / Electron / 任意原生壳）拉起
+引擎、指定渲染源（`MOONVIZ_DOC=<path.mbt.md>`）、承接渲染结果：
+
+1. **表面一 客户端 webview**：把渲染产物（`MOONVIZ_OUT`，缺省
+   `moonviz-render.html`）载入客户端自己的 webview 即是活原型（交互运行时
+   内嵌：画板切换/导航流/toast/状态多态）——Tauri/Electron 零渲染代码。
+2. **表面二 系统兜底**：原生环境没有 webview 时，引擎直接调用系统层渲染并
+   返回结果——产物落盘，连磁盘都不可用时把自包含 HTML 打到 stdout。
+
+无引导（未设 `MOONVIZ_DOC`）引擎保持惰性——只回 usage 信封，不渲染、不写
+文件（CI 硬门断言）。渲染链路 `.mbt.md → load_mbt_project → export_html`
+全程进程内、纯 MoonBit——无 sidecar、无上层框架依赖。详见 `desktop/README.md`。
 
 ## 交互原型系统
 
@@ -301,10 +343,11 @@ moonviz/
 | 概念 | 说明 |
 |:---|:---|
 | **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_text / submit_form / show_toast |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound（submit_form 仅 API 层，spec 语法未落地） |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | 组件多态（default / pressed / disabled / loading） |
 | **NavigationState** | 导航栈（push / pop / back） |
+| **Motion** | 引擎动效令牌（120/240/360ms 刻度 + 缓动曲线含 spring）驱动导出原型：方向感知转场（navigate 前进 / back 反向 / tab 淡入）、按压 spring 反馈、入场阶梯、`prefers-reduced-motion`、ESC = 返回 |
 
 ## Agent 中间产物（.moonviz）
 
@@ -463,7 +506,7 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 
 ## AI 设计批评引擎
 
-引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 8 项设计原则给出整体评价：
+引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 9 项设计原则给出整体评价（第 9 维 `norms` 对组件工艺偏差计分）：
 
 | 原则 | 检查什么 |
 |:---|:---|
@@ -475,12 +518,13 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 | 平衡 | 左右视觉重量是否均衡 |
 | 焦点 | 是否有明确的主 CTA（primary 按钮） |
 | 节奏 | 间距值是否统一到标准令牌 |
+| 规范 | 组件规范：按钮不卡文案、撞色、齐缝分隔、触控目标（norms） |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":8,"results":[
+// → {"principles":9,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"balance","score":6,"verdict":"fair",...},...]}
+//     {"principle":"norms","score":8,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -573,7 +617,7 @@ p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 | nord | 极地 | #88C0D0 | #3B4252 |
 | sunset | 落日暖 | #FF7043 | #FFF8E1 |
 
-**自动暗色推导**：`Theme::auto_dark(light)` → 反转亮度，保留色相 → 自动生成暗色版本。
+**自动暗色推导**：`Theme::auto_dark(light)` → RGB 通道逐位反转（色相旋转 180°）→ 自动生成暗色版本。
 
 ## 组件插槽系统
 
@@ -666,7 +710,7 @@ p.suggest_optimizations(artboard="dashboard")
 | **DDP 容器** | Rust `ddp_codec`（DDP1 加密 / DDP2 免密） | 设计文档加密分发、只读查看器 |
 | **WASM（classic）** | `moon build --target wasm` —— 纯 WASM MVP（0 imports、线性内存），wasmtime/wasmi 等任意规范运行时可实例化 | Rust 宿主、服务端嵌入 |
 
-每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-0.1.3.wasm` / `moonviz-wasm-classic-0.1.3.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
+每个 `engine-v*` tag 都会把**全量产物**发布到 GitHub Releases：4 平台二进制 tarball + 双 wasm 构建（版本化命名，如 `moonviz-wasm-gc-<ver>.wasm` / `moonviz-wasm-classic-<ver>.wasm`）+ npm 全家族当前版本 tarball。分发不单点依赖 npm。
 
 MCP 客户端配置（npx 预编译路线）：
 
@@ -717,7 +761,7 @@ MCP 客户端配置（npx 预编译路线）：
 MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分四层：
 
 1. **产物冻结**（根本手段）：预编译二进制与 WASM 一经发布即快照——工具链后续破坏性变更不影响任何已分发产物，语言不确定性被隔离在构建时。
-2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 209 项测试（`--target native` 全量）+ CLI/MCP 冒烟挡板验证。
+2. **构建工具链**：CI（`binaries.yml`）安装**最新** moon（历史锁定版本目录会从下载 CDN 下架），每次构建以 `moon test --target native` 全量测试 + CLI/MCP 冒烟挡板验证。
 3. **协议稳定**：`SolvedLayout` / `GateDecision` / `RenderPlan` 等对外协议刻意稳定（求解器预留 Cassowary 替换接口），不随语言版本漂移。
 4. **组件隔离兜底**：DDP 已示范非 MoonBit 组件独立进程化路线，极端情况下任何组件可按此模式替换而不动 `.mbt.md` 事实源格式。
 
@@ -742,3 +786,4 @@ MoonBit 快速演进，minor 版本存在行为差异的现实风险，对策分
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit 绘制引擎生态调研
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **绘制方案与渲染管线完整技术说明**（声明解析 → 布局 → 谓词 → SVG/PNG/终端三后端 + 技术栈 + 二进制分发与工具链风险）
 11. [11-user-components.md](docs/11-user-components.md) — 用户组件（component_compile / component_import / component_export）
+12. [12-generative-ui.md](docs/12-generative-ui.md) — 生成式 UI 与 Agent 执行策略（管线 / 报告驱动闭环 / 组合意图 / 接入面矩阵 / 不变量）

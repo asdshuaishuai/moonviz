@@ -369,9 +369,12 @@ pub fn Project::critique(
       )
 
       // ── 9. 组件规范（norms：按钮不卡文案 · 方正圆润 · 全宽条直角）──
-      // 与 auto_fix 的 norm_fix_pass 同一判据：critique 指出偏差并给出建议尺寸，
-      // Agent 调 auto_fix 一键修复——审查-修复循环的反馈/执行两端共享同一规范。
-      let norm_list = norm_issues(doc, layout)
+      // 与 auto_fix 的 norm_fix_pass 同一判据：critique 指出偏差并给出建议尺寸。
+      // 建议按来源区分修复路径（norm_issue_hint）：v1 五规则/触控/返回在
+      // auto_fix 的执行范围内（norm_fix_pass / norm_touch_fix_pass /
+      // list_divider），给 auto_fix 指引；字号阶/密度/gap 网格是 v2 检测项、
+      // auto_fix 没有对应修复通道——给具体改法，不宣称一键修复。
+      let norm_list = norm_issues_v2(doc, layout)
       // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
       // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
       for s in self.norm_back_issues(artboard=artboard).iter() {
@@ -402,9 +405,9 @@ pub fn Project::critique(
           if i >= 2 {
             break
           }
-          acc = acc + norm_list[i] + "；"
+          acc = acc + norm_list[i] + "→ " + norm_issue_hint(norm_list[i]) + "；"
         }
-        acc + "——auto_fix 可一键修复"
+        acc
       }
       results.push(
         crit_json("norms", norm_score, norm_verdict, "\{n_norm} 处规范偏差", norm_advice),
@@ -444,6 +447,22 @@ pub fn Project::critique_summary(
 }
 
 ///|
+/// norms 建议按 issue 来源区分修复路径：字号阶（type scale）/密度（node
+/// count）/gap 网格（not on 4pt grid）是 v2 检测项，auto_fix 没有对应修复
+/// 通道——给具体改法；其余（v1 五规则/触控/返回）给 auto_fix 指引。
+fn norm_issue_hint(issue : String) -> String {
+  if issue.contains("not on 4pt grid") {
+    "gap 调到 4 的倍数（4/8/12/16）"
+  } else if issue.contains("type scale") {
+    "字号收敛到 ≤5 档（如 12/14/16/20/24）"
+  } else if issue.contains("node count") {
+    "拆分画板或删减装饰节点"
+  } else {
+    "auto_fix 可一键修复"
+  }
+}
+
+///|
 fn crit_json(
   principle : String,
   score : Int,
@@ -469,9 +488,16 @@ fn is_token_color3(tokens : DesignTokens, hex : String) -> Bool {
 fn extract_scores(json : String) -> Array[Int] {
   let scores : Array[Int] = []
   let parts = json.split(",\"score\":")
+  // 首段是信封头（{"principles":9,"results":[…"principle":"…"）而非评分，
+  // 跳过——否则 extract_leading_int 会抓到头部的 9，均值变成 (9+Σ九项)/10，
+  // 档位边界虚高一级
+  let mut first = true
   for p0 in parts.iter() {
-    let p = p0.to_string()
-    let num = extract_leading_int(p)
+    if first {
+      first = false
+      continue
+    }
+    let num = extract_leading_int(p0.to_string())
     if num >= 0 {
       scores.push(num)
     }

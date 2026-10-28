@@ -3,7 +3,7 @@ name: Deploy docs site to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'core/**', 'decl/**', 'wasm/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'core/**', 'decl/**', 'cli/**', 'wasm/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -39,6 +39,10 @@ jobs:
           # 工具能力字典：与线上 wasm 同源生成（core/agent_api.mbt 单一事实源）
           printf 'list-tools\nexit\n' | _build/native/release/build/cli/cli.exe | sed -n 2p > site/assets/moonviz-tools.json
           printf 'list-ops\nexit\n' | _build/native/release/build/cli/cli.exe | sed -n 2p > site/assets/moonviz-ops.json
+      # 组件目录 ↔ playground 两表（COMP_ZH/COMP_ICON）键集一致门：
+      # AGENTS.md 检查单第 2 条的固化（漂移直接 fail，不再靠人工纪律）
+      - name: Check playground component tables vs engine catalog
+        run: node scripts/check-playground-components.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

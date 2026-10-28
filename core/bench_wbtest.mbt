@@ -157,3 +157,18 @@ test "Agent 全流程：设计→基准→优化建议→报告" {
   let _ = proj_bench.report()
   let _ = proj_bench.to_json()
 }
+
+///|
+/// 空集合信封红线（AGENTS.md）：0 建议时 detail 键必须输出 []，不得省略。
+test "基准：0 建议时 detail 恒输出 []" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="tiny")
+  let _ = p.place_component(artboard="tiny", component_id="button", instance_id="b")
+  match p.suggest_optimizations(artboard="tiny") {
+    Ok(json) => {
+      assert_true(json.contains("\"optimizations\":0"))
+      assert_true(json.contains("\"detail\":[]"))
+    }
+    Err(_) => assert_true(false)
+  }
+}

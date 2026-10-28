@@ -139,6 +139,11 @@ test "声明文本往返保留 Inspector 可编辑的视觉属性" {
       line_height: 1.8,
       tracking: 0.12,
       flip: "h",
+      font_weight: "bold",
+      text_align: "center",
+      font_style: "italic",
+      stroke_dash: "dashed",
+      visible: false,
     },
   }
   page.add(card)
@@ -164,10 +169,66 @@ test "声明文本往返保留 Inspector 可编辑的视觉属性" {
       )
       assert_true(node.style.tracking > 0.119 && node.style.tracking < 0.121)
       assert_eq(node.style.flip, "h")
+      assert_eq(node.style.font_weight, "bold")
+      assert_eq(node.style.text_align, "center")
+      assert_eq(node.style.font_style, "italic")
+      assert_eq(node.style.stroke_dash, "dashed")
+      assert_false(node.style.visible)
       assert_eq(node.constraint, "stretch-c")
     }
     None => assert_true(false)
   }
+}
+
+///|
+test "声明文本往返：三种位置规格 pos_text/pos_val 对称" {
+  let page = prototype(name="pos-roundtrip", width=390.0, height=844.0)
+  page.add(
+    {
+      ..rect(id="c", width=@core.Fixed(80.0), height=@core.Fixed(40.0)),
+      x: @core.CenterInParent,
+      y: @core.AlignEnd(24.0),
+    },
+  )
+  let source = page.to_decl_text()
+  assert_true(source.contains("x=@decl.center"))
+  assert_true(source.contains("y=@decl.end(24"))
+  let parsed : Prototype = match parse_decl(source) {
+    Ok(p) => p
+    Err(e) => abort("位置规格往返解析失败：\{e.describe()}")
+  }
+  let doc = parsed.build()
+  match doc.get("c") {
+    Some(n) =>
+      match (n.x, n.y) {
+        (@core.CenterInParent, @core.AlignEnd(v)) =>
+          assert_true(v > 23.999 && v < 24.001)
+        _ => abort("位置规格往返变形")
+      }
+    None => abort("节点缺失：c")
+  }
+  // 二次序列化定点：重载后的文档再导出与首轮一致
+  assert_eq(parsed.to_decl_text(), source)
+  // @decl.start(n) 显式形式与裸数字都归一到 AlignStart，重导出走裸数字
+  let src2 = "let page = @decl.prototype(name=\"s\", width=390.0, height=844.0)\npage.add(@decl.rect(id=\"s1\", width=@decl.fixed(40.0), height=@decl.fixed(20.0), x=@decl.start(16), y=8))\n"
+  let parsed2 : Prototype = match parse_decl(src2) {
+    Ok(p) => p
+    Err(e) => abort("start 形式解析失败：\{e.describe()}")
+  }
+  match parsed2.build().get("s1") {
+    Some(n) =>
+      match (n.x, n.y) {
+        (@core.AlignStart(x), @core.AlignStart(y)) => {
+          assert_true(x > 15.999 && x < 16.001)
+          assert_true(y > 7.999 && y < 8.001)
+        }
+        _ => abort("start 形式未归一到 AlignStart")
+      }
+    None => abort("节点缺失：s1")
+  }
+  let source2 = parsed2.to_decl_text()
+  assert_true(source2.contains("x=16"))
+  assert_true(source2.contains("y=8"))
 }
 
 ///|
@@ -191,4 +252,110 @@ test "move_node：人类语义操作修改声明并保持谓词通过" {
   let text = page.to_decl_text()
   assert_true(text.contains("id=\"b\",component=\"rect\""))
   assert_true(text.contains("x=200"))
+}
+
+///|
+test "canonical 往返：节点文本含单个不配对括号可重载" {
+  let page = prototype(name="paren", width=390.0, height=844.0)
+  page.add(
+    {
+      ..rect(id="weird", width=@core.Fixed(100.0), height=@core.Fixed(40.0)),
+      text: "(a",
+    },
+  )
+  let decl = page.to_decl_text()
+  // decl_escape 把裸 `(` 写成 `\(`
+  assert_true(decl.contains("text=\"\\(a\""))
+  // 走完整 .mbt.md 装载链：mbt_visual_decl 的括号归并必须转义感知
+  let sb = StringBuilder::new()
+  sb.write_string("<!-- moonviz:artboard p -->\n```mbt\n")
+  sb.write_string("fn visual_p() -> @decl.Prototype {\n")
+  for line in lines_of(decl).iter() {
+    if line != "" {
+      sb.write_string("  " + line + "\n")
+    }
+  }
+  sb.write_string("  page\n}\n```\n")
+  match load_mbt_project(sb.to_string()) {
+    Ok(m) =>
+      match m.project.artboards.get("p") {
+        Some(ab) =>
+          match ab.doc.get("weird") {
+            Some(n) => assert_eq(n.text, "(a")
+            None => fail("往返后节点缺失：weird")
+          }
+        None => fail("往返后画板缺失：p")
+      }
+    Err(e) => fail("canonical 含不配对括号文本重载失败：\{e}")
+  }
+}
+
+///|
+test "声明文本往返：含引号的容器 id 不损坏" {
+  let page = prototype(name="quote-id", width=390.0, height=844.0)
+  page.add(
+    frame(id="a\"b", width=@core.Fixed(200.0), height=@core.Fixed(100.0)),
+  )
+  page.add_to(
+    parent_id="a\"b",
+    node=rect(id="inner", width=@core.Fixed(40.0), height=@core.Fixed(20.0)),
+  )
+  let source = page.to_decl_text()
+  assert_true(source.contains("parent_id=\"a\\\"b\""))
+  let parsed : Prototype = match parse_decl(source) {
+    Ok(p) => p
+    Err(e) => abort("含引号容器 id 往返解析失败：\{e.describe()}")
+  }
+  let doc = parsed.build()
+  match doc.nodes.get("a\"b") {
+    Some(parent) =>
+      if !parent.children.contains("inner") {
+        abort("子节点未挂在含引号的容器下")
+      }
+    None => abort("容器缺失：a\"b")
+  }
+  match doc.nodes.get(doc.root_id) {
+    Some(root) => assert_false(root.children.contains("inner"))
+    None => abort("根节点缺失")
+  }
+  assert_eq(parsed.to_decl_text(), source)
+}
+
+///|
+test "声明文本往返：C0 控制符经 \\u00xx 对称还原" {
+  let ctrl = "a" + Char::from_int(1).to_string() + "b"
+  let page = prototype(name="ctrl", width=390.0, height=844.0)
+  page.add(
+    {
+      ..rect(id="ctl", width=@core.Fixed(80.0), height=@core.Fixed(20.0)),
+      text: ctrl,
+    },
+  )
+  let source = page.to_decl_text()
+  assert_true(source.contains("\\u0001"))
+  let parsed : Prototype = match parse_decl(source) {
+    Ok(p) => p
+    Err(e) => abort("控制符文本往返解析失败：\{e.describe()}")
+  }
+  match parsed.build().get("ctl") {
+    Some(n) => assert_eq(n.text, ctrl)
+    None => abort("节点缺失：ctl")
+  }
+  assert_eq(parsed.to_decl_text(), source)
+}
+
+///|
+test "短形式组件：line_height 参数经 apply_decl_style 生效" {
+  let src = "let page = @decl.prototype(name=\"t\", width=390.0, height=844.0)\npage.add(@decl.text(id=\"t1\", content=\"hi\", size=16.0, line_height=2.0))\n"
+  match parse_decl(src) {
+    Ok(p) =>
+      match p.build().get("t1") {
+        Some(n) =>
+          assert_true(
+            n.style.line_height > 1.999 && n.style.line_height < 2.001,
+          )
+        None => abort("节点缺失：t1")
+      }
+    Err(e) => abort("短形式 line_height 解析失败：\{e.describe()}")
+  }
 }

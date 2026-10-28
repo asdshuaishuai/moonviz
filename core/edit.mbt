@@ -162,6 +162,22 @@ pub fn Project::move_node(
 }
 
 ///|
+/// update/edit k=v 的合法键词汇表（edit_node 预检的单一事实源）。
+/// 此前未识别 key 被静默丢弃仍返回 ok:true/fields:0——typo（如 colr=）
+/// 得到成功响应却什么都没改。新增键必须两处同步（match 臂 + 本表），
+/// 漏同步会被使用新键的既有测试当场打红。
+fn is_edit_key(k : String) -> Bool {
+  match k {
+    "w" | "h" | "text" | "fill" | "text_color" | "stroke" | "radius"
+    | "opacity" | "font_size" | "weight" | "shadow" | "rotate" | "blur"
+    | "blend" | "line" | "tracking" | "constraint" | "name" | "stroke_width"
+    | "align" | "italic" | "dash" | "visible" | "width_mode" | "height_mode"
+    | "x_mode" | "y_mode" | "layout" | "gap" | "justify" | "padding" => true
+    _ => false
+  }
+}
+
+///|
 /// 人类编辑：key=value 批量更新节点属性。
 /// 支持键：w h text fill text_color stroke radius opacity font_size weight
 pub fn Project::edit_node(
@@ -175,6 +191,14 @@ pub fn Project::edit_node(
     Some(ab) => {
       if !ab.doc.has(node_id) {
         return Err("unknown_node: \{node_id}")
+      }
+      // 未识别 key 显式拒绝（不落任何字段）——与 restyle 的 no_kv_pairs
+      // 防御对称：typo 必须报错，而不是成功响应 + fields:0
+      for kv in kvs.iter() {
+        let (k, _) = kv
+        if !is_edit_key(k) {
+          return Err("mbt_operation_unknown_key:" + k)
+        }
       }
       let applied : Array[String] = []
       let _ = ab.doc.update_node(node_id, n => {

@@ -1,0 +1,11 @@
+import {
+  "asdshuaishuai/moonviz/core",
+  "asdshuaishuai/moonviz/decl",
+  "moonbitlang/core/encoding/utf8",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"
+
+options("native-stub": ["shim/desktop_io.c"])

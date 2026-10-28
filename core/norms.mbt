@@ -750,7 +750,9 @@ fn has_word(s_lower : String, word : String) -> Bool {
 /// 返回交互校验（返回交互是必须的，用户决策 2026-10-11）：
 /// 非入口画板必须有离开路径——出边 flow，或返回类节点（runtime 对返回类
 /// 节点的 tap 有内置返回兜底）。两者皆无 = 用户会卡死在该页。
-/// 入口画板豁免（导航栈底没有「上一层」）；单画板项目整体豁免。
+/// 豁免条件与实现一致：有出边 flow 的画板、单画板项目。引擎不记录入口
+/// 画板（runtime initial_artboard 是会话参数，不入 Project）——未连线的
+/// 首页同样按本规则判，需给出边或返回类节点，不做入口特判。
 pub fn norm_back_issues(self : Project, artboard~ : String) -> Array[String] {
   let issues : Array[String] = []
   match self.artboards.get(artboard) {
@@ -777,9 +779,210 @@ pub fn norm_back_issues(self : Project, artboard~ : String) -> Array[String] {
         }
       }
       issues.push(
-        "画板「\{json_escape(artboard)}」无任何返回/离开交互——用户会卡死在此页：加返回类节点（back/prev/返回/<，runtime 内置返回兜底）或出边 flow",
+        "画板「\{json_escape(artboard)}」无任何返回/离开交互——用户会卡死在此页：加返回类节点（back/prev/返回/←/‹/«，runtime 内置返回兜底）或出边 flow",
       )
     }
+  }
+  issues
+}
+
+// ---------------------------------------------------------------------------
+// Norms v2 — 设计语言扩展（对标 Claude Design codebase-aware 约束 +
+// Open Design agent 设计知识）：触控目标 / 间距网格 / 字号层级 / 节点密度
+// ---------------------------------------------------------------------------
+
+const NORM_TOUCH_MIN : Double = 44.0
+
+const NORM_GRID_UNIT : Double = 4.0
+
+const NORM_TYPE_SCALE_MAX : Int = 5
+
+const NORM_NODE_BUDGET : Int = 80
+
+fn norm_is_interactive(component : String) -> Bool {
+  norm_is_action_component(component) || component == "tab_bar" || component == "search_bar" || component == "slider" || component == "switch" || component == "checkbox"
+}
+
+///|
+/// 触控目标按组件分档（与 component_norm 四端同判据：list_components 下发、
+/// norm_issues/norm_fix_pass、norm_touch_issues/norm_touch_fix_pass、
+/// critique 第 9 维）：chip/tag 有下发的独立高度档（28~32 / 22~26），
+/// 通用 44×44 会把档内合规件（chip 默认 72×30）判违规、被 touch_fix_pass
+/// 抬出档位——chip/tag 只按档下限判高度，宽度无档位、不另设线（文案
+/// 留白由 v1 文案规则兜底）；其余交互件统一 44×44 全尺寸。
+fn norm_touch_is_banded(component : String) -> Bool {
+  component == "chip" || component == "tag"
+}
+
+///|
+fn norm_touch_min_h(component : String) -> Double {
+  match component {
+    "chip" => 28.0
+    "tag" => 22.0
+    _ => NORM_TOUCH_MIN
+  }
+}
+
+pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+  let issues : Array[String] = []
+  for id in doc.nodes.keys() {
+    if issues.length() >= 4 { break }
+    match doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        if !norm_is_interactive(n.component) { continue }
+        let banded = norm_touch_is_banded(n.component)
+        let min_h = norm_touch_min_h(n.component)
+        match layout.rect_of(id) {
+          None => continue
+          Some(r) => {
+            let w_short = !banded && r.width < NORM_TOUCH_MIN - 0.5
+            let h_short = r.height < min_h - 0.5
+            if w_short || h_short {
+              let min_desc = if banded {
+                "height min " + min_h.to_int().to_string()
+              } else {
+                "min 44x44"
+              }
+              issues.push(json_escape(id) + "(" + n.component + ") " + r.width.to_int().to_string() + "x" + r.height.to_int().to_string() + " below touch " + min_desc)
+            }
+          }
+        }
+      }
+    }
+  }
+  issues
+}
+
+///|
+/// Norms v2 触控修复：交互组件低于触控最小值的抬到最小值。与
+/// norm_touch_issues 同一判据（同一组件集、同一分档、同一 0.5 容差）；
+/// 只抬 Fixed 维度——Hug/Fill 尺寸策略不得被静默降级为 Fixed。放大可能
+/// 引入溢出，由 auto_fix 在本 pass 之后的谓词循环清偿（与文案留白放大同序）。
+pub fn norm_touch_fix_pass(
+  doc : Document,
+  layout : SolvedLayout,
+) -> Array[String] {
+  let fixes : Array[String] = []
+  for id in doc.nodes.keys() {
+    match doc.nodes.get(id) {
+      None => ()
+      Some(n) => {
+        if !norm_is_interactive(n.component) { continue }
+        let banded = norm_touch_is_banded(n.component)
+        let min_h = norm_touch_min_h(n.component)
+        match layout.rect_of(id) {
+          None => ()
+          Some(r) => {
+            let w_short = !banded && r.width < NORM_TOUCH_MIN - 0.5
+            let h_short = r.height < min_h - 0.5
+            if !w_short && !h_short { continue }
+            let w_fixed = match n.width {
+              Fixed(_) => true
+              _ => false
+            }
+            let h_fixed = match n.height {
+              Fixed(_) => true
+              _ => false
+            }
+            let new_w = if w_short && w_fixed { NORM_TOUCH_MIN } else { r.width }
+            let new_h = if h_short && h_fixed { min_h } else { r.height }
+            if new_w != r.width || new_h != r.height {
+              let why = if banded {
+                "触控目标 高≥" + min_h.to_int().to_string() + "（chip/tag 档位）"
+              } else {
+                "触控目标 44×44"
+              }
+              let _ = doc.update_node(id, fn(x) {
+                {
+                  ..x,
+                  width: if new_w != r.width { Fixed(new_w) } else { x.width },
+                  height: if new_h != r.height { Fixed(new_h) } else { x.height },
+                }
+              })
+              fixes.push(
+                "{\"node\":\"\{json_escape(id)}\",\"action\":\"touch_norm\",\"why\":\"\{why}\",\"before\":\"\{r.width.to_int()}×\{r.height.to_int()}\",\"after\":\"\{new_w.to_int()}×\{new_h.to_int()}\"}",
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+  fixes
+}
+
+pub fn norm_grid_issues(doc : Document) -> Array[String] {
+  let issues : Array[String] = []
+  for id in doc.nodes.keys() {
+    if issues.length() >= 4 { break }
+    match doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        match n.layout {
+          None => continue
+          Some(l) => {
+            if l.gap > 0.5 && l.gap % NORM_GRID_UNIT != 0.0 {
+              issues.push(json_escape(id) + " gap " + l.gap.to_string() + " not on 4pt grid")
+            }
+          }
+        }
+      }
+    }
+  }
+  issues
+}
+
+pub fn norm_type_issues(doc : Document) -> Array[String] {
+  let sizes : Map[Int, Int] = Map::new()
+  for id in doc.nodes.keys() {
+    match doc.nodes.get(id) {
+      None => continue
+      Some(n) => {
+        if n.text.length() == 0 { continue }
+        let fs = n.style.font_size.to_int()
+        sizes.set(fs, sizes.get(fs).unwrap_or(0) + 1)
+      }
+    }
+  }
+  let issues : Array[String] = []
+  if sizes.size() > NORM_TYPE_SCALE_MAX {
+    let detail = StringBuilder::new()
+    let mut first = true
+    for fs in sizes.keys() {
+      if !first { detail.write_string(" ") }
+      first = false
+      detail.write_string(fs.to_string() + "px x" + sizes.get(fs).unwrap_or(0).to_string())
+    }
+    issues.push("type scale " + sizes.size().to_string() + " > " + NORM_TYPE_SCALE_MAX.to_string() + " (" + detail.to_string() + ")")
+  }
+  issues
+}
+
+pub fn norm_density_issues(doc : Document) -> Array[String] {
+  let issues : Array[String] = []
+  if doc.nodes.size() > NORM_NODE_BUDGET {
+    issues.push("node count " + doc.nodes.size().to_string() + " > " + NORM_NODE_BUDGET.to_string())
+  }
+  issues
+}
+
+
+///|
+/// Norms v2：v1 五规则 + v2 四规则（触控/字号/密度/间距网格）
+pub fn norm_issues_v2(doc : Document, layout : SolvedLayout) -> Array[String] {
+  let issues = norm_issues(doc, layout)
+  for issue in norm_touch_issues(doc, layout).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  for issue in norm_type_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  for issue in norm_density_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  for issue in norm_grid_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
   }
   issues
 }

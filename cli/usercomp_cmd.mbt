@@ -36,12 +36,12 @@ fn cmd_component_compile(p : @core.Project, parts : Array[String]) -> String {
           let ps : Array[String] = []
           for param in def.params.iter() {
             ps.push(
-              "{\"name\":\"\{param.name}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
+              "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{@core.json_escape(param.kind)}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
             )
           }
           let vs : Array[String] = []
           for v in def.variants.keys() {
-            vs.push("\"\{v}\"")
+            vs.push("\"\{@core.json_escape(v)}\"")
           }
           "{\"ok\":true,\"op\":\"component-compile\",\"component\":\"\{@core.json_escape(def.id)}\",\"params\":[\{join_arr(ps)}],\"variants\":[\{join_arr(vs)}],\"source_b64\":\"\{encode_mbt_b64(def.source)}\"}"
         }
@@ -83,7 +83,9 @@ fn cmd_component_import(p : @core.Project, parts : Array[String]) -> String {
       match compile_and_register(p, source) {
         Err(error) => cli_err(error)
         Ok(def) =>
-          "{\"ok\":true,\"op\":\"component-import\",\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{@core.json_escape(header_json)}"
+          // header_json 由 mcf_header_json 产出，已是合法 JSON 对象文本：
+          // 原样嵌入（再转义会破坏结构），收尾 } 是信封闭合（F51）
+          "{\"ok\":true,\"op\":\"component-import\",\"component\":\"\{@core.json_escape(def.id)}\",\"header\":\{header_json}}"
       }
   }
 }
@@ -100,12 +102,12 @@ fn cmd_component_describe(p : @core.Project, parts : Array[String]) -> String {
       let ps : Array[String] = []
       for param in def.params.iter() {
         ps.push(
-          "{\"name\":\"\{param.name}\",\"kind\":\"\{param.kind}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
+          "{\"name\":\"\{@core.json_escape(param.name)}\",\"kind\":\"\{@core.json_escape(param.kind)}\",\"default\":\"\{@core.json_escape(param.default_value)}\"}",
         )
       }
       let vs : Array[String] = []
       for v in def.variants.keys() {
-        vs.push("\"\{v}\"")
+        vs.push("\"\{@core.json_escape(v)}\"")
       }
       // usage 示例：place <ab> <id> <inst> [variant|-] [x] [y] [w] [h] k=<kind> ...
       let kvs : Array[String] = []
@@ -138,7 +140,7 @@ fn cmd_component_delete(p : @core.Project, parts : Array[String]) -> String {
     return cli_err("unknown_component:" + id)
   }
   p.user_components.remove(id)
-  "{\"ok\":true,\"op\":\"component-delete\",\"component\":\"\{id}\"}"
+  "{\"ok\":true,\"op\":\"component-delete\",\"component\":\"\{@core.json_escape(id)}\"}"
 }
 
 ///|

@@ -311,6 +311,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 #playbar.on{display:flex}
 .shot.playing svg g[id^="n_"]{cursor:pointer}
 .shot.playing svg g[id^="n_"]:hover{outline:1px dashed var(--acc)}
+/* 预览按压反馈：spring 回弹缩放（fill-box 居中）——令牌出自
+   core/animation.mbt（MOTION_FAST=120ms / Easing::Spring），导出面同刻度 */
+.shot.playing svg g[id^="n_"]{transform-box:fill-box;transform-origin:center;transition:transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1)}
+.shot.playing svg g[id^="n_"]:active{transform:scale(.96)}
 .retry{display:none;margin-left:6px;font-size:10px;padding:2px 10px;border-radius:99px;border:1px solid var(--err);color:var(--err);background:transparent}
 .retry.show{display:inline-block}
 .retry:hover{background:rgba(224,82,82,.1)}
@@ -425,6 +429,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <span class="pill idle" id="pill">…</span><span id="debt" class="debt zero" title="视觉债：引擎容忍但 AgentGate 不放行的违规数">债 0</span><span id="msg">加载引擎中</span>
   <button class="retry" id="retryBtn" onclick="retryHuman()">↻ HumanGate 重试</button>
   <button id="undobtn" onclick="undo()">↩ 撤销</button>
+  <input id="genuiIntent" placeholder="✦ 一句话生成：登录+注册（+ 连接多页）" style="width:270px;font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx)">
+  <button onclick="genuiGenerate()" title="genUI 第一公民：一句话意图 → 完整画板 + 报告">✦ 生成</button>
+  <button onclick="genuiAutofill()" title="把 infer_missing 报告物化为真实节点（幂等，auto_fix 清偿布局）">✚ 补缺</button>
   <button onclick="togglePlay()" id="playBtn">▶ 演示</button>
   <button onclick="downloadSvg()">导出 SVG</button>
   <button onclick="downloadHtml()" title="单文件可交互原型：节点级导航 / 状态切换 / toast">导出 HTML 原型</button>
@@ -770,6 +777,61 @@ function humanOp(op,silentOk){
     return false;
   }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
 }
+
+/* ---------- 生成式 UI（genUI 第一公民）：一句话生成 / 报告驱动补缺 ---------- */
+function genuiApplyRefresh(r){
+  if(r.mbt){mbt=r.mbt;$('src').value=mbt;}
+  render();
+  // 单段信封带 artboard，组合信封带 artboards[]——生成后跳到首块新板
+  let want=null;
+  if(r.artboard)want=r.artboard;
+  else if(r.artboards&&r.artboards.length)want=r.artboards[0].id;
+  if(want){
+    const idx=artboards().findIndex(a=>a.id===want);
+    if(idx>=0){artIndex=idx;render();}
+  }
+}
+function genuiGenerate(){
+  if(!engine)return setStatus(false,'引擎未就绪');
+  if(mode!=='design'||sessH<0)return setStatus(false,'生成式入口在设计模式（有活动会话）下可用');
+  const intent=$('genuiIntent').value.trim();
+  if(!intent)return setStatus(false,'先输入一句话意图（如：登录+注册 / 设置 dark / web 落地页）');
+  try{
+    const r=engine.session_generate(sessH,intent,'');
+    if(r.ok!==true)return setStatus(false,(r.error||'生成失败'));
+    genuiApplyRefresh(r);
+    if(r.mode==='multi'){
+      setStatus(true,`✦ ${r.summary||('组合生成 '+r.count+' 块画板')}`);
+    }else{
+      setStatus(true,`✦ ${r.summary||('生成 '+r.artboard)}`);
+    }
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+function genuiAutofill(){
+  if(!engine)return setStatus(false,'引擎未就绪');
+  if(mode!=='design'||sessH<0)return setStatus(false,'补缺在设计模式（有活动会话）下可用');
+  const abs=artboards();
+  if(!abs.length)return setStatus(false,'无画板可补缺');
+  try{
+    // 全板联动：组合生成后的多板一次补齐（逐板 autofill，auto_fix 随板清偿）
+    let done=0;
+    for(const a of abs){
+      const r=engine.session_apply_human(sessH,'autofill '+a.id);
+      if(r.ok===true){done++;if(r.mbt){mbt=r.mbt;$('src').value=mbt;}}
+    }
+    if(!done)return setStatus(false,'补缺被拒');
+    render();
+    setStatus(true,`✚ ${done}/${abs.length} 板补缺完成（缺失物化 + auto_fix 清偿布局）`);
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+window.genuiGenerate=genuiGenerate;
+window.genuiAutofill=genuiAutofill;
+window.execAction=execAction;      // proto-back 按钮（⟵返回）
+window.downloadHtml=downloadHtml;  // 导出 HTML 原型按钮
+window.downloadSvg=downloadSvg;
+window.undo=undo;
+window.togglePlay=togglePlay;
+window.retryHuman=retryHuman;
 
 function select(id){selNode=id;renderLayers();renderProps();renderInteract();placeSelbox();}
 function placeSelbox(){
@@ -1225,12 +1287,14 @@ function downloadSvg(){
 }
 function downloadHtml(){
   if(!engine){setStatus(false,'引擎未就绪');return;}
-  const r=engine.exportHtml(mbt);
-  if(r.ok!==true){setStatus(false,r.error||'导出失败');return;}
-  const blob=new Blob([r.html],{type:'text/html'});
-  const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download='moonviz-prototype.html';el.click();
-  URL.revokeObjectURL(el.href);
-  setStatus(true,`✓ HTML 原型已导出（${(r.html.length/1024).toFixed(1)}KB · 节点级交互内置）`);
+  try{
+    const r=engine.export_html(mbt);
+    if(r.ok!==true){setStatus(false,r.error||'导出失败');return;}
+    const blob=new Blob([r.html],{type:'text/html'});
+    const el=document.createElement('a');el.href=URL.createObjectURL(blob);el.download='moonviz-prototype.html';el.click();
+    URL.revokeObjectURL(el.href);
+    setStatus(true,`✓ HTML 原型已导出（${(r.html.length/1024).toFixed(1)}KB · 节点级交互内置）`);
+  }catch(err){setStatus(false,String(err.message||err));}
 }
 async function loadTemplates(){
   try{
@@ -1356,7 +1420,7 @@ function enterPlay(){
   $('playbar').classList.add('on');$('playBtn').textContent='✕ 退出';
   if(selNode)select(null);
   artIndex=artboards().findIndex(a=>a.id===navStack[0]);if(artIndex<0)artIndex=0;
-  render();updateNavCrumb();setStatus(null,'演示模式：点击元素触发交互');
+  render();updateNavCrumb();playBoardAnim(0);setStatus(null,'演示模式：点击元素触发交互');
 }
 function exitPlay(){
   playing=false;navStack=[];
@@ -1396,7 +1460,20 @@ function playTap(nodeId){
 function gotoArtboard(id){
   const idx=artboards().findIndex(a=>a.id===id);
   if(idx<0){setStatus(false,'navigate_to: 画板 '+id+' 不存在');return;}
-  navStack.push(id);artIndex=idx;render();updateNavCrumb();
+  navStack.push(id);artIndex=idx;render();updateNavCrumb();playBoardAnim(1);
+}
+/* 预览转场：方向感知滑入（+1 前进 / −1 返回 / 0 纯淡入）。令牌出自
+   core/animation.mbt（MOTION_BASE=240ms / Easing::EaseOut），与导出 HTML
+   的 mv-board-in 同语义同刻度；prefers-reduced-motion 时跳过 */
+function playBoardAnim(dir){
+  if(mode!=='preview')return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const el=document.querySelector('#stage .shot.on');
+  if(!el||!el.animate)return;
+  el.animate(
+    [{opacity:0,transform:`translateX(${dir*28}px) scale(.99)`},{opacity:1,transform:'translateX(0) scale(1)'}],
+    {duration:240,easing:'cubic-bezier(0, 0, 0.2, 1)'}
+  );
 }
 function execAction(spec){
   const m=/^(\w+)(?::(.*))?$/.exec(spec);
@@ -1405,7 +1482,7 @@ function execAction(spec){
   switch(kind){
     case 'navigate_to':gotoArtboard(arg);break;
     case 'show_toast':showToast(arg.replace(/^"|"$/g,''));break;
-    case 'back':if(navStack.length>1){navStack.pop();artIndex=artboards().findIndex(a=>a.id===navStack[navStack.length-1]);render();updateNavCrumb();}break;
+    case 'back':if(navStack.length>1){navStack.pop();artIndex=artboards().findIndex(a=>a.id===navStack[navStack.length-1]);render();updateNavCrumb();playBoardAnim(-1);}break;
     case 'set_state':{
       const p=arg.split(':');
       if(humanOp('set-state '+p[0]+' '+p[1],true))showToast('状态 → '+p[1]);
@@ -1516,8 +1593,8 @@ async function boot(){
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
     const exports=new WebAssembly.Instance(mod,{}).exports;
-    // 对齐最新 wasm-gc 产物（71 导出；此处包裹 38 个：11 静态 + 27 会话，
-    // 其余为 _in 槽变体与 memory，不经 JS 包装）
+    // 对齐最新 wasm-gc 产物（73 导出；此处包裹 39 个：11 静态 + 28 会话，
+    // 其余为 _in 槽变体与 in/arg/arg2 槽原语，不经 JS 包装）
     engine={
       // —— 无状态（11）——
       version:()=>JSON.parse(exports.version_info()),
@@ -1531,8 +1608,8 @@ async function boot(){
       list_tokens:()=>JSON.parse(exports.list_tokens()),
       list_ops:()=>JSON.parse(exports.list_ops()),
       export_html:s=>JSON.parse(exports.export_html(s)),
-      // —— 会话（24，i32 句柄）——
-      // 改文档面（apply_*/constrain/auto_fix/responsive/tap/component_compile/history undo|redo|checkout）
+      // —— 会话（28，i32 句柄）——
+      // 改文档面（apply_*/constrain/auto_fix/generate/generate_responsive/tap/component_compile/history undo|redo|checkout）
       // 成功信封带 canonical mbt（r.mbt）：按 canonical 交换的宿主须保存它供下次 open 用
       session_open:s=>exports.session_open(s),
       session_close:h=>exports.session_close(h),
@@ -1554,6 +1631,7 @@ async function boot(){
       session_infer_missing:(h,a)=>JSON.parse(exports.session_infer_missing(h,a)),
       session_extract_design_system:(h,a)=>JSON.parse(exports.session_extract_design_system(h,a)),
       session_generate_responsive:(h,a)=>JSON.parse(exports.session_generate_responsive(h,a)),
+      session_generate:(h,i,n)=>JSON.parse(exports.session_generate(h,i,n)),
       session_benchmark:h=>JSON.parse(exports.session_benchmark(h)),
       session_component_compile_b64:(h,b)=>JSON.parse(exports.session_component_compile_b64(h,b)),
       session_library_snapshot:h=>JSON.parse(exports.session_library_snapshot(h)),

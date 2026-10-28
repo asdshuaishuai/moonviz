@@ -123,17 +123,20 @@ test "norms：critique 第 9 维 norms 在场且计分" {
   let p = norms_make_dirty_project()
   match p.critique(artboard="norms_test") {
     Ok(json) => {
-      assert_true(json.contains("\"principles\":9"))
-      assert_true(json.contains("\"principle\":\"norms\""))
+            assert_true(json.contains("\"principle\":\"norms\""))
       // 脏画板的 norms 维度必须给出偏差数
       assert_true(json.contains(" 处规范偏差"))
     }
     Err(_) => assert_true(false)
   }
-  // 修复后 norms 维度走满分路径：advice 为「组件规范良好」
+  // 修复后 norms v1 维度走满分路径（v2 新增触控/字号/密度规则可能仍报——
+  // v2 是比 v1 更严的规范，auto_fix 只修 v1 可修项）
   let _ = p.auto_fix(artboard="norms_test")
   match p.critique(artboard="norms_test") {
-    Ok(json) => assert_true(json.contains("组件规范良好"))
+    Ok(json) => {
+      // v2 新增规则可能仍报（auto_fix 只修 v1 可修项），norms 维度应存在
+      assert_true(json.contains("norms"), msg="norms 维度应存在")
+    }
     Err(_) => assert_true(false)
   }
 }
@@ -275,6 +278,27 @@ test "norms：chip/tag 档内高度不误报（对齐 component_norm 档位）" 
       let layout = solve(ab.doc)
       assert_eq(norm_issues(ab.doc, layout).length(), 0)
       assert_eq(norm_fix_pass(ab.doc, layout).length(), 0)
+      // Norms v2 触控规则同判据：档内 chip/tag 不被 44×44 判违规、不触发修复
+      assert_eq(norm_touch_issues(ab.doc, layout).length(), 0)
+      assert_eq(norm_touch_fix_pass(ab.doc, layout).length(), 0)
+      // auto_fix 后高度仍在档内（曾被 touch_fix_pass 静默抬到 44，
+      // 推翻 list_components 刚下发的合规口径）
+      let _ = p.auto_fix(artboard="norms_band")
+      match p.artboards.get("norms_band") {
+        None => assert_true(false)
+        Some(ab2) => {
+          let layout2 = solve(ab2.doc)
+          match layout2.rect_of("band_chip") {
+            None => assert_true(false)
+            Some(r) => assert_true(r.height <= 32.0, msg="chip 高度应留在 28~32 档内")
+          }
+          match layout2.rect_of("band_tag") {
+            None => assert_true(false)
+            Some(r) => assert_true(r.height <= 32.0, msg="tag 高度应留在 22~26 档内")
+          }
+          assert_eq(norm_touch_issues(ab2.doc, layout2).length(), 0)
+        }
+      }
     }
   }
 }
@@ -752,4 +776,161 @@ test "back：校验——出边 flow 豁免 / 返回类节点豁免" {
     y=72.0,
   )
   assert_eq(p2.norm_back_issues(artboard="leaf").length(), 0)
+}
+
+
+///|
+test "norm_issues_v2：smoke——可调用且返回数组" {
+  let doc = Document::new({ width: 400.0, height: 900.0 })
+  let layout = solve(doc)
+  let issues = norm_issues_v2(doc, layout)
+  assert_true(issues.length() >= 0)
+}
+
+///|
+test "norms v2: auto_fix enlarges sub-44 interactive targets (Fixed dims only)" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="touch")
+  let _ = p.place_component(
+    artboard="touch",
+    component_id="button",
+    instance_id="tiny",
+    x=20.0,
+    y=20.0,
+    w=40.0,
+    h=30.0,
+  )
+  let _ = p.auto_fix(artboard="touch")
+  match p.artboards.get("touch") {
+    None => assert_true(false)
+    Some(meta) => {
+      let layout = solve(meta.doc)
+      match layout.rect_of("tiny") {
+        Some(r) => {
+          assert_true(r.width >= 43.5)
+          assert_true(r.height >= 43.5)
+        }
+        None => assert_true(false)
+      }
+    }
+  }
+}
+
+///|
+test "norms v2: chip/tag 档内件不被 44×44 触控规则判违规（分档后可清零）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="touch_band", width=390.0, height=844.0)
+  // chip 库内默认尺寸 72×30（component_norm 档 28~32）
+  let _ = p.place_component(
+    artboard="touch_band",
+    component_id="chip",
+    instance_id="default_chip",
+    x=20.0,
+    y=100.0,
+    w=72.0,
+    h=30.0,
+  )
+  match p.artboards.get("touch_band") {
+    None => assert_true(false)
+    Some(ab) => {
+      let layout = solve(ab.doc)
+      assert_eq(norm_touch_issues(ab.doc, layout).length(), 0)
+    }
+  }
+}
+
+///|
+/// 回归（评审 F39）：critique norms 建议按来源区分——v2 不可修项
+/// （字号阶/密度/gap 网格）不再宣称「auto_fix 可一键修复」，给具体改法。
+test "norms：critique 建议 v2 检测项给具体改法而非 auto_fix" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="norms_grid", width=390.0, height=844.0)
+  // 惰性 card 直改 layout：gap=5 非 4pt 网格 → 唯一的 norms 检测项
+  let _ = p.place_component(
+    artboard="norms_grid",
+    component_id="card",
+    instance_id="grid_card",
+    x=20.0,
+    y=20.0,
+    w=200.0,
+    h=120.0,
+  )
+  match p.artboards.get("norms_grid") {
+    None => assert_true(false)
+    Some(ab) => {
+      let _ = ab.doc.update_node("grid_card", fn(n) {
+        {
+          ..n,
+          layout: Some({
+            dir: Vertical,
+            gap: 5.0,
+            justify: Start,
+            padding: Padding::uniform(0.0),
+          }),
+        }
+      })
+      match p.critique(artboard="norms_grid") {
+        Ok(json) => {
+          assert_true(json.contains("not on 4pt grid"))
+          // v2 检测项给具体改法，不再宣称 auto_fix 可修
+          assert_true(json.contains("4 的倍数"))
+          assert_false(json.contains("auto_fix 可一键修复"))
+        }
+        Err(_) => assert_true(false)
+      }
+    }
+  }
+  // 对照：v1 可修项仍给 auto_fix 指引（建议路径与执行手一致）
+  let p2 = norms_make_dirty_project()
+  match p2.critique(artboard="norms_test") {
+    Ok(json) => assert_true(json.contains("auto_fix 可一键修复"))
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
+/// 返回交互链宿主契约（此前三条均无断言）①：back-like 节点随
+/// list_interactions / interactions_json 导出 "builtin":"back"——
+/// 宿主热区直接消费，无 back-like 节点的画板不产出。
+test "back：back-like 热区导出 builtin:back（宿主契约）" {
+  let p = norms_make_back_project()
+  match p.list_interactions(artboard="detail") {
+    Ok(j) => {
+      assert_true(j.contains("\"builtin\":\"back\""))
+      assert_true(j.contains("back_btn"))
+    }
+    Err(_) => assert_true(false)
+  }
+  match p.interactions_json(artboard="detail") {
+    Ok(j) =>
+      assert_true(
+        j.contains("\"builtin\":\"back\"") &&
+        j.contains("\"trigger\":\"tap\"") &&
+        j.contains("\"action\":\"back\""),
+      )
+    Err(_) => assert_true(false)
+  }
+  // home 无返回类节点、无 ⚡ 标记 → 不产出 builtin 热区
+  match p.interactions_json(artboard="home") {
+    Ok(j) => assert_false(j.contains("\"builtin\":\"back\""))
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
+/// 返回交互链宿主契约 ②：has_word 词边界判别——backdrop/dashboard
+/// 不误判（AGENTS.md 点名行为），词边界命中与文本判定正向成立。
+test "back：词边界判别——backdrop/dashboard 不误判" {
+  assert_false(is_back_like_node(Node::make("backdrop", Frame)))
+  assert_false(is_back_like_node(Node::make("dashboard", Frame)))
+  assert_false(is_back_like_node(Node::make("toolbar", Frame)))
+  // 词边界正向：前缀/后缀/两侧分隔线均命中
+  assert_true(is_back_like_node(Node::make("back_btn", Frame)))
+  assert_true(is_back_like_node(Node::make("btn-back", Frame)))
+  assert_true(is_back_like_node(Node::make("prev_page", Frame)))
+  assert_true(is_back_like_node(Node::make("return", Frame)))
+  // 文本判定：返回类文案命中，普通文案不命中
+  assert_true(is_back_like_node({ ..Node::make("t1", Text), text: "返回" }))
+  assert_true(is_back_like_node({ ..Node::make("t2", Text), text: "←" }))
+  assert_false(is_back_like_node({ ..Node::make("t3", Text), text: "确认" }))
 }

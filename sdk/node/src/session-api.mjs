@@ -87,6 +87,23 @@ export class Session {
   /** 自然语言布局意图（居中 | 垂直排列 | 等宽 | 间距 N …；与 wasm sessionConstrain 同语义）。 */
   constrain(artboard, intent) { return this.exec(`constrain ${artboard} ${intent}`); }
 
+  /**
+   * 生成式 UI（执行策略第一级）：一句话意图 → 完整画板 + 报告
+   * （autofix/missing/score；与 wasm sessionGenerate 同语义）。
+   *
+   * 换行分帧 + 空格分词协议下，intent 与 name 均须双引号包裹并转义内嵌
+   * 反斜杠与双引号——裸插值的意图含 " as " 或 name 含空格时，会被引擎
+   * 的尾缀解析劫持（仅 "as" 恰为倒数第二 token 才消费为画板名，否则
+   * 并入意图并回落默认名，仍报 ok:true；与 CLI generate 语义对齐，
+   * 见 cli/main.mbt）。name 缺省/空串时不拼 as 尾缀，画板名回落
+   * template_id（与 CLI usage `generate <意图一句话> [as <name>]` 同款）。
+   */
+  generate(intent, name) {
+    const quoted = s => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    const tail = name == null || name === '' ? '' : ` as ${quoted(name)}`;
+    return this.exec(`generate ${quoted(intent)}${tail}`);
+  }
+
   /** 交互清单。 */
   interactions(artboard) { return this.exec(`interactions ${artboard}`); }
 

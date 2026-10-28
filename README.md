@@ -1,10 +1,27 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.10
+
+- **Full-domain audit & repair wave** — 83 confirmed findings fixed across the
+  engine: data fidelity (save/open escape round-trip, Document JSON now carries
+  all node style fields), envelope JSON legality (`json_escape` sweeps across
+  wasm/CLI/MCP exports), wasm slot contract aligned with `docs/wasm-abi.md`,
+  robustness (nested snap-to-grid, responsive variant tree validity, SVG
+  transform/filter merging, `export_react` JSX), export surfaces (CLI `unflow`
+  arm, CLI set-state off-by-one, MCP JSON-RPC id/notification semantics,
+  missing-param validation), norms v2 touch rule reconciled with v1 tiers, and
+  SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
+  platform-package version alignment).
+- **Docs & site full sync** — every count re-anchored to live engine output
+  (55 tools / 27 ops / 73 wasm exports / 9-dimension critique / 52 core
+  modules), version examples moved to `<ver>` placeholders.
+- Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
+
 ## What's New in 0.1.9-fix
 
 - **Hardening patch** — component norms + built-in back navigation (merged from dev),
-  device Git operating rules documented (gh-first, SSH fallback). 231 tests green
-  on the default target.
+  device Git operating rules documented (gh-first, SSH fallback). Full test suite
+  green on the default target and `--target native`.
 
   （Correction note — this fix-2 exists to correct the packaged README; an earlier version of this section wrongly listed Smart UX
   consumption-surface items — those live on the release/1.0 branch and are NOT
@@ -90,7 +107,7 @@
 │  discover components → create artboard → place → lint →      │
 │  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (52 tools, JSON in/out)
+               │ Agent Tools API (55 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -116,36 +133,51 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent Tool List (52 tools)
+## Selected Agent Tools (subset)
+
+Every name below is taken verbatim from the live dictionary (`list-tools` on the CLI / `tools/list` on MCP, 55 entries) — nothing here is a placeholder.
 
 | Tool | Semantics |
 | :--- | :--- |
-| `list_components` | List all available UI components (with variants/descriptions/categories) |
-| `list_tokens` | List design tokens (colors/spacings/radii/font sizes) |
-| `create_artboard` | Create a new artboard (name, width, height) |
-| `list_artboards` | List all artboards in the project with metadata |
-| `place_component` | Place a component instance on an artboard |
-| `query_nodes` | Query nodes by kind/component/text content |
-| `lint_design` | Design quality checks (contrast/touch/spacing/consistency) |
-| `get_violations` | Get the non-crash predicate violation list |
-| `suggest_fix` | Actionable fix patches for violations |
-| `export_svg` | Export an artboard as engine-derived SVG |
+| `list_components` | List all UI components (builtin + user) with variants/categories/descriptions |
+| `list_tokens` | List design tokens (colors/spacings/radii/typography) |
+| `list_artboards` | List all artboards in the project with metadata and node counts |
+| `apply_template` | Instantiate a template as a new artboard (id = template_id unless overridden) |
+| `place_component` | Place a component instance on an artboard at final size (w/h applied at place time, so the gate evaluates the final bbox) |
+| `update_node` | Edit node properties via space-separated k=v pairs |
+| `query_nodes` | Query nodes of an artboard (id/kind/component/rect/style/text) |
+| `lint_design` | Design quality lint (contrast/touch-target/spacing/readability); returns structured suggestions |
+| `auto_fix` | Auto-fix fixable violations on an artboard |
+| `align_nodes` | Align ≥2 nodes (modes: left / right / top / bottom / hcenter / vcenter) |
+| `suggest_alignment` | Suggest alignment fixes for an artboard |
+| `export_html` | Export the whole project as a self-contained interactive HTML prototype (node-level flows, state CSS, nav stack, toast) |
+| `export_svg` | Export one artboard as SVG (themed surface/outline) |
+| `export_design_system` | Export an artboard's extracted design system as deliverables: tokens JSON + CSS custom properties |
 | `collab_merge` | Multi-agent three-way merge: submit N agents' op sequences, get conflicts + auto-resolution |
 | `history` | Design version control: init/commit/log/undo/redo/checkout/diff (time travel + semantic diff) |
 | `animation_presets` / `animation_css` | List the 6 animation presets / generate CSS @keyframes for a node |
 | `protest` | Run a prototype test script (assertion-based navigation/inputs/render/violations) |
-| `read_mbt` | Read and validate a complete `.mbt.md` source |
-| `render_mbt` | Re-parse and render from `.mbt.md` |
-| `ddp_view` | Read-only DDP view and render contract |
-| `export_react` | React TSX component stubs (code generation only, not a fact source) |
-| `apply_template` | Generate a complete artboard from a template (one sentence → full page) |
-| `fork_variants` | Fork design variants (parallel A/B exploration) |
-| `score_variants` | Score all variants (violations/lint/alignment/richness) |
-| `merge_variant` | Merge the best variant back into the main branch |
-| `auto_arrange` | Vertical equal-spacing auto-arrange |
-| `snap_to_grid` | Snap to an N px grid |
-| `center_in_parent` | Center within parent |
-| `suggest_alignment` | Detect near-alignments and suggest snapping |
+| `read_mbt` | Return canonical `.mbt.md` source from a base64 document |
+| `render_mbt` | Validate + render canonical `.mbt.md` (full artboards JSON) |
+| `ddp_view` | Report DDP codec status (read-only view) |
+| `generate` | **Generative UI entry (execution tier 1)**: one-sentence intent → engine picks a semantic template, self-heals norms/predicates, returns a report (autofix/missing/score). Prefer over node-by-node placement |
+| `batch_apply` | **Execution tier 2**: multiple session ops in ONE call (newline-separated, base64, max 64); executes in order, aborts at the first error and returns its index |
+
+Lower-level primitives such as `create` / `fix` / `autofill` are **ops**, not tools — they live in the 27-entry op dictionary (`list_ops`) and are reached through `batch_apply` or the CLI line protocol.
+
+## Generative UI: genUI First, Tools as the Fallback
+
+Two modes, one engine — both fully retained:
+
+- **genUI (primary)** — `generate` one sentence of intent → complete,
+  norms-healed artboard + report (autofix/missing/score); `autofill`
+  materializes the report's missing elements; `batch_apply` packs a
+  refinement pass into one call.
+- **Tool mode (fallback, fully retained)** — the complete per-node
+  vocabulary (all 55 tools / 27 ops) stays unchanged: freeform artboards,
+  layouts no template matches, surgical edits, probes. The ladder ranks
+  channels by cost, not by permission — falling through to tools is correct
+  behavior whenever no recipe expresses your intent.
 
 ## Built-in Page Templates (14 complete pages)
 
@@ -205,7 +237,7 @@ cd ddp && cargo build --release && cd ..
 #    Produces ddp/target/release/ddp_codec (stdin JSON → stdout JSON)
 #    Override the path with MOONVIZ_DDP_HELPER; the SDK searches ddp/target/{debug,release} automatically
 
-# 4. Full test suite (205 on the default target; 209 with --target native)
+# 4. Full test suite (dynamic: `moon test --target native` is the full matrix; counts grow with the release)
 moon test
 ```
 
@@ -268,7 +300,7 @@ moonviz/
 │   ├── tokens.mbt     Design tokens (Material 3 style)
 │   ├── component.mbt  Component system (65 components × 115 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
-│   ├── agent_api.mbt  Agent tool API (52 tools + list-ops op dictionary)
+│   ├── agent_api.mbt  Agent tool API (55 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
 │   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
 │   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)
@@ -283,7 +315,7 @@ moonviz/
 │   ├── responsive.mbt Responsive breakpoints (phone/tablet/desktop auto-adaptation)
 │   ├── collab.mbt     Multi-agent collaboration (operational transform/conflict detection/three-way merge)
 │   ├── history.mbt    Design version control (time travel/branching/change replay/undo-redo)
-│   ├── critique.mbt   AI design critique (automatic review against 8 design principles)
+│   ├── critique.mbt   AI design critique (automatic review against 9 design principles)
 │   ├── annotate.mbt   Design annotation (auto-generated spec docs/CSS variables/spacing-color-type annotations)
 │   ├── animation.mbt  Property animation (keyframes/easing/timeline choreography/CSS export)
 │   ├── extract.mbt    Design-system reverse extraction (infer tokens + component patterns from existing designs)
@@ -296,8 +328,9 @@ moonviz/
 │   └── agent_test.mbt Agent workflow end-to-end tests
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
-├── mcp/               MCP Server (stdio JSON-RPC; 52 tools mirroring the CLI)
-├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 27 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
+├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
+├── mcp/               MCP Server (stdio JSON-RPC; 55 tools mirroring the CLI)
+├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 28 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
@@ -305,10 +338,31 @@ moonviz/
 ├── npm/               npm distribution: moonviz-mcp (launcher) + moonviz-skill + moonviz-bin-<platform> (prebuilt platform packages)
 ├── playground/        Terminal canvas + PNG rendering + REPL
 ├── site/              Website (GitHub Pages: asdshuaishuai.github.io/moonviz/)
-├── scripts/           publish-npm.sh and other release scripts
+├── scripts/           publish-all.sh / backup-release.sh (release scripts) + check-wasm-abi.mjs
 ├── examples/          DDP2 parse/render replica samples (CI example repro)
-└── docs/              Design documents 01–11 + wasm-abi.md
+└── docs/              Design documents 01–12 + wasm-abi.md
 ```
+
+## Webview Self-Rendering (desktop/, client-guided)
+
+The engine provides rendering — but never uses it on its own. The engine has
+**no UI, no window, and never acquires a rendering surface by itself**; the
+capability is strictly **client-guided**: the client (Tauri / Electron / any
+native shell) launches the engine, points it at a source
+(`MOONVIZ_DOC=<path.mbt.md>`), and hosts the result:
+
+1. **Client webview surface** — point your webview at the rendered artifact
+   (`MOONVIZ_OUT`, default `moonviz-render.html`): a fully self-contained
+   interactive prototype (tab switching / flows / toasts / state polymorphism
+   baked in). Tauri / Electron ship zero rendering code.
+2. **System fallback** — in a native environment with no webview, the engine
+   renders via the system layer and returns the result: the artifact on disk,
+   or the self-contained HTML on stdout when disk is unavailable.
+
+With no guidance (no `MOONVIZ_DOC`) the engine stays inert — a usage envelope
+only, no rendering, no files (CI asserts this). The whole chain
+`.mbt.md → load_mbt_project → export_html` runs in-process, pure MoonBit —
+no sidecar, no upper-layer framework. See `desktop/README.md`.
 
 ## Interactive Prototype System
 
@@ -317,10 +371,11 @@ Prototypes are not static pictures — MoonViz has a complete interaction runtim
 | Concept | Description |
 |:---|:---|
 | **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_text / submit_form / show_toast |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound (submit_form exists only at the API layer — no spec syntax yet) |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | Component polymorphism (default / pressed / disabled / loading) |
 | **NavigationState** | Navigation stack (push / pop / back) |
+| **Motion** | Engine-sourced motion tokens (120/240/360ms scale + easing curves incl. spring) drive the exported prototype: direction-aware transitions (navigate forward / back reversed / tab fade), spring press feedback, staggered entrance, `prefers-reduced-motion` support, ESC = back |
 
 ## Agent Intermediate Artifacts (.moonviz)
 
@@ -478,7 +533,7 @@ h.diff(0, 2)     // → semantic diff between two revisions
 
 ## AI Design Critique Engine
 
-The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 8 design principles:
+The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 9 design principles (the 9th, `norms`, scores component-craft deviations):
 
 | Principle | What is checked |
 |:---|:---|
@@ -490,12 +545,13 @@ The engine reviews prototypes like a **senior designer** — not rule checking (
 | Balance | Left/right visual weight is balanced |
 | Focus | A clear primary CTA exists (primary button) |
 | Rhythm | Spacing values unify to standard tokens |
+| Norms | Component norms: button-label fit, contrast, seam dividers, touch targets |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":8,"results":[
+// → {"principles":9,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"balance","score":6,"verdict":"fair",...},...]}
+//     {"principle":"norms","score":8,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -588,7 +644,7 @@ p.enable_auto_dark()          // derive a dark variant from the current theme
 | nord | Nordic | #88C0D0 | #3B4252 |
 | sunset | Warm sunset | #FF7043 | #FFF8E1 |
 
-**Auto dark**: `Theme::auto_dark(light)` → invert luminance, keep hue → a dark variant is generated automatically.
+**Auto dark**: `Theme::auto_dark(light)` → invert each RGB channel (hue rotates 180°) → a dark variant is generated automatically.
 
 ## Component Slot System
 
@@ -681,7 +737,7 @@ Seven integration routes, the same `.mbt.md` fact source, the same dual gates:
 | **DDP container** | Rust `ddp_codec` (DDP1 encrypted / DDP2 keyless) | Encrypted design distribution, read-only viewers |
 | **WASM (classic)** | `moon build --target wasm` — pure WASM MVP (0 imports, linear memory), consumed by wasmtime/wasmi and any spec-compliant runtime | Rust hosts, server-side embedding |
 
-Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-0.1.3.wasm` / `moonviz-wasm-classic-0.1.3.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
+Every `engine-v*` tag publishes the **full artifact set** to GitHub Releases: 4 platform binary tarballs + both wasm builds (versioned, e.g. `moonviz-wasm-gc-<ver>.wasm` / `moonviz-wasm-classic-<ver>.wasm`) + the current npm package tarballs. Distribution does not depend on npm alone.
 
 MCP client configuration (npx prebuilt route):
 
@@ -757,3 +813,4 @@ MoonBit evolves fast; minor versions carry real behavioral risk. Four layers of 
 9. [09-rendering-ecosystem.md](docs/09-rendering-ecosystem.md) — MoonBit rendering ecosystem survey
 10. [10-render-pipeline.md](docs/10-render-pipeline.md) — **Complete technical notes on the rendering scheme and pipeline** (declaration parsing → layout → predicates → SVG/PNG/terminal backends + tech stack + binary distribution and toolchain risk)
 11. [11-user-components.md](docs/11-user-components.md) — User components (component_compile / component_import / component_export)
+12. [12-generative-ui.md](docs/12-generative-ui.md) — Generative UI and the Agent execution strategy (pipeline / report-driven loop / composite intents / integration matrix / invariants)
