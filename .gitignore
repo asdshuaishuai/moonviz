@@ -11,3 +11,4 @@ site/assets/
 LLM/
 .workbuddy/
 scripts-gen-bgm.py
+release-media/
