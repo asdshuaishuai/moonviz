@@ -37,6 +37,10 @@ pub(all) struct Project {
   /// 宿主批注透传（issue #20）：canonical 扫描时收集的非 moonviz 顶层
   /// HTML 注释。写路径再生 canonical 时原样回写；clone/replace_with 随行。
   mut doc_comments : Array[DocComment]
+  /// frontmatter 未知键透传（issue #20 下半场）：canonical 扫描时收集的
+  /// 非引擎权威键行（如顶层 extra_section / moonviz 下 deepdesign_ink），
+  /// 写路径原样回写；clone/replace_with 随行。
+  mut extra_front_matter : Array[String]
 }
 
 ///|
@@ -60,6 +64,7 @@ pub fn Project::new() -> Project {
     active_theme: "light",
     token_overrides: None,
     doc_comments: [],
+    extra_front_matter: [],
   }
 }
 
@@ -165,6 +170,10 @@ pub fn Project::clone(self : Project) -> Project {
   for cm in self.doc_comments.iter() {
     copy.doc_comments.push({ text: cm.text, anchor: cm.anchor, })
   }
+  copy.extra_front_matter = []
+  for line in self.extra_front_matter.iter() {
+    copy.extra_front_matter.push(line)
+  }
   copy
 }
 
@@ -186,6 +195,7 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.active_theme = source.active_theme
   self.token_overrides = source.token_overrides
   self.doc_comments = source.doc_comments
+  self.extra_front_matter = source.extra_front_matter
 }
 
 // ---------------------------------------------------------------------------

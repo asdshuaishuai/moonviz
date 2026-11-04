@@ -338,3 +338,41 @@ test "空态往返：零画板项目 → canonical → load 闭环（issue #27�
     }
   }
 }
+
+///|
+test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue #20）" {
+  let src = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  entry: w\n  extra_section: hello\n  artboards:\n    - w\n  deepdesign_ink:\n    v: 1\ncustom_top: 42\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("load 失败：\{e}")
+      abort("")
+    }
+  }
+  let canonical = model.to_mbt()
+  assert_true(
+    canonical.contains("extra_section: hello"),
+    msg="moonviz 未知子键必须透传：\{canonical}",
+  )
+  assert_true(
+    canonical.contains("deepdesign_ink:"),
+    msg="moonviz 嵌套未知子键必须透传：\{canonical}",
+  )
+  assert_true(
+    canonical.contains("custom_top: 42"),
+    msg="顶层未知键必须透传：\{canonical}",
+  )
+  // 幂等：canonical 再次加载后仍保留，不翻倍
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  let canonical2 = back.to_mbt()
+  let needles = ["extra_section: hello", "deepdesign_ink:", "custom_top: 42"]
+  for needle in needles.iter() {
+    assert_true(canonical2.contains(needle), msg="二次往返必须保持 \{needle}")
+  }
+}

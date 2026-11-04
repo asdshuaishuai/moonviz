@@ -28,6 +28,9 @@ pub(all) struct MbtDocument {
   /// 宿主侧文档级批注（deepdesign:ink 等）的持久化通道。anchor 为其后
   /// 最近的画板 id（无 → None = 文档级，序列化在文末）。
   comments : Array[@core.DocComment]
+  /// frontmatter 未知键行透传（issue #20）：引擎权威字段（moonbit 段与
+  /// moonviz 已知子键）由 canonical 再生，其余键及其缩进负载原样回写。
+  extra_front_matter : Array[String]
 }
 
 ///|
@@ -312,6 +315,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
     blocks,
     visual_blocks,
     comments,
+    extra_front_matter: mbt_extra_front_matter(front),
   })
 }
 
@@ -587,6 +591,7 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       // 不再拒绝——空项目的 entry 允许为空，门与渲染对零画板是恒等操作。
       let project = @core.Project::new()
       project.doc_comments = document.comments
+      project.extra_front_matter = document.extra_front_matter
       for block in document.visual_blocks.iter() {
         let artboard_id = match block.artboard_id {
           Some(id) => id
@@ -781,6 +786,7 @@ pub fn project_to_mbt(
     blocks: [],
     visual_blocks: [],
     comments: project.doc_comments,
+    extra_front_matter: project.extra_front_matter,
   }
   Ok({ project, document, entry: actual_entry, })
 }
@@ -876,6 +882,11 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
       out.write_string("      to: " + flow.to + "\n")
       out.write_string("      trigger: " + flow.trigger + "\n")
     }
+  }
+  // issue #20：frontmatter 未知键原样回写——宿主扩展通道（如
+  // deepdesign_ink / extra_section）不因引擎写路径而丢失。
+  for line in self.document.extra_front_matter.iter() {
+    out.write_string(line + "\n")
   }
   out.write_string("---\n\n")
   out.write_string("# " + self.document.title + "\n\n")
@@ -1044,4 +1055,94 @@ pub fn MbtProject::render_json(self : MbtProject) -> String {
   }
   out.write_string("]}")
   out.to_string()
+}
+
+///|
+/// 行首空格数（frontmatter 缩进判定用；仅 ASCII 空格）。
+fn mbt_indent(s : String) -> Int {
+  let mut i = 0
+  for c in s.iter() {
+    if c == ' ' {
+      i = i + 1
+    } else {
+      break
+    }
+  }
+  i
+}
+
+///|
+/// 取冒号前的键名（trim 后）；无冒号返回整行 trim 结果。
+fn mbt_key_before_colon(s : String) -> String {
+  let mut key = ""
+  for c in s.iter() {
+    if c == ':' {
+      break
+    }
+    key = key + "\{c}"
+  }
+  mbt_trim(key)
+}
+
+///|
+/// issue #20：frontmatter 未知键透传。
+///
+/// 引擎权威字段（`moonbit:` 段整体、`moonviz:` 下的 format/revision/
+/// title/entry/artboards/theme/tokens/flows）由 canonical 再生；其余键
+/// （顶层未知键如 `extra_section`、moonviz 未知子键如 `deepdesign_ink`）
+/// 连同其缩进负载原样收集返回——写路径据此回写，注释通道之外的宿主
+/// 文档级数据由此具备持久化通道。
+fn mbt_extra_front_matter(front : String) -> Array[String] {
+  let out : Array[String] = []
+  let known_sub = [
+    "format", "revision", "title", "entry", "artboards", "theme", "tokens", "flows",
+  ]
+  // mode: 0=顶层 1=moonbit 段（整段再生，跳过） 2=moonviz 已知子键负载（跳过）
+  //       3=顶层未知键负载（透传） 4=moonviz 未知子键负载（透传）
+  let mut mode = 0
+  for raw in mbt_lines(front).iter() {
+    let trimmed = mbt_trim(raw)
+    if trimmed == "" {
+      if mode == 3 || mode == 4 {
+        out.push(raw)
+      }
+      continue
+    }
+    let indent = mbt_indent(raw)
+    if indent == 0 {
+      if mbt_has_prefix(trimmed, "moonbit:") {
+        mode = 1
+      } else if mbt_has_prefix(trimmed, "moonviz:") {
+        mode = 2
+      } else {
+        out.push(raw)
+        mode = 3
+      }
+      continue
+    }
+    if mode == 2 || mode == 4 {
+      if indent == 2 && !mbt_has_prefix(trimmed, "- ") {
+        let key = mbt_key_before_colon(trimmed)
+        let mut known = false
+        for k in known_sub.iter() {
+          if k == key {
+            known = true
+          }
+        }
+        if known {
+          mode = 2
+        } else {
+          out.push(raw)
+          mode = 4
+        }
+      } else if mode == 4 {
+        out.push(raw)
+      }
+      continue
+    }
+    if mode == 3 {
+      out.push(raw)
+    }
+  }
+  out
 }
