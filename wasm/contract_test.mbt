@@ -740,3 +740,32 @@ test "契约：session_constrain 成功信封回传 canonical mbt（issue #19）
   )
   let _ = session_close(h)
 }
+
+///|
+test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（issue #28）" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let s1 = session_snapshot(h)
+  assert_true(s1.contains("\"ok\":true"), msg="快照必须是成功信封：\{s1}")
+  assert_true(s1.contains("\"canonical\":\""), msg="快照必须回传 canonical：\{s1}")
+  assert_true(s1.contains("\"render\":{"), msg="快照必须回传 render：\{s1}")
+  assert_true(s1.contains("\"seq\":0"), msg="首帧 seq 从 0 开始：\{s1}")
+  assert_true(s1.contains("\"delta\":{"), msg="快照必须带 delta：\{s1}")
+  assert_true(
+    s1.contains("\"w/btn\""),
+    msg="首帧 added 必须包含 w/btn",
+  )
+  // 一次改文档 → seq +1；同一节点位移后进 changed
+  let mut_ = session_constrain(h, "w", "垂直居中")
+  assert_true(mut_.contains("\"ok\":true"), msg="constrain 应成功：\{mut_}")
+  let s2 = session_snapshot(h)
+  assert_true(s2.contains("\"seq\":1"), msg="改文档后 seq 必须 +1：\{s2}")
+  assert_true(
+    s2.contains("\"changed\":[\"w/btn\"]"),
+    msg="位移节点必须进 changed",
+  )
+  // 快照本身不推进 seq（只更新签名基线）
+  let s3 = session_snapshot(h)
+  assert_true(s3.contains("\"seq\":1"), msg="快照不得推进 seq：\{s3}")
+  let _ = session_close(h)
+}
