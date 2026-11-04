@@ -637,10 +637,11 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       // 居中的 as 是意图内容（"login as hero page"），按普通词并入意图，
       // 否则意图被截断且 "as" 之后的 token 被整体劫持为画板名。
       if parts.length() < 2 {
-        cli_err("usage: generate <意图一句话> [as <name>]")
+        cli_err("usage: generate <意图一句话> [spec=<b64>] [as <name>]")
       } else {
         let mut intent = parts[1]
         let mut artboard_name = ""
+        let mut spec_json = ""
         let mut i = 2
         while i < parts.length() {
           // 真尾部语义：仅 "as" 是倒数第二个 token（"as <name>" 恰好占满
@@ -648,14 +649,28 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           if parts[i] == "as" && i + 2 == parts.length() {
             artboard_name = parts[i + 1]
             i = i + 2
+          } else if parts[i].has_prefix("spec=") && parts[i].length() > 5 {
+            // issue #24：spec=<base64(design spec JSON)>（行协议内避免引号/空格）
+            match decode_mbt_b64(parts[i].substring(start=5)) {
+              Ok(text) => spec_json = text
+              Err(e) => return cli_err(e)
+            }
+            i = i + 1
           } else {
             intent = intent + " " + parts[i]
             i = i + 1
           }
         }
-        match p.generate(intent_text=intent, name=artboard_name) {
+        match p.generate(intent_text=intent, name=artboard_name, spec=spec_json) {
           Ok(json) => json
-          Err(e) => cli_err(e)
+          Err(e) =>
+            if e == "design_spec_required" {
+              "{\"ok\":false,\"error\":\"design_spec_required\",\"design_spec_draft\":" +
+              @core.design_spec_draft_json(intent) +
+              "}"
+            } else {
+              cli_err(e)
+            }
         }
       }
     "ops-batch-b64" =>
@@ -1301,7 +1316,7 @@ fn cli_help() -> String {
   "  spec <ab>            Generate design spec\n" +
   "\n" +
   "Generative (execution ladder, always start from the top):\n" +
-  "  generate <意图一句话> [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score); \"a+b\" composite → multi-artboard + auto nav flows (max 4)\n" +
+  "  generate <意图一句话> [spec=<b64>] [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score); \"a+b\" composite → multi-artboard + auto nav flows (max 4)\n" +
   "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
   "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
   "  autofill <ab>        Materialize the infer_missing report as real nodes, then auto_fix settles layout\n" +

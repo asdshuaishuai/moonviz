@@ -374,7 +374,7 @@ pub fn Project::critique(
       // auto_fix 的执行范围内（norm_fix_pass / norm_touch_fix_pass /
       // list_divider），给 auto_fix 指引；字号阶/密度/gap 网格是 v2 检测项、
       // auto_fix 没有对应修复通道——给具体改法，不宣称一键修复。
-      let norm_list = norm_issues_v2(doc, layout)
+      let norm_list = norm_issues_v2(doc, layout, radius_base=self.design_spec_radius_base())
       // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
       // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
       for s in self.norm_back_issues(artboard=artboard).iter() {

@@ -41,6 +41,9 @@ pub(all) struct Project {
   /// 非引擎权威键行（如顶层 extra_section / moonviz 下 deepdesign_ink），
   /// 写路径原样回写；clone/replace_with 随行。
   mut extra_front_matter : Array[String]
+  /// issue #24：当前生效的 design spec（JSON 文本；空 = 未注入）。
+  /// norms 的档位判定以 spec 为准（内置仅补 spec 未覆盖的项）。
+  mut design_spec : String
 }
 
 ///|
@@ -65,6 +68,7 @@ pub fn Project::new() -> Project {
     token_overrides: None,
     doc_comments: [],
     extra_front_matter: [],
+    design_spec: "",
   }
 }
 
@@ -174,6 +178,7 @@ pub fn Project::clone(self : Project) -> Project {
   for line in self.extra_front_matter.iter() {
     copy.extra_front_matter.push(line)
   }
+  copy.design_spec = self.design_spec
   copy
 }
 
@@ -196,6 +201,7 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.token_overrides = source.token_overrides
   self.doc_comments = source.doc_comments
   self.extra_front_matter = source.extra_front_matter
+  self.design_spec = source.design_spec
 }
 
 // ---------------------------------------------------------------------------

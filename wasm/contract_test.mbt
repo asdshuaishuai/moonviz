@@ -12,6 +12,10 @@
 const SEED : String = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n"
 
 ///|
+/// issue #24：契约测试用最小 design spec（生成必须带 spec）。
+const SPEC_MIN : String = "{\"v\":1,\"palette\":{\"primary\":\"#4B6BFB\"}}"
+
+///|
 test "契约：全部导出 × 非法输入 → 合法 JSON（issue #3）" {
   let bad_inputs = ["not a doc", "", "{\"x\":1"]
   for bad in bad_inputs {
@@ -680,7 +684,13 @@ test "契约：history 裸 commit 兼容 + 删板不复活旧栈（issue #21 审
 test "契约：session_generate 生成即变更回传 canonical mbt" {
   let h = session_open(SEED)
   assert_true(h >= 0)
-  let r = session_generate(h, "登录页", "gen_login")
+  // issue #24：生成必须带 spec（缺 spec 返回 design_spec_required + 草案）
+  let missing = session_generate(h, "登录页", "gen_login")
+  assert_true(
+    missing.contains("design_spec_required") && missing.contains("design_spec_draft"),
+    msg="缺 spec 必须显式要求并给草案: \{missing}",
+  )
+  let r = session_generate_spec(h, "登录页", "gen_login", SPEC_MIN)
   assert_true(r.contains("\"ok\":true"), msg="generate 应成功: \{r}")
   assert_true(r.contains("\"mbt\":\""), msg="变更信封必须回传 canonical mbt: \{r}")
   assert_true(r.contains("\"template\":\"login\""))
@@ -699,6 +709,11 @@ test "契约：session_generate 生成即变更回传 canonical mbt" {
 test "契约：session_generate_in 槽变体（UTF-8 intent 真传输）" {
   let h = session_open(SEED)
   assert_true(h >= 0)
+  // issue #24：主槽（in_）承载 design spec
+  in_reset()
+  for b in @utf8.encode(SPEC_MIN).iter() {
+    in_push(b.to_int(), 1)
+  }
   arg_reset()
   let intent = "登录页"
   for b in @utf8.encode(intent).iter() {

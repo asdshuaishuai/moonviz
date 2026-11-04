@@ -115,7 +115,11 @@ fn norm_need_h(
 /// 每条自带建议尺寸——Agent 读到就能改，不必自己换算。
 /// 顺序即优先级：结构性偏差（列表缺分割线）在前，逐条样式在后；
 /// 上限 8 条，控制报告体积（deepDesign 侧检视结果有 12KB 截断）。
-pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+pub fn norm_issues(
+  doc : Document,
+  layout : SolvedLayout,
+  radius_base? : Double = NORM_RADIUS_BASE,
+) -> Array[String] {
   let issues : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
     Some(r) => r.width
@@ -189,9 +193,9 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
               n.style.corner_radius < 999.0 {
               let r_cap = r.height / 2.0
               let r_now = n.style.corner_radius
-              if r_now < NORM_RADIUS_BASE - 0.5 && NORM_RADIUS_BASE <= r_cap {
+              if r_now < radius_base - 0.5 && radius_base <= r_cap {
                 issues.push(
-                  "\{json_escape(id)}(\{n.component}) 圆角 \{r_now.to_int()} 低于方正圆润档 → radius 8",
+                  "\{json_escape(id)}(\{n.component}) 圆角 \{r_now.to_int()} 低于方正圆润档 → radius \{radius_base.to_int()}",
                 )
                 continue
               }
@@ -225,6 +229,7 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
 pub fn norm_fix_pass(
   doc : Document,
   layout : SolvedLayout,
+  radius_base? : Double = NORM_RADIUS_BASE,
 ) -> Array[String] {
   let fixes : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
@@ -291,8 +296,8 @@ pub fn norm_fix_pass(
               n.style.corner_radius < 999.0 {
               let r_cap = new_h / 2.0
               let r_now = n.style.corner_radius
-              if r_now < NORM_RADIUS_BASE - 0.5 && NORM_RADIUS_BASE <= r_cap {
-                new_r = NORM_RADIUS_BASE
+              if r_now < radius_base - 0.5 && radius_base <= r_cap {
+                new_r = radius_base
                 if why == "" { why = "圆角归档 8" }
               } else if r_now > r_cap + 0.5 {
                 new_r = r_cap
@@ -1133,8 +1138,12 @@ pub fn norm_readability_issues(doc : Document, layout : SolvedLayout) -> Array[S
   issues
 }
 
-pub fn norm_issues_v2(doc : Document, layout : SolvedLayout) -> Array[String] {
-  let issues = norm_issues(doc, layout)
+pub fn norm_issues_v2(
+  doc : Document,
+  layout : SolvedLayout,
+  radius_base? : Double = NORM_RADIUS_BASE,
+) -> Array[String] {
+  let issues = norm_issues(doc, layout, radius_base~)
   for issue in norm_touch_issues(doc, layout).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }

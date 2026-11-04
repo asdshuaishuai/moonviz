@@ -828,15 +828,59 @@ pub fn session_generate(
   intent : String,
   name : String,
 ) -> String {
-  sess_mut_json(handle, fn(p) { p.generate(intent_text=intent, name=name) })
+  session_generate_core(handle, intent, name, "")
 }
 
 ///|
-/// classic 槽变体：辅槽（arg）= intent，三槽（arg2）= name。
-/// 注意这是槽语义表的唯一特例（一般规则 intent 走三槽）——name 是
-/// 新画板名而非画板引用，故与 constrain_in 的 arg=artboard 布局不同。
+/// issue #24：规范驱动生成的直接导出（spec = design spec JSON 字符串）。
+/// spec 缺失/空白 → {"ok":false,"error":"design_spec_required",
+/// "design_spec_draft":{…}}，宿主落盘草案后带 spec 重试。
+pub fn session_generate_spec(
+  handle : Int,
+  intent : String,
+  name : String,
+  spec : String,
+) -> String {
+  session_generate_core(handle, intent, name, spec)
+}
+
+///|
+fn session_generate_core(
+  handle : Int,
+  intent : String,
+  name : String,
+  spec : String,
+) -> String {
+  sess_mut_json(handle, fn(p) {
+    match p.generate(intent_text=intent, name=name, spec=spec) {
+      Ok(env) => Ok(env)
+      // issue #24：spec 缺失是显式要求——随信封回传可编辑草案，
+      // 而不是普通错误（宿主据此走「写规范 → 重试」闭环）。
+      Err(e) =>
+        if e == "design_spec_required" {
+          Ok(
+            "{\"ok\":false,\"error\":\"design_spec_required\",\"design_spec_draft\":" +
+            @core.design_spec_draft_json(intent) +
+            "}",
+          )
+        } else {
+          Err(e)
+        }
+    }
+  })
+}
+
+///|
+/// classic 槽变体：主槽（in_）= design spec（issue #24，必带），
+/// 辅槽（arg）= intent，三槽（arg2）= name。name 是新画板名而非画板
+/// 引用，故与 constrain_in 的 arg=artboard 布局不同。
 pub fn session_generate_in(handle : Int) -> String {
-  session_generate(handle, slot_string(g_arg_bytes), slot_string(g_arg2_bytes))
+  session_generate_core(
+    handle,
+    slot_string(g_arg_bytes),
+    slot_string(g_arg2_bytes),
+    slot_string(g_in_bytes),
+  )
 }
 
 ///|

@@ -247,7 +247,13 @@ pub fn Project::generate(
   self : Project,
   intent_text~ : String,
   name? : String = "",
+  spec? : String = "",
 ) -> Result[String, String] {
+  // issue #24：spec 在场 = 第一权威；缺失 = 显式要求，不静默用引擎内置
+  // 规范生成。宿主拿到 design_spec_required 后按 design_spec_draft 落盘重试。
+  if ds_is_blank(spec) {
+    return Err("design_spec_required")
+  }
   // 组合意图（"登录+注册"）：多段走 multi 通道（多画板 + 相邻导航流）；
   // 单段路径保持字节级不变（兼容既有信封消费者）
   let segs = split_intent_segments(intent_text)
@@ -255,7 +261,7 @@ pub fn Project::generate(
     if segs.length() > GENERATE_MULTI_MAX {
       return Err("generate_multi_too_many:\{GENERATE_MULTI_MAX}")
     }
-    return self.generate_multi(segs, name=name)
+    return self.generate_multi(segs, name=name, spec=spec)
   }
   let intent = parse_generate_intent(intent_text)
   let ab_name = if name == "" { intent.template_id } else { name }
@@ -279,6 +285,11 @@ pub fn Project::generate(
     ) {
     Err(error) => return Err(error)
     Ok(id) => id
+  }
+  // issue #24：spec 应用到新板（调色板重着色 + 字号阶/圆角档规范化）
+  match self.apply_design_spec(artboard=ab, spec=spec) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
   }
   // 信封暴露实际宽高：模板可能不消费意图宽度（多数模板保留内建
   // 390×844），Agent 无从发现与意图不符，除非信封可见。
@@ -584,7 +595,12 @@ pub fn Project::generate_multi(
   self : Project,
   segments : Array[String],
   name? : String = "",
+  spec? : String = "",
 ) -> Result[String, String] {
+  // issue #24：直调者也必须带 spec（不静默兜底）
+  if ds_is_blank(spec) {
+    return Err("design_spec_required")
+  }
   // 1) 逐段分类；无页面语义的段视为主题修饰（dark 等）不生成板。
   //    页面段原文必须记账：退化单通道时拿页面段重拼——写死 segments[0]
   //    会把主题词在前的组合（"dark+登录"）退化成 "dark dark"，页面段
@@ -624,7 +640,7 @@ pub fn Project::generate_multi(
     // 单通道信封不含 skipped——有丢段时在结果头部注入，保持可见性。
     let only = page_segs[0]
     let with_theme = if theme != "" { "\{only} \{theme}" } else { only }
-    let r = self.generate(intent_text=with_theme, name=name)
+    let r = self.generate(intent_text=with_theme, name=name, spec=spec)
     if skipped.length() == 0 {
       return r
     }
@@ -683,6 +699,11 @@ pub fn Project::generate_multi(
       ) {
       Err(error) => return Err(error)
       Ok(id) => id
+    }
+    // issue #24：spec 应用到本板（与单板通道同一判据）
+    match self.apply_design_spec(artboard=ab, spec=spec) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
     }
     ids.push(ab)
     hints.push(gi.page_hint)

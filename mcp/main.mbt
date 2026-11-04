@@ -436,9 +436,17 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if intent == "" {
         return err_json("missing intent")
       }
-      match p.generate(intent_text=intent, name=name) {
+      let spec = extract_arg_string(request_line, "spec")
+      match p.generate(intent_text=intent, name=name, spec=spec) {
         Ok(json) => json
-        Err(e) => err_json(e)
+        Err(e) =>
+          if e == "design_spec_required" {
+            "{\"ok\":false,\"error\":\"design_spec_required\",\"design_spec_draft\":" +
+            @core.design_spec_draft_json(intent) +
+            "}"
+          } else {
+            err_json(e)
+          }
       }
     }
     "batch_apply" => {

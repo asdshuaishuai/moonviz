@@ -268,6 +268,7 @@ pub fn list_tools() -> Array[AgentTool] {
     [
       s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard); composite \"登录+注册\" splits on \"+\" (max 4 segments) → mode:\"multi\" envelope. NOTE: theme applies project-wide (recolors all existing artboards)"),
       so("name", "artboard name (default = template id)"),
+      s("spec", "design spec JSON (issue #24, required): {v, palette{primary/background/surface/text/muted/danger/success}, typography{display/h1/h2/h3/h4/body/caption}, spacing[], radius{sm/md/lg}, rules[]}. Absent/blank → {ok:false,error:design_spec_required,design_spec_draft:{…}} — persist the draft, then retry generate with it; the engine never silently falls back to its built-in design system"),
     ],
   )
   add(
