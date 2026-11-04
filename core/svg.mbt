@@ -64,6 +64,15 @@ fn render_node(
         Some(r) => {
           // 每个节点包一层 <g id>：编辑器据此把 DOM 元素与场景图节点关联
           sb.write_string("<g id=\"n_\{id}\" data-kind=\"\{svg_kind_of(n)}\">")
+          // issue #22：radius=999 只在方形节点上是圆；非方形必须钳制为
+          // min(r, min(w,h)/2) 并同时输出 rx/ry，否则 SVG 各自半边钳制
+          // 产出极端椭圆（420×40 搜索框 rx=210/ry=20）。
+          let rr = if n.style.corner_radius > r.width / 2.0 ||
+            n.style.corner_radius > r.height / 2.0 {
+            if r.width < r.height { r.width / 2.0 } else { r.height / 2.0 }
+          } else {
+            n.style.corner_radius
+          }
           match n.kind {
             Text => render_text_node(sb, n, r)
             Image => {
@@ -73,7 +82,7 @@ fn render_node(
               if has_url_prefix(src) {
                 if n.style.corner_radius > 0.0 {
                   sb.write_string(
-                    "<clipPath id=\"img_\{svg_id_tag(n.id)}\"><rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\"/></clipPath>",
+                    "<clipPath id=\"img_\{svg_id_tag(n.id)}\"><rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{rr}\" ry=\"\{rr}\"/></clipPath>",
                   )
                   sb.write_string(
                     "<image href=\"\{src}\" x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" preserveAspectRatio=\"xMidYMid slice\" clip-path=\"url(#img_\{svg_id_tag(n.id)})\"/>",
@@ -86,7 +95,7 @@ fn render_node(
               } else {
                 // 图片占位：浅灰底 + 山形/太阳图标 + 细边框，任何尺寸下可辨识
                 sb.write_string(
-                  "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\" fill=\"#EEF0F4\" stroke=\"#D5DAE3\" stroke-width=\"1\"/>",
+                  "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{rr}\" ry=\"\{rr}\" fill=\"#EEF0F4\" stroke=\"#D5DAE3\" stroke-width=\"1\"/>",
                 )
                 let ic = r.width / 6.0
                 if ic > 2.0 {
@@ -106,7 +115,7 @@ fn render_node(
             _ => {
               // Frame / Group / Rect
               sb.write_string(
-                "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{n.style.corner_radius}\" fill=\"\{paint_ref(n.style.fill, n.id)}\"",
+                "<rect x=\"\{r.x}\" y=\"\{r.y}\" width=\"\{r.width}\" height=\"\{r.height}\" rx=\"\{rr}\" ry=\"\{rr}\" fill=\"\{paint_ref(n.style.fill, n.id)}\"",
               )
               if n.style.stroke != "none" {
                 let sw = if n.style.stroke_width > 0.0 {

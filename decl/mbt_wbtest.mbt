@@ -81,11 +81,11 @@ test "human gate records visual debt while agent gate blocks the same MBT" {
 }
 
 ///|
-test "mbt check blocks cannot become visual pages without an mbt visual block" {
-  let invalid = "<!-- moonviz:artboard wrong -->\n```mbt check\ntest \"x\" { }\n```\n"
-  match load_mbt_project(invalid) {
-    Ok(_) => assert_true(false)
-    Err(error) => assert_eq(error, "mbt_no_visual_blocks")
+test "空态合法：零视觉块文档加载为空项目（issue #27）" {
+  let empty = "<!-- moonviz:artboard wrong -->\n```mbt check\ntest \"x\" { }\n```\n"
+  match load_mbt_project(empty) {
+    Ok(model) => assert_eq(model.project.artboards.length(), 0)
+    Err(error) => fail("零视觉块文档必须合法：\{error}")
   }
 }
 
@@ -321,5 +321,20 @@ test "往返：name 与 layout 经 MBT 存活" {
         None => assert_true(false)
       }
     Err(_) => assert_true(false)
+  }
+}
+
+///|
+test "空态往返：零画板项目 → canonical → load 闭环（issue #27）" {
+  let project = @core.Project::new()
+  match project_to_mbt(project) {
+    Err(error) => fail("零画板项目必须可序列化：\{error}")
+    Ok(model) => {
+      let canonical = model.to_mbt()
+      match load_mbt_project(canonical) {
+        Err(error) => fail("空态 canonical 必须可再次 load：\{error}")
+        Ok(back) => assert_eq(back.project.artboards.length(), 0)
+      }
+    }
   }
 }

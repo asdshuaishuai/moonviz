@@ -327,3 +327,21 @@ test "json_escape: C0 control chars emit \\u00xx per RFC 8259" {
   // 常规转义不受影响
   assert_true(json_escape("a\"b\\c\nd") == "a\\\"b\\\\c\\nd")
 }
+
+///|
+test "非方形节点 radius=999 钳制为 min(w,h)/2（issue #22 回归锚）" {
+  let doc = Document::new({ width: 460.0, height: 120.0, })
+  let base = Node::make("search", Rect)
+  let n = {
+    ..base,
+    width: Fixed(420.0),
+    height: Fixed(40.0),
+    style: { ..base.style, corner_radius: 999.0 },
+  }
+  let _ = doc.insert_node(n, "root")
+  let svg = render_svg(doc)
+  assert_true(
+    svg.contains("rx=\"20\" ry=\"20\""),
+    msg="radius=999 在 420×40 上必须钳为 20（rx/ry 同值）：\{svg}",
+  )
+}

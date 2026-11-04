@@ -36,9 +36,19 @@ test "契约：全部导出 × 非法输入 → 合法 JSON（issue #3）" {
         msg="export \{export_fn} 非法输入返回非法 JSON: \{out}",
       )
     }
+    // issue #27：零视觉块文本（空串/纯文本/JSON 片段）都是合法空文档——
+    // literate 语义下「没有画板」不是错误。真正的非法文档（结构错误）
+    // 在下面单独锚定（entry 漂移），此处只验证空态可开可关。
     let h = session_open(bad)
-    let _ = assert_true(h < 0, msg="非法文档不应打开会话")
+    let _ = assert_true(h >= 0, msg="零视觉块输入应视为合法空文档（issue #27）：\{bad}")
+    let _ = session_close(h)
   }
+  // 真非法文档（entry 指向不存在的画板，且有视觉块）必须拒绝开会话。
+  let invalid_doc = "---\nmoonviz:\n  entry: ghost\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let _ = assert_true(
+    session_open(invalid_doc) < 0,
+    msg="entry 漂移的文档必须拒绝开会话",
+  )
   // session_history 纳入模糊面（issue #3 同类回归）：画板名/rev 含引号
   // 或反斜杠时，错误信封值必须转义（此前裸插值输出非法 JSON）
   let h = session_open(SEED)
@@ -707,6 +717,26 @@ test "契约：session_generate_in 槽变体（UTF-8 intent 真传输）" {
   assert_true(
     r.contains("\"template\":\"login\""),
     msg="槽内 UTF-8 intent 应识别为 login 模板: \{r}",
+  )
+  let _ = session_close(h)
+}
+
+///|
+test "契约：session_constrain 成功信封回传 canonical mbt（issue #19）" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let out = session_constrain(h, "w", "垂直居中")
+  assert_true(
+    out.contains("\"ok\":true"),
+    msg="constrain 成功信封必须有 ok：\{out}",
+  )
+  assert_true(
+    out.contains("\"mbt\":"),
+    msg="constrain 成功信封必须回传 canonical mbt（issue #19）：\{out}",
+  )
+  assert_true(
+    out.contains("visual_w"),
+    msg="回传的 mbt 必须是文档源码：\{out}",
   )
   let _ = session_close(h)
 }

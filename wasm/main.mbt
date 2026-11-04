@@ -661,7 +661,20 @@ pub fn session_constrain(
   artboard : String,
   intent : String,
 ) -> String {
-  sess_mut_json(handle, fn(p) { p.apply_constraint(intent, artboard~) })
+  sess_mut_json(handle, fn(p) {
+    match p.apply_constraint(intent, artboard~) {
+      // issue #19：成功信封回传 canonical mbt——按 canonical 交换的宿主
+      // 无需二次 export；失败信封保持原样（错误面不背 canonical）。
+      Err(e) => Err(e)
+      Ok(op_env) =>
+        Ok(
+          "{\"ok\":true," +
+          op_env.substring(start=1, end=op_env.length() - 1) +
+          session_canonical_mbt(p) +
+          "}",
+        )
+    }
+  })
 }
 
 ///|

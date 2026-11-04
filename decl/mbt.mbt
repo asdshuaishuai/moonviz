@@ -583,9 +583,8 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
   match scan_mbt(text) {
     Err(error) => Err(error)
     Ok(document) => {
-      if document.visual_blocks.length() == 0 {
-        return Err("mbt_no_visual_blocks")
-      }
+      // 空态（issue #27）：零视觉块文档是合法初始态（空面板/占位文档），
+      // 不再拒绝——空项目的 entry 允许为空，门与渲染对零画板是恒等操作。
       let project = @core.Project::new()
       project.doc_comments = document.comments
       for block in document.visual_blocks.iter() {
@@ -636,13 +635,16 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       }
       let entry = if document.entry != "" {
         document.entry
-      } else {
+      } else if document.visual_blocks.length() > 0 {
         match document.visual_blocks[0].artboard_id {
           Some(id) => id
           None => ""
         }
+      } else {
+        ""
       }
-      if !project.artboards.contains(entry) {
+      // 空态不校验 entry（issue #27）；有视觉块的文档仍强校验漂移。
+      if document.visual_blocks.length() > 0 && !project.artboards.contains(entry) {
         return Err("mbt_unknown_entry:" + entry)
       }
       project.revision = document.revision
@@ -753,11 +755,16 @@ pub fn project_to_mbt(
   for id in project.artboards.keys() {
     ids.push(id)
   }
-  if ids.length() == 0 {
-    return Err("mbt_project_without_artboards")
+  // 空态（issue #27）：零画板项目合法——entry 允许为空，序列化产出
+  // 带 frontmatter 的无视觉块文档，可再次 load 闭环。
+  let actual_entry = if entry != "" {
+    entry
+  } else if ids.length() > 0 {
+    ids[0]
+  } else {
+    ""
   }
-  let actual_entry = if entry != "" { entry } else { ids[0] }
-  if !project.artboards.contains(actual_entry) {
+  if actual_entry != "" && !project.artboards.contains(actual_entry) {
     return Err("mbt_unknown_entry:" + actual_entry)
   }
   let document : MbtDocument = {
@@ -851,10 +858,15 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   // load 直接 mbt_unknown_entry，文档就此打不开。失效时重定向到首个剩余画板。
   let entry = if self.project.artboards.contains(self.entry) {
     self.entry
-  } else {
+  } else if ids.length() > 0 {
+    // 空项目无 id 可回退（issue #27）——entry 留空，parser 端视作空态。
     ids[0]
+  } else {
+    ""
   }
-  out.write_string("  entry: " + entry + "\n")
+  if entry != "" {
+    out.write_string("  entry: " + entry + "\n")
+  }
   out.write_string("  artboards:\n")
   mbt_yaml_list(out, ids, "    ")
   if self.project.flows.length() > 0 {
