@@ -683,6 +683,16 @@ pub fn project_gate_check(
   p : @core.Project,
   gate : @core.Gate,
 ) -> Result[Int, String] {
+  // issue #25-A3 / #26-A3：交互冲突硬门（仅 AgentGate）——同一节点多条
+  // tap flow、可点热区相交（父子包含除外）→ 拒绝并给出定位。
+  match gate {
+    @core.AgentGate =>
+      match p.qa_agent_conflicts() {
+        Err(e) => return Err(e)
+        Ok(_) => ()
+      }
+    _ => ()
+  }
   let mut debt_count = 0
   for artboard_id in p.artboards.keys() {
     match p.artboards.get(artboard_id) {

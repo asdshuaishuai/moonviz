@@ -384,6 +384,10 @@ pub fn Project::critique(
       for s in self.norm_selected_state_issues(artboard=artboard).iter() {
         norm_list.push(s)
       }
+      // issue #25/#26：交互与内容完整性（可交互无去向 / 占位符 / 空壳 / 非库组件）
+      for s in self.qa_issues(artboard=artboard).iter() {
+        norm_list.push(s)
+      }
       let n_norm = norm_list.length()
       let norm_score = if n_norm == 0 {
         9
@@ -469,6 +473,14 @@ fn norm_issue_hint(issue : String) -> String {
     "深色底改用主题令牌，不要硬填 #000/#111"
   } else if issue.contains("无差异") {
     "选中态至少改 fill / text_color / stroke"
+  } else if issue.contains("可交互组件无去向") {
+    "绑定 tap flow（flow <板> <目标板> <节点>）或改用非交互组件"
+  } else if issue.contains("空壳容器") {
+    "填 ≥2 条语义化示例条目（真实文案，非 Item 1/项目一）"
+  } else if issue.contains("占位符残留") {
+    "换语义化真实文案，去掉 TBD/TODO/xxx 一类占位"
+  } else if issue.contains("非组件库组件") {
+    "换组件库注册表内的组件（list-components 可查）"
   } else {
     "auto_fix 可一键修复"
   }
