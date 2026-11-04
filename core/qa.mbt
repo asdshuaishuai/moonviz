@@ -252,3 +252,36 @@ pub fn qa_agent_conflicts(self : Project) -> Result[Unit, String] {
   }
   Ok(())
 }
+
+///|
+/// issue #25-B4（规则化）：mock 数据缺口——只报告「哪个容器缺样例 / 哪段文本是
+/// 占位符」，不做任何内容内置。真实样例内容由 Agent（LLM）按语义自行填写；
+/// 引擎只保证规则可测（空壳 = 无子节点无文本；占位词表见 qa_is_placeholder_text）。
+pub fn Project::mock_data_gaps(
+  self : Project,
+  artboard~ : String,
+) -> Array[String] {
+  let gaps : Array[String] = []
+  match self.artboards.get(artboard) {
+    None => ()
+    Some(ab) =>
+      for id in ab.doc.nodes.keys() {
+        if id == ab.doc.root_id {
+          continue
+        }
+        match ab.doc.nodes.get(id) {
+          None => ()
+          Some(n) => {
+            if qa_is_placeholder_text(n.text) {
+              gaps.push(id)
+            } else if qa_is_mock_container(n.component) &&
+              n.children.length() == 0 &&
+              n.text.length() == 0 {
+              gaps.push(id)
+            }
+          }
+        }
+      }
+  }
+  gaps
+}

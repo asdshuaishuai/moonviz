@@ -144,7 +144,10 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
    背景禁令、不可见叶子检测、选中态必须设置视觉字段；均为检测项（critique 第九维）。
 7. 交互与内容 QA（issue #25/#26）：可交互组件必须有去向（flow/标记/返回兜底）、
    占位符残留与空壳容器报告、非组件库组件报告；同节点多 flow 与可点热区相交是
-   AgentGate 硬错误。**生成必须带 design spec**（issue #24：缺省返回
+   AgentGate 硬错误。**mock 数据只规则化检测、不内置内容**：引擎用
+   `mock_data_gaps`/`mock_missing` 报缺口（空壳容器 + 占位词表），真实样例由
+   Agent（LLM）按语义填充——引擎不得自造样例文案（2026-11-04 决策）。
+   **生成必须带 design spec**（issue #24：缺省返回
    `design_spec_required` + 草案，不静默回退内置规范；spec 的 palette/字号阶/
    圆角档/rules 阈值参与生成与 norms 判定，白名单偏差随信封 `spec_violations` 上报）。
 8. 原子快照（issue #28）：`session_snapshot` 返回 `{revision,seq,canonical,render,

@@ -547,7 +547,7 @@ pub fn op_entries() -> Array[OpEntry] {
     "autofill",
     "autofill <artboard>",
     "debt",
-    "Materialize the infer_missing report as real nodes (per page-type recipes), then auto_fix settles overlaps/overflows. Idempotent: filled text satisfies the detector.",
+    "Materialize the infer_missing report as real nodes (per page-type recipes), then auto_fix settles overlaps/overflows. Idempotent: filled text satisfies the detector. NOTE (issue #25): mock data gaps (\"mock_missing\":[node ids]) are only DETECTED by the engine — empty list/table/card shells and placeholder texts (TBD/TODO/Lorem/xxx/Item 1/项目一). The engine never fabricates sample content: you must fill domain-semantic entries yourself (update/place), ≥2 per container.",
   )
   add(
     "fix", "fix <artboard>", "debt", "Debt-repayment auto-fix: commits only when total violations strictly decrease; the remainder is accepted as visual debt (HumanGate fallback).",

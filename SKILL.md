@@ -129,7 +129,7 @@ Navigation / theme / tokens / debt:
 via `list-tokens`. Spacing/radii/typography names return `unknown_token`.
 An override recolors immediately, persists in the document's frontmatter
 `tokens:` section, and setting the default value back removes it) ·
-`autofill <ab>` (materialize the infer_missing report as real nodes; idempotent)
+`autofill <ab>` (materialize the infer_missing report as real nodes; idempotent). Mock data is rule-detected only: envelopes/reports carry `mock_missing` node ids (empty list/table/card shells + placeholder texts) — **you must fill domain-semantic sample entries yourself** (≥2 per container); the engine never invents sample content.
 `fix <ab>` (commits only when violations strictly decrease)
 
 Interaction targets are a data layer, never a styling layer: bind `flow` to

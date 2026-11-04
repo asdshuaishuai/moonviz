@@ -291,11 +291,13 @@ pub fn Project::generate(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  // issue #25-B4：空壳 mock 容器物化真实样例数据
-  let mock_rows = match self.materialize_mock_data(artboard=ab) {
-    Ok(n) => n
-    Err(_) => 0
+  // issue #25-B4（规则化）：mock 数据缺口只报 id，真实样例由 Agent 填充
+  let mock_gap_ids = self.mock_data_gaps(artboard=ab)
+  let mg_items : Array[String] = []
+  for gid in mock_gap_ids.iter() {
+    mg_items.push("\"" + json_escape(gid) + "\"")
   }
+  let mg_j = mg_items.join(",")
   // issue #24 要求 2：白名单/禁用项偏差随信封上报
   let spec_violations = self.design_spec_component_violations(artboard=ab)
   let sv_items : Array[String] = []
@@ -329,7 +331,7 @@ pub fn Project::generate(
   }
   let alts_j = alts.join(",")
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"mock_rows\":\{mock_rows},\"spec_violations\":[\{sv_j}],\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"mock_missing\":[\{mg_j}],\"spec_violations\":[\{sv_j}],\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
   )
 }
 
@@ -613,7 +615,7 @@ pub fn Project::generate_multi(
   if ds_is_blank(spec) {
     return Err("design_spec_required")
   }
-  let mut total_mock = 0
+  let multi_mock_gaps : Array[String] = []
   let multi_violations : Array[String] = []
   // 1) 逐段分类；无页面语义的段视为主题修饰（dark 等）不生成板。
   //    页面段原文必须记账：退化单通道时拿页面段重拼——写死 segments[0]
@@ -719,10 +721,9 @@ pub fn Project::generate_multi(
       Err(error) => return Err(error)
       Ok(_) => ()
     }
-    // issue #25-B4：逐板物化真实样例数据
-    match self.materialize_mock_data(artboard=ab) {
-      Ok(n) => total_mock = total_mock + n
-      Err(_) => ()
+    // issue #25-B4（规则化）：逐板缺口 id（内容由 Agent 填充）
+    for gid in self.mock_data_gaps(artboard=ab).iter() {
+      multi_mock_gaps.push(gid)
     }
     for v in self.design_spec_component_violations(artboard=ab).iter() {
       multi_violations.push(v)
@@ -734,6 +735,11 @@ pub fn Project::generate_multi(
   }
   // 4) 相邻板导航流：出口启发（就地找语义节点，找不到合成前往按钮；
   //    画布放不下放弃合成时跳过该流——流契约要求 trigger 指向真实节点）
+  let mmg_items : Array[String] = []
+  for gid in multi_mock_gaps.iter() {
+    mmg_items.push("\"" + json_escape(gid) + "\"")
+  }
+  let mmg_j = mmg_items.join(",")
   let mv_items : Array[String] = []
   for v in multi_violations.iter() {
     mv_items.push("\"" + json_escape(v) + "\"")
@@ -803,6 +809,6 @@ pub fn Project::generate_multi(
     skipped_j.push("\"" + json_escape(s) + "\"")
   }
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"mock_rows\":\{total_mock},\"spec_violations\":[\{mv_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"mock_missing\":[\{mmg_j}],\"spec_violations\":[\{mv_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
   )
 }

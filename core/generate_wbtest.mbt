@@ -482,8 +482,9 @@ test "spec rules：对比度与触控阈值可被 spec 收紧" {
 }
 
 ///|
-/// issue #25-B4：autofill 物化真实样例数据（不是空壳节点/占位文本）。
-test "autofill：空壳容器物化真实样例数据" {
+/// issue #25-B4（规则化）：引擎只报 mock 数据缺口（空壳/占位），不内置样例
+/// 内容；Agent 按语义填充后缺口清零。autofill 报告携带 mock_missing。
+test "mock 数据规则化：报缺口不内置，Agent 填充后清零" {
   let p = Project::new()
   let _ = p.create_artboard(name="product_list", width=390.0, height=600.0)
   let _ = p.place_component(
@@ -495,28 +496,80 @@ test "autofill：空壳容器物化真实样例数据" {
     w=340.0,
     h=200.0,
   )
-  let placed = match p.materialize_mock_data(artboard="product_list") {
-    Ok(n) => n
-    Err(_) => 0
+  let gaps1 = p.mock_data_gaps(artboard="product_list")
+  let mut has_card = false
+  for g in gaps1.iter() {
+    if g == "goods_card" {
+      has_card = true
+    }
   }
-  assert_true(placed >= 2, msg="必须物化 ≥2 条样例（实际 \{placed}）")
+  assert_true(has_card, msg="空壳容器必须报缺口")
+  // 引擎不物化内容：文档里不得出现自造样例文本
   match p.artboards.get("product_list") {
     None => assert_true(false)
-    Some(ab) => {
-      let mut joined = ""
+    Some(ab) =>
       for id in ab.doc.nodes.keys() {
         match ab.doc.nodes.get(id) {
-          Some(n) => joined = joined + n.text + "|"
+          Some(n) => assert_true(
+            !n.text.contains("无线降噪耳机"),
+            msg="引擎不得内置样例内容",
+          )
           None => ()
         }
       }
-      assert_true(joined.contains("无线降噪耳机"), msg="样例必须语义化：\{joined}")
-      assert_true(!joined.contains("Item 1"), msg="禁止占位残留：\{joined}")
+  }
+  // 模拟 Agent 填充两条语义行
+  match p.artboards.get("product_list") {
+    None => assert_true(false)
+    Some(ab) => {
+      let r1 = {
+        ..Node::make("goods_row0", Rect),
+        component: "list_item",
+        text: "机械键盘 87 键 · ¥359",
+        width: Fixed(300.0),
+        height: Fixed(48.0),
+        x: AlignStart(12.0),
+        y: AlignStart(12.0),
+      }
+      let _ = ab.doc.insert_node(r1, "goods_card")
+      let r2 = {
+        ..Node::make("goods_row1", Rect),
+        component: "list_item",
+        text: "无线鼠标 · ¥129",
+        width: Fixed(300.0),
+        height: Fixed(48.0),
+        x: AlignStart(12.0),
+        y: AlignStart(64.0),
+      }
+      let _ = ab.doc.insert_node(r2, "goods_card")
     }
   }
-  // autofill 报告携带 mock_rows
+  let gaps2 = p.mock_data_gaps(artboard="product_list")
+  for g in gaps2.iter() {
+    assert_true(g != "goods_card", msg="填充后缺口必须清零")
+  }
+  // 占位符同样进缺口；换成真实文案后清零
+  let _ = p.edit_node(artboard="product_list", node_id="goods_row0", kvs=[("text", "TBD")])
+  let gaps3 = p.mock_data_gaps(artboard="product_list")
+  let mut ph_hit = false
+  for g in gaps3.iter() {
+    if g == "goods_row0" {
+      ph_hit = true
+    }
+  }
+  assert_true(ph_hit, msg="占位符文本必须报缺口")
+  let _ = p.edit_node(
+    artboard="product_list",
+    node_id="goods_row0",
+    kvs=[("text", "机械键盘 87 键 · ¥359")],
+  )
+  let gaps4 = p.mock_data_gaps(artboard="product_list")
+  for g in gaps4.iter() {
+    assert_true(g != "goods_row0", msg="替换为真实文案后必须清零")
+  }
+  // autofill 报告携带 mock_missing（规则随报告输出）
   match p.autofill_missing(artboard="product_list") {
-    Ok(report) => assert_true(report.contains("\"mock_rows\":"), msg=report)
+    Ok(report) => assert_true(report.contains("\"mock_missing\":["), msg=report)
     Err(e) => fail("autofill 失败：\{e}")
   }
 }
