@@ -380,6 +380,10 @@ pub fn Project::critique(
       for s in self.norm_back_issues(artboard=artboard).iter() {
         norm_list.push(s)
       }
+      // issue #23：状态可辨识（选中态无差异 / 纯黑选中色）
+      for s in self.norm_selected_state_issues(artboard=artboard).iter() {
+        norm_list.push(s)
+      }
       let n_norm = norm_list.length()
       let norm_score = if n_norm == 0 {
         9
@@ -457,6 +461,14 @@ fn norm_issue_hint(issue : String) -> String {
     "字号收敛到 ≤5 档（如 12/14/16/20/24）"
   } else if issue.contains("node count") {
     "拆分画板或删减装饰节点"
+  } else if issue.contains("可读性标准") {
+    "加深文字或调整背景色（正文 4.5 / 大字号 3.0）"
+  } else if issue.contains("组件不可见") {
+    "换填充色或删除该节点"
+  } else if issue.contains("纯黑") {
+    "深色底改用主题令牌，不要硬填 #000/#111"
+  } else if issue.contains("无差异") {
+    "选中态至少改 fill / text_color / stroke"
   } else {
     "auto_fix 可一键修复"
   }
