@@ -778,6 +778,8 @@ function humanOp(op,silentOk){
   }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
 }
 
+const PG_SPEC='{"v":1,"palette":{"primary":"#4B6BFB","background":"#FFFFFF","surface":"#F6F7F9","text":"#1A1C1E","muted":"#6B7280","danger":"#DC2626","success":"#16A34A"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":8,"md":12,"lg":16},"rules":["按钮不卡文案"]}';
+
 /* ---------- 生成式 UI（genUI 第一公民）：一句话生成 / 报告驱动补缺 ---------- */
 function genuiApplyRefresh(r){
   if(r.mbt){mbt=r.mbt;$('src').value=mbt;}
@@ -797,7 +799,7 @@ function genuiGenerate(){
   const intent=$('genuiIntent').value.trim();
   if(!intent)return setStatus(false,'先输入一句话意图（如：登录+注册 / 设置 dark / web 落地页）');
   try{
-    const r=engine.session_generate(sessH,intent,'');
+    const r=engine.session_generate_spec(sessH,intent,'',PG_SPEC);
     if(r.ok!==true)return setStatus(false,(r.error||'生成失败'));
     genuiApplyRefresh(r);
     if(r.mode==='multi'){
@@ -1593,7 +1595,7 @@ async function boot(){
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
     const exports=new WebAssembly.Instance(mod,{}).exports;
-    // 对齐最新 wasm-gc 产物（75 导出；此处包裹 39 个：11 静态 + 28 会话，
+    // 对齐最新 wasm-gc 产物（75 导出；此处包裹 41 个：11 静态 + 30 会话，
     // 其余为 _in 槽变体与 in/arg/arg2 槽原语，不经 JS 包装）
     engine={
       // —— 无状态（11）——
@@ -1632,6 +1634,10 @@ async function boot(){
       session_extract_design_system:(h,a)=>JSON.parse(exports.session_extract_design_system(h,a)),
       session_generate_responsive:(h,a)=>JSON.parse(exports.session_generate_responsive(h,a)),
       session_generate:(h,i,n)=>JSON.parse(exports.session_generate(h,i,n)),
+      session_generate_spec:(h,i,n,s)=>JSON.parse(exports.session_generate_spec(h,i,n,s)),
+      session_snapshot:h=>JSON.parse(exports.session_snapshot(h)),
+      session_generate_spec:(h,i,n,s)=>JSON.parse(exports.session_generate_spec(h,i,n,s)),
+      session_snapshot:h=>JSON.parse(exports.session_snapshot(h)),
       session_benchmark:h=>JSON.parse(exports.session_benchmark(h)),
       session_component_compile_b64:(h,b)=>JSON.parse(exports.session_component_compile_b64(h,b)),
       session_library_snapshot:h=>JSON.parse(exports.session_library_snapshot(h)),

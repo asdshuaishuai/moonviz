@@ -153,6 +153,8 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
     <div class="card"><h3>📐 横平竖直</h3><p>rotate 非 90° 倍数归零——圆角档与对齐网格共同构成几何标准。</p></div>
     <div class="card"><h3>🛡 规范闭环</h3><p>critique 偏差计分并自带建议尺寸；auto_fix 一键规范预修（不动 fill/hug 策略）；list_components 每条目携带 norm 字段——指导与规范，不做硬门。</p></div>
   </div>
+  <h2 class="sec">0.1.11 新能力：规范先行 + 交互 QA</h2>
+  <p class="lead">生成必须携带 design spec（调色板/字号阶/圆角档/rules）——spec 是第一权威，norms 档位按 spec 裁决；可交互组件必须有去向，占位与空壳进 <code>mock_missing</code> 缺口报告由 Agent 填充；<code>session_snapshot</code> 原子快照让三视图与动画同帧。</p>
   <h2 class="sec">内置返回导航 + 交互校验</h2>
   <p class="lead">返回交互是必须的——不再由各宿主自发实现，而是引擎内置语义，CLI / SDK / MCP / 嵌入 runtime 全部免费获得。</p>
   <div class="grid c3">

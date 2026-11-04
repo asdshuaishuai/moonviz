@@ -117,3 +117,54 @@ canonical mbt，键控缓存宿主保存它供下次 session_open 使用。
   往返零损失。
 - `wasm/contract_test.mbt`：session_generate 变更回传 canonical mbt + 槽
   变体等价。
+
+## 设计规范驱动生成（0.1.11 起，issue #24）
+
+生成不再吃引擎内置规范——`generate` 必带 **design spec**（JSON），spec 在场
+即第一权威：
+
+```json
+{
+  "v": 1,
+  "palette":  { "primary": "#DC2626", "background": "#FFFFFF", "surface": "#F6F7F9",
+                "text": "#1A1C1E", "muted": "#6B7280", "danger": "#DC2626", "success": "#16A34A" },
+  "typography": { "display": 48, "h1": 32, "h2": 24, "h3": 20, "h4": 16, "body": 14, "caption": 12 },
+  "spacing": [4, 8, 12, 16, 24, 32],
+  "radius":   { "sm": 8, "md": 12, "lg": 16 },
+  "components": { "allow": ["…"], "deny": ["…"] },
+  "rules": ["正文对比度≥4.5", "触控目标 44"]
+}
+```
+
+- **调色板** → token 覆盖 + 全板重着色（spec 色即页面色）。
+- **字号阶 / 圆角档** → 节点 font_size / corner_radius 按默认阶→spec 阶
+  重映射。
+- **norms 裁决以 spec 为准**：按钮圆角基准 = `radius.sm`、可读性对比度阈值
+  = rules 中的对比度档、触控下限 = rules 中的触控值；内置默认仅补 spec
+  未覆盖的项。
+- **白名单/禁用**：`components` 数组 = 白名单，对象支持 `allow/deny`——
+  偏差随生成信封 `spec_violations` 上报。
+- **缺 spec 不静默兜底**：返回 `design_spec_required` + 可编辑
+  `design_spec_draft`（按 intent 推荐强调色）；Agent 落盘草案后带 spec
+  重试。接线：wasm `session_generate_spec(handle,intent,name,spec)` /
+  `session_generate_in`（主槽=spec）/ CLI `generate <意图> spec=<base64>` /
+  MCP `generate` 的 `spec` 参数。
+
+## mock 数据：规则化检测，内容由 Agent 填充（issue #25）
+
+引擎只做规则检测并把缺口报出来，**不自造任何领域样例内容**：
+
+- 空壳容器：`list_item` / `table` / `card` 无子节点且无文本；
+- 占位残留：`TBD` / `TODO` / `Lorem` / `xxx` / `Item 1` / `项目一` / `示例文本` / `占位`。
+
+缺口以 `mock_missing`（节点 id 列表）随 generate/autofill 信封与 critique
+norms 维度输出；Agent（LLM）按领域语义填充 ≥2 条真实条目（引擎的
+autofill 仍负责结构性微文案如「忘记密码？」，不属领域内容）。
+
+## 原子快照（issue #28）
+
+`session_snapshot` 单调用返回 `{revision, seq, canonical, render,
+animations, delta}`：宿主三视图（源码/高保真/动画）只消费同一帧；seq 随
+改文档路径严格递增；delta 按板 content_seq 增量（未变板零成本），渲染
+对象按板缓存复用——未变更快照为 O(1) 帧重建（基准：
+`scripts/bench-snapshot.mjs`，100 节点板未变更 ≈0.33ms）。
