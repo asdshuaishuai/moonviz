@@ -486,6 +486,7 @@ pub fn Project::delete_node(
             children: pn.children.filter(c => c != node_id),
           })
           for i in ids.iter() {
+            ab.doc.content_seq = ab.doc.content_seq + 1
             ab.doc.nodes.remove(i)
           }
           self.revision = self.revision + 1

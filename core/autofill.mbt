@@ -190,6 +190,11 @@ pub fn Project::autofill_missing(
       }
     }
   }
+  // issue #25-B4：空壳 mock 容器先物化真实样例数据，再走清偿
+  let mock_rows = match self.materialize_mock_data(artboard=artboard) {
+    Ok(n) => n
+    Err(_) => 0
+  }
   // 清偿：新节点与既有内容的重叠/溢出/触控规范归 auto_fix
   let autofix_json = match self.auto_fix(artboard=artboard) {
     Ok(json) => json
@@ -218,7 +223,7 @@ pub fn Project::autofill_missing(
   let pj = placed.join(",")
   let sj = skipped.join(",")
   Ok(
-    "{\"ok\":\{autofix_ok},\"op\":\"autofill\",\"artboard\":\"\{json_escape(artboard)}\",\"page_type\":\"\{page_type}\",\"placed_count\":\{placed.length()},\"placed\":[\{pj}],\"skipped\":[\{sj}],\"autofix\":\{autofix_json},\"missing_count_after\":\{after_count}}",
+    "{\"ok\":\{autofix_ok},\"op\":\"autofill\",\"artboard\":\"\{json_escape(artboard)}\",\"page_type\":\"\{page_type}\",\"placed_count\":\{placed.length()},\"placed\":[\{pj}],\"skipped\":[\{sj}],\"autofix\":\{autofix_json},\"missing_count_after\":\{after_count},\"mock_rows\":\{mock_rows}}",
   )
 }
 
@@ -277,4 +282,115 @@ fn parse_missing_elements(scope : String) -> Array[String] {
 /// 转义；reason 为字面枚举，不需转义）
 fn af_skip_json(element : String, reason : String) -> String {
   "{\"element\":\"\{json_escape(element)}\",\"reason\":\"\{reason}\"}"
+}
+
+///|
+/// issue #25-B4：页面语义 → 真实样例数据（拒绝 Item 1/项目一/占位）。
+fn af_mock_samples(artboard_name : String) -> Array[(String, String)] {
+  let n = artboard_name.to_lower()
+  if n.contains("chat") ||
+    artboard_name.contains("聊天") ||
+    artboard_name.contains("消息") ||
+    n.contains("message") {
+    [("林小雨", "设计稿已更新，麻烦看下"), ("陈工", "评审定在明天 10:00"), ("产品群", "本周迭代范围已确认")]
+  } else if n.contains("product") ||
+    n.contains("order") ||
+    artboard_name.contains("商品") ||
+    artboard_name.contains("订单") ||
+    artboard_name.contains("购物") ||
+    n.contains("list") {
+    [("无线降噪耳机", "¥499 · 已发货"), ("便携咖啡机", "¥299 · 待付款"), ("机械键盘 87 键", "¥359 · 已完成")]
+  } else if n.contains("setting") || artboard_name.contains("设置") {
+    [("通知提醒", "已开启"), ("深色模式", "跟随系统"), ("存储空间", "已用 6.4 GB")]
+  } else if n.contains("contact") ||
+    artboard_name.contains("通讯录") ||
+    artboard_name.contains("联系人") {
+    [("张伟", "产品经理"), ("李娜", "视觉设计"), ("王强", "前端开发")]
+  } else if n.contains("profile") || artboard_name.contains("个人") {
+    [("我的订单", "3 项进行中"), ("收货地址", "2 个地址"), ("账户与安全", "已绑定手机")]
+  } else {
+    [("今日概览", "3 项待处理"), ("最近更新", "登录流程优化"), ("本周计划", "组件库对齐")]
+  }
+}
+
+///|
+/// issue #25-B4：把空壳 mock 容器（list/table/card 无子节点无文本）物化为
+/// 真实样例条目——≥2 条语义化文本（受容器高度约束），不是空壳占位。
+/// 幂等：同 id 已存在则跳过；有落点则 revision +1。
+pub fn Project::materialize_mock_data(
+  self : Project,
+  artboard~ : String,
+) -> Result[Int, String] {
+  let ab = match self.artboards.get(artboard) {
+    None => return Err("unknown_artboard")
+    Some(meta) => meta
+  }
+  let doc = ab.doc
+  let layout = solve(doc)
+  let targets : Array[String] = []
+  for id in doc.nodes.keys() {
+    if id == doc.root_id {
+      continue
+    }
+    match doc.nodes.get(id) {
+      None => ()
+      Some(n) =>
+        if qa_is_mock_container(n.component) &&
+          n.children.length() == 0 &&
+          n.text.length() == 0 {
+          targets.push(id)
+        }
+    }
+  }
+  let samples = af_mock_samples(ab.name)
+  let mut placed = 0
+  for target in targets {
+    let r = match layout.rect_of(target) {
+      Some(v) => v
+      None => Rect::new(0.0, 0.0, 0.0, 0.0)
+    }
+    if r.width < 80.0 || r.height < 40.0 {
+      continue
+    }
+    let pad = 12.0
+    let row_step = 56.0
+    let mut max_rows = ((r.height - pad * 2.0) / row_step).to_int()
+    if max_rows > 3 {
+      max_rows = 3
+    }
+    if max_rows < 1 {
+      max_rows = 1
+    }
+    let rows = if samples.length() < max_rows { samples.length() } else { max_rows }
+    for i in 0..<rows {
+      let (t1, t2) = samples[i]
+      let rid = target + "_row" + i.to_string()
+      if doc.has(rid) {
+        continue
+      }
+      let text = if t2 != "" {
+        t1 + " · " + t2
+      } else {
+        t1
+      }
+      let base = Node::make(rid, Rect)
+      let node = {
+        ..base,
+        component: "list_item",
+        text,
+        width: Fixed(r.width - pad * 2.0),
+        height: Fixed(row_step - 8.0),
+        x: AlignStart(pad),
+        y: AlignStart(pad + i.to_double() * row_step),
+        style: { ..base.style, fill: "#FFFFFF", text_color: "#1A1C1E", font_size: 14.0 },
+      }
+      if doc.insert_node(node, target) {
+        placed = placed + 1
+      }
+    }
+  }
+  if placed > 0 {
+    self.revision = self.revision + 1
+  }
+  Ok(placed)
 }

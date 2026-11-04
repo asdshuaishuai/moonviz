@@ -295,3 +295,220 @@ pub fn Project::design_spec_radius_base(self : Project) -> Double {
     None => NORM_RADIUS_BASE
   }
 }
+
+///|
+/// 抽取一段以 '[' 开头的数组文本里的引号 token。
+fn ds_tokens_in_brackets(s : String) -> Array[String] {
+  let out : Array[String] = []
+  let open = match s.find("[") {
+    None => return out
+    Some(o) => o
+  }
+  let body = s.substring(start=open + 1)
+  let close = match body.find("]") {
+    None => body
+    Some(c) => body.substring(start=0, end=c)
+  }
+  let mut cur = ""
+  let mut in_q = false
+  for c in close.iter() {
+    if c == '"' {
+      if in_q {
+        if cur != "" {
+          out.push(cur)
+        }
+        cur = ""
+      }
+      in_q = !in_q
+    } else if in_q {
+      cur = cur + "\{c}"
+    }
+  }
+  out
+}
+
+///|
+/// 从 key 后的首个 '[' … ']' 抽取引号内 token（components/rules 列表解析用）。
+fn ds_quoted_list(spec : String, key : String) -> Array[String] {
+  let out : Array[String] = []
+  let pat = "\"" + key + "\""
+  let pos = match spec.find(pat) {
+    None => return out
+    Some(p) => p
+  }
+  let rest = spec.substring(start=pos + pat.length())
+  let open = match rest.find("[") {
+    None => return out
+    Some(o) => o
+  }
+  let body = rest.substring(start=open + 1)
+  let close = match body.find("]") {
+    None => return out
+    Some(c) => c
+  }
+  let span = body.substring(start=0, end=close)
+  let mut cur = ""
+  let mut in_q = false
+  for c in span.iter() {
+    if c == '"' {
+      if in_q {
+        if cur != "" {
+          out.push(cur)
+        }
+        cur = ""
+      }
+      in_q = !in_q
+    } else if in_q {
+      cur = cur + "\{c}"
+    }
+  }
+  out
+}
+
+///|
+/// spec.components 策略：数组 = 白名单；对象支持 allow/deny 数组。
+pub fn ds_components_policy(spec : String) -> (Array[String], Array[String]) {
+  let allow : Array[String] = []
+  let deny : Array[String] = []
+  if spec.trim() == "" {
+    return (allow, deny)
+  }
+  let pat = "\"components\""
+  let pos = match spec.find(pat) {
+    None => return (allow, deny)
+    Some(p) => p
+  }
+  let rest = spec.substring(start=pos + pat.length())
+  let colon = match rest.find(":") {
+    None => return (allow, deny)
+    Some(c) => c
+  }
+  let after = rest.substring(start=colon + 1).trim().to_string()
+  if after.has_prefix("[") {
+    // 数组形态 = 白名单：直接抽取方括号内的引号 token
+    for v in ds_tokens_in_brackets(after).iter() {
+      allow.push(v)
+    }
+    return (allow, deny)
+  }
+  for v in ds_quoted_list(spec, "allow").iter() {
+    allow.push(v)
+  }
+  for v in ds_quoted_list(spec, "deny").iter() {
+    deny.push(v)
+  }
+  (allow, deny)
+}
+
+///|
+/// spec 组件白名单/禁用项校验（issue #24 要求 2：规范是生成的第一权威）。
+/// 结构组件（root/frame）不参与判定。
+pub fn Project::design_spec_component_violations(
+  self : Project,
+  artboard~ : String,
+) -> Array[String] {
+  let out : Array[String] = []
+  if self.design_spec.trim() == "" {
+    return out
+  }
+  let (allow, deny) = ds_components_policy(self.design_spec)
+  if allow.length() == 0 && deny.length() == 0 {
+    return out
+  }
+  match self.artboards.get(artboard) {
+    None => ()
+    Some(ab) =>
+      for id in ab.doc.nodes.keys() {
+        if id == ab.doc.root_id {
+          continue
+        }
+        match ab.doc.nodes.get(id) {
+          None => ()
+          Some(n) => {
+            if n.component == "frame" || n.component == "" {
+              continue
+            }
+            let mut banned = false
+            for d in deny.iter() {
+              if d == n.component {
+                banned = true
+              }
+            }
+            if banned {
+              out.push("\{json_escape(id)} 组件「\{n.component}」命中 spec 禁用项")
+              continue
+            }
+            if allow.length() > 0 {
+              let mut ok = false
+              for a in allow.iter() {
+                if a == n.component {
+                  ok = true
+                }
+              }
+              if !ok {
+                out.push("\{json_escape(id)} 组件「\{n.component}」不在 spec 白名单")
+              }
+            }
+          }
+        }
+      }
+  }
+  out
+}
+
+///|
+/// marker 后首个数字（rules[] 结构化阈值解析用：对比度≥N / 触控 N）。
+fn ds_number_after_marker(text : String, marker : String) -> Double? {
+  let pos = match text.find(marker) {
+    None => return None
+    Some(p) => p
+  }
+  let rest = text.substring(start=pos + marker.length())
+  let mut digits = ""
+  let mut started = false
+  for c in rest.iter() {
+    if c >= '0' && c <= '9' {
+      digits = digits + "\{c}"
+      started = true
+    } else if c == '.' && started {
+      digits = digits + "."
+    } else if started {
+      break
+    } else if c == '>' || c == '=' || c == '≥' || c == ' ' || c == ':' || c == '：' {
+      continue
+    } else {
+      continue
+    }
+  }
+  if digits == "" {
+    return None
+  }
+  match ds_number_value("{\"n\":" + digits + "}", "n") {
+    Some(v) => Some(v)
+    None => None
+  }
+}
+
+///|
+/// rules[] 中的可读性对比度阈值（issue #24 要求 2：norms 以 spec 为准）。
+pub fn Project::design_spec_text_contrast(self : Project) -> Double {
+  if self.design_spec.trim() == "" {
+    return NORM_TEXT_CONTRAST_MIN
+  }
+  match ds_number_after_marker(self.design_spec, "对比度") {
+    Some(v) => if v >= 1.0 && v <= 21.0 { v } else { NORM_TEXT_CONTRAST_MIN }
+    None => NORM_TEXT_CONTRAST_MIN
+  }
+}
+
+///|
+/// rules[] 中的触控目标下限（默认 44）。
+pub fn Project::design_spec_touch_min(self : Project) -> Double {
+  if self.design_spec.trim() == "" {
+    return NORM_TOUCH_MIN
+  }
+  match ds_number_after_marker(self.design_spec, "触控") {
+    Some(v) => if v >= 20.0 && v <= 96.0 { v } else { NORM_TOUCH_MIN }
+    None => NORM_TOUCH_MIN
+  }
+}

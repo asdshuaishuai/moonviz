@@ -79,6 +79,10 @@ pub fn qa_is_bound(self : Project, artboard : String, n : Node) -> Bool {
 /// 4) 非组件库组件（generic_node 当组件用）
 pub fn qa_issues(self : Project, artboard~ : String) -> Array[String] {
   let issues : Array[String] = []
+  // issue #24 要求 2：spec 组件白名单/禁用项的整篇检视并入 QA
+  for v in self.design_spec_component_violations(artboard~).iter() {
+    issues.push(v)
+  }
   match self.artboards.get(artboard) {
     None => ()
     Some(ab) =>

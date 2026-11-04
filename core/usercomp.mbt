@@ -173,10 +173,12 @@ fn rollback_inserted(
             kids.push(k)
           }
         }
+        target.content_seq = target.content_seq + 1
         target.nodes.set(host_parent, { ..parent, children: kids, })
       }
       None => ()
     }
+    target.content_seq = target.content_seq + 1
     target.nodes.remove(host_id)
     j = j - 1
   }

@@ -452,3 +452,71 @@ test "generate spec：调色板/字号/圆角随 spec 生效" {
   assert_true(btn_radius == 6.0, msg="md=6 必须把按钮圆角（12 档）映射到 6（实际 \{btn_radius}）")
   assert_true(max_font == 28.0, msg="h2 档必须重映射为 28（实际最大字号 \{max_font}）")
 }
+
+///|
+/// issue #24 要求 2：spec 组件白名单/禁用项偏差随生成信封上报。
+test "generate spec：组件禁用项偏差随信封上报" {
+  let p = Project::new()
+  let spec = "{\"v\":1,\"palette\":{\"primary\":\"#4B6BFB\"},\"components\":{\"deny\":[\"badge\"]}}"
+  let j = match p.generate(spec=spec, intent_text="登录页", name="wl_login") {
+    Ok(v) => v
+    Err(e) => {
+      fail("带 spec 生成失败：\{e}")
+      abort("")
+    }
+  }
+  assert_true(j.contains("\"spec_violations\":["), msg="信封必须带 spec_violations：\{j}")
+  assert_true(j.contains("badge"), msg="deny badge 必须被报：\{j}")
+}
+
+///|
+/// issue #24 要求 2：rules[] 的结构化阈值（对比度 / 触控）参与 norms 裁决。
+test "spec rules：对比度与触控阈值可被 spec 收紧" {
+  let p = Project::new()
+  p.design_spec = "{\"v\":1,\"rules\":[\"对比度≥7\",\"触控目标 48\"]}"
+  assert_true(p.design_spec_text_contrast() == 7.0, msg="对比度阈值应解析为 7")
+  assert_true(p.design_spec_touch_min() == 48.0, msg="触控阈值应解析为 48")
+  let q = Project::new()
+  assert_true(q.design_spec_text_contrast() == NORM_TEXT_CONTRAST_MIN)
+  assert_true(q.design_spec_touch_min() == NORM_TOUCH_MIN)
+}
+
+///|
+/// issue #25-B4：autofill 物化真实样例数据（不是空壳节点/占位文本）。
+test "autofill：空壳容器物化真实样例数据" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="product_list", width=390.0, height=600.0)
+  let _ = p.place_component(
+    artboard="product_list",
+    component_id="card",
+    instance_id="goods_card",
+    x=20.0,
+    y=20.0,
+    w=340.0,
+    h=200.0,
+  )
+  let placed = match p.materialize_mock_data(artboard="product_list") {
+    Ok(n) => n
+    Err(_) => 0
+  }
+  assert_true(placed >= 2, msg="必须物化 ≥2 条样例（实际 \{placed}）")
+  match p.artboards.get("product_list") {
+    None => assert_true(false)
+    Some(ab) => {
+      let mut joined = ""
+      for id in ab.doc.nodes.keys() {
+        match ab.doc.nodes.get(id) {
+          Some(n) => joined = joined + n.text + "|"
+          None => ()
+        }
+      }
+      assert_true(joined.contains("无线降噪耳机"), msg="样例必须语义化：\{joined}")
+      assert_true(!joined.contains("Item 1"), msg="禁止占位残留：\{joined}")
+    }
+  }
+  // autofill 报告携带 mock_rows
+  match p.autofill_missing(artboard="product_list") {
+    Ok(report) => assert_true(report.contains("\"mock_rows\":"), msg=report)
+    Err(e) => fail("autofill 失败：\{e}")
+  }
+}

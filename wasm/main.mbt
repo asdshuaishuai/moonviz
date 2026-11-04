@@ -153,6 +153,14 @@ struct WasmSession {
   seq : Int
   /// issue #28：上一快照的节点签名表（板/节点 → 签名），delta 由此差分。
   last_sig : Map[String, String]
+  /// issue #28：各板上次快照时的 doc.revision——未变板整板跳过（O(变更)）。
+  sig_rev : Map[String, Int]
+  /// issue #28：单板渲染对象缓存（content_seq → board json）——未变板
+  /// 复用上次渲染，快照成本不再随总节点数增长。
+  render_cache : Map[String, (Int, String)]
+  /// issue #28：canonical 文本转义缓存（project.revision → escaped mbt）——
+  /// 未变更快照整段复用（序列化是快照里最重的一步）。
+  canon_cache : (Int, String)
 }
 
 ///|
@@ -178,6 +186,9 @@ pub fn session_open(mbt : String) -> Int {
           alive: true,
           seq: 0,
           last_sig: Map::new(),
+          sig_rev: Map::new(),
+          render_cache: Map::new(),
+          canon_cache: (0, ""),
         }),
       )
       s.length() - 1
@@ -301,58 +312,158 @@ pub fn session_snapshot(handle : Int) -> String {
     return "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
   }
   let cur = s[handle].val
-  match @decl.project_to_mbt(cur.project) {
+  let p = cur.project
+  match @decl.project_to_mbt(p) {
     Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
     Ok(model) => {
-      let next : Map[String, String] = Map::new()
       let added : Array[String] = []
       let changed : Array[String] = []
-      for ab_id in cur.project.artboards.keys() {
-        match cur.project.artboards.get(ab_id) {
+      let removed : Array[String] = []
+      // 1) 已删板：清签名/渲染缓存，其节点全部进 removed
+      for ab_id in cur.sig_rev.keys() {
+        if !p.artboards.contains(ab_id) {
+          let stale : Array[String] = []
+          for k in cur.last_sig.keys() {
+            if k.has_prefix(ab_id + "/") {
+              stale.push(k)
+            }
+          }
+          for k in stale.iter() {
+            cur.last_sig.remove(k)
+            removed.push(k)
+          }
+          cur.sig_rev.remove(ab_id)
+        }
+      }
+      let render_boards : Array[String] = []
+      for ab_id in p.artboards.keys() {
+        match p.artboards.get(ab_id) {
           None => ()
-          Some(ab) =>
-            for nid in ab.doc.nodes.keys() {
-              match ab.doc.nodes.get(nid) {
-                None => ()
-                Some(n) => {
-                  let key = ab_id + "/" + nid
-                  let sig = nd_sig(n)
-                  next.set(key, sig)
-                  match cur.last_sig.get(key) {
-                    None => added.push(key)
-                    Some(old) =>
-                      if old != sig {
+          Some(ab) => {
+            let rev_now = ab.doc.content_seq
+            // 2) 板 revision 未变 → 整板跳过（delta 与渲染都复用上次结果）
+            let unchanged = match cur.sig_rev.get(ab_id) {
+              Some(r) => r == rev_now
+              None => false
+            }
+            if !unchanged {
+              let old_keys : Array[String] = []
+              for k in cur.last_sig.keys() {
+                if k.has_prefix(ab_id + "/") {
+                  old_keys.push(k)
+                }
+              }
+              let live : Map[String, Bool] = Map::new()
+              for nid in ab.doc.nodes.keys() {
+                match ab.doc.nodes.get(nid) {
+                  None => ()
+                  Some(n) => {
+                    let key = ab_id + "/" + nid
+                    let sig = nd_sig(n)
+                    live.set(key, true)
+                    match cur.last_sig.get(key) {
+                      None => added.push(key)
+                      Some(old) => if old != sig {
                         changed.push(key)
                       }
+                    }
+                    cur.last_sig.set(key, sig)
                   }
                 }
               }
+              for k in old_keys.iter() {
+                if !live.contains(k) {
+                  cur.last_sig.remove(k)
+                  removed.push(k)
+                }
+              }
+              cur.sig_rev.set(ab_id, rev_now)
             }
+            // 3) 渲染对象：缓存命中直接复用（O(1)），否则只渲染本板
+            let cached = match cur.render_cache.get(ab_id) {
+              Some((rev, json)) => if rev == rev_now {
+                Some(json)
+              } else {
+                None
+              }
+              None => None
+            }
+            let board_json = match cached {
+              Some(json) => json
+              None =>
+                match model.render_board_json(ab_id) {
+                  Some(json) => {
+                    cur.render_cache.set(ab_id, (rev_now, json))
+                    json
+                  }
+                  None => ""
+                }
+            }
+            if board_json != "" {
+              render_boards.push(board_json)
+            }
+          }
         }
       }
-      let removed : Array[String] = []
-      for key in cur.last_sig.keys() {
-        if !next.contains(key) {
-          removed.push(key)
+      // 4) 清理已删板的渲染缓存
+      let dead : Array[String] = []
+      for k in cur.render_cache.keys() {
+        if !p.artboards.contains(k) {
+          dead.push(k)
         }
       }
-      s[handle].val = { ..cur, last_sig: next, }
-      let rendered = model.render_json()
-      "{\"ok\":true,\"revision\":" +
-      cur.project.revision.to_string() +
-      ",\"seq\":" +
-      cur.seq.to_string() +
-      ",\"canonical\":\"" +
-      @core.json_escape(model.to_mbt()) +
-      "\",\"render\":{" +
-      rendered.substring(start=11) +
-      ",\"delta\":{\"added\":" +
-      nd_ids_json(added) +
-      ",\"changed\":" +
-      nd_ids_json(changed) +
-      ",\"removed\":" +
-      nd_ids_json(removed) +
-      "}}"
+      for k in dead.iter() {
+        cur.render_cache.remove(k)
+      }
+      // 5) canonical 转义文本：按 project.revision 缓存——未变更快照直取，
+      //    变更快照重序列化一次（canonical 是全文档文本，该步不可避免）。
+      let escaped_mbt = match cur.canon_cache {
+        (rev, cached) =>
+          if rev == p.revision && cached != "" {
+            cached
+          } else {
+            let fresh = @core.json_escape(model.to_mbt())
+            s[handle].val = { ..s[handle].val, canon_cache: (p.revision, fresh), }
+            fresh
+          }
+      }
+      // 6) 组信封：canonical + 增量 render + delta + 动画定义（motion 令牌
+      //    与预设随同一 seq——宿主动画流与设计稿流同帧）
+      let boards_json = render_boards.join(",")
+      let n_boards = p.artboards.length()
+      let out = StringBuilder::new()
+      out.write_string("{\"ok\":true,\"revision\":")
+      out.write_string(p.revision.to_string())
+      out.write_string(",\"seq\":")
+      out.write_string(cur.seq.to_string())
+      out.write_string(",\"canonical\":\"")
+      out.write_string(escaped_mbt)
+      out.write_string("\",\"render\":{\"entry\":\"")
+      out.write_string(@core.json_escape(model.entry))
+      out.write_string("\",\"revision\":")
+      out.write_string(p.revision.to_string())
+      out.write_string(",\"blockKinds\":{\"mbt\":")
+      out.write_string(n_boards.to_string())
+      out.write_string(",\"mbt_check\":")
+      out.write_string(n_boards.to_string())
+      out.write_string(",\"mbt_nocheck\":0,\"moonbit\":0},\"flows\":")
+      out.write_string(p.flow_json())
+      out.write_string(",\"mbt\":\"")
+      out.write_string(escaped_mbt)
+      out.write_string("\",\"artboards\":[")
+      out.write_string(boards_json)
+      out.write_string("]},\"animations\":{\"presets\":")
+      out.write_string(@core.animation_presets_json())
+      out.write_string(",\"motion_css\":\"")
+      out.write_string(@core.json_escape(@core.motion_tokens_css()))
+      out.write_string("\"},\"delta\":{\"added\":")
+      out.write_string(nd_ids_json(added))
+      out.write_string(",\"changed\":")
+      out.write_string(nd_ids_json(changed))
+      out.write_string(",\"removed\":")
+      out.write_string(nd_ids_json(removed))
+      out.write_string("}}")
+      out.to_string()
     }
   }
 }
@@ -529,6 +640,9 @@ pub fn session_close(handle : Int) -> Bool {
       alive: false,
       seq: 0,
       last_sig: Map::new(),
+      sig_rev: Map::new(),
+      render_cache: Map::new(),
+      canon_cache: (0, ""),
     })
     true
   } else {
@@ -560,6 +674,9 @@ pub fn session_open_project_json(project_json : String) -> Int {
           alive: true,
           seq: 0,
           last_sig: Map::new(),
+          sig_rev: Map::new(),
+          render_cache: Map::new(),
+          canon_cache: (0, ""),
         }),
       )
       s.length() - 1
@@ -669,6 +786,8 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(_) => {
                   p.replace_with(snapshot)
+                  // issue #28：apply 是改文档路径——seq 严格递增
+                  bump_session_seq(handle)
                   // 从属不变式：apply 成功后清掉已删画板的历史注册
                   let _ = prune_session_histories(session_store()[handle].val)
                   match @decl.project_to_mbt(p) {
@@ -706,6 +825,8 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(debt) => {
                   p.replace_with(snapshot)
+                  // issue #28：apply 是改文档路径——seq 严格递增
+                  bump_session_seq(handle)
                   // 从属不变式：apply 成功后清掉已删画板的历史注册
                   let _ = prune_session_histories(session_store()[handle].val)
                   match @decl.project_to_mbt(p) {

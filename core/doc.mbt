@@ -34,6 +34,9 @@ pub(all) struct Document {
   mut nodes : Map[String, Node]
   mut revision : Int
   journal : Array[JournalEntry]
+  /// 内容序号（issue #28）：任何节点变更 +1——快照按板失效的 O(1) 键。
+  /// 与 revision 不同：revision 是文档/历史语义，content_seq 只服务增量。
+  mut content_seq : Int
 }
 
 ///|
@@ -48,7 +51,7 @@ pub fn Document::new(viewport : Size) -> Document {
   }
   let nodes : Map[String, Node] = Map::new()
   nodes.set("root", root)
-  { root_id: "root", nodes, revision: 1, journal: [], }
+  { root_id: "root", nodes, revision: 1, journal: [], content_seq: 0, }
 }
 
 ///|
@@ -77,6 +80,7 @@ pub fn Document::insert_node(
       let kids = parent.children.copy()
       kids.push(node.id)
       self.nodes.set(parent_id, { ..parent, children: kids, })
+      self.content_seq = self.content_seq + 1
       true
     }
     None => false
@@ -90,6 +94,7 @@ pub fn Document::register(self : Document, node : Node) -> Bool {
     return false
   }
   self.nodes.set(node.id, node)
+  self.content_seq = self.content_seq + 1
   true
 }
 
@@ -102,6 +107,7 @@ pub fn Document::update_node(
   match self.nodes.get(id) {
     Some(n) => {
       self.nodes.set(id, f(n))
+      self.content_seq = self.content_seq + 1
       true
     }
     None => false
@@ -149,7 +155,13 @@ pub fn Document::clone(self : Document) -> Document {
   for e in self.journal.iter() {
     journal.push(e)
   }
-  { root_id: self.root_id, nodes, revision: self.revision, journal, }
+  {
+    root_id: self.root_id,
+    nodes,
+    revision: self.revision,
+    journal,
+    content_seq: self.content_seq,
+  }
 }
 
 ///|

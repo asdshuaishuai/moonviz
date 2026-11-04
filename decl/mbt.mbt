@@ -1010,33 +1010,44 @@ pub fn MbtProject::commit_and_render(
 }
 
 ///|
+///|
+/// 单板渲染对象（issue #28 增量快照的复用单元）：{id,name,width,height,
+/// nodes,svg} 的 JSON 文本；板不存在或渲染失败返回 None。
+pub fn MbtProject::render_board_json(self : MbtProject, id : String) -> String? {
+  match
+    (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
+    (Some(artboard), Ok(svg)) => {
+      let nodes = match self.project.query_nodes(artboard=id) {
+        Ok(json) => json
+        Err(_) => "[]"
+      }
+      Some(
+        "{\"id\":\"" +
+        @core.json_escape(id) +
+        "\",\"name\":\"" +
+        @core.json_escape(artboard.name) +
+        "\",\"width\":" +
+        artboard.width.to_string() +
+        ",\"height\":" +
+        artboard.height.to_string() +
+        ",\"nodes\":" +
+        nodes +
+        ",\"svg\":\"" +
+        @core.json_escape(svg) +
+        "\"}",
+      )
+    }
+    _ => None
+  }
+}
+
+///|
 pub fn MbtProject::render_json(self : MbtProject) -> String {
   let artboards : Array[String] = []
   for id in self.project.artboards.keys() {
-    match
-      (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
-      (Some(artboard), Ok(svg)) => {
-        let nodes = match self.project.query_nodes(artboard=id) {
-          Ok(json) => json
-          Err(_) => "[]"
-        }
-        artboards.push(
-          "{\"id\":\"" +
-          @core.json_escape(id) +
-          "\",\"name\":\"" +
-          @core.json_escape(artboard.name) +
-          "\",\"width\":" +
-          artboard.width.to_string() +
-          ",\"height\":" +
-          artboard.height.to_string() +
-          ",\"nodes\":" +
-          nodes +
-          ",\"svg\":\"" +
-          @core.json_escape(svg) +
-          "\"}",
-        )
-      }
-      _ => ()
+    match self.render_board_json(id) {
+      Some(board_json) => artboards.push(board_json)
+      None => ()
     }
   }
   let out = StringBuilder::new()

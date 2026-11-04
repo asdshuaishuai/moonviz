@@ -820,15 +820,19 @@ fn norm_touch_is_banded(component : String) -> Bool {
 }
 
 ///|
-fn norm_touch_min_h(component : String) -> Double {
+fn norm_touch_min_h(component : String, touch_min : Double) -> Double {
   match component {
     "chip" => 28.0
     "tag" => 22.0
-    _ => NORM_TOUCH_MIN
+    _ => touch_min
   }
 }
 
-pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+pub fn norm_touch_issues(
+  doc : Document,
+  layout : SolvedLayout,
+  touch_min? : Double = NORM_TOUCH_MIN,
+) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
     if issues.length() >= 4 { break }
@@ -837,11 +841,11 @@ pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String]
       Some(n) => {
         if !norm_is_interactive(n.component) { continue }
         let banded = norm_touch_is_banded(n.component)
-        let min_h = norm_touch_min_h(n.component)
+        let min_h = norm_touch_min_h(n.component, touch_min)
         match layout.rect_of(id) {
           None => continue
           Some(r) => {
-            let w_short = !banded && r.width < NORM_TOUCH_MIN - 0.5
+            let w_short = !banded && r.width < touch_min - 0.5
             let h_short = r.height < min_h - 0.5
             if w_short || h_short {
               let min_desc = if banded {
@@ -867,6 +871,7 @@ pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String]
 pub fn norm_touch_fix_pass(
   doc : Document,
   layout : SolvedLayout,
+  touch_min? : Double = NORM_TOUCH_MIN,
 ) -> Array[String] {
   let fixes : Array[String] = []
   for id in doc.nodes.keys() {
@@ -875,11 +880,11 @@ pub fn norm_touch_fix_pass(
       Some(n) => {
         if !norm_is_interactive(n.component) { continue }
         let banded = norm_touch_is_banded(n.component)
-        let min_h = norm_touch_min_h(n.component)
+        let min_h = norm_touch_min_h(n.component, touch_min)
         match layout.rect_of(id) {
           None => ()
           Some(r) => {
-            let w_short = !banded && r.width < NORM_TOUCH_MIN - 0.5
+            let w_short = !banded && r.width < touch_min - 0.5
             let h_short = r.height < min_h - 0.5
             if !w_short && !h_short { continue }
             let w_fixed = match n.width {
@@ -890,7 +895,7 @@ pub fn norm_touch_fix_pass(
               Fixed(_) => true
               _ => false
             }
-            let new_w = if w_short && w_fixed { NORM_TOUCH_MIN } else { r.width }
+            let new_w = if w_short && w_fixed { touch_min } else { r.width }
             let new_h = if h_short && h_fixed { min_h } else { r.height }
             if new_w != r.width || new_h != r.height {
               let why = if banded {
@@ -1078,7 +1083,11 @@ pub fn norm_selected_state_issues(self : Project, artboard~ : String) -> Array[S
 ///    撞色规则报告并 auto_fix，这里补 [2.0, need) 区间（检测项，给改法）。
 /// 2) 组件不可见：叶子节点纯色填充与父背景完全同色、无描边、无文本。
 /// 3) 纯黑/近黑灰背景：有子节点的容器硬填灰度近黑（生硬刺眼，用户明确不要）。
-pub fn norm_readability_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+pub fn norm_readability_issues(
+  doc : Document,
+  layout : SolvedLayout,
+  contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
+) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
     if issues.length() >= 8 {
@@ -1098,10 +1107,17 @@ pub fn norm_readability_issues(doc : Document, layout : SolvedLayout) -> Array[S
               norm_luminance(bg),
               norm_luminance(n.style.text_color),
             )
-            let need = if n.style.font_size >= 24.0 {
-              NORM_TEXT_CONTRAST_LARGE_MIN
+            let large = n.style.font_size >= 24.0
+            let need = if large {
+              // 大字号仍放宽（默认 3.0；spec 收紧时按 2/3 比例跟随）
+              let scaled = contrast_min * 2.0 / 3.0
+              if scaled > NORM_TEXT_CONTRAST_LARGE_MIN {
+                scaled
+              } else {
+                NORM_TEXT_CONTRAST_LARGE_MIN
+              }
             } else {
-              NORM_TEXT_CONTRAST_MIN
+              contrast_min
             }
             if cr >= NORM_CONTRAST_MIN && cr < need {
               issues.push(
@@ -1142,9 +1158,11 @@ pub fn norm_issues_v2(
   doc : Document,
   layout : SolvedLayout,
   radius_base? : Double = NORM_RADIUS_BASE,
+  contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
+  touch_min? : Double = NORM_TOUCH_MIN,
 ) -> Array[String] {
   let issues = norm_issues(doc, layout, radius_base~)
-  for issue in norm_touch_issues(doc, layout).iter() {
+  for issue in norm_touch_issues(doc, layout, touch_min~).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }
   for issue in norm_type_issues(doc).iter() {
@@ -1157,7 +1175,7 @@ pub fn norm_issues_v2(
     if issues.length() < 8 { issues.push(issue) }
   }
   // issue #23：可读性硬标准（对比度 / 不可见 / 纯黑底），检测项
-  for issue in norm_readability_issues(doc, layout).iter() {
+  for issue in norm_readability_issues(doc, layout, contrast_min~).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }
   issues

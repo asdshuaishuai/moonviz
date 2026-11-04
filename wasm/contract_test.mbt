@@ -779,8 +779,25 @@ test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（is
     s2.contains("\"changed\":[\"w/btn\"]"),
     msg="位移节点必须进 changed",
   )
-  // 快照本身不推进 seq（只更新签名基线）
+  // 快照本身不推进 seq（只更新签名基线）；未变更 → delta 为空（增量快路径）
   let s3 = session_snapshot(h)
   assert_true(s3.contains("\"seq\":1"), msg="快照不得推进 seq：\{s3}")
+  assert_true(
+    s3.contains("\"delta\":{\"added\":[],\"changed\":[],\"removed\":[]}"),
+    msg="未变更时 delta 必须为空（O(变更) 快路径）",
+  )
+  // 动画定义随帧（issue #28：动画流与设计稿流同一 seq）
+  assert_true(
+    s3.contains("\"animations\":{\"presets\":"),
+    msg="快照必须携带 animations.presets",
+  )
+  assert_true(s3.contains("\"motion_css\":\""), msg="快照必须携带 motion_css")
+  // 删除节点 → removed 定位
+  let _ = session_apply_human(h, "delete w btn")
+  let s4 = session_snapshot(h)
+  assert_true(
+    s4.contains("\"removed\":[\"w/btn\"]"),
+    msg="删除节点必须进 removed：\{s4}",
+  )
   let _ = session_close(h)
 }
