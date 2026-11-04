@@ -149,6 +149,18 @@ struct WasmSession {
   /// session_get 对已关槽位返回 None——宿主得到 invalid_session_handle
   /// 而不是在空项目上误操作（issue #4A）。
   alive : Bool
+  /// issue #28：快照序号——每次改文档路径严格 +1（宿主按 seq 配对三视图帧）。
+  seq : Int
+  /// issue #28：上一快照的节点签名表（板/节点 → 签名），delta 由此差分。
+  last_sig : Map[String, String]
+  /// issue #28：各板上次快照时的 doc.revision——未变板整板跳过（O(变更)）。
+  sig_rev : Map[String, Int]
+  /// issue #28：单板渲染对象缓存（content_seq → board json）——未变板
+  /// 复用上次渲染，快照成本不再随总节点数增长。
+  render_cache : Map[String, (Int, String)]
+  /// issue #28：canonical 文本转义缓存（project.revision → escaped mbt）——
+  /// 未变更快照整段复用（序列化是快照里最重的一步）。
+  canon_cache : (Int, String)
 }
 
 ///|
@@ -172,6 +184,11 @@ pub fn session_open(mbt : String) -> Int {
           histories: Map::new(),
           history_board: "",
           alive: true,
+          seq: 0,
+          last_sig: Map::new(),
+          sig_rev: Map::new(),
+          render_cache: Map::new(),
+          canon_cache: (0, ""),
         }),
       )
       s.length() - 1
@@ -231,6 +248,241 @@ fn session_canonical_mbt(p : @core.Project) -> String {
   match @decl.project_to_mbt(p) {
     Ok(m) => ",\"mbt\":\"\{@core.json_escape(m.to_mbt())}\""
     Err(_) => ""
+  }
+}
+
+///|
+fn nd_size_sig(s : @core.SizeSpec) -> String {
+  match s {
+    Fixed(v) => "f" + v.to_string()
+    Fill => "fill"
+    Hug => "hug"
+  }
+}
+
+///|
+fn nd_pos_sig(p : @core.PosSpec) -> String {
+  match p {
+    Fixed(v) => "f" + v.to_string()
+    AlignStart(v) => "s" + v.to_string()
+    AlignEnd(v) => "e" + v.to_string()
+    CenterInParent => "c"
+  }
+}
+
+///|
+fn nd_sig(n : @core.Node) -> String {
+  let mut kids = ""
+  for c in n.children.iter() {
+    kids = kids + c + ","
+  }
+  nd_size_sig(n.width) +
+  "|" +
+  nd_size_sig(n.height) +
+  "|" +
+  nd_pos_sig(n.x) +
+  "|" +
+  nd_pos_sig(n.y) +
+  "|" +
+  n.component +
+  "|" +
+  n.text +
+  "|" +
+  n.style.fill +
+  "|" +
+  n.style.text_color +
+  "|" +
+  n.style.stroke +
+  "|" +
+  n.style.corner_radius.to_string() +
+  "|" +
+  n.style.font_size.to_string() +
+  "|" +
+  n.style.opacity.to_string() +
+  "|" +
+  (if n.style.visible { "v" } else { "h" }) +
+  "|" +
+  kids
+}
+
+///|
+fn nd_ids_json(ids : Array[String]) -> String {
+  let items : Array[String] = []
+  for id in ids.iter() {
+    items.push("\"\{@core.json_escape(id)}\"")
+  }
+  "[" + items.join(",") + "]"
+}
+
+///|
+/// issue #28：原子快照契约。单次调用返回
+/// `{ok, revision, seq, canonical, render, delta:{added,changed,removed}}`——
+/// 宿主三视图（线框/高保真/源码/动画）只消费同一帧；delta 为与上一快照的
+/// 节点签名差分（id 带板前缀），首帧全部 added。seq 随改文档路径严格递增，
+/// 快照本身不递增（只更新签名基线）。
+pub fn session_snapshot(handle : Int) -> String {
+  let s = session_store()
+  if handle < 0 || handle >= s.length() || !s[handle].val.alive {
+    return "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+  }
+  let cur = s[handle].val
+  let p = cur.project
+  match @decl.project_to_mbt(p) {
+    Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+    Ok(model) => {
+      let added : Array[String] = []
+      let changed : Array[String] = []
+      let removed : Array[String] = []
+      // 1) 已删板：清签名/渲染缓存，其节点全部进 removed
+      let dead_boards : Array[String] = []
+      for ab_id in cur.sig_rev.keys() {
+        if !p.artboards.contains(ab_id) {
+          dead_boards.push(ab_id)
+        }
+      }
+      for ab_id in dead_boards.iter() {
+        let stale : Array[String] = []
+        for k in cur.last_sig.keys() {
+          if k.has_prefix(ab_id + "/") {
+            stale.push(k)
+          }
+        }
+        for k in stale.iter() {
+          cur.last_sig.remove(k)
+          removed.push(k)
+        }
+        cur.sig_rev.remove(ab_id)
+      }
+      let render_boards : Array[String] = []
+      for ab_id in p.artboards.keys() {
+        match p.artboards.get(ab_id) {
+          None => ()
+          Some(ab) => {
+            let rev_now = ab.doc.content_seq
+            // 2) 板 revision 未变 → 整板跳过（delta 与渲染都复用上次结果）
+            let unchanged = match cur.sig_rev.get(ab_id) {
+              Some(r) => r == rev_now
+              None => false
+            }
+            if !unchanged {
+              let old_keys : Array[String] = []
+              for k in cur.last_sig.keys() {
+                if k.has_prefix(ab_id + "/") {
+                  old_keys.push(k)
+                }
+              }
+              let live : Map[String, Bool] = Map::new()
+              for nid in ab.doc.nodes.keys() {
+                match ab.doc.nodes.get(nid) {
+                  None => ()
+                  Some(n) => {
+                    let key = ab_id + "/" + nid
+                    let sig = nd_sig(n)
+                    live.set(key, true)
+                    match cur.last_sig.get(key) {
+                      None => added.push(key)
+                      Some(old) => if old != sig {
+                        changed.push(key)
+                      }
+                    }
+                    cur.last_sig.set(key, sig)
+                  }
+                }
+              }
+              for k in old_keys.iter() {
+                if !live.contains(k) {
+                  cur.last_sig.remove(k)
+                  removed.push(k)
+                }
+              }
+              cur.sig_rev.set(ab_id, rev_now)
+            }
+            // 3) 渲染对象：缓存命中直接复用（O(1)），否则只渲染本板
+            let cached = match cur.render_cache.get(ab_id) {
+              Some((rev, json)) => if rev == rev_now {
+                Some(json)
+              } else {
+                None
+              }
+              None => None
+            }
+            let board_json = match cached {
+              Some(json) => json
+              None =>
+                match model.render_board_json(ab_id) {
+                  Some(json) => {
+                    cur.render_cache.set(ab_id, (rev_now, json))
+                    json
+                  }
+                  None => ""
+                }
+            }
+            if board_json != "" {
+              render_boards.push(board_json)
+            }
+          }
+        }
+      }
+      // 4) 清理已删板的渲染缓存
+      let dead : Array[String] = []
+      for k in cur.render_cache.keys() {
+        if !p.artboards.contains(k) {
+          dead.push(k)
+        }
+      }
+      for k in dead.iter() {
+        cur.render_cache.remove(k)
+      }
+      // 5) canonical 转义文本：按 project.revision 缓存——未变更快照直取，
+      //    变更快照重序列化一次（canonical 是全文档文本，该步不可避免）。
+      let escaped_mbt = match cur.canon_cache {
+        (rev, cached) =>
+          if rev == p.revision && cached != "" {
+            cached
+          } else {
+            let fresh = @core.json_escape(model.to_mbt())
+            s[handle].val = { ..s[handle].val, canon_cache: (p.revision, fresh), }
+            fresh
+          }
+      }
+      // 6) 组信封：canonical + 增量 render + delta + 动画定义（motion 令牌
+      //    与预设随同一 seq——宿主动画流与设计稿流同帧）
+      let boards_json = render_boards.join(",")
+      let n_boards = p.artboards.length()
+      let out = StringBuilder::new()
+      out.write_string("{\"ok\":true,\"revision\":")
+      out.write_string(p.revision.to_string())
+      out.write_string(",\"seq\":")
+      out.write_string(cur.seq.to_string())
+      out.write_string(",\"canonical\":\"")
+      out.write_string(escaped_mbt)
+      out.write_string("\",\"render\":{\"entry\":\"")
+      out.write_string(@core.json_escape(model.entry))
+      out.write_string("\",\"revision\":")
+      out.write_string(p.revision.to_string())
+      out.write_string(",\"blockKinds\":{\"mbt\":")
+      out.write_string(n_boards.to_string())
+      out.write_string(",\"mbt_check\":")
+      out.write_string(n_boards.to_string())
+      out.write_string(",\"mbt_nocheck\":0,\"moonbit\":0},\"flows\":")
+      out.write_string(p.flow_json())
+      out.write_string(",\"mbt\":\"")
+      out.write_string(escaped_mbt)
+      out.write_string("\",\"artboards\":[")
+      out.write_string(boards_json)
+      out.write_string("]},\"animations\":{\"presets\":")
+      out.write_string(@core.animation_presets_json())
+      out.write_string(",\"motion_css\":\"")
+      out.write_string(@core.json_escape(@core.motion_tokens_css()))
+      out.write_string("\"},\"delta\":{\"added\":")
+      out.write_string(nd_ids_json(added))
+      out.write_string(",\"changed\":")
+      out.write_string(nd_ids_json(changed))
+      out.write_string(",\"removed\":")
+      out.write_string(nd_ids_json(removed))
+      out.write_string("}}")
+      out.to_string()
+    }
   }
 }
 
@@ -305,7 +557,8 @@ pub fn session_history(handle : Int, line : String) -> String {
         Some(h) =>
           "{\"ok\":true,\"op\":\"history-log\",\"board\":\"\{@core.json_escape(cur.history_board)}\",\"rev\":\{h.rev()},\"log\":\"\{@core.json_escape(h.log())}\"}"
       }
-    "undo" | "redo" =>
+    "undo" | "redo" => {
+      bump_session_seq(handle)
       match cur.histories.get(cur.history_board) {
         None => "{\"ok\":false,\"error\":\"history_not_initialized\"}"
         Some(h) => {
@@ -326,7 +579,9 @@ pub fn session_history(handle : Int, line : String) -> String {
           }
         }
       }
+    }
     "checkout" => {
+      bump_session_seq(handle)
       if parts.length() < 2 {
         return "{\"ok\":false,\"error\":\"mbt_operation_usage:history checkout <rev>\"}"
       }
@@ -401,6 +656,11 @@ pub fn session_close(handle : Int) -> Bool {
       histories: Map::new(),
       history_board: "",
       alive: false,
+      seq: 0,
+      last_sig: Map::new(),
+      sig_rev: Map::new(),
+      render_cache: Map::new(),
+      canon_cache: (0, ""),
     })
     true
   } else {
@@ -430,6 +690,11 @@ pub fn session_open_project_json(project_json : String) -> Int {
           histories: Map::new(),
           history_board: "",
           alive: true,
+          seq: 0,
+          last_sig: Map::new(),
+          sig_rev: Map::new(),
+          render_cache: Map::new(),
+          canon_cache: (0, ""),
         }),
       )
       s.length() - 1
@@ -473,6 +738,17 @@ fn sess_json(
 /// 未动）不回 mbt。
 /// 内层自带 "ok" 即保留全部字段并拼接 mbt；无 ok 的裸 intent 负载包一层
 /// {"ok":true,"moves":<inner>,"mbt":...}。
+///|
+/// issue #28：改文档路径的 seq 递增（快照契约单调序）。
+fn bump_session_seq(handle : Int) -> Unit {
+  let s = session_store()
+  if handle >= 0 && handle < s.length() && s[handle].val.alive {
+    let cur = s[handle].val
+    s[handle].val = { ..cur, seq: cur.seq + 1, }
+  }
+}
+
+///|
 fn sess_mut_json(
   handle : Int,
   f : (@core.Project) -> Result[String, String],
@@ -482,13 +758,14 @@ fn sess_mut_json(
     Some(p) =>
       match f(p) {
         Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
-        Ok(inner) => sess_mut_ok(p, inner)
+        Ok(inner) => sess_mut_ok(handle, p, inner)
       }
   }
 }
 
 ///|
-fn sess_mut_ok(p : @core.Project, inner : String) -> String {
+fn sess_mut_ok(handle : Int, p : @core.Project, inner : String) -> String {
+  bump_session_seq(handle)
   let mbt_frag = session_canonical_mbt(p)
   if inner.contains("\"ok\":") &&
     inner.length() > 0 &&
@@ -527,6 +804,8 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(_) => {
                   p.replace_with(snapshot)
+                  // issue #28：apply 是改文档路径——seq 严格递增
+                  bump_session_seq(handle)
                   // 从属不变式：apply 成功后清掉已删画板的历史注册
                   let _ = prune_session_histories(session_store()[handle].val)
                   match @decl.project_to_mbt(p) {
@@ -564,6 +843,8 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
                 Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
                 Ok(debt) => {
                   p.replace_with(snapshot)
+                  // issue #28：apply 是改文档路径——seq 严格递增
+                  bump_session_seq(handle)
                   // 从属不变式：apply 成功后清掉已删画板的历史注册
                   let _ = prune_session_histories(session_store()[handle].val)
                   match @decl.project_to_mbt(p) {
@@ -661,7 +942,20 @@ pub fn session_constrain(
   artboard : String,
   intent : String,
 ) -> String {
-  sess_mut_json(handle, fn(p) { p.apply_constraint(intent, artboard~) })
+  sess_mut_json(handle, fn(p) {
+    match p.apply_constraint(intent, artboard~) {
+      // issue #19：成功信封回传 canonical mbt——按 canonical 交换的宿主
+      // 无需二次 export；失败信封保持原样（错误面不背 canonical）。
+      Err(e) => Err(e)
+      Ok(op_env) =>
+        Ok(
+          "{\"ok\":true," +
+          op_env.substring(start=1, end=op_env.length() - 1) +
+          session_canonical_mbt(p) +
+          "}",
+        )
+    }
+  })
 }
 
 ///|
@@ -673,15 +967,59 @@ pub fn session_generate(
   intent : String,
   name : String,
 ) -> String {
-  sess_mut_json(handle, fn(p) { p.generate(intent_text=intent, name=name) })
+  session_generate_core(handle, intent, name, "")
 }
 
 ///|
-/// classic 槽变体：辅槽（arg）= intent，三槽（arg2）= name。
-/// 注意这是槽语义表的唯一特例（一般规则 intent 走三槽）——name 是
-/// 新画板名而非画板引用，故与 constrain_in 的 arg=artboard 布局不同。
+/// issue #24：规范驱动生成的直接导出（spec = design spec JSON 字符串）。
+/// spec 缺失/空白 → {"ok":false,"error":"design_spec_required",
+/// "design_spec_draft":{…}}，宿主落盘草案后带 spec 重试。
+pub fn session_generate_spec(
+  handle : Int,
+  intent : String,
+  name : String,
+  spec : String,
+) -> String {
+  session_generate_core(handle, intent, name, spec)
+}
+
+///|
+fn session_generate_core(
+  handle : Int,
+  intent : String,
+  name : String,
+  spec : String,
+) -> String {
+  sess_mut_json(handle, fn(p) {
+    match p.generate(intent_text=intent, name=name, spec=spec) {
+      Ok(env) => Ok(env)
+      // issue #24：spec 缺失是显式要求——随信封回传可编辑草案，
+      // 而不是普通错误（宿主据此走「写规范 → 重试」闭环）。
+      Err(e) =>
+        if e == "design_spec_required" {
+          Ok(
+            "{\"ok\":false,\"error\":\"design_spec_required\",\"design_spec_draft\":" +
+            @core.design_spec_draft_json(intent) +
+            "}",
+          )
+        } else {
+          Err(e)
+        }
+    }
+  })
+}
+
+///|
+/// classic 槽变体：主槽（in_）= design spec（issue #24，必带），
+/// 辅槽（arg）= intent，三槽（arg2）= name。name 是新画板名而非画板
+/// 引用，故与 constrain_in 的 arg=artboard 布局不同。
 pub fn session_generate_in(handle : Int) -> String {
-  session_generate(handle, slot_string(g_arg_bytes), slot_string(g_arg2_bytes))
+  session_generate_core(
+    handle,
+    slot_string(g_arg_bytes),
+    slot_string(g_arg2_bytes),
+    slot_string(g_in_bytes),
+  )
 }
 
 ///|
@@ -752,6 +1090,7 @@ pub fn session_component_compile_b64(handle : Int, decl_b64 : String) -> String 
                 Ok(def) => {
                   p.user_components.set(def.id, def)
                   sess_mut_ok(
+                    handle,
                     p,
                     "{\"ok\":true,\"component\":\"\{@core.json_escape(def.id)}\",\"params_count\":\{def.params.length()}}",
                   )
@@ -809,6 +1148,7 @@ pub fn session_tap(
           }
           let joined = items.join(",")
           sess_mut_ok(
+            handle,
             p,
             "{\"ok\":true,\"changes\":[\{joined}],\"current\":\"\{@core.json_escape(rt.nav.current)}\"}",
           )

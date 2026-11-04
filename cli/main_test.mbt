@@ -58,13 +58,13 @@ test "MBT transport rejects malformed Base64 before parsing source" {
 ///|
 test "generate: one-sentence intent produces a full artboard plus report" {
   let project = @core.Project::new()
-  let result = cli_exec(project, "generate 登录页")
+  let result = cli_exec(project, "generate 登录页 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19")
   assert_true(result.contains("\"ok\":true"))
   assert_true(result.contains("\"template\":\"login\""))
   assert_true(result.contains("\"autofix\""))
   assert_true(result.contains("\"score\""))
   // 自定义画板名（as 尾缀）
-  let named = cli_exec(project, "generate 设置页 as my_settings")
+  let named = cli_exec(project, "generate 设置页 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as my_settings")
   assert_true(named.contains("\"artboard\":\"my_settings\""))
 }
 
@@ -76,16 +76,16 @@ test "generate: one-sentence intent produces a full artboard plus report" {
 test "generate: mid-intent as stays in the intent, trailing as names the artboard" {
   let project = @core.Project::new()
   // as 居中（其后还有 token）：不劫持——意图完整，画板名回落 template_id
-  let mid = cli_exec(project, "generate login as hero page")
+  let mid = cli_exec(project, "generate login spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as hero page")
   assert_true(mid.contains("\"ok\":true"))
   assert_true(mid.contains("\"template\":\"login\""))
   assert_true(mid.contains("\"artboard\":\"login\""))
   // as 尾部：仍按声明生效
-  let tail = cli_exec(project, "generate login page as hero")
+  let tail = cli_exec(project, "generate login page spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as hero")
   assert_true(tail.contains("\"template\":\"login\""))
   assert_true(tail.contains("\"artboard\":\"hero\""))
   // 引号意图含 as：split_cmd 还原为单 token，as 永不劫持（与 wasm 臂同构）
-  let quoted = cli_exec(project, "generate \"登录页 with as badge 中间词\"")
+  let quoted = cli_exec(project, "generate \"登录页 with as badge 中间词\" spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19")
   assert_true(quoted.contains("\"template\":\"login\""))
   assert_true(quoted.contains("\"artboard\":\"login\""))
   assert_true(!quoted.contains("\"artboard\":\"badge"))
@@ -152,7 +152,7 @@ test "ops-batch: over-limit rejection reports applied:0 with sentinel index" {
 /// help 是会话内 Agent 的发现面：SKILL.md 执行阶梯的首选入口必须在列
 test "help surfaces the generative commands" {
   let help = cli_exec(@core.Project::new(), "help")
-  assert_true(help.contains("generate <意图一句话> [as <name>]"))
+  assert_true(help.contains("generate <意图一句话> [spec=<b64>] [as <name>]"))
   assert_true(help.contains("ops-batch-b64 <b64>"))
   // 组合意图通道（"+" 多段 → mode:multi）必须从 help 可发现——与
   // core/agent_api.mbt 的 generate 描述同源，SKILL.md 不再是唯一入口
@@ -220,7 +220,7 @@ fn envelope_mbt(envelope : String) -> String {
 ///|
 test "组合意图产物 canonical 往返：双板与导航流零损失" {
   let p = @core.Project::new()
-  let gen = cli_exec(p, "generate 登录+注册")
+  let gen = cli_exec(p, "generate 登录+注册 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19")
   assert_true(gen.contains("\"mode\":\"multi\""))
   let exp = cli_exec(p, "export-mbt-agent")
   let mbt = envelope_mbt(exp)

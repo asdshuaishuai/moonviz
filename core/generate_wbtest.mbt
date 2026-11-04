@@ -3,6 +3,10 @@
 /// 历史 bug：list_detail 把裸「列表」「详情」都收进词表，而它渲染的是聊天界面
 /// （app_bar "Chats" + Alice/Bob 会话）——「首页 列表」「装备详情」都被解析成
 /// 同一个聊天页，用户拿到的原型与需求无关。锁死三类语义的落点分离。
+///|
+/// issue #24 测试用 design spec（规范驱动生成的必须入参）。
+const SPEC : String = "{\"v\":1,\"palette\":{\"primary\":\"#4B6BFB\",\"background\":\"#FFFFFF\",\"surface\":\"#F6F7F9\",\"text\":\"#1A1C1E\",\"muted\":\"#6B7280\",\"danger\":\"#DC2626\",\"success\":\"#16A34A\"},\"typography\":{\"display\":48,\"h1\":32,\"h2\":24,\"h3\":20,\"h4\":16,\"body\":14,\"caption\":12},\"spacing\":[4,8,12,16,24,32],\"radius\":{\"sm\":8,\"md\":12,\"lg\":16},\"rules\":[\"按钮不卡文案\"]}"
+
 test "generate：列表/详情/聊天三类语义必须落到不同模板" {
   assert_true(parse_generate_intent("首页 列表").template_id == "list")
   assert_true(parse_generate_intent("商品列表").template_id == "list")
@@ -23,14 +27,14 @@ test "generate：列表/详情/聊天三类语义必须落到不同模板" {
 /// 新模板必须能真正实例化并产出内容（不是只注册了 id）。
 test "generate：list / detail 模板产物结构正确" {
   let p = Project::new()
-  let rl = match p.generate(intent_text="商品列表", name="lst") {
+  let rl = match p.generate(spec=SPEC, intent_text="商品列表", name="lst") {
     Ok(j) => j
     Err(_) => ""
   }
   assert_true(rl.contains("\"ok\":true"), msg="list 生成应成功：\{rl}")
   assert_true(rl.contains("\"template\":\"list\""), msg="list 意图应落到 list 模板：\{rl}")
   let p2 = Project::new()
-  let rd = match p2.generate(intent_text="商品详情", name="det") {
+  let rd = match p2.generate(spec=SPEC, intent_text="商品详情", name="det") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -55,7 +59,7 @@ test "generate：意图解析与生成信封" {
   assert_true(i4.template_id == "empty_state")
   // 一调用生成：模板 → auto_fix → missing/score 报告
   let p = Project::new()
-  let json = match p.generate(intent_text="登录页") {
+  let json = match p.generate(spec=SPEC, intent_text="登录页") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -70,7 +74,7 @@ test "generate：意图解析与生成信封" {
     None => assert_true(false)
   }
   // 自定义画板名 + 第二次生成（设置语义 → settings 模板）
-  let _ = p.generate(intent_text="设置页", name="my_settings")
+  let _ = p.generate(spec=SPEC, intent_text="设置页", name="my_settings")
   assert_true(p.artboards.contains("my_settings"))
 }
 
@@ -121,7 +125,7 @@ test "agent_api：generate/batch_apply 注册" {
 test "generate：信封宽高/覆盖标记与 pc/web 整词、平分-反超清理" {
   // 平板意图：dashboard 模板不消费 768 宽，实际产出 390×844——信封可见
   let p = Project::new()
-  let tablet = match p.generate(intent_text="平板 仪表盘") {
+  let tablet = match p.generate(spec=SPEC, intent_text="平板 仪表盘") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -130,7 +134,7 @@ test "generate：信封宽高/覆盖标记与 pc/web 整词、平分-反超清�
   assert_true(tablet.contains("\"height\":844"))
   assert_true(tablet.contains("\"replaced\":false"))
   // 重跑同意图：同名画板被覆盖 → replaced:true（覆盖必须可见）
-  let rerun = match p.generate(intent_text="平板 仪表盘") {
+  let rerun = match p.generate(spec=SPEC, intent_text="平板 仪表盘") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -157,7 +161,7 @@ test "generate：信封宽高/覆盖标记与 pc/web 整词、平分-反超清�
 /// 语义节点，找不到合成前往按钮）；纯主题段不生成板只换主题。
 test "generate multi：组合意图与自动导航流" {
   let p = Project::new()
-  let json = match p.generate(intent_text="登录+注册") {
+  let json = match p.generate(spec=SPEC, intent_text="登录+注册") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -207,7 +211,7 @@ test "generate multi：组合意图与自动导航流" {
     y=10.0,
   )
   let flows_before = p.flows.length()
-  let rerun = match p.generate(intent_text="登录+注册") {
+  let rerun = match p.generate(spec=SPEC, intent_text="登录+注册") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -220,7 +224,7 @@ test "generate multi：组合意图与自动导航流" {
   }
   assert_true(p.flows.length() == flows_before, msg="重跑 flows 数不得膨胀")
   // 再跑一次仍不膨胀（去重覆盖模板内建流与出口流两个来源）
-  let _ = p.generate(intent_text="登录+注册")
+  let _ = p.generate(spec=SPEC, intent_text="登录+注册")
   assert_true(p.flows.length() == flows_before)
 }
 
@@ -230,7 +234,7 @@ test "generate multi：组合意图与自动导航流" {
 /// 丢弃、静默落到空状态兜底板（SKILL/docs 承诺主题段全局生效、不限顺序）。
 test "generate multi：主题段在前的退化取页面段原文" {
   let p = Project::new()
-  let j1 = match p.generate(intent_text="dark+登录") {
+  let j1 = match p.generate(spec=SPEC, intent_text="dark+登录") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -241,7 +245,7 @@ test "generate multi：主题段在前的退化取页面段原文" {
   assert_true(p.artboards.contains("login"))
   // 带空格的中文主题段同样退化到页面段
   let p2 = Project::new()
-  let j2 = match p2.generate(intent_text="暗色 + 注册页") {
+  let j2 = match p2.generate(spec=SPEC, intent_text="暗色 + 注册页") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -258,7 +262,7 @@ test "generate multi：主题段在前的退化取页面段原文" {
 /// signup_2，不再经 create_artboard 的 Map upsert 静默覆盖第一板。
 test "generate multi：归一撞名加序号不静默覆盖" {
   let p = Project::new()
-  let json = match p.generate(intent_text="登录+注册", name="Signup") {
+  let json = match p.generate(spec=SPEC, intent_text="登录+注册", name="Signup") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -295,7 +299,7 @@ test "generate multi：归一撞名加序号不静默覆盖" {
 /// autofix ok/fixes 摘要进入信封，不再 `let _ =` 丢弃后硬编码 ok:true。
 test "generate multi：合成出口画布钳制与 autofix 摘要" {
   let p = Project::new()
-  let json = match p.generate(intent_text="设置+仪表盘") {
+  let json = match p.generate(spec=SPEC, intent_text="设置+仪表盘") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -332,19 +336,19 @@ test "generate multi：合成出口画布钳制与 autofix 摘要" {
 test "generate multi：主题段/空组合/上限" {
   let p = Project::new()
   // "登录+dark"：dark 只是主题修饰 → 单板 + dark 主题生效
-  let j1 = match p.generate(intent_text="登录+dark") {
+  let j1 = match p.generate(spec=SPEC, intent_text="登录+dark") {
     Ok(j) => j
     Err(_) => ""
   }
   assert_true(j1.contains("\"theme_applied\":\"dark\""))
   assert_false(j1.contains("\"mode\":\"multi\""))
   // 纯修饰组合 → no_page_intent
-  match p.generate(intent_text="dark+light") {
+  match p.generate(spec=SPEC, intent_text="dark+light") {
     Err(e) => assert_true(e.contains("no_page_intent"))
     Ok(_) => assert_true(false)
   }
   // 5 段超上限
-  match p.generate(intent_text="登录+注册+设置+仪表盘+个人主页") {
+  match p.generate(spec=SPEC, intent_text="登录+注册+设置+仪表盘+个人主页") {
     Err(e) => assert_true(e.contains("too_many"))
     Ok(_) => assert_true(false)
   }
@@ -354,12 +358,12 @@ test "generate multi：主题段/空组合/上限" {
 /// 交流模式：generate 信封带人话 summary（单通道与组合通道）。
 test "generate：信封 summary 摘要" {
   let p = Project::new()
-  let j1 = match p.generate(intent_text="登录页") {
+  let j1 = match p.generate(spec=SPEC, intent_text="登录页") {
     Ok(j) => j
     Err(_) => ""
   }
   assert_true(j1.contains("\"summary\":\"生成登录页（93分，自愈"))
-  let j2 = match p.generate(intent_text="登录+注册") {
+  let j2 = match p.generate(spec=SPEC, intent_text="登录+注册") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -373,7 +377,7 @@ test "generate：信封 summary 摘要" {
 test "generate multi：未知段丢弃进 skipped 字段（单通道退化与多板同权可见）" {
   let p = Project::new()
   // 退化单通道（仅 1 个页面段）：单通道信封头部注入 skipped
-  let j1 = match p.generate(intent_text="登录+帮助中心") {
+  let j1 = match p.generate(spec=SPEC, intent_text="登录+帮助中心") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -383,14 +387,14 @@ test "generate multi：未知段丢弃进 skipped 字段（单通道退化与多
   assert_true(j1.contains("\"skipped\":[\"帮助中心\"],\"ok\":true,\"op\":\"generate\""))
   // 纯主题修饰组合（"登录+dark"）：dark 是主题词不是丢段——不进 skipped
   let p2 = Project::new()
-  let j2 = match p2.generate(intent_text="登录+dark") {
+  let j2 = match p2.generate(spec=SPEC, intent_text="登录+dark") {
     Ok(j) => j
     Err(_) => ""
   }
   assert_false(j2.contains("skipped\":[\"dark\""), msg="主题词不得算丢段: \{j2}")
   // 多板组合夹未知段：multi 信封 skipped 恒在场
   let p3 = Project::new()
-  let j3 = match p3.generate(intent_text="登录+注册+乱七八糟") {
+  let j3 = match p3.generate(spec=SPEC, intent_text="登录+注册+乱七八糟") {
     Ok(j) => j
     Err(_) => ""
   }
@@ -398,9 +402,174 @@ test "generate multi：未知段丢弃进 skipped 字段（单通道退化与多
   assert_true(j3.contains("\"count\":2"))
   // 无未知段：skipped 空数组（形状恒定，消费者免判空缺）
   let p4 = Project::new()
-  let j4 = match p4.generate(intent_text="登录+注册") {
+  let j4 = match p4.generate(spec=SPEC, intent_text="登录+注册") {
     Ok(j) => j
     Err(_) => ""
   }
   assert_true(j4.contains("\"skipped\":[]"), msg="无丢段时应为空数组: \{j4}")
+}
+
+///|
+/// issue #24 验收：spec 在场 = 第一权威——调色板重着色、字号阶与圆角档
+/// 都跟随 spec，而不是引擎内置规范。
+test "generate spec：调色板/字号/圆角随 spec 生效" {
+  let p = Project::new()
+  let spec = "{\"v\":1,\"palette\":{\"primary\":\"#DC2626\"},\"typography\":{\"h2\":28},\"radius\":{\"sm\":4,\"md\":6,\"lg\":16}}"
+  let j = match p.generate(spec=spec, intent_text="登录页", name="spec_login") {
+    Ok(v) => v
+    Err(e) => {
+      fail("带 spec 生成失败：\{e}")
+      abort("")
+    }
+  }
+  let ab = match p.artboards.get("spec_login") {
+    Some(a) => a
+    None => {
+      fail("spec_login 未生成")
+      abort("")
+    }
+  }
+  let mut has_spec_primary = false
+  let mut btn_radius = -1.0
+  let mut max_font = 0.0
+  for id in ab.doc.nodes.keys() {
+    match ab.doc.nodes.get(id) {
+      Some(n) => {
+        if n.style.fill.to_lower() == "#dc2626" {
+          has_spec_primary = true
+        }
+        if n.component == "button" {
+          btn_radius = n.style.corner_radius
+        }
+        if n.style.font_size > max_font {
+          max_font = n.style.font_size
+        }
+      }
+      None => ()
+    }
+  }
+  assert_true(has_spec_primary, msg="primary 必须重着色为 spec 红：\{j}")
+  assert_true(btn_radius == 6.0, msg="md=6 必须把按钮圆角（12 档）映射到 6（实际 \{btn_radius}）")
+  assert_true(max_font == 28.0, msg="h2 档必须重映射为 28（实际最大字号 \{max_font}）")
+}
+
+///|
+/// issue #24 要求 2：spec 组件白名单/禁用项偏差随生成信封上报。
+test "generate spec：组件禁用项偏差随信封上报" {
+  let p = Project::new()
+  let spec = "{\"v\":1,\"palette\":{\"primary\":\"#4B6BFB\"},\"components\":{\"deny\":[\"badge\"]}}"
+  let j = match p.generate(spec=spec, intent_text="登录页", name="wl_login") {
+    Ok(v) => v
+    Err(e) => {
+      fail("带 spec 生成失败：\{e}")
+      abort("")
+    }
+  }
+  assert_true(j.contains("\"spec_violations\":["), msg="信封必须带 spec_violations：\{j}")
+  assert_true(j.contains("badge"), msg="deny badge 必须被报：\{j}")
+}
+
+///|
+/// issue #24 要求 2：rules[] 的结构化阈值（对比度 / 触控）参与 norms 裁决。
+test "spec rules：对比度与触控阈值可被 spec 收紧" {
+  let p = Project::new()
+  p.design_spec = "{\"v\":1,\"rules\":[\"对比度≥7\",\"触控目标 48\"]}"
+  assert_true(p.design_spec_text_contrast() == 7.0, msg="对比度阈值应解析为 7")
+  assert_true(p.design_spec_touch_min() == 48.0, msg="触控阈值应解析为 48")
+  let q = Project::new()
+  assert_true(q.design_spec_text_contrast() == NORM_TEXT_CONTRAST_MIN)
+  assert_true(q.design_spec_touch_min() == NORM_TOUCH_MIN)
+}
+
+///|
+/// issue #25-B4（规则化）：引擎只报 mock 数据缺口（空壳/占位），不内置样例
+/// 内容；Agent 按语义填充后缺口清零。autofill 报告携带 mock_missing。
+test "mock 数据规则化：报缺口不内置，Agent 填充后清零" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="product_list", width=390.0, height=600.0)
+  let _ = p.place_component(
+    artboard="product_list",
+    component_id="card",
+    instance_id="goods_card",
+    x=20.0,
+    y=20.0,
+    w=340.0,
+    h=200.0,
+  )
+  let gaps1 = p.mock_data_gaps(artboard="product_list")
+  let mut has_card = false
+  for g in gaps1.iter() {
+    if g == "goods_card" {
+      has_card = true
+    }
+  }
+  assert_true(has_card, msg="空壳容器必须报缺口")
+  // 引擎不物化内容：文档里不得出现自造样例文本
+  match p.artboards.get("product_list") {
+    None => assert_true(false)
+    Some(ab) =>
+      for id in ab.doc.nodes.keys() {
+        match ab.doc.nodes.get(id) {
+          Some(n) => assert_true(
+            !n.text.contains("无线降噪耳机"),
+            msg="引擎不得内置样例内容",
+          )
+          None => ()
+        }
+      }
+  }
+  // 模拟 Agent 填充两条语义行
+  match p.artboards.get("product_list") {
+    None => assert_true(false)
+    Some(ab) => {
+      let r1 = {
+        ..Node::make("goods_row0", Rect),
+        component: "list_item",
+        text: "机械键盘 87 键 · ¥359",
+        width: Fixed(300.0),
+        height: Fixed(48.0),
+        x: AlignStart(12.0),
+        y: AlignStart(12.0),
+      }
+      let _ = ab.doc.insert_node(r1, "goods_card")
+      let r2 = {
+        ..Node::make("goods_row1", Rect),
+        component: "list_item",
+        text: "无线鼠标 · ¥129",
+        width: Fixed(300.0),
+        height: Fixed(48.0),
+        x: AlignStart(12.0),
+        y: AlignStart(64.0),
+      }
+      let _ = ab.doc.insert_node(r2, "goods_card")
+    }
+  }
+  let gaps2 = p.mock_data_gaps(artboard="product_list")
+  for g in gaps2.iter() {
+    assert_true(g != "goods_card", msg="填充后缺口必须清零")
+  }
+  // 占位符同样进缺口；换成真实文案后清零
+  let _ = p.edit_node(artboard="product_list", node_id="goods_row0", kvs=[("text", "TBD")])
+  let gaps3 = p.mock_data_gaps(artboard="product_list")
+  let mut ph_hit = false
+  for g in gaps3.iter() {
+    if g == "goods_row0" {
+      ph_hit = true
+    }
+  }
+  assert_true(ph_hit, msg="占位符文本必须报缺口")
+  let _ = p.edit_node(
+    artboard="product_list",
+    node_id="goods_row0",
+    kvs=[("text", "机械键盘 87 键 · ¥359")],
+  )
+  let gaps4 = p.mock_data_gaps(artboard="product_list")
+  for g in gaps4.iter() {
+    assert_true(g != "goods_row0", msg="替换为真实文案后必须清零")
+  }
+  // autofill 报告携带 mock_missing（规则随报告输出）
+  match p.autofill_missing(artboard="product_list") {
+    Ok(report) => assert_true(report.contains("\"mock_missing\":["), msg=report)
+    Err(e) => fail("autofill 失败：\{e}")
+  }
 }

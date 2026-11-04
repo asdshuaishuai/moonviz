@@ -12,6 +12,10 @@
 const SEED : String = "---\nmoonviz:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: T\n  entry: w\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.button(id=\"btn\", width=@decl.fixed(120.0), height=@decl.fixed(44.0), x=20.0, y=20.0, label=\"OK\"))\n  page\n}\n```\n"
 
 ///|
+/// issue #24：契约测试用最小 design spec（生成必须带 spec）。
+const SPEC_MIN : String = "{\"v\":1,\"palette\":{\"primary\":\"#4B6BFB\"}}"
+
+///|
 test "契约：全部导出 × 非法输入 → 合法 JSON（issue #3）" {
   let bad_inputs = ["not a doc", "", "{\"x\":1"]
   for bad in bad_inputs {
@@ -36,9 +40,19 @@ test "契约：全部导出 × 非法输入 → 合法 JSON（issue #3）" {
         msg="export \{export_fn} 非法输入返回非法 JSON: \{out}",
       )
     }
+    // issue #27：零视觉块文本（空串/纯文本/JSON 片段）都是合法空文档——
+    // literate 语义下「没有画板」不是错误。真正的非法文档（结构错误）
+    // 在下面单独锚定（entry 漂移），此处只验证空态可开可关。
     let h = session_open(bad)
-    let _ = assert_true(h < 0, msg="非法文档不应打开会话")
+    let _ = assert_true(h >= 0, msg="零视觉块输入应视为合法空文档（issue #27）：\{bad}")
+    let _ = session_close(h)
   }
+  // 真非法文档（entry 指向不存在的画板，且有视觉块）必须拒绝开会话。
+  let invalid_doc = "---\nmoonviz:\n  entry: ghost\n  artboards:\n    - w\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let _ = assert_true(
+    session_open(invalid_doc) < 0,
+    msg="entry 漂移的文档必须拒绝开会话",
+  )
   // session_history 纳入模糊面（issue #3 同类回归）：画板名/rev 含引号
   // 或反斜杠时，错误信封值必须转义（此前裸插值输出非法 JSON）
   let h = session_open(SEED)
@@ -670,7 +684,13 @@ test "契约：history 裸 commit 兼容 + 删板不复活旧栈（issue #21 审
 test "契约：session_generate 生成即变更回传 canonical mbt" {
   let h = session_open(SEED)
   assert_true(h >= 0)
-  let r = session_generate(h, "登录页", "gen_login")
+  // issue #24：生成必须带 spec（缺 spec 返回 design_spec_required + 草案）
+  let missing = session_generate(h, "登录页", "gen_login")
+  assert_true(
+    missing.contains("design_spec_required") && missing.contains("design_spec_draft"),
+    msg="缺 spec 必须显式要求并给草案: \{missing}",
+  )
+  let r = session_generate_spec(h, "登录页", "gen_login", SPEC_MIN)
   assert_true(r.contains("\"ok\":true"), msg="generate 应成功: \{r}")
   assert_true(r.contains("\"mbt\":\""), msg="变更信封必须回传 canonical mbt: \{r}")
   assert_true(r.contains("\"template\":\"login\""))
@@ -689,6 +709,11 @@ test "契约：session_generate 生成即变更回传 canonical mbt" {
 test "契约：session_generate_in 槽变体（UTF-8 intent 真传输）" {
   let h = session_open(SEED)
   assert_true(h >= 0)
+  // issue #24：主槽（in_）承载 design spec
+  in_reset()
+  for b in @utf8.encode(SPEC_MIN).iter() {
+    in_push(b.to_int(), 1)
+  }
   arg_reset()
   let intent = "登录页"
   for b in @utf8.encode(intent).iter() {
@@ -707,6 +732,72 @@ test "契约：session_generate_in 槽变体（UTF-8 intent 真传输）" {
   assert_true(
     r.contains("\"template\":\"login\""),
     msg="槽内 UTF-8 intent 应识别为 login 模板: \{r}",
+  )
+  let _ = session_close(h)
+}
+
+///|
+test "契约：session_constrain 成功信封回传 canonical mbt（issue #19）" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let out = session_constrain(h, "w", "垂直居中")
+  assert_true(
+    out.contains("\"ok\":true"),
+    msg="constrain 成功信封必须有 ok：\{out}",
+  )
+  assert_true(
+    out.contains("\"mbt\":"),
+    msg="constrain 成功信封必须回传 canonical mbt（issue #19）：\{out}",
+  )
+  assert_true(
+    out.contains("visual_w"),
+    msg="回传的 mbt 必须是文档源码：\{out}",
+  )
+  let _ = session_close(h)
+}
+
+///|
+test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（issue #28）" {
+  let h = session_open(SEED)
+  assert_true(h >= 0)
+  let s1 = session_snapshot(h)
+  assert_true(s1.contains("\"ok\":true"), msg="快照必须是成功信封：\{s1}")
+  assert_true(s1.contains("\"canonical\":\""), msg="快照必须回传 canonical：\{s1}")
+  assert_true(s1.contains("\"render\":{"), msg="快照必须回传 render：\{s1}")
+  assert_true(s1.contains("\"seq\":0"), msg="首帧 seq 从 0 开始：\{s1}")
+  assert_true(s1.contains("\"delta\":{"), msg="快照必须带 delta：\{s1}")
+  assert_true(
+    s1.contains("\"w/btn\""),
+    msg="首帧 added 必须包含 w/btn",
+  )
+  // 一次改文档 → seq +1；同一节点位移后进 changed
+  let mut_ = session_constrain(h, "w", "垂直居中")
+  assert_true(mut_.contains("\"ok\":true"), msg="constrain 应成功：\{mut_}")
+  let s2 = session_snapshot(h)
+  assert_true(s2.contains("\"seq\":1"), msg="改文档后 seq 必须 +1：\{s2}")
+  assert_true(
+    s2.contains("\"changed\":[\"w/btn\"]"),
+    msg="位移节点必须进 changed",
+  )
+  // 快照本身不推进 seq（只更新签名基线）；未变更 → delta 为空（增量快路径）
+  let s3 = session_snapshot(h)
+  assert_true(s3.contains("\"seq\":1"), msg="快照不得推进 seq：\{s3}")
+  assert_true(
+    s3.contains("\"delta\":{\"added\":[],\"changed\":[],\"removed\":[]}"),
+    msg="未变更时 delta 必须为空（O(变更) 快路径）",
+  )
+  // 动画定义随帧（issue #28：动画流与设计稿流同一 seq）
+  assert_true(
+    s3.contains("\"animations\":{\"presets\":"),
+    msg="快照必须携带 animations.presets",
+  )
+  assert_true(s3.contains("\"motion_css\":\""), msg="快照必须携带 motion_css")
+  // 删除节点 → removed 定位
+  let _ = session_apply_human(h, "delete w btn")
+  let s4 = session_snapshot(h)
+  assert_true(
+    s4.contains("\"removed\":[\"w/btn\"]"),
+    msg="删除节点必须进 removed：\{s4}",
   )
   let _ = session_close(h)
 }

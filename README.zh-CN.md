@@ -1,4 +1,26 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.11 新特性
+
+- **规范驱动生成（issue #24）**——`generate` 必带 design spec（JSON：调色板/
+  字号阶/圆角档/rules）。缺 spec 返回 `design_spec_required` + 可编辑草案；
+  spec 调色板驱动重着色、字号阶与圆角档重映射、norms 档位按 spec 裁决
+  （按钮圆角基准 = `radius.sm`）。新导出 `session_generate_spec`；CLI
+  `generate <意图> spec=<base64>`。
+- **交互与内容完整性 QA + 硬门（issue #25/#26）**——可交互组件无去向、占位
+  残留、空壳容器、非组件库组件并入 norms 检测；同节点多 flow 与可点热区
+  相交是 AgentGate 硬错误（带定位）。
+- **可读性硬标准（issue #23）**——正文对比度 ≥4.5（≥24px 大字号 ≥3.0）、
+  纯黑/近黑灰背景禁令、不可见叶子检测、选中态可辨识 + 纯黑选中色禁令。
+- **原子快照契约（issue #28）**——`session_snapshot` 单调用返回
+  `{revision, seq, canonical, render, animations, delta}`；seq 随改文档严格
+  递增，delta/渲染按板 content_seq 增量（未变板 O(1)）。
+- **九条 open issue 全清**——空文档/空画板合法初始态（#27）、SVG 圆角钳制
+  （#22）、`session_constrain` 信封回传 canonical（#19）、frontmatter 未知键
+  透传（#20）、mock 数据规则化检测——`mock_missing` 报缺口，内容由 Agent
+  填充（#25）。
+- **工具链迁移**——适配 moonc 20261023（`try?` 移除 ×4、`Result::is_ok` ×3）。
+- 测试矩阵：默认目标 314 / `--target native` 330，全绿。
+
 ## 0.1.10 新特性
 
 - **全域审查修复波**——83 项确认问题全部修复：数据保真（save/open 转义往返、
@@ -307,7 +329,7 @@ moonviz/
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── desktop/           自渲染服务（客户端引导：引擎无 UI，渲染面由客户端 webview 承载；无 webview 走系统层兜底返回结果）
 ├── mcp/               MCP Server（stdio JSON-RPC，55 工具，工具面同 CLI）
-├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 28 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
+├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 30 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）

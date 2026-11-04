@@ -167,6 +167,7 @@ pub fn Project::ungroup_node(
       let _ = ab.doc.update_node(parent, fn(p) {
         { ..p, children: p.children.filter(c => c != group_id), }
       })
+      ab.doc.content_seq = ab.doc.content_seq + 1
       ab.doc.nodes.remove(group_id)
       self.revision = self.revision + 1
       Ok(

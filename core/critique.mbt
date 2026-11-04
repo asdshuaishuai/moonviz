@@ -374,10 +374,25 @@ pub fn Project::critique(
       // auto_fix 的执行范围内（norm_fix_pass / norm_touch_fix_pass /
       // list_divider），给 auto_fix 指引；字号阶/密度/gap 网格是 v2 检测项、
       // auto_fix 没有对应修复通道——给具体改法，不宣称一键修复。
-      let norm_list = norm_issues_v2(doc, layout)
+      let prof = self.norms_profile()
+      let norm_list = norm_issues_v2(
+        doc,
+        layout,
+        radius_base=prof.radius_base,
+        contrast_min=prof.contrast_min,
+        touch_min=prof.touch_min,
+      )
       // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
       // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
       for s in self.norm_back_issues(artboard=artboard).iter() {
+        norm_list.push(s)
+      }
+      // issue #23：状态可辨识（选中态无差异 / 纯黑选中色）
+      for s in self.norm_selected_state_issues(artboard=artboard).iter() {
+        norm_list.push(s)
+      }
+      // issue #25/#26：交互与内容完整性（可交互无去向 / 占位符 / 空壳 / 非库组件）
+      for s in self.qa_issues(artboard=artboard).iter() {
         norm_list.push(s)
       }
       let n_norm = norm_list.length()
@@ -457,6 +472,22 @@ fn norm_issue_hint(issue : String) -> String {
     "字号收敛到 ≤5 档（如 12/14/16/20/24）"
   } else if issue.contains("node count") {
     "拆分画板或删减装饰节点"
+  } else if issue.contains("可读性标准") {
+    "加深文字或调整背景色（正文 4.5 / 大字号 3.0）"
+  } else if issue.contains("组件不可见") {
+    "换填充色或删除该节点"
+  } else if issue.contains("纯黑") {
+    "深色底改用主题令牌，不要硬填 #000/#111"
+  } else if issue.contains("无差异") {
+    "选中态至少改 fill / text_color / stroke"
+  } else if issue.contains("可交互组件无去向") {
+    "绑定 tap flow（flow <板> <目标板> <节点>）或改用非交互组件"
+  } else if issue.contains("空壳容器") {
+    "填 ≥2 条语义化示例条目（真实文案，非 Item 1/项目一）"
+  } else if issue.contains("占位符残留") {
+    "换语义化真实文案，去掉 TBD/TODO/xxx 一类占位"
+  } else if issue.contains("非组件库组件") {
+    "换组件库注册表内的组件（list-components 可查）"
   } else {
     "auto_fix 可一键修复"
   }

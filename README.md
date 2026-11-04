@@ -1,5 +1,33 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.11
+
+- **Spec-driven generation (issue #24)** — `generate` now requires a design
+  spec (JSON: palette / typography / radius tiers / rules). A missing spec
+  returns `design_spec_required` plus an editable `design_spec_draft`; the
+  spec palette drives recoloring, typography and radius tiers are remapped,
+  and norms tiers judge against the spec (button radius base = `radius.sm`).
+  New export `session_generate_spec`; CLI `generate <intent> spec=<base64>`.
+- **Interaction & content QA + hard gates (issues #25/#26)** — unbound
+  interactive components, placeholder residue, empty shells and non-registry
+  components are reported into the norms dimension; same-node multi-flow and
+  clickable-hotzone overlap are AgentGate hard errors with locations.
+- **Readability hard standards (issue #23)** — text contrast ≥ 4.5 (≥24px →
+  3.0), pure-black/near-gray background ban, invisible-leaf detection,
+  selected-state distinguishability + pure-black selected-color ban.
+- **Atomic snapshot contract (issue #28)** — new `session_snapshot` returns
+  `{revision, seq, canonical, render, animations, delta}`; `seq` strictly
+  increases along mutation paths; delta/render are per-board incremental via
+  `content_seq` invalidation (unchanged boards are O(1)).
+- **Nine open issues closed** — empty document/artboard as a legal initial
+  state (#27), SVG radius clamp rx=ry=min(r, min(w,h)/2) (#22),
+  `session_constrain` envelope carries canonical mbt (#19), unknown
+  frontmatter keys pass through canonical (#20), mock data is rule-detected
+  only — `mock_missing` gap report, content authored by the agent (#25).
+- **Toolchain migration** — adapted to moonc 20261023: `try?` removed (×4)
+  and `Result::is_ok` reworked (×3).
+- Test matrix: 314 (default target) / 330 (`--target native`), all green.
+
 ## What's New in 0.1.10
 
 - **Full-domain audit & repair wave** — 83 confirmed findings fixed across the
@@ -13,7 +41,7 @@
   SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
   platform-package version alignment).
 - **Docs & site full sync** — every count re-anchored to live engine output
-  (55 tools / 27 ops / 73 wasm exports / 9-dimension critique / 52 core
+  (55 tools / 27 ops / 75 wasm exports / 9-dimension critique / 52 core
   modules), version examples moved to `<ver>` placeholders.
 - Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
 

@@ -28,6 +28,9 @@ pub(all) struct MbtDocument {
   /// 宿主侧文档级批注（deepdesign:ink 等）的持久化通道。anchor 为其后
   /// 最近的画板 id（无 → None = 文档级，序列化在文末）。
   comments : Array[@core.DocComment]
+  /// frontmatter 未知键行透传（issue #20）：引擎权威字段（moonbit 段与
+  /// moonviz 已知子键）由 canonical 再生，其余键及其缩进负载原样回写。
+  extra_front_matter : Array[String]
 }
 
 ///|
@@ -312,6 +315,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
     blocks,
     visual_blocks,
     comments,
+    extra_front_matter: mbt_extra_front_matter(front),
   })
 }
 
@@ -583,11 +587,11 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
   match scan_mbt(text) {
     Err(error) => Err(error)
     Ok(document) => {
-      if document.visual_blocks.length() == 0 {
-        return Err("mbt_no_visual_blocks")
-      }
+      // 空态（issue #27）：零视觉块文档是合法初始态（空面板/占位文档），
+      // 不再拒绝——空项目的 entry 允许为空，门与渲染对零画板是恒等操作。
       let project = @core.Project::new()
       project.doc_comments = document.comments
+      project.extra_front_matter = document.extra_front_matter
       for block in document.visual_blocks.iter() {
         let artboard_id = match block.artboard_id {
           Some(id) => id
@@ -636,13 +640,16 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
       }
       let entry = if document.entry != "" {
         document.entry
-      } else {
+      } else if document.visual_blocks.length() > 0 {
         match document.visual_blocks[0].artboard_id {
           Some(id) => id
           None => ""
         }
+      } else {
+        ""
       }
-      if !project.artboards.contains(entry) {
+      // 空态不校验 entry（issue #27）；有视觉块的文档仍强校验漂移。
+      if document.visual_blocks.length() > 0 && !project.artboards.contains(entry) {
         return Err("mbt_unknown_entry:" + entry)
       }
       project.revision = document.revision
@@ -676,6 +683,16 @@ pub fn project_gate_check(
   p : @core.Project,
   gate : @core.Gate,
 ) -> Result[Int, String] {
+  // issue #25-A3 / #26-A3：交互冲突硬门（仅 AgentGate）——同一节点多条
+  // tap flow、可点热区相交（父子包含除外）→ 拒绝并给出定位。
+  match gate {
+    @core.AgentGate =>
+      match p.qa_agent_conflicts() {
+        Err(e) => return Err(e)
+        Ok(_) => ()
+      }
+    _ => ()
+  }
   let mut debt_count = 0
   for artboard_id in p.artboards.keys() {
     match p.artboards.get(artboard_id) {
@@ -753,11 +770,16 @@ pub fn project_to_mbt(
   for id in project.artboards.keys() {
     ids.push(id)
   }
-  if ids.length() == 0 {
-    return Err("mbt_project_without_artboards")
+  // 空态（issue #27）：零画板项目合法——entry 允许为空，序列化产出
+  // 带 frontmatter 的无视觉块文档，可再次 load 闭环。
+  let actual_entry = if entry != "" {
+    entry
+  } else if ids.length() > 0 {
+    ids[0]
+  } else {
+    ""
   }
-  let actual_entry = if entry != "" { entry } else { ids[0] }
-  if !project.artboards.contains(actual_entry) {
+  if actual_entry != "" && !project.artboards.contains(actual_entry) {
     return Err("mbt_unknown_entry:" + actual_entry)
   }
   let document : MbtDocument = {
@@ -774,6 +796,7 @@ pub fn project_to_mbt(
     blocks: [],
     visual_blocks: [],
     comments: project.doc_comments,
+    extra_front_matter: project.extra_front_matter,
   }
   Ok({ project, document, entry: actual_entry, })
 }
@@ -851,10 +874,15 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   // load 直接 mbt_unknown_entry，文档就此打不开。失效时重定向到首个剩余画板。
   let entry = if self.project.artboards.contains(self.entry) {
     self.entry
-  } else {
+  } else if ids.length() > 0 {
+    // 空项目无 id 可回退（issue #27）——entry 留空，parser 端视作空态。
     ids[0]
+  } else {
+    ""
   }
-  out.write_string("  entry: " + entry + "\n")
+  if entry != "" {
+    out.write_string("  entry: " + entry + "\n")
+  }
   out.write_string("  artboards:\n")
   mbt_yaml_list(out, ids, "    ")
   if self.project.flows.length() > 0 {
@@ -864,6 +892,11 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
       out.write_string("      to: " + flow.to + "\n")
       out.write_string("      trigger: " + flow.trigger + "\n")
     }
+  }
+  // issue #20：frontmatter 未知键原样回写——宿主扩展通道（如
+  // deepdesign_ink / extra_section）不因引擎写路径而丢失。
+  for line in self.document.extra_front_matter.iter() {
+    out.write_string(line + "\n")
   }
   out.write_string("---\n\n")
   out.write_string("# " + self.document.title + "\n\n")
@@ -977,33 +1010,44 @@ pub fn MbtProject::commit_and_render(
 }
 
 ///|
+///|
+/// 单板渲染对象（issue #28 增量快照的复用单元）：{id,name,width,height,
+/// nodes,svg} 的 JSON 文本；板不存在或渲染失败返回 None。
+pub fn MbtProject::render_board_json(self : MbtProject, id : String) -> String? {
+  match
+    (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
+    (Some(artboard), Ok(svg)) => {
+      let nodes = match self.project.query_nodes(artboard=id) {
+        Ok(json) => json
+        Err(_) => "[]"
+      }
+      Some(
+        "{\"id\":\"" +
+        @core.json_escape(id) +
+        "\",\"name\":\"" +
+        @core.json_escape(artboard.name) +
+        "\",\"width\":" +
+        artboard.width.to_string() +
+        ",\"height\":" +
+        artboard.height.to_string() +
+        ",\"nodes\":" +
+        nodes +
+        ",\"svg\":\"" +
+        @core.json_escape(svg) +
+        "\"}",
+      )
+    }
+    _ => None
+  }
+}
+
+///|
 pub fn MbtProject::render_json(self : MbtProject) -> String {
   let artboards : Array[String] = []
   for id in self.project.artboards.keys() {
-    match
-      (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
-      (Some(artboard), Ok(svg)) => {
-        let nodes = match self.project.query_nodes(artboard=id) {
-          Ok(json) => json
-          Err(_) => "[]"
-        }
-        artboards.push(
-          "{\"id\":\"" +
-          @core.json_escape(id) +
-          "\",\"name\":\"" +
-          @core.json_escape(artboard.name) +
-          "\",\"width\":" +
-          artboard.width.to_string() +
-          ",\"height\":" +
-          artboard.height.to_string() +
-          ",\"nodes\":" +
-          nodes +
-          ",\"svg\":\"" +
-          @core.json_escape(svg) +
-          "\"}",
-        )
-      }
-      _ => ()
+    match self.render_board_json(id) {
+      Some(board_json) => artboards.push(board_json)
+      None => ()
     }
   }
   let out = StringBuilder::new()
@@ -1032,4 +1076,94 @@ pub fn MbtProject::render_json(self : MbtProject) -> String {
   }
   out.write_string("]}")
   out.to_string()
+}
+
+///|
+/// 行首空格数（frontmatter 缩进判定用；仅 ASCII 空格）。
+fn mbt_indent(s : String) -> Int {
+  let mut i = 0
+  for c in s.iter() {
+    if c == ' ' {
+      i = i + 1
+    } else {
+      break
+    }
+  }
+  i
+}
+
+///|
+/// 取冒号前的键名（trim 后）；无冒号返回整行 trim 结果。
+fn mbt_key_before_colon(s : String) -> String {
+  let mut key = ""
+  for c in s.iter() {
+    if c == ':' {
+      break
+    }
+    key = key + "\{c}"
+  }
+  mbt_trim(key)
+}
+
+///|
+/// issue #20：frontmatter 未知键透传。
+///
+/// 引擎权威字段（`moonbit:` 段整体、`moonviz:` 下的 format/revision/
+/// title/entry/artboards/theme/tokens/flows）由 canonical 再生；其余键
+/// （顶层未知键如 `extra_section`、moonviz 未知子键如 `deepdesign_ink`）
+/// 连同其缩进负载原样收集返回——写路径据此回写，注释通道之外的宿主
+/// 文档级数据由此具备持久化通道。
+fn mbt_extra_front_matter(front : String) -> Array[String] {
+  let out : Array[String] = []
+  let known_sub = [
+    "format", "revision", "title", "entry", "artboards", "theme", "tokens", "flows",
+  ]
+  // mode: 0=顶层 1=moonbit 段（整段再生，跳过） 2=moonviz 已知子键负载（跳过）
+  //       3=顶层未知键负载（透传） 4=moonviz 未知子键负载（透传）
+  let mut mode = 0
+  for raw in mbt_lines(front).iter() {
+    let trimmed = mbt_trim(raw)
+    if trimmed == "" {
+      if mode == 3 || mode == 4 {
+        out.push(raw)
+      }
+      continue
+    }
+    let indent = mbt_indent(raw)
+    if indent == 0 {
+      if mbt_has_prefix(trimmed, "moonbit:") {
+        mode = 1
+      } else if mbt_has_prefix(trimmed, "moonviz:") {
+        mode = 2
+      } else {
+        out.push(raw)
+        mode = 3
+      }
+      continue
+    }
+    if mode == 2 || mode == 4 {
+      if indent == 2 && !mbt_has_prefix(trimmed, "- ") {
+        let key = mbt_key_before_colon(trimmed)
+        let mut known = false
+        for k in known_sub.iter() {
+          if k == key {
+            known = true
+          }
+        }
+        if known {
+          mode = 2
+        } else {
+          out.push(raw)
+          mode = 4
+        }
+      } else if mode == 4 {
+        out.push(raw)
+      }
+      continue
+    }
+    if mode == 3 {
+      out.push(raw)
+    }
+  }
+  out
 }

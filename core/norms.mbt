@@ -115,7 +115,11 @@ fn norm_need_h(
 /// 每条自带建议尺寸——Agent 读到就能改，不必自己换算。
 /// 顺序即优先级：结构性偏差（列表缺分割线）在前，逐条样式在后；
 /// 上限 8 条，控制报告体积（deepDesign 侧检视结果有 12KB 截断）。
-pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+pub fn norm_issues(
+  doc : Document,
+  layout : SolvedLayout,
+  radius_base? : Double = NORM_RADIUS_BASE,
+) -> Array[String] {
   let issues : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
     Some(r) => r.width
@@ -189,9 +193,9 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
               n.style.corner_radius < 999.0 {
               let r_cap = r.height / 2.0
               let r_now = n.style.corner_radius
-              if r_now < NORM_RADIUS_BASE - 0.5 && NORM_RADIUS_BASE <= r_cap {
+              if r_now < radius_base - 0.5 && radius_base <= r_cap {
                 issues.push(
-                  "\{json_escape(id)}(\{n.component}) 圆角 \{r_now.to_int()} 低于方正圆润档 → radius 8",
+                  "\{json_escape(id)}(\{n.component}) 圆角 \{r_now.to_int()} 低于方正圆润档 → radius \{radius_base.to_int()}",
                 )
                 continue
               }
@@ -225,6 +229,7 @@ pub fn norm_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
 pub fn norm_fix_pass(
   doc : Document,
   layout : SolvedLayout,
+  radius_base? : Double = NORM_RADIUS_BASE,
 ) -> Array[String] {
   let fixes : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
@@ -291,9 +296,9 @@ pub fn norm_fix_pass(
               n.style.corner_radius < 999.0 {
               let r_cap = new_h / 2.0
               let r_now = n.style.corner_radius
-              if r_now < NORM_RADIUS_BASE - 0.5 && NORM_RADIUS_BASE <= r_cap {
-                new_r = NORM_RADIUS_BASE
-                if why == "" { why = "圆角归档 8" }
+              if r_now < radius_base - 0.5 && radius_base <= r_cap {
+                new_r = radius_base
+                if why == "" { why = "圆角归档 \{radius_base.to_int()}" }
               } else if r_now > r_cap + 0.5 {
                 new_r = r_cap
                 if why == "" { why = "圆角收敛到 高/2" }
@@ -815,15 +820,19 @@ fn norm_touch_is_banded(component : String) -> Bool {
 }
 
 ///|
-fn norm_touch_min_h(component : String) -> Double {
+fn norm_touch_min_h(component : String, touch_min : Double) -> Double {
   match component {
     "chip" => 28.0
     "tag" => 22.0
-    _ => NORM_TOUCH_MIN
+    _ => touch_min
   }
 }
 
-pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String] {
+pub fn norm_touch_issues(
+  doc : Document,
+  layout : SolvedLayout,
+  touch_min? : Double = NORM_TOUCH_MIN,
+) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
     if issues.length() >= 4 { break }
@@ -832,11 +841,11 @@ pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String]
       Some(n) => {
         if !norm_is_interactive(n.component) { continue }
         let banded = norm_touch_is_banded(n.component)
-        let min_h = norm_touch_min_h(n.component)
+        let min_h = norm_touch_min_h(n.component, touch_min)
         match layout.rect_of(id) {
           None => continue
           Some(r) => {
-            let w_short = !banded && r.width < NORM_TOUCH_MIN - 0.5
+            let w_short = !banded && r.width < touch_min - 0.5
             let h_short = r.height < min_h - 0.5
             if w_short || h_short {
               let min_desc = if banded {
@@ -862,6 +871,7 @@ pub fn norm_touch_issues(doc : Document, layout : SolvedLayout) -> Array[String]
 pub fn norm_touch_fix_pass(
   doc : Document,
   layout : SolvedLayout,
+  touch_min? : Double = NORM_TOUCH_MIN,
 ) -> Array[String] {
   let fixes : Array[String] = []
   for id in doc.nodes.keys() {
@@ -870,11 +880,11 @@ pub fn norm_touch_fix_pass(
       Some(n) => {
         if !norm_is_interactive(n.component) { continue }
         let banded = norm_touch_is_banded(n.component)
-        let min_h = norm_touch_min_h(n.component)
+        let min_h = norm_touch_min_h(n.component, touch_min)
         match layout.rect_of(id) {
           None => ()
           Some(r) => {
-            let w_short = !banded && r.width < NORM_TOUCH_MIN - 0.5
+            let w_short = !banded && r.width < touch_min - 0.5
             let h_short = r.height < min_h - 0.5
             if !w_short && !h_short { continue }
             let w_fixed = match n.width {
@@ -885,7 +895,7 @@ pub fn norm_touch_fix_pass(
               Fixed(_) => true
               _ => false
             }
-            let new_w = if w_short && w_fixed { NORM_TOUCH_MIN } else { r.width }
+            let new_w = if w_short && w_fixed { touch_min } else { r.width }
             let new_h = if h_short && h_fixed { min_h } else { r.height }
             if new_w != r.width || new_h != r.height {
               let why = if banded {
@@ -970,9 +980,189 @@ pub fn norm_density_issues(doc : Document) -> Array[String] {
 
 ///|
 /// Norms v2：v1 五规则 + v2 四规则（触控/字号/密度/间距网格）
-pub fn norm_issues_v2(doc : Document, layout : SolvedLayout) -> Array[String] {
-  let issues = norm_issues(doc, layout)
-  for issue in norm_touch_issues(doc, layout).iter() {
+
+// ---------------------------------------------------------------------------
+// issue #23：视觉可读性硬标准（critique 第 9 维检测项，软路径不进双门）
+// ---------------------------------------------------------------------------
+
+///|
+/// 正文文字最小对比度（WCAG AA 正文 4.5）。
+pub const NORM_TEXT_CONTRAST_MIN : Double = 4.5
+///|
+/// 大字号（>=24px）放宽到 WCAG AA 大文本 3.0。
+pub const NORM_TEXT_CONTRAST_LARGE_MIN : Double = 3.0
+///|
+/// 纯黑/近黑灰背景禁令：灰度（通道差 < 8）且相对亮度 < 0.01
+/// （覆盖 #000000–#151515 一类硬填黑，暗色主题的蓝调深底不受影响）。
+pub const NORM_PURE_DARK_LUMA_MAX : Double = 0.01
+
+///|
+fn norm_rgb_spread(hex : String) -> Int {
+  let (r, g, b) = parse_hex_rgb(hex)
+  let mx = if r > g {
+    if r > b {
+      r
+    } else {
+      b
+    }
+  } else if g > b {
+    g
+  } else {
+    b
+  }
+  let mn = if r < g {
+    if r < b {
+      r
+    } else {
+      b
+    }
+  } else if g < b {
+    g
+  } else {
+    b
+  }
+  (mx - mn).to_int()
+}
+
+///|
+pub fn norm_is_pure_dark(hex : String) -> Bool {
+  norm_is_hex6(hex) &&
+  norm_rgb_spread(hex) < 8 &&
+  norm_luminance(hex) < NORM_PURE_DARK_LUMA_MAX
+}
+
+
+///|
+/// issue #23 检测项（Project 级）：组件状态可辨识。
+/// 选中态（selected/checked/active）补丁必须改变至少一个视觉字段，
+/// 否则「选中」在演示时不可辨识；选中色同样受纯黑禁令约束。
+pub fn norm_selected_state_issues(self : Project, artboard~ : String) -> Array[String] {
+  let issues : Array[String] = []
+  match self.artboards.get(artboard) {
+    None => ()
+    Some(ab) =>
+      for node_id in ab.doc.nodes.keys() {
+        match self.node_states.get(node_id) {
+          None => ()
+          Some(def) =>
+            for state_name in ["selected", "checked", "active"].iter() {
+              match def.states.get(state_name) {
+                None => ()
+                Some(patch) => {
+                  let sets_visual = patch.fill is Some(_) ||
+                    patch.text_color is Some(_) ||
+                    patch.stroke is Some(_) ||
+                    patch.corner_radius is Some(_) ||
+                    patch.font_size is Some(_)
+                  if !sets_visual {
+                    issues.push(
+                      "\{json_escape(node_id)} 的「\{state_name}」态未设置任何视觉字段 → 选中态与默认态无差异（至少改 fill/text_color/stroke）",
+                    )
+                  }
+                  match patch.fill {
+                    Some(f) =>
+                      if norm_is_pure_dark(f) {
+                        issues.push(
+                          "\{json_escape(node_id)} 的「\{state_name}」态选中色 \{f} 为纯黑/近黑灰 → 换品牌色或令牌色",
+                        )
+                      }
+                    None => ()
+                  }
+                }
+              }
+            }
+        }
+      }
+  }
+  issues
+}
+
+///|
+/// issue #23 检测项（doc 级）：
+/// 1) 可读性对比度：正文 < 4.5、大字号（>=24px）< 3.0——2.0 以下已由 v1
+///    撞色规则报告并 auto_fix，这里补 [2.0, need) 区间（检测项，给改法）。
+/// 2) 组件不可见：叶子节点纯色填充与父背景完全同色、无描边、无文本。
+/// 3) 纯黑/近黑灰背景：有子节点的容器硬填灰度近黑（生硬刺眼，用户明确不要）。
+pub fn norm_readability_issues(
+  doc : Document,
+  layout : SolvedLayout,
+  contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
+) -> Array[String] {
+  let issues : Array[String] = []
+  for id in doc.nodes.keys() {
+    if issues.length() >= 8 {
+      break
+    }
+    match doc.nodes.get(id) {
+      None => ()
+      Some(n) => {
+        let is_frame = match n.kind {
+          Frame => true
+          _ => false
+        }
+        if n.text.length() > 0 {
+          let bg = norm_effective_bg(doc, id, n.style.fill)
+          if norm_is_hex6(bg) && norm_is_hex6(n.style.text_color) {
+            let cr = norm_contrast_ratio(
+              norm_luminance(bg),
+              norm_luminance(n.style.text_color),
+            )
+            let large = n.style.font_size >= 24.0
+            let need = if large {
+              // 大字号仍放宽（默认 3.0；spec 收紧时按 2/3 比例跟随）
+              let scaled = contrast_min * 2.0 / 3.0
+              if scaled > NORM_TEXT_CONTRAST_LARGE_MIN {
+                scaled
+              } else {
+                NORM_TEXT_CONTRAST_LARGE_MIN
+              }
+            } else {
+              contrast_min
+            }
+            if cr >= NORM_CONTRAST_MIN && cr < need {
+              issues.push(
+                "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字对比度 \{cr} < 可读性标准 \{need}（\{bg} 底 \{n.style.text_color} 字）→ 加深文字或调整背景（检测项，不自动改色）",
+              )
+              continue
+            }
+          }
+        }
+        // 不可见判定只看非 Frame 叶子：空 Frame 是合法占位容器（懒放置的
+        // card 等），同色不代表不可见。
+        if !is_frame &&
+          n.text.length() == 0 &&
+          n.children.length() == 0 &&
+          n.style.stroke == "none" &&
+          norm_is_hex6(n.style.fill) {
+          let pbg = norm_effective_bg(doc, id, "none")
+          if norm_is_hex6(pbg) && n.style.fill.to_lower() == pbg.to_lower() {
+            issues.push(
+              "\{json_escape(id)}（\{n.component}）组件不可见：填充与父背景同为 \{pbg} 且无描边/文本 → 换填充或删除该节点",
+            )
+            continue
+          }
+        }
+        // 背景角色 = 有子节点的容器或 Frame 类（card/frame 容器）
+        if (n.children.length() > 0 || is_frame) && norm_is_pure_dark(n.style.fill) {
+          issues.push(
+            "\{json_escape(id)}（\{n.component}）纯黑/近黑灰背景 \{n.style.fill} → 深色底改用主题令牌（暗色主题画布色），不要硬填 #000/#111",
+          )
+        }
+      }
+    }
+  }
+  issues
+}
+
+pub fn norm_issues_v2(
+  doc : Document,
+  layout : SolvedLayout,
+  radius_base? : Double = NORM_RADIUS_BASE,
+  contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
+  touch_min? : Double = NORM_TOUCH_MIN,
+) -> Array[String] {
+  let issues = norm_issues(doc, layout, radius_base~)
+  for issue in norm_touch_issues(doc, layout, touch_min~).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }
   for issue in norm_type_issues(doc).iter() {
@@ -982,6 +1172,10 @@ pub fn norm_issues_v2(doc : Document, layout : SolvedLayout) -> Array[String] {
     if issues.length() < 8 { issues.push(issue) }
   }
   for issue in norm_grid_issues(doc).iter() {
+    if issues.length() < 8 { issues.push(issue) }
+  }
+  // issue #23：可读性硬标准（对比度 / 不可见 / 纯黑底），检测项
+  for issue in norm_readability_issues(doc, layout, contrast_min~).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }
   issues

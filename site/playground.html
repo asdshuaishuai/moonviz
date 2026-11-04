@@ -1593,7 +1593,7 @@ async function boot(){
     const bytes=await res.arrayBuffer();
     const mod=new WebAssembly.Module(bytes,{builtins:['js-string'],importedStringConstants:'_'});
     const exports=new WebAssembly.Instance(mod,{}).exports;
-    // 对齐最新 wasm-gc 产物（73 导出；此处包裹 39 个：11 静态 + 28 会话，
+    // 对齐最新 wasm-gc 产物（75 导出；此处包裹 39 个：11 静态 + 28 会话，
     // 其余为 _in 槽变体与 in/arg/arg2 槽原语，不经 JS 包装）
     engine={
       // —— 无状态（11）——

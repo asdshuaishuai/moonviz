@@ -37,6 +37,13 @@ pub(all) struct Project {
   /// 宿主批注透传（issue #20）：canonical 扫描时收集的非 moonviz 顶层
   /// HTML 注释。写路径再生 canonical 时原样回写；clone/replace_with 随行。
   mut doc_comments : Array[DocComment]
+  /// frontmatter 未知键透传（issue #20 下半场）：canonical 扫描时收集的
+  /// 非引擎权威键行（如顶层 extra_section / moonviz 下 deepdesign_ink），
+  /// 写路径原样回写；clone/replace_with 随行。
+  mut extra_front_matter : Array[String]
+  /// issue #24：当前生效的 design spec（JSON 文本；空 = 未注入）。
+  /// norms 的档位判定以 spec 为准（内置仅补 spec 未覆盖的项）。
+  mut design_spec : String
 }
 
 ///|
@@ -60,6 +67,8 @@ pub fn Project::new() -> Project {
     active_theme: "light",
     token_overrides: None,
     doc_comments: [],
+    extra_front_matter: [],
+    design_spec: "",
   }
 }
 
@@ -165,6 +174,11 @@ pub fn Project::clone(self : Project) -> Project {
   for cm in self.doc_comments.iter() {
     copy.doc_comments.push({ text: cm.text, anchor: cm.anchor, })
   }
+  copy.extra_front_matter = []
+  for line in self.extra_front_matter.iter() {
+    copy.extra_front_matter.push(line)
+  }
+  copy.design_spec = self.design_spec
   copy
 }
 
@@ -186,6 +200,8 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
   self.active_theme = source.active_theme
   self.token_overrides = source.token_overrides
   self.doc_comments = source.doc_comments
+  self.extra_front_matter = source.extra_front_matter
+  self.design_spec = source.design_spec
 }
 
 // ---------------------------------------------------------------------------
@@ -409,7 +425,10 @@ pub fn Project::add_flow(
   to~ : String,
   trigger? : String = "tap",
 ) -> Unit {
+  // 审查修复：canonical 含 flows 段——变更必须推进 revision 以失效
+  // 会话级 canon_cache（否则新导航边不出现在 canonical 里）
   self.flows.push({ from, to, trigger, })
+  self.revision = self.revision + 1
 }
 
 ///|
@@ -430,6 +449,7 @@ pub fn Project::remove_flow(
   if self.flows.length() == before {
     Err("unknown_flow: \{from} -> \{to} (\{trigger})")
   } else {
+    self.revision = self.revision + 1
     Ok(())
   }
 }

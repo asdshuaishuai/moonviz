@@ -247,7 +247,13 @@ pub fn Project::generate(
   self : Project,
   intent_text~ : String,
   name? : String = "",
+  spec? : String = "",
 ) -> Result[String, String] {
+  // issue #24：spec 在场 = 第一权威；缺失 = 显式要求，不静默用引擎内置
+  // 规范生成。宿主拿到 design_spec_required 后按 design_spec_draft 落盘重试。
+  if ds_is_blank(spec) {
+    return Err("design_spec_required")
+  }
   // 组合意图（"登录+注册"）：多段走 multi 通道（多画板 + 相邻导航流）；
   // 单段路径保持字节级不变（兼容既有信封消费者）
   let segs = split_intent_segments(intent_text)
@@ -255,7 +261,7 @@ pub fn Project::generate(
     if segs.length() > GENERATE_MULTI_MAX {
       return Err("generate_multi_too_many:\{GENERATE_MULTI_MAX}")
     }
-    return self.generate_multi(segs, name=name)
+    return self.generate_multi(segs, name=name, spec=spec)
   }
   let intent = parse_generate_intent(intent_text)
   let ab_name = if name == "" { intent.template_id } else { name }
@@ -280,6 +286,17 @@ pub fn Project::generate(
     Err(error) => return Err(error)
     Ok(id) => id
   }
+  // issue #24：spec 应用到新板（调色板重着色 + 字号阶/圆角档规范化）
+  match self.apply_design_spec(artboard=ab, spec=spec) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  // issue #25-B4（规则化）：mock 数据缺口只报 id，真实样例由 Agent 填充
+  let mock_gap_ids = self.mock_data_gaps(artboard=ab)
+  let mg_j = json_string_array(mock_gap_ids)
+  // issue #24 要求 2：白名单/禁用项偏差随信封上报
+  let spec_violations = self.design_spec_component_violations(artboard=ab)
+  let sv_j = json_string_array(spec_violations)
   // 信封暴露实际宽高：模板可能不消费意图宽度（多数模板保留内建
   // 390×844），Agent 无从发现与意图不符，除非信封可见。
   let (actual_w, actual_h) = match self.artboards.get(ab) {
@@ -306,7 +323,7 @@ pub fn Project::generate(
   }
   let alts_j = alts.join(",")
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"mock_missing\":[\{mg_j}],\"spec_violations\":[\{sv_j}],\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
   )
 }
 
@@ -584,7 +601,14 @@ pub fn Project::generate_multi(
   self : Project,
   segments : Array[String],
   name? : String = "",
+  spec? : String = "",
 ) -> Result[String, String] {
+  // issue #24：直调者也必须带 spec（不静默兜底）
+  if ds_is_blank(spec) {
+    return Err("design_spec_required")
+  }
+  let multi_mock_gaps : Array[String] = []
+  let multi_violations : Array[String] = []
   // 1) 逐段分类；无页面语义的段视为主题修饰（dark 等）不生成板。
   //    页面段原文必须记账：退化单通道时拿页面段重拼——写死 segments[0]
   //    会把主题词在前的组合（"dark+登录"）退化成 "dark dark"，页面段
@@ -624,7 +648,7 @@ pub fn Project::generate_multi(
     // 单通道信封不含 skipped——有丢段时在结果头部注入，保持可见性。
     let only = page_segs[0]
     let with_theme = if theme != "" { "\{only} \{theme}" } else { only }
-    let r = self.generate(intent_text=with_theme, name=name)
+    let r = self.generate(intent_text=with_theme, name=name, spec=spec)
     if skipped.length() == 0 {
       return r
     }
@@ -684,6 +708,18 @@ pub fn Project::generate_multi(
       Err(error) => return Err(error)
       Ok(id) => id
     }
+    // issue #24：spec 应用到本板（与单板通道同一判据）
+    match self.apply_design_spec(artboard=ab, spec=spec) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+    // issue #25-B4（规则化）：逐板缺口 id（内容由 Agent 填充）
+    for gid in self.mock_data_gaps(artboard=ab).iter() {
+      multi_mock_gaps.push(gid)
+    }
+    for v in self.design_spec_component_violations(artboard=ab).iter() {
+      multi_violations.push(v)
+    }
     ids.push(ab)
     hints.push(gi.page_hint)
     replaced_flags.push(replaced)
@@ -691,6 +727,12 @@ pub fn Project::generate_multi(
   }
   // 4) 相邻板导航流：出口启发（就地找语义节点，找不到合成前往按钮；
   //    画布放不下放弃合成时跳过该流——流契约要求 trigger 指向真实节点）
+  let mmg_j = json_string_array(multi_mock_gaps)
+  let mv_items : Array[String] = []
+  for v in multi_violations.iter() {
+    mv_items.push("\"" + json_escape(v) + "\"")
+  }
+  let mv_j = mv_items.join(",")
   let flows_json : Array[String] = []
   let mut i = 0
   while i + 1 < ids.length() {
@@ -755,6 +797,6 @@ pub fn Project::generate_multi(
     skipped_j.push("\"" + json_escape(s) + "\"")
   }
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"mock_missing\":[\{mmg_j}],\"spec_violations\":[\{mv_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
   )
 }

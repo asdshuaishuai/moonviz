@@ -190,6 +190,9 @@ pub fn Project::autofill_missing(
       }
     }
   }
+  // issue #25-B4（规则化）：mock 数据缺口只报 id，内容由 Agent 填充
+  let mock_gap_ids = self.mock_data_gaps(artboard=artboard)
+  let mock_gaps_json = json_string_array(mock_gap_ids)
   // 清偿：新节点与既有内容的重叠/溢出/触控规范归 auto_fix
   let autofix_json = match self.auto_fix(artboard=artboard) {
     Ok(json) => json
@@ -218,7 +221,7 @@ pub fn Project::autofill_missing(
   let pj = placed.join(",")
   let sj = skipped.join(",")
   Ok(
-    "{\"ok\":\{autofix_ok},\"op\":\"autofill\",\"artboard\":\"\{json_escape(artboard)}\",\"page_type\":\"\{page_type}\",\"placed_count\":\{placed.length()},\"placed\":[\{pj}],\"skipped\":[\{sj}],\"autofix\":\{autofix_json},\"missing_count_after\":\{after_count}}",
+    "{\"ok\":\{autofix_ok},\"op\":\"autofill\",\"artboard\":\"\{json_escape(artboard)}\",\"page_type\":\"\{page_type}\",\"placed_count\":\{placed.length()},\"placed\":[\{pj}],\"skipped\":[\{sj}],\"autofix\":\{autofix_json},\"missing_count_after\":\{after_count},\"mock_missing\":[\{mock_gaps_json}]}",
   )
 }
 

@@ -1,9 +1,0 @@
-- generic [ref=e2]:
-  - generic [ref=e5]: RELEASE · engine-v0.1.10
-  - heading "MoonViz 0.1.10" [level=1] [ref=e6]
-  - generic [ref=e7]: AI 时代的 Agent 驱动原型设计引擎 —— .mbt.md 是唯一事实源，人类画布与 Agent 修改回写同一份可编译的 literate 源码。
-  - generic [ref=e8]:
-    - generic [ref=e9]: 65 × 115 组件
-    - generic [ref=e10]: 55 工具 / 27 op
-    - generic [ref=e11]: WASM 73 导出 ×2
-    - generic [ref=e12]: 纯 MoonBit · 单二进制

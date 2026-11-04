@@ -140,6 +140,21 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
    对比度 < 2.0 即同色系严禁；auto_fix 按背景亮度把文字翻转到黑/白；
    非 #RRGGBB 形态不判不报。品牌色正常设计（微信绿白字 ≈2.4）不误伤
 5. 横平竖直：rotate 非 90° 倍数归零
+6. 可读性硬标准（issue #23）：正文对比度 ≥4.5（≥24px 大字号 ≥3.0）、纯黑/近黑灰
+   背景禁令、不可见叶子检测、选中态必须设置视觉字段；均为检测项（critique 第九维）。
+7. 交互与内容 QA（issue #25/#26）：可交互组件必须有去向（flow/标记/返回兜底）、
+   占位符残留与空壳容器报告、非组件库组件报告；同节点多 flow 与可点热区相交是
+   AgentGate 硬错误。**mock 数据只规则化检测、不内置内容**：引擎用
+   `mock_data_gaps`/`mock_missing` 报缺口（空壳容器 + 占位词表），真实样例由
+   Agent（LLM）按语义填充——引擎不得自造**领域样例数据条目**（商品/消息/
+   联系人等内容文案；autofill 的功能性微文案如「忘记密码？」不受限，
+   2026-11-04 决策）。
+   **生成必须带 design spec**（issue #24：缺省返回
+   `design_spec_required` + 草案，不静默回退内置规范；spec 的 palette/字号阶/
+   圆角档/rules 阈值参与生成与 norms 判定，白名单偏差随信封 `spec_violations` 上报）。
+8. 原子快照（issue #28）：`session_snapshot` 返回 `{revision,seq,canonical,render,
+   animations,delta}`；seq 随改文档路径严格递增，delta/渲染按板 content_seq 增量
+  （未变板零成本，基准见 `scripts/bench-snapshot.mjs`）。
 
 交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中
 返回类节点（id 词边界 back/prev/return；文本 返回/后退/上一步/back/←/‹/«）

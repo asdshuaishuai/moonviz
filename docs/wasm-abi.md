@@ -69,10 +69,11 @@ let json = read_moonstr(ptr);   // §2 判别式读取
 
 带 `_in` 后缀的入口当前 26 个，与 `wasm/moon.pkg` classic exports 段
 一一对应。一般槽位规则：主槽放文档级长文本，辅槽放 op/artboard 参数
-文本，三槽放 intent/value 自由文本。**唯一特例 `session_generate_in`：
-辅槽 = intent、三槽 = name**——name 是新画板名而非既有画板引用，故
-不走 constrain_in 的 arg=artboard 布局；宿主若按一般规则把 intent 放
-三槽会装反。逐导出槽位映射：
+文本，三槽放 intent/value 自由文本。**特例 `session_generate_in`：
+主槽 = design spec（issue #24 必带）、辅槽 = intent、三槽 = name**——
+name 是新画板名而非既有画板引用，故不走 constrain_in 的 arg=artboard
+布局；spec 缺省时生成被拒并回 `design_spec_required` + 草案（不静默
+兜底）。逐导出槽位映射：
 
 | 导出 | 主槽 in_ | 辅槽 arg_ | 三槽 arg2_ | 其他形参 |
 |---|---|---|---|---|
@@ -95,10 +96,12 @@ let json = read_moonstr(ptr);   // §2 判别式读取
 | session_infer_missing_in | — | artboard | — | |
 | session_extract_design_system_in | — | artboard | — | |
 | session_generate_responsive_in | — | artboard | — | |
-| session_generate_in | — | **intent（特例）** | name | |
+| session_generate_in | **design spec（特例）** | **intent（特例）** | name | spec 必带（issue #24）；`session_generate`（直传版）已退化为 design_spec_required 存根——迁移到 `session_generate_spec` 或本槽变体 |
 | session_component_compile_b64_in | — | base64 组件声明 | — | |
 | session_constrain_in | — | artboard | intent | |
 | session_tap_in | — | artboard | — | x、y: f64 |
+| session_snapshot | — | — | — | 直接导出（handle）；返回 {revision, seq, canonical, render, animations:{presets,motion_css}, delta}（issue #28） |
+| session_generate_spec | — | — | — | 直接导出（handle, intent, name, spec）；issue #24 规范驱动生成 |
 | session_critique_in | — | artboard | — | |
 | session_auto_fix_in | — | artboard | — | |
 | session_history_in | — | history line | — | |

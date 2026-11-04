@@ -137,3 +137,14 @@ fn block_json(kind : String, vs : Array[Violation]) -> String {
   sb.write_string("]}")
   sb.to_string()
 }
+
+///|
+/// 字符串数组 → JSON 数组文本（逐项 json_escape；空数组恒输出 `[]`——
+/// issue #10 纪律：envelope 集合键不允许裸拼接）。信封构造的统一出口。
+pub fn json_string_array(items : Array[String]) -> String {
+  let parts : Array[String] = []
+  for it in items.iter() {
+    parts.push("\"" + json_escape(it) + "\"")
+  }
+  "[" + parts.join(",") + "]"
+}

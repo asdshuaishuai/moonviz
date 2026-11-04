@@ -301,6 +301,7 @@ fn detach_child(doc : Document, parent_id : String, child_id : String) -> Unit {
           kids.push(c)
         }
       }
+      doc.content_seq = doc.content_seq + 1
       doc.nodes.set(parent_id, { ..p, children: kids, })
     }
     None => ()
@@ -313,6 +314,7 @@ fn append_child(doc : Document, parent_id : String, child_id : String) -> Unit {
     Some(p) => {
       let kids = p.children.copy()
       kids.push(child_id)
+      doc.content_seq = doc.content_seq + 1
       doc.nodes.set(parent_id, { ..p, children: kids, })
     }
     None => ()
@@ -326,6 +328,7 @@ fn delete_subtree(doc : Document, id : String) -> Unit {
       for c in n.children.iter() {
         delete_subtree(doc, c)
       }
+      doc.content_seq = doc.content_seq + 1
       let _ = doc.nodes.remove(id)
     }
     None => ()

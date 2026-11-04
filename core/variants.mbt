@@ -118,6 +118,7 @@ pub fn Project::merge_variant(
         Some(r) => { ..r, children: r.children.copy(), }
         None => Node::make("root", Frame)
       }
+      tgt.doc.content_seq = tgt.doc.content_seq + 1
       tgt.doc.nodes.set("root", root_node)
       for id in src.doc.nodes.keys() {
         if id != "root" {

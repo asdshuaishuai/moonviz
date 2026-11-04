@@ -81,11 +81,11 @@ test "human gate records visual debt while agent gate blocks the same MBT" {
 }
 
 ///|
-test "mbt check blocks cannot become visual pages without an mbt visual block" {
-  let invalid = "<!-- moonviz:artboard wrong -->\n```mbt check\ntest \"x\" { }\n```\n"
-  match load_mbt_project(invalid) {
-    Ok(_) => assert_true(false)
-    Err(error) => assert_eq(error, "mbt_no_visual_blocks")
+test "空态合法：零视觉块文档加载为空项目（issue #27）" {
+  let empty = "<!-- moonviz:artboard wrong -->\n```mbt check\ntest \"x\" { }\n```\n"
+  match load_mbt_project(empty) {
+    Ok(model) => assert_eq(model.project.artboards.length(), 0)
+    Err(error) => fail("零视觉块文档必须合法：\{error}")
   }
 }
 
@@ -321,5 +321,58 @@ test "往返：name 与 layout 经 MBT 存活" {
         None => assert_true(false)
       }
     Err(_) => assert_true(false)
+  }
+}
+
+///|
+test "空态往返：零画板项目 → canonical → load 闭环（issue #27）" {
+  let project = @core.Project::new()
+  match project_to_mbt(project) {
+    Err(error) => fail("零画板项目必须可序列化：\{error}")
+    Ok(model) => {
+      let canonical = model.to_mbt()
+      match load_mbt_project(canonical) {
+        Err(error) => fail("空态 canonical 必须可再次 load：\{error}")
+        Ok(back) => assert_eq(back.project.artboards.length(), 0)
+      }
+    }
+  }
+}
+
+///|
+test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue #20）" {
+  let src = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  entry: w\n  extra_section: hello\n  artboards:\n    - w\n  deepdesign_ink:\n    v: 1\ncustom_top: 42\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("load 失败：\{e}")
+      abort("")
+    }
+  }
+  let canonical = model.to_mbt()
+  assert_true(
+    canonical.contains("extra_section: hello"),
+    msg="moonviz 未知子键必须透传：\{canonical}",
+  )
+  assert_true(
+    canonical.contains("deepdesign_ink:"),
+    msg="moonviz 嵌套未知子键必须透传：\{canonical}",
+  )
+  assert_true(
+    canonical.contains("custom_top: 42"),
+    msg="顶层未知键必须透传：\{canonical}",
+  )
+  // 幂等：canonical 再次加载后仍保留，不翻倍
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  let canonical2 = back.to_mbt()
+  let needles = ["extra_section: hello", "deepdesign_ink:", "custom_top: 42"]
+  for needle in needles.iter() {
+    assert_true(canonical2.contains(needle), msg="二次往返必须保持 \{needle}")
   }
 }
