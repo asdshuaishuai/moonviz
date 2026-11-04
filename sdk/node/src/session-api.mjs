@@ -98,10 +98,17 @@ export class Session {
    * 见 cli/main.mbt）。name 缺省/空串时不拼 as 尾缀，画板名回落
    * template_id（与 CLI usage `generate <意图一句话> [as <name>]` 同款）。
    */
-  generate(intent, name) {
+  generate(intent, name, spec) {
     const quoted = s => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
     const tail = name == null || name === '' ? '' : ` as ${quoted(name)}`;
-    return this.exec(`generate ${quoted(intent)}${tail}`);
+    // issue #24：生成必须带 design spec（JSON 字符串）；缺省时引擎返回
+    // {ok:false,error:"design_spec_required",design_spec_draft:{…}}——
+    // 落盘草案后带 spec 重试。spec 以 base64 走行协议（规避引号/空格）。
+    if (spec == null || String(spec).trim() === '') {
+      return this.exec(`generate ${quoted(intent)}${tail}`);
+    }
+    const b64 = Buffer.from(String(spec)).toString('base64');
+    return this.exec(`generate ${quoted(intent)} spec=${b64}${tail}`);
   }
 
   /** 交互清单。 */

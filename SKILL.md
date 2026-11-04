@@ -34,6 +34,16 @@ does not fit — falling through is correct behavior, not failure):**
    **Composite intents** (`generate "登录+注册"`) expand to multiple
    artboards wired with auto navigation flows ("+"-separated, max 4;
    theme-only segments like `dark` apply globally).
+   **Design spec is required (issue #24)**: calling without one returns
+   `{ok:false, error:"design_spec_required", design_spec_draft:{…}}` —
+   persist the draft (DESIGN.md payload), then retry generate with that
+   spec (CLI: `generate <intent> spec=<base64-json>`; MCP/wasm: `spec`
+   argument / `session_generate_spec`). The spec's palette / typography /
+   radius tiers / rules drive generation and norms judgment; the engine
+   never silently falls back to its built-in design system. Mock data
+   gaps (`mock_missing:[node ids]`) in the report/envelopes are for YOU
+   to fill with domain-semantic sample entries — the engine detects but
+   never invents sample content.
 2. `template` — when you already know the exact page template id
    (`template dashboard home`). Same generative path, explicit selection.
 3. `ops-batch-b64` / MCP `batch_apply` — a determined refinement pass in ONE

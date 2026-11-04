@@ -166,6 +166,12 @@ pub fn Project::resize_canvas(
         Some(m) => self.artboards.set(artboard, { ..m, width, height, })
         None => ()
       }
+      // 审查修复：板尺寸变化必须推进 content_seq——按板失效的渲染缓存
+      // （svg 含画板宽高）依赖它感知 resize
+      match self.artboards.get(artboard) {
+        Some(m) => m.doc.content_seq = m.doc.content_seq + 1
+        None => ()
+      }
       self.revision = self.revision + 1
       Ok(
         "{\"ok\":true,\"op\":\"resize_canvas\",\"artboard\":\"\{artboard}\",\"from_w\":\{old_w},\"from_h\":\{old_h},\"to_w\":\{width},\"to_h\":\{height}}",

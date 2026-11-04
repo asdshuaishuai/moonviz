@@ -425,7 +425,10 @@ pub fn Project::add_flow(
   to~ : String,
   trigger? : String = "tap",
 ) -> Unit {
+  // 审查修复：canonical 含 flows 段——变更必须推进 revision 以失效
+  // 会话级 canon_cache（否则新导航边不出现在 canonical 里）
   self.flows.push({ from, to, trigger, })
+  self.revision = self.revision + 1
 }
 
 ///|
@@ -446,6 +449,7 @@ pub fn Project::remove_flow(
   if self.flows.length() == before {
     Err("unknown_flow: \{from} -> \{to} (\{trigger})")
   } else {
+    self.revision = self.revision + 1
     Ok(())
   }
 }

@@ -192,11 +192,7 @@ pub fn Project::autofill_missing(
   }
   // issue #25-B4（规则化）：mock 数据缺口只报 id，内容由 Agent 填充
   let mock_gap_ids = self.mock_data_gaps(artboard=artboard)
-  let mock_gap_items : Array[String] = []
-  for gid in mock_gap_ids.iter() {
-    mock_gap_items.push("\"" + json_escape(gid) + "\"")
-  }
-  let mock_gaps_json = mock_gap_items.join(",")
+  let mock_gaps_json = json_string_array(mock_gap_ids)
   // 清偿：新节点与既有内容的重叠/溢出/触控规范归 auto_fix
   let autofix_json = match self.auto_fix(artboard=artboard) {
     Ok(json) => json

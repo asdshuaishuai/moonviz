@@ -284,9 +284,23 @@ fn nd_sig(n : @core.Node) -> String {
   "|" +
   nd_pos_sig(n.y) +
   "|" +
+  n.component +
+  "|" +
   n.text +
   "|" +
   n.style.fill +
+  "|" +
+  n.style.text_color +
+  "|" +
+  n.style.stroke +
+  "|" +
+  n.style.corner_radius.to_string() +
+  "|" +
+  n.style.font_size.to_string() +
+  "|" +
+  n.style.opacity.to_string() +
+  "|" +
+  (if n.style.visible { "v" } else { "h" }) +
   "|" +
   kids
 }
@@ -320,20 +334,24 @@ pub fn session_snapshot(handle : Int) -> String {
       let changed : Array[String] = []
       let removed : Array[String] = []
       // 1) 已删板：清签名/渲染缓存，其节点全部进 removed
+      let dead_boards : Array[String] = []
       for ab_id in cur.sig_rev.keys() {
         if !p.artboards.contains(ab_id) {
-          let stale : Array[String] = []
-          for k in cur.last_sig.keys() {
-            if k.has_prefix(ab_id + "/") {
-              stale.push(k)
-            }
-          }
-          for k in stale.iter() {
-            cur.last_sig.remove(k)
-            removed.push(k)
-          }
-          cur.sig_rev.remove(ab_id)
+          dead_boards.push(ab_id)
         }
+      }
+      for ab_id in dead_boards.iter() {
+        let stale : Array[String] = []
+        for k in cur.last_sig.keys() {
+          if k.has_prefix(ab_id + "/") {
+            stale.push(k)
+          }
+        }
+        for k in stale.iter() {
+          cur.last_sig.remove(k)
+          removed.push(k)
+        }
+        cur.sig_rev.remove(ab_id)
       }
       let render_boards : Array[String] = []
       for ab_id in p.artboards.keys() {

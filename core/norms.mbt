@@ -298,7 +298,7 @@ pub fn norm_fix_pass(
               let r_now = n.style.corner_radius
               if r_now < radius_base - 0.5 && radius_base <= r_cap {
                 new_r = radius_base
-                if why == "" { why = "圆角归档 8" }
+                if why == "" { why = "圆角归档 \{radius_base.to_int()}" }
               } else if r_now > r_cap + 0.5 {
                 new_r = r_cap
                 if why == "" { why = "圆角收敛到 高/2" }

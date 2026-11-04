@@ -175,10 +175,19 @@ export async function createEngine(source) {
      * 生成式 UI（执行策略第一级）：一句话意图 → 完整画板 + 报告
      * （autofix/missing/score）。新画板变更——成功信封带 canonical mbt，
      * 按 canonical 交换的宿主应保存它供下次 sessionOpen 使用。
-     * 槽变体 session_generate_in 反向传参（槽语义表唯一特例）：辅槽 arg=intent、三槽 arg2=name。
+     * 槽变体 session_generate_in 反向传参（槽语义表特例）：主槽 in_=design spec（issue #24 必带）、辅槽 arg=intent、三槽 arg2=name。
      */
     sessionGenerate(handle, intent, name) {
+      // issue #24：session_generate 已改为 spec 必带（缺省返回
+      // design_spec_required + 草案）；规范驱动请用 sessionGenerateSpec。
       return JSON.parse(exports.session_generate(handle, intent, name));
+    },
+    sessionGenerateSpec(handle, intent, name, spec) {
+      // issue #24：spec 驱动生成。classic wasm 直传版（4 参数）。
+      if (typeof exports.session_generate_spec !== 'function') {
+        throw new Error('session_generate_spec requires a wasm build with the 75-export surface (0.1.11+); rebuild or re-vendor the engine wasm');
+      }
+      return JSON.parse(exports.session_generate_spec(handle, intent, name, spec));
     },
 
     /** 关闭会话。 */

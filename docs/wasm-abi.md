@@ -96,11 +96,11 @@ name 是新画板名而非既有画板引用，故不走 constrain_in 的 arg=ar
 | session_infer_missing_in | — | artboard | — | |
 | session_extract_design_system_in | — | artboard | — | |
 | session_generate_responsive_in | — | artboard | — | |
-| session_generate_in | **design spec（特例）** | **intent（特例）** | name | spec 必带（issue #24） |
+| session_generate_in | **design spec（特例）** | **intent（特例）** | name | spec 必带（issue #24）；`session_generate`（直传版）已退化为 design_spec_required 存根——迁移到 `session_generate_spec` 或本槽变体 |
 | session_component_compile_b64_in | — | base64 组件声明 | — | |
 | session_constrain_in | — | artboard | intent | |
 | session_tap_in | — | artboard | — | x、y: f64 |
-| session_snapshot | — | — | — | 直接导出（handle）；返回 {revision, seq, canonical, render, delta}（issue #28） |
+| session_snapshot | — | — | — | 直接导出（handle）；返回 {revision, seq, canonical, render, animations:{presets,motion_css}, delta}（issue #28） |
 | session_generate_spec | — | — | — | 直接导出（handle, intent, name, spec）；issue #24 规范驱动生成 |
 | session_critique_in | — | artboard | — | |
 | session_auto_fix_in | — | artboard | — | |

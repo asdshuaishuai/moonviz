@@ -80,12 +80,14 @@ fn ds_number_value(json : String, key : String) -> Double? {
   let after = rest.substring(start=colon + 1)
   let mut digits = ""
   let mut seen = false
+  let mut dot_seen = false
   for c in after.iter() {
     if c >= '0' && c <= '9' {
       digits = digits + "\{c}"
       seen = true
-    } else if c == '.' && seen {
+    } else if c == '.' && !dot_seen {
       digits = digits + "."
+      dot_seen = true
     } else if c == ' ' || c == '\n' || c == '\r' || c == '\t' {
       if seen {
         break
@@ -243,8 +245,8 @@ pub fn Project::apply_design_spec(
     None => return Err("unknown_artboard: " + artboard)
     Some(_) => ()
   }
-  // 1) 调色板 → token 覆盖 + 重着色（prior 为当前 tokens 快照）
-  let prior = ds_token_copy(self.tokens)
+  // 1) 调色板 → token 覆盖（set_token 内建 tokens_snapshot + recolor_with
+  //    通道，逐角色重着色；无需额外整体 recolor）
   let mut touched = false
   let roles : Array[(String, String)] = [
     ("primary", "primary"),
@@ -269,7 +271,7 @@ pub fn Project::apply_design_spec(
     }
   }
   if touched {
-    let _ = self.recolor_with(self.tokens, prior=Some(prior))
+    self.revision = self.revision + 1
   }
   // 2) 字号阶与圆角档
   match self.artboards.get(artboard) {
@@ -490,10 +492,54 @@ fn ds_number_after_marker(text : String, marker : String) -> Double? {
 }
 
 ///|
+/// issue #24：norms 阈值画像——一次解析 design_spec 得到三档，供
+/// critique/auto_fix/norms 各检测与修复通道共享（消除链上重复解析）。
+pub(all) struct NormsProfile {
+  radius_base : Double
+  contrast_min : Double
+  touch_min : Double
+}
+
+///|
+pub fn Project::norms_profile(self : Project) -> NormsProfile {
+  let base = DesignTokens::default()
+  let radius_base = match ds_number_value(self.design_spec, "sm") {
+    Some(v) => if v > 0.0 { v } else { NORM_RADIUS_BASE }
+    None => NORM_RADIUS_BASE
+  }
+  // 角色标记优先：正文对比度 → 泛化对比度 → 内置
+  let contrast_min = match ds_number_after_marker(self.design_spec, "正文对比度") {
+    Some(v) => v
+    None =>
+      match ds_number_after_marker(self.design_spec, "对比度") {
+        Some(v) => v
+        None => NORM_TEXT_CONTRAST_MIN
+      }
+  }
+  let contrast_min = if contrast_min >= 1.0 && contrast_min <= 21.0 {
+    contrast_min
+  } else {
+    NORM_TEXT_CONTRAST_MIN
+  }
+  let touch_min = match ds_number_after_marker(self.design_spec, "触控") {
+    Some(v) => if v >= 20.0 && v <= 96.0 { v } else { NORM_TOUCH_MIN }
+    None => NORM_TOUCH_MIN
+  }
+  let _ = base.typography
+  { radius_base, contrast_min, touch_min, }
+}
+
+///|
 /// rules[] 中的可读性对比度阈值（issue #24 要求 2：norms 以 spec 为准）。
 pub fn Project::design_spec_text_contrast(self : Project) -> Double {
   if self.design_spec.trim() == "" {
     return NORM_TEXT_CONTRAST_MIN
+  }
+  // 角色标记优先（"正文对比度 4.5" 先于泛化 "对比度 3.0"）——rules 多条
+  // 阈值并存时首标记不再覆盖正文档
+  match ds_number_after_marker(self.design_spec, "正文对比度") {
+    Some(v) => return if v >= 1.0 && v <= 21.0 { v } else { NORM_TEXT_CONTRAST_MIN }
+    None => ()
   }
   match ds_number_after_marker(self.design_spec, "对比度") {
     Some(v) => if v >= 1.0 && v <= 21.0 { v } else { NORM_TEXT_CONTRAST_MIN }

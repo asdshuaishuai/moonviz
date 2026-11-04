@@ -13,7 +13,7 @@
   SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
   platform-package version alignment).
 - **Docs & site full sync** — every count re-anchored to live engine output
-  (55 tools / 27 ops / 73 wasm exports / 9-dimension critique / 52 core
+  (55 tools / 27 ops / 75 wasm exports / 9-dimension critique / 52 core
   modules), version examples moved to `<ver>` placeholders.
 - Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
 

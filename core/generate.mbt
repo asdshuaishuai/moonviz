@@ -293,18 +293,10 @@ pub fn Project::generate(
   }
   // issue #25-B4（规则化）：mock 数据缺口只报 id，真实样例由 Agent 填充
   let mock_gap_ids = self.mock_data_gaps(artboard=ab)
-  let mg_items : Array[String] = []
-  for gid in mock_gap_ids.iter() {
-    mg_items.push("\"" + json_escape(gid) + "\"")
-  }
-  let mg_j = mg_items.join(",")
+  let mg_j = json_string_array(mock_gap_ids)
   // issue #24 要求 2：白名单/禁用项偏差随信封上报
   let spec_violations = self.design_spec_component_violations(artboard=ab)
-  let sv_items : Array[String] = []
-  for v in spec_violations.iter() {
-    sv_items.push("\"" + json_escape(v) + "\"")
-  }
-  let sv_j = sv_items.join(",")
+  let sv_j = json_string_array(spec_violations)
   // 信封暴露实际宽高：模板可能不消费意图宽度（多数模板保留内建
   // 390×844），Agent 无从发现与意图不符，除非信封可见。
   let (actual_w, actual_h) = match self.artboards.get(ab) {
@@ -735,11 +727,7 @@ pub fn Project::generate_multi(
   }
   // 4) 相邻板导航流：出口启发（就地找语义节点，找不到合成前往按钮；
   //    画布放不下放弃合成时跳过该流——流契约要求 trigger 指向真实节点）
-  let mmg_items : Array[String] = []
-  for gid in multi_mock_gaps.iter() {
-    mmg_items.push("\"" + json_escape(gid) + "\"")
-  }
-  let mmg_j = mmg_items.join(",")
+  let mmg_j = json_string_array(multi_mock_gaps)
   let mv_items : Array[String] = []
   for v in multi_violations.iter() {
     mv_items.push("\"" + json_escape(v) + "\"")

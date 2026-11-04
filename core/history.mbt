@@ -232,6 +232,9 @@ pub fn Project::set_artboard_doc(
       // clone 防别名：checkout/undo 返回的历史快照若按引用落回画板，
       // 后续编辑会原地改掉该 revision 的快照，时间旅行语义被静默破坏
       ab.doc = doc.clone()
+      // 审查修复：整板替换必须推进 project.revision——canon_cache 等以
+      // project.revision 为失效键的会话级缓存依赖它感知内容变化
+      self.revision = self.revision + 1
       Ok(())
     }
   }

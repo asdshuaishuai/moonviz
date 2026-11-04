@@ -81,6 +81,9 @@ pub fn qa_issues(self : Project, artboard~ : String) -> Array[String] {
   let issues : Array[String] = []
   // issue #24 要求 2：spec 组件白名单/禁用项的整篇检视并入 QA
   for v in self.design_spec_component_violations(artboard~).iter() {
+    if issues.length() >= 12 {
+      break
+    }
     issues.push(v)
   }
   match self.artboards.get(artboard) {
@@ -135,55 +138,6 @@ pub fn qa_issues(self : Project, artboard~ : String) -> Array[String] {
 // ---------------------------------------------------------------------------
 
 ///|
-fn qa_rect_intersects(a : Rect, b : Rect) -> Bool {
-  let ax2 = a.x + a.width
-  let ay2 = a.y + a.height
-  let bx2 = b.x + b.width
-  let by2 = b.y + b.height
-  a.x < bx2 && b.x < ax2 && a.y < by2 && b.y < ay2
-}
-
-///|
-fn qa_rect_contains(outer : Rect, inner : Rect) -> Bool {
-  outer.x <= inner.x &&
-  outer.y <= inner.y &&
-  outer.x + outer.width >= inner.x + inner.width &&
-  outer.y + outer.height >= inner.y + inner.height
-}
-
-///|
-/// 父子包含豁免：two ids 在同一文档里存在祖先关系即合法（容器与内部可点元素）。
-fn qa_is_related(doc : Document, a : String, b : String) -> Bool {
-  let mut cur = a
-  let mut walking = true
-  while walking {
-    match doc.find_parent(cur) {
-      None => walking = false
-      Some(p) =>
-        if p == b {
-          return true
-        } else {
-          cur = p
-        }
-    }
-  }
-  let mut cur2 = b
-  let mut walking2 = true
-  while walking2 {
-    match doc.find_parent(cur2) {
-      None => walking2 = false
-      Some(p) =>
-        if p == a {
-          return true
-        } else {
-          cur2 = p
-        }
-    }
-  }
-  false
-}
-
-///|
 /// AgentGate 冲突判定（issue #25-A3 / #26-A3）：
 /// 1) 同一节点多条 tap flow → interaction_conflict
 /// 2) 两个可点热区（被 tap flow 绑定的容器）包围盒相交且无父子包含 → hotzone_overlap
@@ -230,10 +184,13 @@ pub fn qa_agent_conflicts(self : Project) -> Result[Unit, String] {
             let rb = layout.rect_of(targets[j])
             match (ra, rb) {
               (Some(a), Some(b)) =>
-                if !qa_is_related(ab.doc, targets[i], targets[j]) &&
-                  !qa_rect_contains(a, b) &&
-                  !qa_rect_contains(b, a) &&
-                  qa_rect_intersects(a, b) {
+                // 父子包含豁免（is_descendant 双向）+ 包含关系矩形豁免；
+                // 两个可点区正相交即冲突（几何谓词复用 geom.mbt）
+                if !(is_descendant(ab.doc, targets[i], targets[j]) ||
+                is_descendant(ab.doc, targets[j], targets[i])) &&
+                  !a.contains_rect(b) &&
+                  !b.contains_rect(a) &&
+                  a.intersects(b) {
                   return Err(
                     "mbt_gate_block:" +
                     artboard_id +
