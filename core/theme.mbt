@@ -178,6 +178,9 @@ pub fn Theme::sepia() -> Theme {
   t.colors.set("text_hint", "#8D6E63")
   // text_hint 加深一档：#8D6E63 压 surface_variant 仅 4.07，#7A5C50 达 5.33
   t.colors.set("text_hint", "#7A5C50")
+  // outline 暖棕（第 1 轮补角色时误删，描边消费面扩大后回落 default 冷灰
+  // #C8CDD6 压暖底 #FAF6F0 呈可见冷色偏色）
+  t.colors.set("outline", "#BCAAA4")
   // 补齐角色集（模板按角色取色，缺角色会以原名落盘成非法色值）：
   t.colors.set("error_container", "#F3D9D2")
   t.colors.set("on_secondary_container", "#3E2723")
@@ -233,7 +236,9 @@ pub fn Theme::sunset() -> Theme {
   t.colors.set("background", "#FFF3E0")
   t.colors.set("error", "#D32F2F")
   t.colors.set("success", "#2E7D32")
-  t.colors.set("warning", "#FB8C00")
+  // warning 加深一档：#FB8C00 白字仅 2.37，#B25A00 达 4.82（浅橙留给
+  // secondary 做暖色点缀）
+  t.colors.set("warning", "#B25A00")
   t.colors.set("outline", "#FFCC80")
   t.colors.set("text_primary", "#3E2723")
   t.colors.set("text_secondary", "#5D4037")

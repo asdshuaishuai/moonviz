@@ -29,6 +29,9 @@ test "visual：全部内置主题色板逐档达可读性标准" {
     // 语义色徽标（badge success 底 + on_secondary_container 字）
     assert_true(cr("on_secondary_container", "secondary_container") >= 4.5)
     assert_true(cr("on_primary", "success") >= 4.5)
+    // warning 档（badge/alert warning 底 + on_primary 字；default/sunset
+    // 曾 3.11/2.37，校准后全主题达标）
+    assert_true(cr("on_primary", "warning") >= 4.5)
   }
 }
 

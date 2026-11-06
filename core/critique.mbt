@@ -543,6 +543,10 @@ fn norm_issue_hint(issue : String) -> String {
     "换语义化真实文案，去掉 TBD/TODO/xxx 一类占位"
   } else if issue.contains("非组件库组件") {
     "换组件库注册表内的组件（list-components 可查）"
+  } else if issue.contains("超盒高") {
+    // norms 检测项（折行越盒）没有 auto_fix 通道——else 兜底的
+    // 「auto_fix 可一键修复」广告会让 Agent 空手而归（fixes:0）
+    "加高盒子或精简文案（norms 检测项，无自动修复通道）"
   } else {
     "auto_fix 可一键修复"
   }

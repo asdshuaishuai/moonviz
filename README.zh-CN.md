@@ -595,7 +595,7 @@ let ds = p.extract_design_system(artboard="dashboard")
 ds.summary()
 // → Extracted Design System:
 //     Colors: 6 tokens
-//       primary = #4B6BFB (used 5x, confidence 0.9)
+//       primary = #4361EE (used 5x, confidence 0.9)
 //       surface = #FFFFFF (used 12x, confidence 0.9)
 //       error = #BA1A1A (used 1x, confidence 0.5)
 //     Spacing: 3 values

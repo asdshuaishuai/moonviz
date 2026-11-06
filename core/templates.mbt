@@ -244,7 +244,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   let t = self.tokens
 
   // Logo 区域（圆形占位）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "badge",
     "logo",
@@ -262,7 +262,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
 
   // 标题
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "welcome_title",
@@ -281,7 +281,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
 
   // 副标题
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "subtitle",
@@ -298,7 +298,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
 
   // 邮箱输入框
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "text_input",
     "email_input",
@@ -310,7 +310,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   self.resize_node(ab, "email_input", 342.0, 52.0, 12.0)
 
   // 密码输入框
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "text_input",
     "password_input",
@@ -322,7 +322,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   self.resize_node(ab, "password_input", 342.0, 52.0, 12.0)
 
   // 忘记密码链接（全宽盒 + 右对齐：右缘贴字段右缘，不再悬空 37px）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "forgot_link",
@@ -339,7 +339,7 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
 
   // 登录按钮（主 CTA 文字 17/600，HIG 主按钮档；出厂 14/regular 太轻）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "login_btn",
@@ -356,11 +356,11 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
 
   // 分隔线
-  let _ = self.place_comp(ab, "divider", "divider1", x=24.0, y=600.0)
+  self.place_required(ab, "divider", "divider1", x=24.0, y=600.0)
   self.resize_node(ab, "divider1", 342.0, 1.0, 0.0)
 
   // 注册按钮
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "signup_btn",
@@ -391,7 +391,7 @@ fn Project::template_login(self : Project, name : String) -> String {
 fn Project::template_signup(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
-  let _ = self.place_comp(ab, "heading", "title", variant="h2", x=24.0, y=60.0)
+  self.place_required(ab, "heading", "title", variant="h2", x=24.0, y=60.0)
   self.set_text(ab, "title", "Create Account")
   self.resize_node(ab, "title", 342.0, 36.0, 0.0)
   let _ = self.edit_node(
@@ -404,13 +404,13 @@ fn Project::template_signup(self : Project, name : String) -> String {
   let mut y = 140.0
   for i in 0..<fields.length() {
     let fid = "field_\{i}"
-    let _ = self.place_comp(ab, "text_input", fid, variant="filled", x=24.0, y~)
+    self.place_required(ab, "text_input", fid, variant="filled", x=24.0, y~)
     self.set_text(ab, fid, fields[i])
     self.resize_node(ab, fid, 342.0, 52.0, 12.0)
     y = y + 68.0
   }
 
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "create_btn",
@@ -428,7 +428,7 @@ fn Project::template_signup(self : Project, name : String) -> String {
 
   // 全宽盒 + 居中：与上方 Sign Up 按钮文字（text-anchor middle）同一中轴，
   // 不再靠手算文字宽把节点摆到「视觉中心偏左 8px」
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "have_account",
@@ -466,7 +466,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
   // App Bar（标题提到页级：17/600，不再比分区标题还小）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "app_bar",
     "top_bar",
@@ -500,11 +500,11 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
       let cid = "stat_\{i}"
       let x = 24.0 + col.to_double() * 179.0
       let y = 80.0 + row.to_double() * 112.0
-      let _ = self.place_comp(ab, "card", cid, variant="elevated", x~, y~)
+      self.place_required(ab, "card", cid, variant="elevated", x~, y~)
       self.resize_node(ab, cid, 163.0, 96.0, 12.0)
       // 数值（主层级）
       let vid = "stat_v\{i}"
-      let _ = self.place_comp(
+      self.place_required(
         ab,
         "heading",
         vid,
@@ -517,7 +517,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
       let _ = self.edit_node(artboard=ab, node_id=vid, kvs=[("align", "center")])
       // 标签（次层级）
       let lid = "stat_l\{i}"
-      let _ = self.place_comp(
+      self.place_required(
         ab,
         "body_text",
         lid,
@@ -616,7 +616,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   }
 
   // 最近活动列表
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "activity_title",
@@ -635,7 +635,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   ]
   for j in 0..<4 {
     let aid = "activity_\{j}"
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "card",
       aid,
@@ -662,7 +662,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
   // App Bar（标题提到页级：17/600，不再是最小标题）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "app_bar",
     "top_bar",
@@ -679,7 +679,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   )
 
   // 头像（圆形，首字母按直径档放大——出厂 14px 在 104 圆里显得空）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "badge",
     "avatar",
@@ -697,7 +697,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
 
   // 姓名 + 简介（盒心在画板中线，文字对齐 center——与头像同轴，
   // 不再「名字落在头像左下方」）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "user_name",
@@ -713,7 +713,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
     kvs=[("align", "center"), ("weight", "700")],
   )
 
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "user_bio",
@@ -736,12 +736,12 @@ fn Project::template_profile(self : Project, name : String) -> String {
   for i in 0..<3 {
     let sid = "stat_\{i}"
     let x = 24.0 + i.to_double() * 118.0
-    let _ = self.place_comp(ab, "card", sid, variant="elevated", x~, y=290.0)
+    self.place_required(ab, "card", sid, variant="elevated", x~, y=290.0)
     // 高 80：contained_in_parent 按卡内容盒（pad 16 内缩）判 contained——
     // 栈内容 22+8+14=44 必须 ≤ 80-32=48，64 高会底边越出内容盒
     self.resize_node(ab, sid, 106.0, 80.0, 8.0)
     let vid = "stat_v\{i}"
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "heading",
       vid,
@@ -753,7 +753,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
     self.resize_node(ab, vid, 74.0, 22.0, 0.0)
     let _ = self.edit_node(artboard=ab, node_id=vid, kvs=[("align", "center")])
     let lid = "stat_l\{i}"
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "body_text",
       lid,
@@ -767,7 +767,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   }
 
   // 操作按钮
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "follow_btn",
@@ -778,7 +778,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   self.set_text(ab, "follow_btn", "Follow")
   self.resize_node(ab, "follow_btn", 163.0, 44.0, 10.0)
 
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "message_btn",
@@ -790,7 +790,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   self.resize_node(ab, "message_btn", 163.0, 44.0, 10.0)
 
   // 内容列表
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "posts_title",
@@ -804,11 +804,11 @@ fn Project::template_profile(self : Project, name : String) -> String {
   for j in 0..<3 {
     let pid = "post_\{j}"
     let py = 486.0 + j.to_double() * 110.0
-    let _ = self.place_comp(ab, "card", pid, variant="elevated", x=24.0, y=py)
+    self.place_required(ab, "card", pid, variant="elevated", x=24.0, y=py)
     self.resize_node(ab, pid, 342.0, 96.0, 12.0)
     // 帖子卡两级内容：标题 h4 + 预览 caption（不再八成面积的空壳骨架）
     let tid = "post_t\{j}"
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "heading",
       tid,
@@ -819,7 +819,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
     self.set_text(ab, tid, "Post \{j + 1}")
     self.resize_node(ab, tid, 200.0, 22.0, 0.0)
     let bid = "post_b\{j}"
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "body_text",
       bid,
@@ -842,7 +842,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
 fn Project::template_settings(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "app_bar",
     "top_bar",
@@ -875,7 +875,7 @@ fn Project::template_settings(self : Project, name : String) -> String {
     let (section_name, items) = sections[si]
     // 分组标题
     let hid = "section_\{si}"
-    let _ = self.place_comp(ab, "heading", hid, variant="h4", x=24.0, y~)
+    self.place_required(ab, "heading", hid, variant="h4", x=24.0, y~)
     self.set_text(ab, hid, section_name)
     self.resize_node(ab, hid, 200.0, 22.0, 0.0)
     y = y + 30.0
@@ -933,7 +933,7 @@ fn Project::template_settings(self : Project, name : String) -> String {
   }
 
   // 退出按钮（圆角归按钮族 8 档，与同页列表卡同语言）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "logout_btn",
@@ -958,6 +958,13 @@ fn Project::template_list(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
   self.place_required(ab, "app_bar", "top_bar", x=0.0, y=0.0, w=390.0, h=56.0)
   self.set_text(ab, "top_bar", "Discover")
+  // 页级标题 17/600 居中：整页 15 个节点曾全 14px normal（critique 自报
+  // visual_hierarchy poor「1 种字号」），左锚 pad 12 也与内容线不齐
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600"), ("align", "center")],
+  )
 
   // 搜索栏（锚在 app_bar 下方；autofill 的配方会认这个位置）
   // 高 44 触控下限（40 会被 lint 报 touch_target）
@@ -1133,7 +1140,7 @@ fn Project::template_checkout(self : Project, name : String) -> String {
   self.place_required(ab, "card", "summary", x=24.0, y=72.0)
   self.resize_node(ab, "summary", 342.0, 96.0, 12.0)
   self.set_text(ab, "summary", "")
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "summary_t",
@@ -1143,7 +1150,7 @@ fn Project::template_checkout(self : Project, name : String) -> String {
   )
   self.set_text(ab, "summary_t", "Order summary")
   self.resize_node(ab, "summary_t", 200.0, 22.0, 0.0)
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "summary_b",
@@ -1248,7 +1255,7 @@ fn Project::template_checkout(self : Project, name : String) -> String {
 ///|
 fn Project::template_list_detail(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "app_bar",
     "top_bar",
@@ -1329,7 +1336,7 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
     }
   }
   // 底部详情卡（占位内容区）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "card",
     "detail_card",
@@ -1349,7 +1356,7 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
 ///|
 fn Project::template_onboarding(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "ob_title",
@@ -1364,7 +1371,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     node_id="ob_title",
     kvs=[("align", "center"), ("weight", "700")],
   )
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "ob_sub",
@@ -1418,7 +1425,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
 
   // 主 CTA 文字 17/600；Skip 抬到 44 触控下限、圆角与主按钮同档 12，
   // 底边 820 落在安全区之上，两个出口不再一高一矮
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "ob_next",
@@ -1433,7 +1440,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     node_id="ob_next",
     kvs=[("font_size", "17"), ("weight", "600")],
   )
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "ob_skip",
@@ -1455,7 +1462,7 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
   // 插图占位（正圆盘，rx=高/2；阴影交给 card 组件的 e1 档）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "card",
     "illustration",
@@ -1475,7 +1482,7 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
 
   // 主文案（与插图/按钮同一中轴：盒心 195 + align center，
   // 不再两行文字各偏一条轴线）
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "heading",
     "main_text",
@@ -1492,7 +1499,7 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
   )
 
   // 副文案
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "body_text",
     "sub_text",
@@ -1505,7 +1512,7 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
   let _ = self.edit_node(artboard=ab, node_id="sub_text", kvs=[("align", "center")])
 
   // 操作按钮
-  let _ = self.place_comp(
+  self.place_required(
     ab,
     "button",
     "cta_btn",
@@ -1524,29 +1531,9 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
 // ---------------------------------------------------------------------------
 
 ///|
-fn Project::place_comp(
-  self : Project,
-  ab : String,
-  comp : String,
-  id : String,
-  variant? : String = "",
-  x? : Double = 0.0,
-  y? : Double = 0.0,
-) -> Result[String, String] {
-  self.place_component(
-    artboard=ab,
-    component_id=comp,
-    instance_id=id,
-    variant~,
-    x~,
-    y~,
-  )
-}
-
-///|
 /// place_comp 的**强制版本**：放置失败即 panic。
 ///
-/// 为什么需要它：模板里到处写 `let _ = self.place_comp(...)`，一旦组件名或
+/// 为什么需要它：模板里到处写 `self.place_required(...)`，一旦组件名或
 /// variant 写错（2026-10-26 真实事故：新模板用了不存在的 variant="surface"，
 /// 5 个节点全被拒绝却静默通过），产出画板只剩少量节点却没有任何报错，
 /// 直到用户看到"空页面"才发现。模板是确定性构造，失败必然是实现错误——

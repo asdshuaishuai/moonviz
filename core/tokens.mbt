@@ -5,7 +5,7 @@
 /// Agent 通过 `apply_token` 引用令牌，引擎在布局/渲染时解析为具体值。
 /// 这样 Agent 生成的设计自动获得一致的主题（换主题只需改令牌表）。
 pub(all) struct DesignTokens {
-  mut colors : Map[String, String] // "primary" → "#4B6BFB"
+  mut colors : Map[String, String] // "primary" → "#4361EE"
   mut spacing : Map[String, Double] // "sm" → 4, "md" → 8, "lg" → 16
   mut radii : Map[String, Double] // "sm" → 4, "md" → 8, "round" → 999
   mut typography : Map[String, Double] // "h1" → 32, "h2" → 24, "body" → 14
@@ -37,7 +37,9 @@ pub fn DesignTokens::default() -> DesignTokens {
   t.colors.set("error", "#BA1A1A")
   t.colors.set("error_container", "#FFDAD6")
   t.colors.set("success", "#2E7D32")
-  t.colors.set("warning", "#ED6C02")
+  // warning 加深一档：#ED6C02 白字仅 3.11（可读性硬标准 ≥4.5，badge/
+  // alert 的 warning 档文字色是 on_primary），#B85C00 达 4.6
+  t.colors.set("warning", "#B85C00")
   t.colors.set("outline", "#C8CDD6")
   t.colors.set("outline_variant", "#E0E0E0")
   t.colors.set("text_primary", "#1A1C1E")
@@ -75,7 +77,7 @@ pub fn DesignTokens::default() -> DesignTokens {
 // ---------------------------------------------------------------------------
 
 ///|
-/// 解析颜色令牌："primary" → "#4B6BFB"；非令牌直接返回
+/// 解析颜色令牌："primary" → "#4361EE"；非令牌直接返回
 pub fn DesignTokens::resolve_color(
   self : DesignTokens,
   token_or_hex : String,
