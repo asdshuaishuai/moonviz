@@ -66,7 +66,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   // 与 chip 同语义）：文字角色随容器底翻转，recolor 反查也单一化
   bv.set(
     "secondary",
-    patch3("secondary_container", "on_secondary_container", 8.0),
+    patch4("secondary_container", "on_secondary_container", 8.0, "outline"),
   )
   bv.set("danger", patch3("error", "on_primary", 8.0))
   m.set("button", {
@@ -180,6 +180,11 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   let gv : Map[String, NodePatch] = Map::new()
   gv.set("primary", patch3("primary", "on_primary", 12.0))
   gv.set("success", patch3("success", "on_primary", 12.0))
+  // warning/error 语义档：web_landing 特性卡按 primary/success/warning 取
+  // 语义色，变体表缺 warning 时 place_comp 静默拒绝、第三卡图标丢失
+  // （第 2 轮回归 feat_icon2）——语义色档在此补齐
+  gv.set("warning", patch3("warning", "on_primary", 12.0))
+  gv.set("error", patch3("error", "on_primary", 12.0))
   m.set("badge", {
     id: "badge",
     kind: "rect",
@@ -273,8 +278,8 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let sbv : Map[String, NodePatch] = Map::new()
-  sbv.set("default", patch3("surface_variant", "text_hint", 999.0))
-  sbv.set("filled", patch3("surface", "text_hint", 10.0))
+  sbv.set("default", patch4("surface_variant", "text_hint", 999.0, "outline"))
+  sbv.set("filled", patch4("surface", "text_hint", 10.0, "outline"))
   m.set("search_bar", {
     id: "search_bar",
     kind: "rect",
@@ -303,7 +308,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   let chv : Map[String, NodePatch] = Map::new()
   chv.set(
     "default",
-    patch3("secondary_container", "on_secondary_container", 999.0),
+    patch4("secondary_container", "on_secondary_container", 999.0, "outline"),
   )
   chv.set("selected", patch3("primary", "on_primary", 999.0))
   m.set("chip", {

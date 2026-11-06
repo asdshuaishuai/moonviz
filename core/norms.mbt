@@ -1140,6 +1140,28 @@ pub fn norm_readability_issues(
               continue
             }
           }
+          // 文字折行超盒高（检测项）：渲染层按盒宽折行后，固定矮盒装不下
+          // 折出的行数会纵向越出（S6 之前的横向溢出已由折行消除，这里是
+          // 剩余的纵向形态）。容差 fs×0.5 容纳行盒 vs 字形的正常高差。
+          let is_text_kind = match n.kind {
+            Text => true
+            _ => false
+          }
+          if is_text_kind {
+            match layout.rect_of(id) {
+              None => ()
+              Some(r) =>
+                if r.width > 1.0 {
+                  let lines = wrap_text_lines(n.text, n.style.font_size, r.width)
+                  let block_h = lines.length().to_double() * n.style.font_size * n.style.line_height
+                  if block_h > r.height + n.style.font_size * 0.5 {
+                    issues.push(
+                      "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字折 \{lines.length()} 行高 \{block_h.to_int()} 超盒高 \{r.height.to_int()} → 加高盒子或精简文案（检测项）",
+                    )
+                  }
+                }
+            }
+          }
         }
         // 不可见判定只看非 Frame 叶子：空 Frame 是合法占位容器（懒放置的
         // card 等），同色不代表不可见。

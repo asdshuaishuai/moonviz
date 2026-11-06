@@ -29,9 +29,9 @@ fn landing_tree(width : Double, tokens : DesignTokens) -> LT {
 fn landing_desktop(t : DesignTokens) -> LT {
   lt_v(id="page", kids=[
     // 顶部导航
-    // pad 12：容器高 72，pad 24 时内容盒只剩 24，装不下 44 高的 nav_cta
-    // （issue #14 adaptive_landing nav_* contained_in_parent）
-    lt_h(id="nav", pad=12.0, gap=16.0, kids=[
+    // pad 14 = (72−44)/2：内容盒恰装 44 高的 nav_cta；再大将触发
+    // contained_in_parent（issue #14），再小则与 footer 的 bar 档留白不齐
+    lt_h(id="nav", pad=14.0, gap=16.0, kids=[
       lt_dot(id="nav_logo", fill="primary", d=36.0, tokens=t).cy(),
       // Hug + 弹簧：链接按内在宽成组贴向 CTA（Fill 会与 lt_flex 平分、
       // 等距铺满整条导航，审计 adaptive_landing nav 横排残留）
@@ -44,8 +44,9 @@ fn landing_desktop(t : DesignTokens) -> LT {
       lt_btn(id="nav_cta", label="Get Started", tokens=t).cy(),
     ]).h(Fixed(72.0)),
     // Hero：左文案右插图
-    // pad 28：hero 高 380，pad 48 时内容盒 284 装不下 300 高的 hero_art
-    lt_h(id="hero", pad=28.0, gap=48.0, kids=[
+    // pad 24：内容盒 332 ≥ 300 高的 hero_art（pad 48 只剩 284 装不下）；
+    // 与 features 同 24 内容栅格，不再 28/24/48 三条左线
+    lt_h(id="hero", pad=24.0, gap=48.0, kids=[
       // justify Center：左栏内容块在 hero 行内垂直居中（原顶对齐，
       // 左下留 183px 空白、与右侧插图失衡）
       lt_v(id="hero_copy", gap=14.0, justify=Center, kids=[
@@ -78,7 +79,8 @@ fn landing_desktop(t : DesignTokens) -> LT {
       ),
     ]).h(Fixed(380.0)),
     // 三列特性卡（Fill 平分）
-    lt_h(id="features", pad=48.0, gap=24.0, kids=[
+    // pad 24：与 hero 同一内容栅格（此前 48 让特性卡左缘独占一条线）
+    lt_h(id="features", pad=24.0, gap=24.0, kids=[
       lt_card(id="feat_c0", gap=10.0, kids=[
         lt_dot(id="feat_d0", fill="primary", d=44.0, tokens=t),
         lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
@@ -111,8 +113,8 @@ fn landing_desktop(t : DesignTokens) -> LT {
       ], tokens=t),
     ]).h(Fixed(280.0)),
     // Footer
-    // pad 12：footer 高 64，pad 24 时内容盒 16 装不下 18.75 高的 caption
-    lt_h(id="footer", pad=12.0, gap=16.0, kids=[
+    // pad 14：与 nav 同 bar 档留白（pad 24 时内容盒 16 装不下 caption）
+    lt_h(id="footer", pad=14.0, gap=16.0, kids=[
       lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", width=Hug, tokens=t)
       .color(t.resolve_color("text_secondary"))
       .cy(),
@@ -297,7 +299,7 @@ fn login_tree(width : Double, tokens : DesignTokens) -> LT {
   lt_v(id="page", pad=24.0, kids=[
     lt_flex(id="top_sp"),
     lt_card(id="login_card", gap=12.0, pad=28.0, kids=[
-      lt_dot(id="logo", fill="primary", d=56.0, tokens=t).cx(),
+      lt_dot(id="logo", fill="primary", d=56.0, tokens=t, label="M").cx(),
       lt_text(id="title", role="h2", s="Welcome back", tokens=t).cx(),
       lt_text(id="sub", role="body", s="Sign in to continue", tokens=t)
       .color(t.resolve_color("text_secondary"))

@@ -230,18 +230,25 @@ pub fn lt_dot(
   fill~ : String,
   d? : Double = 36.0,
   tokens? : DesignTokens = DesignTokens::default(),
+  label? : String = "",
 ) -> LT {
+  // label 非空时圆点带首字母字形（形状标签渲染居中）：纯空圆读作图片
+  // 未加载（审计 login_v2 logo 空圆残留；web_login brand_logo 同类已加 M）
+  let st = if label != "" {
+    {
+      ..NodeStyle::default(),
+      fill: tokens.resolve_color(fill),
+      text_color: tokens.resolve_color("on_primary"),
+      corner_radius: 999.0,
+      font_size: 26.0,
+      font_weight: "600",
+      text_align: "center",
+    }
+  } else {
+    { ..NodeStyle::default(), fill: tokens.resolve_color(fill), corner_radius: 999.0, }
+  }
   {
-    node: {
-      ..Node::make(id, Rect),
-      width: Fixed(d),
-      height: Fixed(d),
-      style: {
-        ..NodeStyle::default(),
-        fill: tokens.resolve_color(fill),
-        corner_radius: 999.0,
-      },
-    },
+    node: { ..Node::make(id, Rect), text: label, width: Fixed(d), height: Fixed(d), style: st, },
     kids: [],
   }
 }

@@ -316,7 +316,8 @@ test "渲染：SVG 输出包含预期形状与文本" {
   assert_true(svg.contains("<svg"))
   assert_true(svg.contains("登录"))
   assert_true(svg.contains("欢迎回来"))
-  assert_true(svg.contains("#4361EE") || svg.contains("#4B6BFB"))
+  // 锁定校准后的默认主色（历史教训：|| 接受新旧两值 = 失去锁定力）
+  assert_true(svg.contains("#4361EE"))
 }
 
 ///|

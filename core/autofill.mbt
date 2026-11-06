@@ -18,10 +18,12 @@ fn autofill_recipe(
   let cw = if content_w < 100.0 { 342.0 } else { content_w }
   match element {
     // auth：密码框下方的右对齐链接 + 底部注册链接 + 记住我
+    // 链接色走令牌（默认调色板 primary），不再硬编码旧蓝 #4B6BFB——
+    // 令牌校准后默认主色是 #4361EE（历史教训：字面量残留即漂移源）
     "forgot_password" =>
-      Some(("body_text", "忘记密码？", cw, 20.0, "#4B6BFB", true))
+      Some(("body_text", "忘记密码？", cw, 20.0, DesignTokens::default().resolve_color("primary"), true))
     "signup_link" =>
-      Some(("body_text", "没有账号？立即注册", cw, 20.0, "#4B6BFB", false))
+      Some(("body_text", "没有账号？立即注册", cw, 20.0, DesignTokens::default().resolve_color("primary"), false))
     "remember_me" =>
       Some(("checkbox", "记住我", 160.0, 44.0, "#111111", false))
     // dashboard / list / profile / settings 操作

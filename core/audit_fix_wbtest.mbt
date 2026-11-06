@@ -328,3 +328,34 @@ test "结构式模板：暗色令牌 + 布局容器无虚线" {
     Err(_) => assert_true(false)
   }
 }
+
+///|
+/// 第 2 轮盲区回归锚：norms「文字折行超盒高」检测——固定矮盒装不下
+/// 折出的行数时按检测项报出（此前 profile 统计卡越出 34px、detail 描述
+/// 越 130px、onboarding 副标题越 213px 全部无人报）。
+test "norms：文字折行超盒高检测" {
+  let doc = Document::new({ width: 390.0, height: 844.0 })
+  // 200 宽 × 24 高的盒放 60 字符（14px ≈ 288px 宽 → 折 2 行 42 高，超盒）
+  let over = {
+    ..Node::make("over", Text),
+    width: Fixed(200.0),
+    height: Fixed(24.0),
+    style: { ..NodeStyle::default(), text_color: "#42474F" },
+    text: "A short paragraph describing this item in two or three lines.",
+  }
+  let _ = doc.insert_node(over, "root")
+  // 足够高的盒：不报
+  let fits = {
+    ..Node::make("fits", Text),
+    width: Fixed(200.0),
+    height: Fixed(60.0),
+    style: { ..NodeStyle::default(), text_color: "#42474F" },
+    text: "A short paragraph describing this item in two or three lines.",
+  }
+  let _ = doc.insert_node(fits, "root")
+  let issues = norm_readability_issues(doc, solve(doc))
+  assert_true(
+    issues.length() == 1 && issues[0].contains("over"),
+    msg="应只对超盒高的 over 报折行越界: " + jstr9(issues),
+  )
+}

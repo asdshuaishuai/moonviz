@@ -166,7 +166,7 @@ pub fn Node::make(id : String, kind : NodeKind) -> Node {
 }
 
 ///|
-/// 文本内在尺寸估算（v1：CJK 全角按 1.0 倍字号，其余 0.6 倍；行高 1.5）。
+/// 文本内在尺寸估算（v1：CJK 全角按 1.0 倍字号，其余 0.48 倍；行高 1.5）。
 /// M2 计划：编辑器运行时用 canvas measureText 实测后写入文档，见 docs/03。
 pub const TEXT_LINE_HEIGHT_RATIO : Double = 1.5
 
@@ -341,7 +341,7 @@ fn trim_trailing_space(s : String) -> String {
 
 ///|
 /// 折行后的文本内在尺寸：供布局求解器在「宽已定、高 Hug」时取真实行数。
-/// 与 text_intrinsic 同口径（CJK 1.0 / ASCII 0.6 字号），只是行数按折行算。
+/// 与 text_intrinsic 同口径（CJK 1.0 / ASCII 0.48 字号），只是行数按折行算。
 pub fn text_intrinsic_wrapped(
   text : String,
   font_size : Double,

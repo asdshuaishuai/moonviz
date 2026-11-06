@@ -105,6 +105,11 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   )
   self.set_text(ab, "hero_title", "Prototype at the speed of thought")
   self.resize_node(ab, "hero_title", 560.0, 56.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="hero_title",
+    kvs=[("weight", "700")],
+  )
   let _ = self.place_comp(ab, "body_text", "hero_sub", x=96.0, y=253.0)
   self.set_text(
     ab, "hero_sub", "Design, critique and iterate — human drags, agent commands.",
@@ -141,44 +146,57 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   let fx = [96.0, 496.0, 896.0]
   for i in 0..<3 {
     let cid = "feat_card" + i.to_string()
-    let _ = self.place_comp(
+    // 模板是确定性构造：place_required 让变体拼错当场炸掉，不再静默丢
+    // 图标引发后续子节点整体上浮（第 2 轮 feat_icon2 回归的放大器）
+    self.place_required(
       ab,
       "card",
       cid,
       variant="elevated",
       x=fx[i],
       y=460.0,
+      w=288.0,
+      h=210.0,
     )
-    self.resize_node(ab, cid, 288.0, 210.0, 12.0)
     let iid = "feat_icon" + i.to_string()
     // 三卡图标区分语义色（原三枚同色主色圆读作占位，且首屏高饱和主色过多）
     let icon_variant = ["primary", "success", "warning"][i]
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "badge",
       iid,
       variant=icon_variant,
       x=fx[i] + 24.0,
       y=484.0,
+      w=48.0,
+      h=48.0,
     )
-    self.resize_node(ab, iid, 48.0, 48.0, 999.0)
     let tid = "feat_title" + i.to_string()
-    let _ = self.place_comp(
+    self.place_required(
       ab,
       "heading",
       tid,
       variant="h3",
       x=fx[i] + 24.0,
       y=552.0,
+      w=200.0,
+      h=28.0,
     )
     self.set_text(ab, tid, feats[i])
-    self.resize_node(ab, tid, 200.0, 28.0, 0.0)
+    let _ = self.edit_node(artboard=ab, node_id=tid, kvs=[("weight", "700")])
     let bid = "feat_body" + i.to_string()
-    let _ = self.place_comp(ab, "body_text", bid, x=fx[i] + 24.0, y=588.0)
+    self.place_required(
+      ab,
+      "body_text",
+      bid,
+      x=fx[i] + 24.0,
+      y=588.0,
+      w=200.0,
+      h=20.0,
+    )
     self.set_text(ab, bid, descs[i])
     // 200 而非 240：收编进卡片后由栈布局接管排布，240 会溢出卡片内容盒
     // （issue #14：web_landing feat_bodyN contained_in_parent）
-    self.resize_node(ab, bid, 200.0, 20.0, 0.0)
   }
 
   // Footer：surface_variant 深一档的面板带 + text_secondary（随主题翻转，
@@ -239,6 +257,11 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   self.set_text(ab, "brand_title", "Design together\nwith your agent")
   self.resize_node(ab, "brand_title", 400.0, 112.0, 0.0)
   self.w_style(ab, "brand_title", [("text_color", c("on_primary"))])
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="brand_title",
+    kvs=[("weight", "700")],
+  )
   let _ = self.place_comp(ab, "body_text", "brand_sub", x=96.0, y=452.0)
   self.set_text(
     ab, "brand_sub", "One plain-text source of truth for humans and AI.",
@@ -266,6 +289,7 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "wl_title", "Welcome back")
   self.resize_node(ab, "wl_title", 300.0, 30.0, 0.0)
+  let _ = self.edit_node(artboard=ab, node_id="wl_title", kvs=[("weight", "700")])
   let _ = self.place_comp(ab, "body_text", "wl_sub", x=736.0, y=266.0)
   self.set_text(ab, "wl_sub", "Sign in to continue")
   self.resize_node(ab, "wl_sub", 300.0, 20.0, 0.0)
@@ -289,17 +313,20 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "wl_pass", "Password")
   self.resize_node(ab, "wl_pass", 368.0, 48.0, 10.0)
+  // forgot 链接：盒横跨输入栏全宽 + 右对齐，右缘贴输入框右缘
+  // （start 锚 + 手算盒宽让墨迹悬空 ~50px，三桌面主题残留）
   let _ = self.place_comp(
     ab,
     "body_text",
     "wl_forgot",
     variant="caption",
-    x=960.0,
+    x=736.0,
     y=436.0,
   )
   self.set_text(ab, "wl_forgot", "Forgot password?")
-  self.resize_node(ab, "wl_forgot", 144.0, 18.0, 0.0)
+  self.resize_node(ab, "wl_forgot", 368.0, 18.0, 0.0)
   self.w_style(ab, "wl_forgot", [("text_color", c("primary"))])
+  let _ = self.edit_node(artboard=ab, node_id="wl_forgot", kvs=[("align", "right")])
   let _ = self.place_comp(
     ab,
     "button",
@@ -310,16 +337,19 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "wl_btn", "Sign In")
   self.resize_node(ab, "wl_btn", 368.0, 48.0, 10.0)
+  // signup 链接：盒横跨输入栏全宽 + 居中——与居中的 Sign In 按钮同一
+  // 中轴 920（start 锚 + 手算盒宽曾左偏 ~38px）
   let _ = self.place_comp(
     ab,
     "body_text",
     "wl_signup",
     variant="caption",
-    x=816.0,
+    x=736.0,
     y=552.0,
   )
   self.set_text(ab, "wl_signup", "No account? Create one")
-  self.resize_node(ab, "wl_signup", 220.0, 18.0, 0.0)
+  self.resize_node(ab, "wl_signup", 368.0, 18.0, 0.0)
+  let _ = self.edit_node(artboard=ab, node_id="wl_signup", kvs=[("align", "center")])
 
   ab
 }
@@ -731,11 +761,13 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   let layers = ["root", "hero_title", "hero_btn1", "feat_card0"]
   for i in 0..<4 {
     let id = "pc_l" + i.to_string()
+    // 层级缩进：root 顶层，其余为其子级——平铺同 x 读作平级列表（审计残留）
+    let lx = if i == 0 { 276.0 } else { 292.0 }
     let _ = self.place_comp(
       ab,
       "body_text",
       id,
-      x=276.0,
+      x=lx,
       y=144.0 + i.to_double() * 32.0,
     )
     self.set_text(ab, id, layers[i])
@@ -772,7 +804,9 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   )
   self.set_text(ab, "pc_ph", "Properties")
   self.resize_node(ab, "pc_ph", 150.0, 20.0, 0.0)
-  let props = ["x: 96", "y: 150", "w: 560", "fill: none"]
+  // 属性值对齐画布内唯一选中对象（手机缩略图 x=640/y=150/w=180，
+  // fill=primary_container）——此前的 x:96/w:560 与任何元素都对不上
+  let props = ["x: 640", "y: 150", "w: 180", "fill: primary_container"]
   for i in 0..<4 {
     let id = "pc_pr" + i.to_string()
     let _ = self.place_comp(

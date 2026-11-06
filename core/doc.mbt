@@ -216,7 +216,7 @@ pub fn Document::sample_login() -> Document {
       justify: Center,
       padding: Padding::uniform(0.0),
     }),
-    style: { ..NodeStyle::default(), fill: "#4B6BFB", corner_radius: 10.0, },
+    style: { ..NodeStyle::default(), fill: "#4361EE", corner_radius: 10.0, },
   }
   let btn_text = {
     ..Node::make("text-btn", Text),

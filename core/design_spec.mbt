@@ -29,7 +29,8 @@ pub fn design_spec_draft_json(intent_text : String) -> String {
     intent_text.contains("购物") {
     "#F97316"
   } else {
-    "#4B6BFB"
+    // 默认主色与 tokens.mbt 校准值同步（历史教训：字面量残留即漂移源）
+    "#4361EE"
   }
   "{\"v\":1,\"palette\":{\"primary\":\"" +
   primary +

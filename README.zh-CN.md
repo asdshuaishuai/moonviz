@@ -117,7 +117,7 @@
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
-│  │ 17色/7距/  │ │ 65组件×115 │ │ 多画板/流  │ │ lint/diff │ │
+│  │ 17色/7距/  │ │ 65组件×117 │ │ 多画板/流  │ │ lint/diff │ │
 │  │ 6角/8字号  │ │ 变体       │ │ /令牌/组件 │ │ /suggest  │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -198,7 +198,7 @@
 | `adaptive_landing` | 适配 Web 宽度的落地页 |
 | `login_v2` | 登录页第二种风格 |
 
-## 内置组件库（65 组件 × 115 变体）
+## 内置组件库（65 组件 × 117 变体）
 
 | 组件 | 分类 | 变体 |
 | :--- | :--- | :--- |
@@ -298,7 +298,7 @@ moonviz/
 │   ├── policy.mbt     双路线策略（人类软/Agent 硬）
 │   ├── patch.mbt      事务式补丁
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
-│   ├── component.mbt  组件系统（65 组件×115 变体）
+│   ├── component.mbt  组件系统（65 组件×117 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
 │   ├── agent_api.mbt  Agent 工具 API（55 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
@@ -633,12 +633,12 @@ p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 
 | 主题 | 风格 | primary | surface |
 |:---|:---|:---|:---|
-| light | 浅色（默认） | #4B6BFB | #FFFFFF |
+| light | 浅色（默认） | #4361EE | #FFFFFF |
 | dark | 深色 | #A5B4FC | #1A1C1E |
 | high_contrast | 高对比度 | #0000EE | #FFFFFF |
 | sepia | 复古棕 | #8D6E63 | #FAF6F0 |
 | nord | 极地 | #88C0D0 | #3B4252 |
-| sunset | 落日暖 | #FF7043 | #FFF8E1 |
+| sunset | 落日暖 | #BF360C | #FFF8E1 |
 | apple | Apple HIG（#F2F2F7 分组画布） | #0068D6 | #FFFFFF |
 | apple_dark | Apple HIG 暗色 | #409CFF | #2C2C2E |
 | harmony | HarmonyOS（#F1F3F5 分层画布） | #0A59F7 | #FFFFFF |

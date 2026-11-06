@@ -141,7 +141,7 @@
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
 │  │ 17 colors/  │ │ 65 comps × │ │ multi-    │ │ lint/diff │ │
-│  │ 7 spacing/  │ │115 variants│ │ boards/   │ │ /suggest  │ │
+│  │ 7 spacing/  │ │117 variants│ │ boards/   │ │ /suggest  │ │
 │  │ 6 radii/    │ │            │ │ flows/    │ │           │ │
 │  │ 8 font sizes│ │            │ │ tokens    │ │           │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
@@ -226,7 +226,7 @@ Two modes, one engine — both fully retained:
 | `adaptive_landing` | Adaptive landing page for web widths |
 | `login_v2` | Login page, second style variant |
 
-## Built-in Component Library (65 components × 115 variants)
+## Built-in Component Library (65 components × 117 variants)
 
 | Component | Category | Variants |
 | :--- | :--- | :--- |
@@ -326,7 +326,7 @@ moonviz/
 │   ├── policy.mbt     Dual-route policy (human soft / agent hard)
 │   ├── patch.mbt      Transactional patches
 │   ├── tokens.mbt     Design tokens (Material 3 style)
-│   ├── component.mbt  Component system (65 components × 115 variants)
+│   ├── component.mbt  Component system (65 components × 117 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
 │   ├── agent_api.mbt  Agent tool API (55 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
@@ -666,12 +666,12 @@ p.enable_auto_dark()          // derive a dark variant from the current theme
 
 | Theme | Style | primary | surface |
 |:---|:---|:---|:---|
-| light | Light (default) | #4B6BFB | #FFFFFF |
+| light | Light (default) | #4361EE | #FFFFFF |
 | dark | Dark | #A5B4FC | #1A1C1E |
 | high_contrast | High contrast | #0000EE | #FFFFFF |
 | sepia | Sepia | #8D6E63 | #FAF6F0 |
 | nord | Nordic | #88C0D0 | #3B4252 |
-| sunset | Warm sunset | #FF7043 | #FFF8E1 |
+| sunset | Warm sunset | #BF360C | #FFF8E1 |
 | apple | Apple HIG (#F2F2F7 grouped canvas) | #0068D6 | #FFFFFF |
 | apple_dark | Apple HIG dark | #409CFF | #2C2C2E |
 | harmony | HarmonyOS (#F1F3F5 layered canvas) | #0A59F7 | #FFFFFF |

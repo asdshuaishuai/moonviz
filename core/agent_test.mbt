@@ -287,7 +287,8 @@ test "engine catalog: 65 组件 × 全变体放置渲染冒烟（组件目录回
       None => assert_true(false)
     }
   }
-  assert_eq(placed, 115)
+  // badge 补 warning/error 语义档后全变体总数 115→117（AGENTS 计数同步）
+  assert_eq(placed, 117)
   // 整画板可渲染且内容非空
   match p.export_svg(artboard="all") {
     Ok(svg) => assert_true(svg.contains("<svg") && svg.length() > 1000)

@@ -77,7 +77,7 @@ pub fn button(
     text: label,
     style: {
       ..@core.NodeStyle::default(),
-      fill: "#4B6BFB",
+      fill: "#4361EE",
       corner_radius: 10.0,
       text_color: "#FFFFFF",
       font_size: 16.0,

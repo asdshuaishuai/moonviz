@@ -476,10 +476,12 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Dashboard")
+  // 标题居中：与 detail/checkout 同形态；左锚形状标签 pad 12 会让标题
+  // 左缘与 24px 内容线错开 12px（审计残留）
   let _ = self.edit_node(
     artboard=ab,
     node_id="top_bar",
-    kvs=[("font_size", "17"), ("weight", "600")],
+    kvs=[("font_size", "17"), ("weight", "600"), ("align", "center")],
   )
 
   // 统计卡片 2×2 网格：卡内「大数值 + 小标签」两级层级（数值 h3 20px，
@@ -673,7 +675,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
   let _ = self.edit_node(
     artboard=ab,
     node_id="top_bar",
-    kvs=[("font_size", "17"), ("weight", "600")],
+    kvs=[("font_size", "17"), ("weight", "600"), ("align", "center")],
   )
 
   // 头像（圆形，首字母按直径档放大——出厂 14px 在 104 圆里显得空）
@@ -850,11 +852,12 @@ fn Project::template_settings(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Settings")
-  // 页级标题提到 17/600（出厂 14/regular 比区块标题 h4 还小，层级倒挂）
+  // 页级标题提到 17/600 并居中（出厂 14/regular 比区块标题 h4 还小；
+  // 左锚 pad 12 与 24px 内容线错开，审计残留）
   let _ = self.edit_node(
     artboard=ab,
     node_id="top_bar",
-    kvs=[("font_size", "17"), ("weight", "600")],
+    kvs=[("font_size", "17"), ("weight", "600"), ("align", "center")],
   )
 
   let sections = [
@@ -894,14 +897,36 @@ fn Project::template_settings(self : Project, name : String) -> String {
         ],
       )
       self.set_text(ab, iid, items[ii])
+      // About/Version 行尾显示真实版本值（ENGINE_VERSION 单一事实源），
+      // 其余行尾 chevron 表可点——「Version ›」读不出任何版本信息（审计残留）
       let cid = "item_c\{si}_\{ii}"
-      self.place_required(ab, "body_text", cid, x=336.0, y=y + 10.0, w=20.0, h=20.0)
-      self.set_text(ab, cid, "›")
-      let _ = self.edit_node(
-        artboard=ab,
-        node_id=cid,
-        kvs=[("align", "center"), ("text_color", self.tokens.resolve_color("text_hint"))],
-      )
+      if si == 3 && ii == 0 {
+        self.place_required(
+          ab, "body_text", cid, x=244.0, y=y + 10.0, w=100.0, h=20.0,
+        )
+        self.set_text(ab, cid, "v" + ENGINE_VERSION)
+        let _ = self.edit_node(
+          artboard=ab,
+          node_id=cid,
+          kvs=[
+            ("align", "right"),
+            ("text_color", self.tokens.resolve_color("text_hint")),
+          ],
+        )
+      } else {
+        self.place_required(
+          ab, "body_text", cid, x=336.0, y=y + 10.0, w=20.0, h=20.0,
+        )
+        self.set_text(ab, cid, "›")
+        let _ = self.edit_node(
+          artboard=ab,
+          node_id=cid,
+          kvs=[
+            ("align", "center"),
+            ("text_color", self.tokens.resolve_color("text_hint")),
+          ],
+        )
+      }
       y = y + 46.0
     }
     y = y + 10.0 // 分组间距
@@ -935,7 +960,8 @@ fn Project::template_list(self : Project, name : String) -> String {
   self.set_text(ab, "top_bar", "Discover")
 
   // 搜索栏（锚在 app_bar 下方；autofill 的配方会认这个位置）
-  self.place_required(ab, "search_bar", "search_bar", x=16.0, y=68.0, w=358.0, h=40.0)
+  // 高 44 触控下限（40 会被 lint 报 touch_target）
+  self.place_required(ab, "search_bar", "search_bar", x=16.0, y=68.0, w=358.0, h=44.0)
   self.set_text(ab, "search_bar", "Search")
 
   // 分类横向标签（chip 档：高度按 NORM 的 chip 28）
@@ -1438,12 +1464,13 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
     y=250.0,
   )
   self.resize_node(ab, "illustration", 200.0, 200.0, 100.0)
-  // 纯色空圆读作未填的头像位：放 ＋ 字形占位（形状标签在圆内垂直居中）
+  // 纯色空圆读作未填的头像位：放 ＋ 字形占位（水平垂直都居中——
+  // start 锚曾让字形贴盘左缘偏 ~64px）
   self.set_text(ab, "illustration", "＋")
   let _ = self.edit_node(
     artboard=ab,
     node_id="illustration",
-    kvs=[("font_size", "48")],
+    kvs=[("font_size", "48"), ("align", "center")],
   )
 
   // 主文案（与插图/按钮同一中轴：盒心 195 + align center，
