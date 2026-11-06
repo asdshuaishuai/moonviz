@@ -37,6 +37,20 @@ fn patch3(f : String, tc : String, r : Double) -> NodePatch {
 }
 
 ///|
+/// 输入类变体用：底 + 文字角色 + 圆角 + 1px hairline 描边——浅色主题下
+/// surface_variant 与画布仅 1.03~1.05:1，无描边时字段边界不可辨（审计
+/// signup/checkout 字段边界残留）
+fn patch4(f : String, tc : String, r : Double, s : String) -> NodePatch {
+  {
+    ..NodePatch::empty(),
+    fill: Some(f),
+    text_color: Some(tc),
+    corner_radius: Some(r),
+    stroke: Some(s),
+  }
+}
+
+///|
 fn patch_font(size : Double, tc : String) -> NodePatch {
   { ..NodePatch::empty(), font_size: Some(size), text_color: Some(tc), }
 }
@@ -69,9 +83,10 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   let iv : Map[String, NodePatch] = Map::new()
   // 输入底用中性 surface_variant（输入层不是品牌 tint 层——HIG/
   // 鸿蒙的 filled field 都是中性灰阶，品牌色留给主操作）；占位文字
-  // 绑 text_hint：占位是提示不是已填值，且暗色下出厂黑字会撞色（审计 R1）
-  iv.set("default", patch3("surface_variant", "text_hint", 8.0))
-  iv.set("filled", patch3("surface_variant", "text_hint", 12.0))
+  // 绑 text_hint：占位是提示不是已填值，且暗色下出厂黑字会撞色（审计 R1）；
+  // 1px outline 描边补字段边界（浅色下底色与画布仅 1.03~1.05:1）
+  iv.set("default", patch4("surface_variant", "text_hint", 8.0, "outline"))
+  iv.set("filled", patch4("surface_variant", "text_hint", 12.0, "outline"))
   m.set("text_input", {
     id: "text_input",
     kind: "rect",

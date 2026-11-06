@@ -917,7 +917,10 @@ pub fn Project::export_svg(
       Ok(
         render_svg(
           ab.doc,
-          surface=self.tokens.resolve_color("surface"),
+          // 画布底 = background 令牌：与 export_html（export.mbt）同一派生
+          // 约定「画布 = background，卡面 = surface」——快照与导出页画布
+          // 不再差一档（apple：#FFFFFF vs #F2F2F7；暗色：#2C2C2E vs #1C1C1E）
+          surface=self.tokens.resolve_color("background"),
           frame=self.tokens.resolve_color("outline"),
         ),
       )

@@ -27,7 +27,9 @@ const WIDE_INVERSE_TITLEBAR : String = "#111318"
 const WIDE_INVERSE_TEXT : String = "#C8CCD2"
 
 ///|
-const WIDE_INVERSE_MUTED : String = "#7C838C"
+/// 反色深底上的弱调文字：#7C838C 压 #1E2126 仅 4.21 < 4.5，提亮到
+/// #868D97（4.82），仍与 WIDE_INVERSE_TEXT #C8CCD2 保持两档层次
+const WIDE_INVERSE_MUTED : String = "#868D97"
 
 ///|
 /// 反色深底上的弱白（标题/文件名）：#FFFFFF 对 #1E2126 约 14:1，这里
@@ -99,11 +101,11 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     "hero_title",
     variant="h1",
     x=96.0,
-    y=150.0,
+    y=175.0,
   )
   self.set_text(ab, "hero_title", "Prototype at the speed of thought")
   self.resize_node(ab, "hero_title", 560.0, 56.0, 0.0)
-  let _ = self.place_comp(ab, "body_text", "hero_sub", x=96.0, y=228.0)
+  let _ = self.place_comp(ab, "body_text", "hero_sub", x=96.0, y=253.0)
   self.set_text(
     ab, "hero_sub", "Design, critique and iterate — human drags, agent commands.",
   )
@@ -114,7 +116,7 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     "hero_btn1",
     variant="primary",
     x=96.0,
-    y=292.0,
+    y=317.0,
   )
   self.set_text(ab, "hero_btn1", "Start Free")
   self.resize_node(ab, "hero_btn1", 160.0, 48.0, 10.0)
@@ -124,7 +126,7 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     "hero_btn2",
     variant="secondary",
     x=276.0,
-    y=292.0,
+    y=317.0,
   )
   self.set_text(ab, "hero_btn2", "Watch Demo")
   self.resize_node(ab, "hero_btn2", 160.0, 48.0, 10.0)
@@ -149,11 +151,13 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     )
     self.resize_node(ab, cid, 288.0, 210.0, 12.0)
     let iid = "feat_icon" + i.to_string()
+    // 三卡图标区分语义色（原三枚同色主色圆读作占位，且首屏高饱和主色过多）
+    let icon_variant = ["primary", "success", "warning"][i]
     let _ = self.place_comp(
       ab,
       "badge",
       iid,
-      variant="primary",
+      variant=icon_variant,
       x=fx[i] + 24.0,
       y=484.0,
     )
@@ -211,6 +215,19 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   let _ = self.place_comp(ab, "badge", "brand_logo", x=96.0, y=120.0)
   self.resize_node(ab, "brand_logo", 64.0, 64.0, 999.0)
   self.w_style(ab, "brand_logo", [("fill", c("on_primary"))])
+  // 首字母字形：空圆读作图片未加载（审计 brand_logo 残留）；圆底已置
+  // on_primary，字形用 primary（品牌色字压白盘）——沿 badge 变体默认的
+  // on_primary 字色会同色相撞
+  self.set_text(ab, "brand_logo", "M")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="brand_logo",
+    kvs=[
+      ("font_size", "26"),
+      ("weight", "600"),
+      ("text_color", c("primary")),
+    ],
+  )
   let _ = self.place_comp(
     ab,
     "heading",
@@ -230,7 +247,9 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   self.w_style(ab, "brand_sub", [("text_color", c("on_primary"))])
 
   // 右侧表单卡
-  let _ = self.place_comp(ab, "rect", "form_card", x=680.0, y=180.0)
+  // 卡心对齐右栏中线（右栏 560..1280 中心 920，原 900 偏左 20）；
+  // 内容整体下移 12px 平衡上下留白（原顶 45 / 底 68）
+  let _ = self.place_comp(ab, "rect", "form_card", x=700.0, y=180.0)
   self.resize_node(ab, "form_card", 440.0, 440.0, 16.0)
   self.w_style(
     ab,
@@ -242,12 +261,12 @@ fn Project::template_web_login(self : Project, name : String) -> String {
     "heading",
     "wl_title",
     variant="h3",
-    x=716.0,
-    y=220.0,
+    x=736.0,
+    y=232.0,
   )
   self.set_text(ab, "wl_title", "Welcome back")
   self.resize_node(ab, "wl_title", 300.0, 30.0, 0.0)
-  let _ = self.place_comp(ab, "body_text", "wl_sub", x=716.0, y=254.0)
+  let _ = self.place_comp(ab, "body_text", "wl_sub", x=736.0, y=266.0)
   self.set_text(ab, "wl_sub", "Sign in to continue")
   self.resize_node(ab, "wl_sub", 300.0, 20.0, 0.0)
   let _ = self.place_comp(
@@ -255,8 +274,8 @@ fn Project::template_web_login(self : Project, name : String) -> String {
     "text_input",
     "wl_email",
     variant="filled",
-    x=716.0,
-    y=304.0,
+    x=736.0,
+    y=316.0,
   )
   self.set_text(ab, "wl_email", "Email address")
   self.resize_node(ab, "wl_email", 368.0, 48.0, 10.0)
@@ -265,8 +284,8 @@ fn Project::template_web_login(self : Project, name : String) -> String {
     "text_input",
     "wl_pass",
     variant="filled",
-    x=716.0,
-    y=364.0,
+    x=736.0,
+    y=376.0,
   )
   self.set_text(ab, "wl_pass", "Password")
   self.resize_node(ab, "wl_pass", 368.0, 48.0, 10.0)
@@ -275,8 +294,8 @@ fn Project::template_web_login(self : Project, name : String) -> String {
     "body_text",
     "wl_forgot",
     variant="caption",
-    x=940.0,
-    y=424.0,
+    x=960.0,
+    y=436.0,
   )
   self.set_text(ab, "wl_forgot", "Forgot password?")
   self.resize_node(ab, "wl_forgot", 144.0, 18.0, 0.0)
@@ -286,8 +305,8 @@ fn Project::template_web_login(self : Project, name : String) -> String {
     "button",
     "wl_btn",
     variant="primary",
-    x=716.0,
-    y=460.0,
+    x=736.0,
+    y=472.0,
   )
   self.set_text(ab, "wl_btn", "Sign In")
   self.resize_node(ab, "wl_btn", 368.0, 48.0, 10.0)
@@ -296,8 +315,8 @@ fn Project::template_web_login(self : Project, name : String) -> String {
     "body_text",
     "wl_signup",
     variant="caption",
-    x=796.0,
-    y=540.0,
+    x=816.0,
+    y=552.0,
   )
   self.set_text(ab, "wl_signup", "No account? Create one")
   self.resize_node(ab, "wl_signup", 220.0, 18.0, 0.0)
@@ -358,8 +377,10 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
     )
     self.set_text(ab, id, items[i])
     self.resize_node(ab, id, 160.0, 20.0, 0.0)
+    // 选中项文字随高亮条走令牌：constant 亮字压暗色主题的浅 primary 仅
+    // 1.65:1，on_primary 全主题达标（dark 8.57 / nord 6.24 / apple 5.31）
     let active : Array[(String, String)] = if i == 0 {
-      [("text_color", WIDE_INVERSE_BRIGHT)]
+      [("text_color", c("on_primary"))]
     } else {
       [("text_color", WIDE_INVERSE_MUTED)]
     }
@@ -596,14 +617,20 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     self.resize_node(ab, id, 12.0, 12.0, 999.0)
     self.w_style(ab, id, [("fill", dots[i])])
   }
-  let _ = self.place_comp(ab, "body_text", "tl_title", x=600.0, y=9.0)
+  // 标题居中窗口轴线（macOS 惯例）：盒 490..790 中心 640，文字 align center
+  let _ = self.place_comp(ab, "body_text", "tl_title", x=490.0, y=9.0)
   self.set_text(ab, "tl_title", "MoonViz Studio — login.mbt.md")
   self.resize_node(ab, "tl_title", 300.0, 18.0, 0.0)
-  self.w_style(ab, "tl_title", [("text_color", WIDE_INVERSE_MUTED)])
+  self.w_style(
+    ab,
+    "tl_title",
+    [("text_color", WIDE_INVERSE_MUTED), ("align", "center")],
+  )
 
   // 侧边栏：反色 chrome
   let _ = self.place_comp(ab, "rect", "pc_sb", x=0.0, y=36.0)
-  self.resize_node(ab, "pc_sb", 240.0, 728.0, 0.0)
+  // 高 736：底边 772 与三面板/状态栏对齐（原 764 缺 8px 错位+左下缺口）
+  self.resize_node(ab, "pc_sb", 240.0, 736.0, 0.0)
   self.w_style(ab, "pc_sb", [("fill", WIDE_INVERSE_BG)])
   let files = ["login.mbt.md", "dashboard.mbt.md", "tokens.json", "history.log"]
   for i in 0..<4 {
@@ -613,7 +640,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       "body_text",
       id,
       x=36.0,
-      y=72.0 + i.to_double() * 36.0,
+      y=72.0 + i.to_double() * 32.0,
     )
     self.set_text(ab, id, files[i])
     self.resize_node(ab, id, 180.0, 20.0, 0.0)
@@ -670,7 +697,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       "button",
       id,
       variant="secondary",
-      x=260.0 + i.to_double() * 96.0,
+      x=272.0 + i.to_double() * 96.0,
       y=44.0,
     )
     self.set_text(ab, id, tbtns[i])
@@ -709,7 +736,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       "body_text",
       id,
       x=276.0,
-      y=144.0 + i.to_double() * 30.0,
+      y=144.0 + i.to_double() * 32.0,
     )
     self.set_text(ab, id, layers[i])
     self.resize_node(ab, id, 200.0, 20.0, 0.0)
@@ -717,18 +744,19 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   let _ = self.place_comp(ab, "rect", "pc_canvas", x=520.0, y=88.0)
   self.resize_node(ab, "pc_canvas", 560.0, 684.0, 0.0)
   self.w_style(ab, "pc_canvas", [("fill", c("surface"))])
-  // 画布内放一个手机画板缩略示意（品牌容器色，随主题翻转）
-  let _ = self.place_comp(ab, "rect", "pc_phone", x=640.0, y=150.0)
+  // 画布内放一个手机画板缩略示意（品牌容器色，随主题翻转）；
+  // 缩略图在画布内居中：x=520+(560-180)/2=710，y=88+(684-380)/2=240
+  let _ = self.place_comp(ab, "rect", "pc_phone", x=710.0, y=240.0)
   self.resize_node(ab, "pc_phone", 180.0, 380.0, 16.0)
   self.w_style(
     ab,
     "pc_phone",
     [("fill", c("primary_container")), ("stroke", c("primary"))],
   )
-  let _ = self.place_comp(ab, "rect", "pc_phone_hdr", x=656.0, y=174.0)
+  let _ = self.place_comp(ab, "rect", "pc_phone_hdr", x=726.0, y=264.0)
   self.resize_node(ab, "pc_phone_hdr", 148.0, 28.0, 6.0)
   self.w_style(ab, "pc_phone_hdr", [("fill", c("primary"))])
-  let _ = self.place_comp(ab, "rect", "pc_phone_btn", x=672.0, y=452.0)
+  let _ = self.place_comp(ab, "rect", "pc_phone_btn", x=742.0, y=542.0)
   self.resize_node(ab, "pc_phone_btn", 116.0, 36.0, 18.0)
   self.w_style(ab, "pc_phone_btn", [("fill", c("primary"))])
   let _ = self.place_comp(ab, "rect", "pc_props", x=1080.0, y=88.0)
@@ -752,7 +780,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       "body_text",
       id,
       x=1096.0,
-      y=144.0 + i.to_double() * 28.0,
+      y=144.0 + i.to_double() * 32.0,
     )
     self.set_text(ab, id, props[i])
     self.resize_node(ab, id, 160.0, 18.0, 0.0)

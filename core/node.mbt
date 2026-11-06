@@ -174,7 +174,12 @@ pub const TEXT_LINE_HEIGHT_RATIO : Double = 1.5
 pub const CJK_CODEPOINT_MIN : Int = 0x2E80
 
 ///|
-pub const ASCII_ADVANCE_RATIO : Double = 0.6
+/// 拉丁字符宽度系数：按 Chrome 默认字体栈（-apple-system/SF Pro Text）实测
+/// 校准——0.6 高估约 25%，导致「盒宽足够却折行」的假溢出（web_landing
+/// hero 标题叠印副标题、empty_state/profile/adaptive_landing/web_login
+/// 尾行孤词）；0.48 仍高于实测 0.445~0.448，保持保守估计。CJK 全角 1.0
+/// 不变（等宽方块，估算准确）。
+pub const ASCII_ADVANCE_RATIO : Double = 0.48
 
 ///|
 fn char_advance(code : Int, font_size : Double) -> Double {

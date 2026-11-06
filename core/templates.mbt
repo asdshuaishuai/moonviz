@@ -95,9 +95,9 @@ pub fn list_templates() -> Array[TemplateInfo] {
     {
       id: "onboarding",
       name: "引导页",
-      description: "三页滑动引导：插图 + 标题 + 描述 + 跳过/下一步",
+      description: "单页引导：插图占位 + 标题 + 描述 + 分页点 + 主/次操作",
       category: "navigation",
-      tags: ["wizard", "carousel"],
+      tags: ["onboarding", "welcome"],
       device: "mobile",
     },
     {
@@ -253,6 +253,13 @@ fn Project::template_login(self : Project, name : String) -> String {
     y=120.0,
   )
   self.resize_node(ab, "logo", 64.0, 64.0, 999.0) // 圆形
+  // 首字母字形：纯色空圆读作「图片没加载」（审计 web_login:brand_logo 同根）
+  self.set_text(ab, "logo", "M")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="logo",
+    kvs=[("font_size", "26"), ("weight", "600")],
+  )
 
   // 标题
   let _ = self.place_comp(
@@ -431,10 +438,16 @@ fn Project::template_signup(self : Project, name : String) -> String {
   )
   self.set_text(ab, "have_account", "Already have an account? Sign In")
   self.resize_node(ab, "have_account", 342.0, 18.0, 0.0)
+  // 唯一导航出口用主色 + 半粗——整行 caption 灰读不出可点（审计 signup
+  // 链接感残留；拆双节点会重新引入手算居中偏移，故整行链接待之）
   let _ = self.edit_node(
     artboard=ab,
     node_id="have_account",
-    kvs=[("align", "center")],
+    kvs=[
+      ("align", "center"),
+      ("text_color", self.tokens.resolve_color("primary")),
+      ("weight", "600"),
+    ],
   )
 
   // 导航流：只在目标画板已经存在时写入，避免单页模板生成悬空引用。
@@ -552,15 +565,18 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   )
   self.set_text(ab, "chart_title", "Weekly Revenue")
   let bars = [42.0, 58.0, 50.0, 74.0, 66.0, 92.0, 84.0]
+  let days = ["M", "T", "W", "T", "F", "S", "S"]
   let bar_fill = self.tokens.resolve_color("primary")
+  // 柱组左右留白对称：柱组 50..340，面板 24..366 → 各 26
   for b in 0..<7 {
     let bh = bars[b]
+    let bx = 50.0 + b.to_double() * 44.0
     let _ = self.place_component(
       artboard=ab,
       component_id="rect",
       instance_id="bar_\{b}",
       variant="default",
-      x=48.0 + b.to_double() * 44.0,
+      x=bx,
       y=486.0 - bh,
       w=26.0,
       h=bh,
@@ -570,6 +586,31 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
       node_id="bar_\{b}",
       kvs=[("fill", bar_fill), ("radius", "6")],
     )
+  }
+  // 基线 + 星期标签：让「Weekly Revenue」可读出数据节奏（审计图表信息缺失）
+  let _ = self.place_component(
+    artboard=ab,
+    component_id="divider",
+    instance_id="chart_baseline",
+    x=50.0,
+    y=487.0,
+    w=290.0,
+    h=1.0,
+  )
+  for b in 0..<7 {
+    let did = "chart_day\{b}"
+    let _ = self.place_component(
+      artboard=ab,
+      component_id="body_text",
+      instance_id=did,
+      variant="caption",
+      x=50.0 + b.to_double() * 44.0,
+      y=492.0,
+      w=26.0,
+      h=12.0,
+    )
+    self.set_text(ab, did, days[b])
+    let _ = self.edit_node(artboard=ab, node_id=did, kvs=[("align", "center")])
   }
 
   // 最近活动列表
@@ -836,12 +877,31 @@ fn Project::template_settings(self : Project, name : String) -> String {
     self.resize_node(ab, hid, 200.0, 22.0, 0.0)
     y = y + 30.0
 
-    // 分组项
+    // 分组项：rect 行（绝对容器）+ 行尾 chevron——纯「卡+裸文案」读不出
+    // 可操作性（审计 settings 尾部控件残留）；card 的竖向栈会把子节点
+    // 叠到文案下方，故换 rect 保绝对定位
     for ii in 0..<items.length() {
       let iid = "item_\{si}_\{ii}"
-      let _ = self.place_comp(ab, "card", iid, variant="elevated", x=24.0, y~)
-      self.resize_node(ab, iid, 342.0, 40.0, 8.0)
+      self.place_required(ab, "rect", iid, x=24.0, y~, w=342.0, h=40.0)
+      let _ = self.edit_node(
+        artboard=ab,
+        node_id=iid,
+        kvs=[
+          ("fill", self.tokens.resolve_color("surface")),
+          ("shadow", "e1"),
+          ("radius", "8"),
+          ("text_color", self.tokens.resolve_color("text_primary")),
+        ],
+      )
       self.set_text(ab, iid, items[ii])
+      let cid = "item_c\{si}_\{ii}"
+      self.place_required(ab, "body_text", cid, x=336.0, y=y + 10.0, w=20.0, h=20.0)
+      self.set_text(ab, cid, "›")
+      let _ = self.edit_node(
+        artboard=ab,
+        node_id=cid,
+        kvs=[("align", "center"), ("text_color", self.tokens.resolve_color("text_hint"))],
+      )
       y = y + 46.0
     }
     y = y + 10.0 // 分组间距
@@ -916,7 +976,9 @@ fn Project::template_list(self : Project, name : String) -> String {
   // 单行左对齐字符串只占条宽左半，不合移动端 tab 均分惯例）
   // y=780 + 64 = 844 正好顶到画板下边界，contained_in_parent 要求严格包含，
   // 差 0 也会被拒——上移到 776 留 4px 余量（视觉上仍贴底）
-  self.place_required(ab, "tab_bar", "tab_bar", x=0.0, y=776.0, w=390.0, h=64.0)
+  // y=779 + 64 = 843，距画板底 1px（contained_in_parent 要求严格包含，
+  // 顶满 844 会被拒）——底缝从 4px 收到 1px，视觉上贴底
+  self.place_required(ab, "tab_bar", "tab_bar", x=0.0, y=779.0, w=390.0, h=64.0)
   let tabs = ["Home", "Discover", "Cart", "Me"]
   for ti in 0..<tabs.length() {
     let tid = "tab_\{ti}"
@@ -926,7 +988,7 @@ fn Project::template_list(self : Project, name : String) -> String {
       "body_text",
       tid,
       x=ti.to_double() * slot,
-      y=794.0,
+      y=797.0,
       w=slot,
       h=24.0,
     )
@@ -960,9 +1022,15 @@ fn Project::template_detail(self : Project, name : String) -> String {
   self.place_required(ab, "button", "back_btn", variant="secondary", x=8.0, y=10.0)
   self.resize_node(ab, "back_btn", 64.0, 36.0, 8.0)
   self.set_text(ab, "back_btn", "‹ Back")
-  // 大图区（占位 rect，Agent 可换成 image / 改 fill）
+  // 大图区（占位 rect，Agent 可换成 image / 改 fill）：品牌容器色 tint——
+  // surface_variant 压画布仅 1.03~1.05，无符号时 260px 视觉区像一片空白
   self.place_required(ab, "rect", "hero", x=0.0, y=56.0)
   self.resize_node(ab, "hero", 390.0, 260.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="hero",
+    kvs=[("fill", self.tokens.resolve_color("primary_container"))],
+  )
 
   // 标题 + 副标题
   self.place_required(ab, "heading", "title", x=24.0, y=332.0)
@@ -1060,7 +1128,8 @@ fn Project::template_checkout(self : Project, name : String) -> String {
   self.set_text(ab, "summary_b", "2 items")
   self.resize_node(ab, "summary_b", 200.0, 16.0, 0.0)
 
-  // 表单字段（确认订单的真实形态：联系人/时间/地点）
+  // 表单字段（确认订单的真实形态：联系人/时间/地点）；
+  // time/place 是选择器字段，行尾 chevron 表达可点（审计 checkout 选择器指示残留）
   let fields = [
     ("field_contact", "Contact"),
     ("field_time", "Pickup time"),
@@ -1072,6 +1141,27 @@ fn Project::template_checkout(self : Project, name : String) -> String {
     self.place_required(ab, "text_input", fid, x=24.0, y~)
     self.resize_node(ab, fid, 342.0, 52.0, 12.0)
     self.set_text(ab, fid, label)
+    if fid != "field_contact" {
+      let cid = fid + "_c"
+      self.place_required(
+        ab,
+        "body_text",
+        cid,
+        x=336.0,
+        y=y + 16.0,
+        w=20.0,
+        h=20.0,
+      )
+      self.set_text(ab, cid, "›")
+      let _ = self.edit_node(
+        artboard=ab,
+        node_id=cid,
+        kvs=[
+          ("align", "center"),
+          ("text_color", self.tokens.resolve_color("text_hint")),
+        ],
+      )
+    }
     y = y + 60.0
   }
 
@@ -1262,8 +1352,19 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
   self.resize_node(ab, "ob_sub", 342.0, 72.0, 0.0)
   let _ = self.edit_node(artboard=ab, node_id="ob_sub", kvs=[("align", "center")])
 
-  // 轮播分页点（3 页：第 1 页激活主色、其余 surface_variant——
-  // 目录声明 wizard/carousel，之前只有单页连分页语义都没有）
+  // 插图占位：目录写了插图但模板此前没有，画板中部约四成板面全空
+  // （审计 onboarding:artboard 残留）——品牌容器色圆角块，亮暗都可辨
+  self.place_required(ab, "rect", "ob_art", x=48.0, y=372.0, w=294.0, h=240.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="ob_art",
+    kvs=[
+      ("fill", self.tokens.resolve_color("primary_container")),
+      ("stroke", self.tokens.resolve_color("outline")),
+      ("radius", "24"),
+    ],
+  )
+
   let dot_inactive = self.tokens.resolve_color("surface_variant")
   for di in 0..<3 {
     let did = "ob_dot\{di}"
@@ -1337,7 +1438,13 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
     y=250.0,
   )
   self.resize_node(ab, "illustration", 200.0, 200.0, 100.0)
-  self.set_text(ab, "illustration", "")
+  // 纯色空圆读作未填的头像位：放 ＋ 字形占位（形状标签在圆内垂直居中）
+  self.set_text(ab, "illustration", "＋")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="illustration",
+    kvs=[("font_size", "48")],
+  )
 
   // 主文案（与插图/按钮同一中轴：盒心 195 + align center，
   // 不再两行文字各偏一条轴线）

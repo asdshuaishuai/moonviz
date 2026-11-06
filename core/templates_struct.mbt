@@ -32,19 +32,23 @@ fn landing_desktop(t : DesignTokens) -> LT {
     // pad 12：容器高 72，pad 24 时内容盒只剩 24，装不下 44 高的 nav_cta
     // （issue #14 adaptive_landing nav_* contained_in_parent）
     lt_h(id="nav", pad=12.0, gap=16.0, kids=[
-      lt_dot(id="nav_logo", fill="primary", d=36.0, tokens=t),
-      lt_text(id="nav_name", role="h4", s="MoonViz", tokens=t),
+      lt_dot(id="nav_logo", fill="primary", d=36.0, tokens=t).cy(),
+      // Hug + 弹簧：链接按内在宽成组贴向 CTA（Fill 会与 lt_flex 平分、
+      // 等距铺满整条导航，审计 adaptive_landing nav 横排残留）
+      lt_text(id="nav_name", role="h4", s="MoonViz", width=Hug, tokens=t).cy(),
       lt_flex(id="nav_sp"),
-      lt_text(id="nav_i1", role="body", s="Product", tokens=t),
-      lt_text(id="nav_i2", role="body", s="Features", tokens=t),
-      lt_text(id="nav_i3", role="body", s="Pricing", tokens=t),
-      lt_text(id="nav_i4", role="body", s="Docs", tokens=t),
-      lt_btn(id="nav_cta", label="Get Started", tokens=t),
+      lt_text(id="nav_i1", role="body", s="Product", width=Hug, tokens=t).cy(),
+      lt_text(id="nav_i2", role="body", s="Features", width=Hug, tokens=t).cy(),
+      lt_text(id="nav_i3", role="body", s="Pricing", width=Hug, tokens=t).cy(),
+      lt_text(id="nav_i4", role="body", s="Docs", width=Hug, tokens=t).cy(),
+      lt_btn(id="nav_cta", label="Get Started", tokens=t).cy(),
     ]).h(Fixed(72.0)),
     // Hero：左文案右插图
     // pad 28：hero 高 380，pad 48 时内容盒 284 装不下 300 高的 hero_art
     lt_h(id="hero", pad=28.0, gap=48.0, kids=[
-      lt_v(id="hero_copy", gap=14.0, kids=[
+      // justify Center：左栏内容块在 hero 行内垂直居中（原顶对齐，
+      // 左下留 183px 空白、与右侧插图失衡）
+      lt_v(id="hero_copy", gap=14.0, justify=Center, kids=[
         lt_text(
           id="hero_title",
           role="h1",
@@ -109,16 +113,21 @@ fn landing_desktop(t : DesignTokens) -> LT {
     // Footer
     // pad 12：footer 高 64，pad 24 时内容盒 16 装不下 18.75 高的 caption
     lt_h(id="footer", pad=12.0, gap=16.0, kids=[
-      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", tokens=t)
-      .color(t.resolve_color("text_secondary")),
+      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", width=Hug, tokens=t)
+      .color(t.resolve_color("text_secondary"))
+      .cy(),
       lt_flex(id="foot_sp"),
       lt_text(
         id="foot_r",
         role="caption",
         s="About   Privacy   Contact",
+        width=Hug,
         tokens=t,
-      ).color(t.resolve_color("text_secondary")),
-    ]).h(Fixed(64.0))
+      )
+      .color(t.resolve_color("text_secondary"))
+      .cy(),
+    ])
+    .h(Fixed(64.0))
   ])
 }
 

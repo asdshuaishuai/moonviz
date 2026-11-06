@@ -19,6 +19,7 @@ pub fn lt_v(
   id~ : String,
   gap? : Double = 0.0,
   pad? : Double = 0.0,
+  justify? : Justify = Start,
   kids? : Array[LT] = [],
 ) -> LT {
   {
@@ -29,7 +30,7 @@ pub fn lt_v(
       layout: Some({
         dir: Vertical,
         gap,
-        justify: Start,
+        justify,
         padding: Padding::uniform(pad),
       }),
     },
@@ -70,6 +71,7 @@ pub fn lt_text(
   id~ : String,
   role~ : String,
   s~ : String,
+  width? : SizeSpec = Fill,
   tokens? : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
@@ -90,7 +92,9 @@ pub fn lt_text(
   {
     node: {
       ..Node::make(id, Text),
-      width: Fill,
+      // width=Hug 用于横排导航/页脚：文字按内在宽收缩，弹簧留白吃掉
+      // 剩余空间，链接成组贴向 CTA（Fill 会与 lt_flex 平分、铺满整条）
+      width,
       height: Hug,
       style: {
         ..NodeStyle::default(),
@@ -162,10 +166,15 @@ pub fn lt_btn(
   tokens? : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
-  let (fill, tc) : (String, String) = if variant == "primary" {
-    (t.resolve_color("primary"), t.resolve_color("on_primary"))
+  let (fill, tc, stroke) : (String, String, String) = if variant == "primary" {
+    (t.resolve_color("primary"), t.resolve_color("on_primary"), "none")
   } else {
-    (t.resolve_color("surface_variant"), t.resolve_color("text_primary"))
+    // 次按钮描边：surface_variant 压画布仅 1.01~1.08，无描边近乎幽灵按钮
+    (
+      t.resolve_color("surface_variant"),
+      t.resolve_color("text_primary"),
+      t.resolve_color("outline"),
+    )
   }
   {
     node: {
@@ -179,6 +188,7 @@ pub fn lt_btn(
         corner_radius: 10.0,
         shadow: "e1",
         text_align: "center",
+        stroke,
       },
       text: label,
     },
@@ -281,6 +291,13 @@ pub fn LT::w(self : LT, spec : SizeSpec) -> LT {
 ///|
 pub fn LT::h(self : LT, spec : SizeSpec) -> LT {
   { node: { ..self.node, height: spec, }, kids: self.kids, }
+}
+
+///|
+/// 垂直居中：横排（hstack）子项的交叉轴规格——y=CenterInParent 由求解器
+/// 在内容盒内居中（审计 adaptive_landing nav/footer 子项贴顶残留）
+pub fn LT::cy(self : LT) -> LT {
+  { node: { ..self.node, y: CenterInParent, }, kids: self.kids, }
 }
 
 ///|
