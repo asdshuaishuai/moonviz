@@ -3,14 +3,17 @@
 //
 // spec 契约（JSON 字符串，schema 对齐 DESIGN.md 载荷）：
 //   { "v":1,
+//     "style": "apple" | "harmony"（美学体系第一要素；缺省 = 保留当前主题）,
 //     "palette": { "primary": "#..", "background": "#..", "surface": "#..",
 //                  "text": "#..", "muted": "#..", "danger": "#..", "success": "#.." },
 //     "typography": { "display/h1/h2/h3/h4/body/caption/overline": 数字 },
 //     "spacing": [..], "radius": { "sm":.., "md":.., "lg":.. },
 //     "components": {..}, "rules": [..] }
-// 应用语义：调色板 → token 覆盖 + recolor_with 重着色；字号阶 → 节点
-// font_size 按默认阶到 spec 阶重映射；圆角档 → 8/10→sm、12→md、16→lg
-// （999 保留正圆语义）。规则数组只随信封上报，不做硬编码裁决。
+// 应用语义：style → 美学主题预设（apple/harmony 令牌族，含 tinted 分层底/
+// hairline/胶囊语义）先行应用；palette → token 覆盖 + recolor_with 重着色
+// （palette 覆盖 style 的同名角色，二者可叠加——style 给气质、palette 给微调）；
+// 字号阶 → 节点 font_size 按默认阶到 spec 阶重映射；圆角档 → 8/10→sm、
+// 12→md、16→lg（999 保留正圆语义）。规则数组只随信封上报，不做硬编码裁决。
 // ---------------------------------------------------------------------------
 
 ///|
@@ -231,8 +234,39 @@ fn ds_apply_radius(doc : Document, spec : String) -> Unit {
 }
 
 ///|
-/// spec 应用（issue #24）：调色板 → token 覆盖 + 重着色；字号阶/圆角档按
-/// spec 规范化。spec 空白 → design_spec_required（不静默兜底）。
+/// spec.style 值 → 可注册主题名（仅美学体系有效；"" = 不换主题）。
+/// 未知值返回 ""（不报错——spec 是数据契约，非法 style 由 palette/组件
+/// 白名单通道各自兜底，不在这里静默改道）。
+pub fn ds_style_theme(spec : String) -> String {
+  match ds_string_value(spec, "style") {
+    Some(v) => {
+      let a = theme_alias(v)
+      if a == "apple" || a == "harmony" {
+        a
+      } else {
+        ""
+      }
+    }
+    None => ""
+  }
+}
+
+///|
+/// 当前激活主题是否暗色（美学 style 换装时保留明暗意图：暗色项目 +
+/// style:apple → apple_dark 而不是静默跳回浅色）。
+fn Project::active_theme_is_dark(self : Project) -> Bool {
+  for t in builtin_themes().iter() {
+    if t.name == self.active_theme {
+      return t.is_dark
+    }
+  }
+  false
+}
+
+///|
+/// spec 应用（issue #24）：style → 美学主题预设先行；palette → token 覆盖
+/// + 重着色；字号阶/圆角档按 spec 规范化。spec 空白 → design_spec_required
+/// （不静默兜底）。
 pub fn Project::apply_design_spec(
   self : Project,
   artboard~ : String,
@@ -244,6 +278,17 @@ pub fn Project::apply_design_spec(
   match self.artboards.get(artboard) {
     None => return Err("unknown_artboard: " + artboard)
     Some(_) => ()
+  }
+  // 0) 美学体系第一要素：style: apple/harmony 先落整套令牌气质（tinted
+  //    分层底/胶囊/hairline 语义族）；当前项目处于暗色主题时换装保留暗色
+  //    （apple + dark 意图 → apple_dark）。palette 随后覆盖同名角色（微调优先）。
+  let style_theme = ds_style_theme(spec)
+  if style_theme != "" {
+    let resolved = resolve_aesthetic_theme(style_theme, self.active_theme_is_dark())
+    match self.apply_theme(resolved) {
+      Ok(_) => ()
+      Err(_) => ()
+    }
   }
   // 1) 调色板 → token 覆盖（set_token 内建 tokens_snapshot + recolor_with
   //    通道，逐角色重着色；无需额外整体 recolor）

@@ -88,11 +88,30 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
   let is_pc = contains_latin_word(lower, "pc") ||
     contains_any(lower, ["桌面应用", "desktop", "工作站"])
   let is_tablet = contains_any(lower, ["tablet", "平板", "ipad"])
-  // 主题暗示
+  // 主题暗示（含美学体系第一要素：apple/ios/苹果、harmony/鸿蒙/华为；
+  // 与 dark/暗色同句时直接落到对应暗色预设注册名，apply_theme 原生识别）。
+  // 拉丁美学词按整词匹配（ios 不误中 scenarios/studios）。
+  let is_aesthetic_apple = contains_latin_word(lower, "apple") ||
+    contains_latin_word(lower, "ios") ||
+    lower.contains("苹果")
+  let is_aesthetic_harmony = contains_latin_word(lower, "harmony") ||
+    contains_latin_word(lower, "harmonyos") ||
+    lower.contains("鸿蒙") ||
+    lower.contains("华为")
   let theme = if contains_any(lower, [
     "dark", "暗色", "深色", "夜间",
   ]) {
-    "dark"
+    if is_aesthetic_apple {
+      "apple_dark"
+    } else if is_aesthetic_harmony {
+      "harmony_dark"
+    } else {
+      "dark"
+    }
+  } else if is_aesthetic_apple {
+    "apple"
+  } else if is_aesthetic_harmony {
+    "harmony"
   } else if contains_any(lower, ["light", "亮色", "浅色"]) {
     "light"
   } else {

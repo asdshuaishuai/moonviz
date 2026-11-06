@@ -149,10 +149,11 @@ test "AI 设计批评：摘要评分" {
 }
 
 ///|
-/// 回归（评审 F36）：extract_scores 曾把信封头 "principles":9 当一条原则
-/// 分计入——avg=(9+Σ九项)/10 而非 Σ/9，档位边界虚高一级。摘要均值必须
-/// 只计九项原则分（scores 长度 9 是本回归的判别断言）。
-test "AI 设计批评：摘要均值只计九项原则分" {
+/// 回归（评审 F36）：extract_scores 曾把信封头 "principles":N 当一条原则
+/// 分计入——avg=(N+Σ)/(N+1) 而非 Σ/N，档位边界虚高一级。摘要均值必须
+/// 只计原则分（scores 长度 = 原则数 10 是本回归的判别断言；第 10 维
+/// visual 于视觉语言升级加入）。
+test "AI 设计批评：摘要均值只计十项原则分" {
   let p = Project::new()
   let _ = p.apply_template(template_id="login")
   let json = match p.critique(artboard="login") {
@@ -163,7 +164,7 @@ test "AI 设计批评：摘要均值只计九项原则分" {
     }
   }
   let scores = extract_scores(json)
-  assert_eq(scores.length(), 9)
+  assert_eq(scores.length(), 10)
   let avg = sum_scores(scores) / scores.length()
   let grade = if avg >= 8 {
     "A"

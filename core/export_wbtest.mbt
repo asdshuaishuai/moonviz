@@ -155,9 +155,14 @@ test "export_html：交互动画与精致化断言" {
     action_spec="haptic",
   )
   let html = p.export_html()
-  // haptic 动作进绑定表并在运行时反馈
+  // haptic 动作进绑定表并在运行时反馈：支持振动的设备真振（navigator.vibrate，
+  // 安卓生效 / iOS 静默忽略），再给可见 toast 兜底
   assert_true(html.contains("\"haptic\""))
-  assert_true(html.contains("else if(k==='haptic')toast('📳 触觉反馈')"))
+  assert_true(
+    html.contains(
+      "else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}",
+    ),
+  )
   // 微动效三件套
   assert_true(html.contains("@keyframes mv-pop"))
   assert_true(html.contains("@keyframes mv-tick"))

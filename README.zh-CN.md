@@ -528,7 +528,7 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 
 ## AI 设计批评引擎
 
-引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 9 项设计原则给出整体评价（第 9 维 `norms` 对组件工艺偏差计分）：
+引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 10 项设计原则给出整体评价（第 9 维 `norms` 对组件工艺偏差计分；第 10 维 `visual` 对视觉语言债计分——文字带阴影、卡片融进画布、嵌套圆角不同心）：
 
 | 原则 | 检查什么 |
 |:---|:---|
@@ -541,12 +541,13 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 | 焦点 | 是否有明确的主 CTA（primary 按钮） |
 | 节奏 | 间距值是否统一到标准令牌 |
 | 规范 | 组件规范：按钮不卡文案、撞色、齐缝分隔、触控目标（norms） |
+| 视觉语言 | 阴影只属于容器层次、卡片与画布可辨、嵌套圆角同心（visual） |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":9,"results":[
+// → {"principles":10,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"norms","score":8,"verdict":"good",...},...]}
+//     {"principle":"visual","score":9,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -628,7 +629,7 @@ p.preview_themes("btn")            // 预览各主题下按钮的颜色
 p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 ```
 
-**6 种预定义主题**：
+**10 种预定义主题**（含 Apple HIG / HarmonyOS 两族一等美学预设，各带暗色）：
 
 | 主题 | 风格 | primary | surface |
 |:---|:---|:---|:---|
@@ -638,6 +639,17 @@ p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 | sepia | 复古棕 | #8D6E63 | #FAF6F0 |
 | nord | 极地 | #88C0D0 | #3B4252 |
 | sunset | 落日暖 | #FF7043 | #FFF8E1 |
+| apple | Apple HIG（#F2F2F7 分组画布） | #0068D6 | #FFFFFF |
+| apple_dark | Apple HIG 暗色 | #409CFF | #2C2C2E |
+| harmony | HarmonyOS（#F1F3F5 分层画布） | #0A59F7 | #FFFFFF |
+| harmony_dark | HarmonyOS 暗色 | #5291FF | #26292D |
+
+美学预设的色值是官方色板的**无障碍翻译**而非照抄：每档按 WCAG 校准（主按钮
+文字/三级文字 × 三层底全部 ≥4.5:1，可读性硬标准对全部主题生效）。别名归一：
+`ios`/`苹果`/`hig` → apple，`harmonyos`/`鸿蒙`/`华为` → harmony，同名带暗色词
+（`苹果暗色`/`harmony dark`）直达暗色预设。生成时三条通道等价：意图句里的美学词
+（`apple 风格登录页`、`暗色 鸿蒙 设置页`）、design spec 的 `"style":"apple"` 键
+（palette 随后覆盖同名角色）、或 `theme apple`。
 
 **自动暗色推导**：`Theme::auto_dark(light)` → RGB 通道逐位反转（色相旋转 180°）→ 自动生成暗色版本。
 

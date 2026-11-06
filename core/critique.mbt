@@ -428,9 +428,60 @@ pub fn Project::critique(
         crit_json("norms", norm_score, norm_verdict, "\{n_norm} 处规范偏差", norm_advice),
       )
 
+      // ── 10. 视觉语言（visual：阴影只属于容器 · 卡片层次可辨 · 同心圆角）──
+      // 检测项、只报不修（审美方向由 Agent 决定）；与 norms 维度分账——
+      // norms 是「不出错」，visual 是「有层次」（Apple HIG / 鸿蒙共识）。
+      let vis_list = norm_visual_issues(doc)
+      let n_vis = vis_list.length()
+      let vis_score = if n_vis == 0 {
+        9
+      } else if n_vis <= 2 {
+        7
+      } else if n_vis <= 4 {
+        5
+      } else {
+        3
+      }
+      let vis_verdict = if vis_score >= 7 {
+        "good"
+      } else if vis_score >= 5 {
+        "fair"
+      } else {
+        "poor"
+      }
+      let vis_advice = if n_vis == 0 {
+        "视觉层次良好（阴影只在容器 · 卡片可辨 · 圆角同心）"
+      } else {
+        let mut acc = ""
+        for i in 0..<vis_list.length() {
+          if i >= 2 {
+            break
+          }
+          acc = acc + vis_list[i] + "→ " + visual_issue_hint(vis_list[i]) + "；"
+        }
+        acc
+      }
+      results.push(
+        crit_json("visual", vis_score, vis_verdict, "\{n_vis} 处视觉语言偏差", vis_advice),
+      )
+
       let j = jstr19(results)
-      Ok("{\"principles\":9,\"results\":[\{j}]}")
+      Ok("{\"principles\":10,\"results\":[\{j}]}")
     }
+  }
+}
+
+///|
+/// visual 维度建议：按偏差类型给具体改法（检测项，无一键修复通道）。
+fn visual_issue_hint(issue : String) -> String {
+  if issue.contains("文字带阴影") {
+    "去掉文字阴影（shadow=none），层次交给容器 elevation"
+  } else if issue.contains("层次不可辨") {
+    "卡片加 e1 阴影或 1px hairline 描边，或画布换 tinted 底（background 令牌）"
+  } else if issue.contains("同心") {
+    "子圆角收到 ≤ 父圆角（内 = 外 − 内边距）"
+  } else {
+    "按视觉语言调整"
   }
 }
 

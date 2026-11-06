@@ -33,7 +33,7 @@ pub fn render_svg(
     sb.write_string(defs)
   }
   sb.write_string(
-    "<defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"1\" stdDeviation=\"2\" flood-opacity=\"0.07\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"4\" stdDeviation=\"10\" flood-opacity=\"0.10\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"14\" stdDeviation=\"28\" flood-opacity=\"0.16\"/></filter></defs>",
+    "<defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"4\" flood-opacity=\"0.10\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"6\" stdDeviation=\"14\" flood-opacity=\"0.14\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"16\" stdDeviation=\"30\" flood-opacity=\"0.18\"/></filter></defs>",
   )
   sb.write_string(
     "<rect x=\"0\" y=\"0\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" fill=\"\{surface}\" pointer-events=\"none\"/>",
@@ -130,8 +130,10 @@ fn render_node(
                   Some(da) => sb.write_string(" stroke-dasharray=\"\{da}\"")
                   None => ()
                 }
-              } else if n.style.fill == "none" && n.text == "" {
-                // 无填充无文字的容器：细虚线边界，避免"幽灵组件"融进背景
+              } else if n.style.fill == "none" && n.text == "" && n.id != doc.root_id {
+                // 无填充无文字的容器：细虚线边界，避免"幽灵组件"融进背景。
+                // 根节点豁免——画板本身是画布边界（surface 底已由 wrapper
+                // rect 画出），给画布描虚线是每个模板都背一遍的视觉债。
                 sb.write_string(
                   " stroke=\"\{frame}\" stroke-width=\"1\" stroke-dasharray=\"4 3\"",
                 )
@@ -257,10 +259,10 @@ fn dash_array(dash : String) -> String? {
 /// 与 render_svg 顶部 defs 的 e1/e2/e3 定义一一对应；未知令牌取 e2 档兜底
 fn shadow_token_params(tok : String) -> (Double, Double, Double, Double) {
   match tok {
-    "e1" => (0.0, 1.0, 2.0, 0.07)
-    "e2" => (0.0, 4.0, 10.0, 0.10)
-    "e3" => (0.0, 14.0, 28.0, 0.16)
-    _ => (0.0, 4.0, 10.0, 0.10)
+    "e1" => (0.0, 2.0, 4.0, 0.10)
+    "e2" => (0.0, 6.0, 14.0, 0.14)
+    "e3" => (0.0, 16.0, 30.0, 0.18)
+    _ => (0.0, 6.0, 14.0, 0.14)
   }
 }
 

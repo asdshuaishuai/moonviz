@@ -68,39 +68,75 @@ fn js_string_escape(s : String) -> String {
 }
 
 ///|
-/// 导出为自包含 HTML（SVG 内嵌 + 画板切换 + 导航流模拟）
+/// 导出为自包含 HTML（SVG 内嵌 + 画板切换 + 导航流模拟）。
+///
+/// 视觉语言（Apple HIG / HarmonyOS 共识）：chrome 全部由主题令牌派生为
+/// CSS 变量（--mv-bg/--mv-surface/--mv-primary…），换主题即换整页气质；
+/// 吸顶 tab 用 Vibrancy 磨砂材质（backdrop-filter），画板是设备感圆角
+/// 屏幕（分层柔阴影 + hairline），页面按安全区留呼吸边距，窄屏自适应缩放。
+/// 交互：可交互节点挂 mv-live（Hover Lift + 指针 + 键盘 Enter/Space 可达），
+/// 非交互节点不再伪装可点（cursor 只给 mv-live）。
 pub fn Project::export_html(self : Project) -> String {
   let sb = StringBuilder::new()
+  // 主题令牌 → chrome 色板（单一来源：tokens，不再硬编码深底）
+  let c_bg = self.tokens.resolve_color("background")
+  let c_fg = self.tokens.resolve_color("text_primary")
+  let c_surface = self.tokens.resolve_color("surface")
+  let c_primary = self.tokens.resolve_color("primary")
+  let c_on_primary = self.tokens.resolve_color("on_primary")
+  let c_muted = self.tokens.resolve_color("text_secondary")
+  let c_line = self.tokens.resolve_color("outline_variant")
+  let scheme = if norm_is_hex6(c_bg) && norm_luminance(c_bg) < 0.18 {
+    "dark"
+  } else {
+    "light"
+  }
   sb.write_string(
     "<!DOCTYPE html>\n<html lang=\"zh\">\n<head>\n<meta charset=\"UTF-8\">\n",
   )
   sb.write_string(
-    "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n",
+    "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n",
   )
-  // 暗底原型：声明 color-scheme，浏览器控件/滚动条不再闪白
-  sb.write_string("<meta name=\"color-scheme\" content=\"dark\">\n")
+  // color-scheme 随主题明暗：浏览器控件/滚动条与原型同调，不闪白/闪黑；
+  // theme-color 让移动端浏览器地址栏与画布底同色（H5 沉浸感）
+  sb.write_string("<meta name=\"color-scheme\" content=\"\{scheme}\">\n")
+  sb.write_string("<meta name=\"theme-color\" content=\"\{c_bg}\">\n")
   sb.write_string("<title>MoonViz Prototype</title>\n")
   sb.write_string("<style>\n")
   // 动效令牌：时长刻度 + 引擎缓动曲线（animation.mbt 单一来源，不手写贝塞尔）
   sb.write_string("  \{motion_tokens_css()}\n")
+  // 色彩令牌：主题 → CSS 变量（CSS 美感的单一事实源）
   sb.write_string(
-    "  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Segoe UI','Noto Sans SC',Roboto,'Helvetica Neue',sans-serif;background:#1a1c1e;color:#e0e0e0;display:flex;flex-direction:column;align-items:center;min-height:100vh}\n",
-  )
-  sb.write_string("  .tabs{display:flex;gap:8px;padding:12px;flex-wrap:wrap}\n")
-  sb.write_string(
-    "  .tab{padding:8px 16px;border-radius:8px;cursor:pointer;background:#2a2c2e;border:1px solid #42474f;font-size:14px;transition:background var(--mv-dur-fast) var(--mv-ease),color var(--mv-dur-fast) var(--mv-ease),border-color var(--mv-dur-fast) var(--mv-ease),box-shadow var(--mv-dur-fast) var(--mv-ease),transform var(--mv-dur-fast) var(--mv-spring)}\n",
-  )
-  sb.write_string("  .tab:hover{transform:translateY(-1px)}\n")
-  sb.write_string(
-    "  .tab.active{background:#4B6BFB;color:#fff;border-color:#4B6BFB;box-shadow:0 2px 10px rgba(75,107,251,.35)}\n",
+    "  :root{--mv-bg:\{c_bg};--mv-fg:\{c_fg};--mv-surface:\{c_surface};--mv-primary:\{c_primary};--mv-on-primary:\{c_on_primary};--mv-muted:\{c_muted};--mv-line:\{c_line}}\n",
   )
   sb.write_string(
-    "  .board{display:none;padding:16px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}\n",
+    "  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','HarmonyOS Sans SC','PingFang SC','Segoe UI','Noto Sans SC',Roboto,'Helvetica Neue',sans-serif;background:var(--mv-bg);color:var(--mv-fg);display:flex;flex-direction:column;align-items:center;min-height:100vh;box-sizing:border-box;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}\n",
+  )
+  // 吸顶 tab：Vibrancy 磨砂材质（半透明表面 + saturate/blur），胶囊分段
+  sb.write_string(
+    "  .tabs{position:sticky;top:max(8px,env(safe-area-inset-top));z-index:5;display:flex;gap:4px;padding:6px;margin:0 0 32px;flex-wrap:wrap;justify-content:center;border-radius:999px;background:color-mix(in srgb,var(--mv-surface) 72%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 0 0 .5px var(--mv-line),0 8px 24px rgba(0,0,0,.06)}\n",
+  )
+  sb.write_string(
+    "  .tab{padding:7px 16px;border-radius:999px;cursor:pointer;background:transparent;color:var(--mv-muted);font-size:14px;font-weight:500;letter-spacing:-.01em;transition:background var(--mv-dur-fast) var(--mv-ease),color var(--mv-dur-fast) var(--mv-ease),border-color var(--mv-dur-fast) var(--mv-ease),box-shadow var(--mv-dur-fast) var(--mv-ease),transform var(--mv-dur-fast) var(--mv-spring)}\n",
+  )
+  sb.write_string(
+    "  .tab:hover{transform:translateY(-1px);color:var(--mv-fg)}\n",
+  )
+  sb.write_string(
+    "  .tab.active{background:var(--mv-primary);color:var(--mv-on-primary);box-shadow:0 2px 10px color-mix(in srgb,var(--mv-primary) 35%,transparent)}\n",
+  )
+  // 画板 = 设备感屏幕：大圆角 + hairline + 分层柔阴影（近/中/远三层，
+  // HIG 的 elevation 不是一道硬阴影）；窄屏按 viewBox 等比缩放
+  sb.write_string(
+    "  .board{display:none;max-width:100%;border-radius:28px;overflow:hidden;background:var(--mv-surface);box-shadow:0 0 0 .5px var(--mv-line),0 1px 2px rgba(0,0,0,.04),0 12px 32px rgba(0,0,0,.08),0 32px 80px rgba(0,0,0,.08)}\n",
+  )
+  sb.write_string(
+    "  .board>svg{display:block;max-width:100%;height:auto}\n",
   )
   // 画板转场：方向感知（navigate 前进 +1 / back 返回 -1 / tab 纯淡入 0），
   // fill 用 backwards——结束后把 transform 交还按压反馈，不冻结交互
   sb.write_string(
-    "  .board.active{display:block;background:#fff;animation:mv-board-in var(--mv-dur) var(--mv-out) backwards}\n",
+    "  .board.active{display:block;animation:mv-board-in var(--mv-dur) var(--mv-out) backwards}\n",
   )
   sb.write_string(
     "  @keyframes mv-board-in{from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}}\n",
@@ -121,18 +157,26 @@ pub fn Project::export_html(self : Project) -> String {
     "  @keyframes mv-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}\n",
   )
   sb.write_string(
-    "  .flow{padding:12px;font-size:12px;color:#9098a1;text-align:center}\n" +
+    "  .flow{padding:12px;font-size:12px;color:var(--mv-muted);text-align:center}\n" +
     // 按压反馈：spring 回弹 + fill-box 居中缩放（SVG 节点的触感来源）；
-    // 状态多态的 fill 切换走引擎缓动——状态切换不再生硬跳变
-    "  g[id^=n_]{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform var(--mv-dur-fast) var(--mv-spring)}\n" +
+    // 状态多态的 fill 切换走引擎缓动——状态切换不再生硬跳变。
+    // 指针只给可交互节点（mv-live，由交互绑定表在 JS 侧挂类）——非交互
+    // 节点不伪装可点；Hover Lift（namethatui 词汇）只在真实悬停设备上生效，
+    // 规则排在 :active 之前，按下时 scale 覆盖上浮
+    "  g[id^=n_]{transform-box:fill-box;transform-origin:center;transition:transform var(--mv-dur-fast) var(--mv-spring),filter var(--mv-dur) var(--mv-out)}\n" +
+    "  g.mv-live{cursor:pointer}\n" +
+    "  @media (hover:hover){g.mv-live:hover{transform:translateY(-2px);filter:drop-shadow(0 6px 12px rgba(0,0,0,.10))}}\n" +
     "  g[id^=n_]:active{transform:scale(.96)}\n" +
+    "  g.mv-live:focus{outline:none}\n" +
+    "  g.mv-live:focus-visible{filter:drop-shadow(0 0 0 var(--mv-primary)) drop-shadow(0 0 3px var(--mv-primary))}\n" +
     "  g[id^=n_] rect,g[id^=n_] text{transition:fill var(--mv-dur) var(--mv-out)}\n" +
-    "  #mv-toast{position:fixed;left:50%;bottom:10%;transform:translateX(-50%) translateY(20px);background:rgba(20,22,26,.92);color:#fff;padding:10px 22px;border-radius:99px;font-size:14px;opacity:0;transition:opacity var(--mv-dur) var(--mv-out),transform var(--mv-dur) var(--mv-spring);pointer-events:none;z-index:9}\n" +
+    // toast：HUD 反相胶囊（前景色作底 + 磨砂），明暗主题自动反相
+    "  #mv-toast{position:fixed;left:50%;bottom:max(10%,env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:color-mix(in srgb,var(--mv-fg) 88%,transparent);color:var(--mv-bg);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:10px 22px;border-radius:99px;font-size:14px;font-weight:500;opacity:0;transition:opacity var(--mv-dur) var(--mv-out),transform var(--mv-dur) var(--mv-spring);pointer-events:none;z-index:9}\n" +
     "  #mv-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}\n" +
     // 无障碍：系统开启减弱动态效果时全部动效关闭（精致感不含强制动）
     "  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}\n" +
-    // 无障碍精致：键盘焦点可见
-    "  :focus-visible{outline:2px solid #4B6BFB;outline-offset:2px}\n" +
+    // 无障碍精致：键盘焦点可见（主题主色）
+    "  :focus-visible{outline:2px solid var(--mv-primary);outline-offset:2px}\n" +
     // 入场淡入 + 状态切换 pop + 文字更新 tick（令牌同源，reduced-motion 全覆盖）
     "  @keyframes mv-boot{from{opacity:0}to{opacity:1}}\n" +
     "  body{animation:mv-boot .36s var(--mv-out) backwards}\n" +
@@ -198,9 +242,11 @@ pub fn Project::export_html(self : Project) -> String {
   for id in self.artboards.keys() {
     match self.artboards.get(id) {
       Some(ab) => {
+        // 画布底 = background 令牌（tinted 画布），卡面 = surface 白卡浮起
+        // ——iOS 分组语义/HarmonyOS 分层：canvas 永远比卡片低一档明度
         let svg = render_svg(
           ab.doc,
-          surface=self.tokens.resolve_color("surface"),
+          surface=self.tokens.resolve_color("background"),
           frame=self.tokens.resolve_color("outline"),
         )
         sb.write_string(
@@ -323,7 +369,7 @@ pub fn Project::export_html(self : Project) -> String {
     "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st);el.classList.remove('mv-pop');void el.getBoundingClientRect();el.classList.add('mv-pop');el.addEventListener('animationend',()=>el.classList.remove('mv-pop'),{once:true})}\n",
   )
   sb.write_string(
-    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic')toast('📳 触觉反馈');else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}})});\n",
+    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;if(!el.classList.contains('mv-live')){el.classList.add('mv-live');el.setAttribute('tabindex','0');el.setAttribute('role','button');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.dispatchEvent(new MouseEvent('click',{bubbles:true}))}})}el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}})});\n",
   )
   // 键盘返回：ESC = back()（与引擎内置返回导航语义对齐）
   sb.write_string(

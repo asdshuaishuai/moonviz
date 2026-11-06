@@ -81,14 +81,29 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
 
 ### 落点与顺序
 
+**第一阶段已落地（dev，美学第一要素：Apple HIG / HarmonyOS）**：
+- ✅ 美学主题预设 apple/apple_dark/harmony/harmony_dark——官方色板的 WCAG 校准
+  翻译（逐档 ≥4.5:1 由测试锚定），三通道等价：意图美学词 / spec `style` 键 /
+  `theme` 命令，暗色意图自动合流到暗色预设；
+- ✅ 生命感：组件默认 elevation 三档（内容卡 e1 / 浮层 e2 / 模态 e3），阴影档
+  提浓到可见档；按钮族文字默认居中；输入层中性底；
+- ✅ 呼吸感：导出画布 = tinted background、卡面 = 白浮起（iOS 分组语义），
+  画板根节点不再描幽灵虚线；仪表盘模板画出真实主色圆角柱状图；
+- ✅ critique 第 10 维 `visual`（文字阴影 / 卡片融底 / 同心圆角，只报不修）；
+- ✅ H5/CSS/JS：导出 chrome 全部令牌化为 CSS 变量（明暗随主题、theme-color、
+  安全区呼吸边距、窄屏等比缩放）、Vibrancy 磨砂吸顶胶囊 tab、设备感画板（分层
+  柔阴影 + hairline）、Hover Lift 仅给可交互节点、键盘 Enter/Space 可达、
+  haptic 真振动（navigator.vibrate）。
+
+**后续阶段**：
 1. **tokens 层**（core/tokens.mbt）：surface tint / elevation 语义 / accent 角色命名
-   入 token，profile 预设表收敛于此（单一事实源）。
-2. **生成层**（core/generate.mbt + 组件默认样式）：模板按间距节奏与角色取色重构，
-   65 组件默认值带 elevation/tint 档；`autofill` 样例数据按三级层级丰度生成。
-3. **规范层**（core/norms.mbt，软路径）：critique 第 10 维 `visual`（留白率/阴影
-   滥用/圆角搭配/色彩面积），auto_fix 只修机械可判项，审美项只报不修。
-4. **spec/DDP 层**：spec 新键向后兼容（缺省 = calm），SKILL.md 同步视觉语言指南
-   与 profile 用法。
+   入 token，vivid/editorial/playful profile 预设表收敛于此（单一事实源）。
+2. **生成层**（core/generate.mbt + 组件默认样式）：其余模板按间距节奏与角色取色
+   重构；栈卡内的多级文字层级需要先解决「normalize 收编进栈卡被重排」的坐标
+   语义（当前以无布局 rect 面板绕行）。
+3. **规范层**（core/norms.mbt，软路径）：留白率 / 彩积比两项量化指标。
+4. **spec/DDP 层**：spec 新键向后兼容（缺省 = 保留当前主题），playground 加
+   style 切换对比。
 
 验收：同一 intent + 不同 profile 出稿，留白率/彩积比/elevation 分布可量化且显著
 区分；对比度与双门禁零回退；playground 预览可切 profile 对比。

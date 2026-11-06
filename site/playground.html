@@ -1514,6 +1514,7 @@ document.addEventListener('keydown',e=>{
 const THEMES=[
   ['light','#ffffff'],['dark','#1b1d21'],['high_contrast','#000000'],
   ['sepia','#f5ecd9'],['nord','#2e3440'],['sunset','#ff9e7d'],
+  ['apple','#f2f2f7'],['apple_dark','#1c1c1e'],['harmony','#f1f3f5'],['harmony_dark','#1c1e21'],
 ];
 document.querySelectorAll('#modesw button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 $('themes').innerHTML=THEMES.map(([n,c])=>

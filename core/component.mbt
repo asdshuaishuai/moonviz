@@ -63,7 +63,9 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
 
   let iv : Map[String, NodePatch] = Map::new()
   iv.set("default", patch2("surface_variant", 8.0))
-  iv.set("filled", patch2("secondary_container", 4.0))
+  // filled 输入底用中性 surface_variant（输入层不是品牌 tint 层——HIG/
+  // 鸿蒙的 filled field 都是中性灰阶，品牌色留给主操作）
+  iv.set("filled", patch2("surface_variant", 12.0))
   m.set("text_input", {
     id: "text_input",
     kind: "rect",
@@ -358,6 +360,42 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
 }
 
 ///|
+/// 组件默认 elevation（视觉语言「生命感」支柱：层次靠阴影语言而非颜色）。
+///
+/// 三档对齐 render_svg 的 e1/e2/e3 滤镜，语义取 Apple HIG / HarmonyOS /
+/// Material 的共识分层——内容层浮起一档，临时浮层两档，模态层三档：
+/// - e1 内容卡片：card(elevated)、stat
+/// - e2 临时浮层：fab、popover、menu、tooltip、toast、snackbar、hover_card
+/// - e3 模态层：dialog、drawer、command_palette
+/// 其余组件贴面（"none"）。查表而非扩 NodePatch：NodePatch 是 pub(all)
+/// 被多包字面量构造，加字段即全仓连锁破坏；elevation 是组件语义，归组件层。
+pub fn component_default_shadow(comp_id : String, variant : String) -> String {
+  match comp_id {
+    "card" => if variant == "elevated" || variant == "" { "e1" } else { "none" }
+    "stat" => "e1"
+    "fab" | "popover" | "menu" | "tooltip" | "toast" | "snackbar" | "hover_card" =>
+      "e2"
+    "dialog" | "drawer" | "command_palette" => "e3"
+    _ => "none"
+  }
+}
+
+///|
+/// 居中文字组件族：形状+文字在视觉上居中是 HIG/鸿蒙/Material 共识
+/// （按钮/胶囊/chip/徽标）。节点默认 text_align="left" 是文字节点的
+/// 通用缺省，这里在组件语义层覆写——SVG/HTML 渲染与导出同源受益，
+/// 不在渲染层按组件名单硬编码。
+fn component_centers_text(comp_id : String) -> Bool {
+  comp_id == "button" ||
+  comp_id == "fab" ||
+  comp_id == "chip" ||
+  comp_id == "tag" ||
+  comp_id == "badge" ||
+  comp_id == "button_group" ||
+  comp_id == "toggle_group"
+}
+
+///|
 /// 实例化组件：返回可直接放入文档的 Node
 pub fn instantiate_component(
   def : ComponentDef,
@@ -374,12 +412,19 @@ pub fn instantiate_component(
     _ => Rect
   }
   let (w, h) = def.default_size
+  let made = Node::make(id, kind)
+  let centered = component_centers_text(def.id)
   let base = {
-    ..Node::make(id, kind),
+    ..made,
     width: Fixed(w),
     height: Fixed(h),
     layout: def.default_layout,
     component: def.id,
+    style: {
+      ..made.style,
+      shadow: component_default_shadow(def.id, v),
+      text_align: if centered { "center" } else { made.style.text_align },
+    },
   }
   match def.variants.get(v) {
     Some(p) => {

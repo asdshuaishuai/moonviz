@@ -3,13 +3,18 @@
 ///|
 test "主题：预定义主题清单" {
   let themes = builtin_themes()
-  assert_eq(themes.length(), 6)
+  assert_eq(themes.length(), 10)
   assert_eq(themes[0].name, "light")
   assert_eq(themes[1].name, "dark")
   assert_eq(themes[2].name, "high_contrast")
   assert_eq(themes[3].name, "sepia")
   assert_eq(themes[4].name, "nord")
   assert_eq(themes[5].name, "sunset")
+  // 美学体系一等预设（Apple HIG / HarmonyOS，各含暗色）
+  assert_eq(themes[6].name, "apple")
+  assert_eq(themes[7].name, "apple_dark")
+  assert_eq(themes[8].name, "harmony")
+  assert_eq(themes[9].name, "harmony_dark")
 }
 
 ///|

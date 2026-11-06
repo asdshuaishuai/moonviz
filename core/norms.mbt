@@ -1180,3 +1180,83 @@ pub fn norm_issues_v2(
   }
   issues
 }
+
+// ---------------------------------------------------------------------------
+// 视觉语言（critique 第 10 维 visual）：层次靠阴影与同心圆角，不靠颜色。
+//
+// 三项全部机械可判、只报不修（审美方向不由引擎替 Agent 定）：
+// 1) 阴影滥用：文字节点带 elevation——阴影语言只属于容器层次（卡片/浮层/
+//    模态），文字投影是 2000 年代网页的发糊效果，HIG/鸿蒙均不用；
+// 2) 层次不可辨：内容卡片（card/stat）与所在画布同色且无阴影无描边——
+//    卡片的边界全靠「浮起」或「hairline」交代，两者皆无即融进画布；
+// 3) 同心圆角（Apple HIG concentric corners）：子容器圆角大于父容器圆角
+//    时轮廓失衡（内角顶破外角弧线）；胶囊/正圆（≥高/2 或 999）豁免。
+// ---------------------------------------------------------------------------
+
+///|
+pub fn norm_visual_issues(doc : Document) -> Array[String] {
+  let issues : Array[String] = []
+  for id in doc.nodes.keys() {
+    if issues.length() >= 8 {
+      break
+    }
+    if id == doc.root_id {
+      continue
+    }
+    match doc.nodes.get(id) {
+      None => ()
+      Some(n) => {
+        // 1) 阴影滥用：文字层带 elevation
+        let is_text = match n.kind {
+          Text => true
+          _ => false
+        }
+        if is_text && n.style.shadow != "none" {
+          issues.push(
+            "\{json_escape(id)}（\{n.component}）文字带阴影 \{n.style.shadow}：阴影语言只用于容器层次（视觉语言）",
+          )
+          continue
+        }
+        // 2) 层次不可辨：卡片与画布同色且无阴影无描边
+        let is_card = n.component == "card" || n.component == "stat"
+        let no_edge = n.style.stroke == "none" || n.style.stroke_width <= 0.0
+        if is_card && n.style.shadow == "none" && no_edge && norm_is_hex6(n.style.fill) {
+          let pbg = norm_effective_bg(doc, id, "none")
+          if norm_is_hex6(pbg) && n.style.fill.to_lower() == pbg.to_lower() {
+            issues.push(
+              "\{json_escape(id)}（\{n.component}）卡片层次不可辨：与画布同为 \{pbg} 且无阴影无描边（视觉语言）",
+            )
+            continue
+          }
+        }
+        // 3) 同心圆角：子圆角 > 父圆角（胶囊/正圆豁免）
+        let cr = n.style.corner_radius
+        let h = match n.height {
+          Fixed(v) => v
+          _ => 0.0
+        }
+        let capsule = cr >= 999.0 || (h > 0.0 && cr >= h / 2.0 - 0.5)
+        if cr > 0.0 && !capsule {
+          match doc.find_parent(id) {
+            Some(pid) =>
+              if pid != doc.root_id {
+                match doc.nodes.get(pid) {
+                  Some(p) => {
+                    let pr = p.style.corner_radius
+                    if pr > 0.0 && pr < 999.0 && cr > pr {
+                      issues.push(
+                        "\{json_escape(id)}（\{n.component}）圆角 \{cr} 大于父容器 \{json_escape(pid)} 的 \{pr}：嵌套圆角应同心（内 ≤ 外，视觉语言）",
+                      )
+                    }
+                  }
+                  None => ()
+                }
+              }
+            None => ()
+          }
+        }
+      }
+    }
+  }
+  issues
+}

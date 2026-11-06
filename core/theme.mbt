@@ -30,7 +30,69 @@ pub fn builtin_themes() -> Array[Theme] {
     Theme::sepia(),
     Theme::nord(),
     Theme::sunset(),
+    Theme::apple(),
+    Theme::apple_dark(),
+    Theme::harmony(),
+    Theme::harmony_dark(),
   ]
+}
+
+///|
+/// 美学风格别名归一：Agent/宿主可用自然写法指名美学体系，归一到主题
+/// 注册名（Apple HIG 与鸿蒙是一等美学，不是配色变体）。规则：
+/// 1) 已注册名原样直通——apple_dark 不能被 contains("apple") 折回浅色；
+/// 2) 拉丁词按整词匹配（ios 不误中 scenarios/studios）；中文按子串；
+/// 3) 同名带暗色词（"苹果暗色"/"harmony dark"）直接落到暗色预设。
+/// 未知名原样返回——apply_theme 报 unknown_theme，Agent 可从 list_themes 精修。
+pub fn theme_alias(name : String) -> String {
+  let lower = name.to_lower()
+  for t in builtin_themes().iter() {
+    if t.name == lower {
+      return t.name
+    }
+  }
+  let is_apple = contains_latin_word(lower, "apple") ||
+    contains_latin_word(lower, "ios") ||
+    contains_latin_word(lower, "hig") ||
+    lower.contains("苹果")
+  let is_harmony = contains_latin_word(lower, "harmony") ||
+    contains_latin_word(lower, "harmonyos") ||
+    contains_latin_word(lower, "huawei") ||
+    lower.contains("鸿蒙") ||
+    lower.contains("华为")
+  let is_dark = contains_latin_word(lower, "dark") ||
+    lower.contains("暗色") ||
+    lower.contains("深色") ||
+    lower.contains("夜间")
+  if is_apple {
+    if is_dark {
+      "apple_dark"
+    } else {
+      "apple"
+    }
+  } else if is_harmony {
+    if is_dark {
+      "harmony_dark"
+    } else {
+      "harmony"
+    }
+  } else {
+    name
+  }
+}
+
+///|
+/// 美学体系 + 明暗意图 → 注册主题名。暗色意图落到对应暗色预设
+/// （apple + dark → apple_dark；非美学名或非暗色意图原样返回）。
+pub fn resolve_aesthetic_theme(alias_name : String, dark_hint : Bool) -> String {
+  let a = theme_alias(alias_name)
+  if dark_hint && a == "apple" {
+    "apple_dark"
+  } else if dark_hint && a == "harmony" {
+    "harmony_dark"
+  } else {
+    a
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +217,136 @@ pub fn Theme::sunset() -> Theme {
 }
 
 // ---------------------------------------------------------------------------
+// 美学体系预设（第一要素）：Apple HIG 与 HarmonyOS NEXT 的官方色板翻译。
+//
+// 与既有「配色主题」不同档：这两族自带完整的组件美学约定（tinted 分层底、
+// hairline 分割、胶囊控件、语义色口径），主题切换即整套气质落地。色值不是
+// 原样照抄，而是逐档 WCAG 校准（实测 ≥4.5:1，big-ok 档 ≥3.0）：
+// - apple 主色取 Apple 营销蓝的加深档 #0068D6（原版 #007AFF 白字 4.02 不达
+//   正文档，按钮是白字主面必须过 4.5）；暗色 #409CFF 原版 #0A84FF 同理。
+// - harmony 主色 #0A59F7 原生达标（白字 5.55）；暗色 #5291FF 配深字 #06142B
+//   （6.0），浮起面对暗面 ≥4.7。
+// - text_secondary/hint 全部调深一档：iOS #8E8E93 在 tinted 底上 3.4x，
+//   兑换成 #66666B / #66717D 才能过 4.5（可读性硬标准对全部主题生效）。
+// - 分层底严格按官方口径：iOS systemGroupedBackground #F2F2F7（画布）、
+//   secondarySystemGroupedBackground #FFFFFF（卡面）；鸿蒙 #F1F3F5 / #FFFFFF。
+// ---------------------------------------------------------------------------
+
+///|
+/// Apple HIG 浅色（iOS systemGroupedBackground 分层 + SF 语义色）
+pub fn Theme::apple() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#0068D6")
+  t.colors.set("primary_container", "#D9EBFF")
+  t.colors.set("on_primary", "#FFFFFF")
+  t.colors.set("on_secondary_container", "#1D1D1F")
+  t.colors.set("secondary", "#5856D6")
+  t.colors.set("secondary_container", "#E9E9EE")
+  t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("surface", "#FFFFFF")
+  t.colors.set("surface_variant", "#EDEDF2")
+  t.colors.set("background", "#F2F2F7")
+  t.colors.set("error", "#D70015")
+  t.colors.set("error_container", "#FFE0DE")
+  t.colors.set("success", "#248A3D")
+  t.colors.set("warning", "#C93400")
+  t.colors.set("outline", "#C6C6C8")
+  t.colors.set("outline_variant", "#E5E5EA")
+  t.colors.set("text_primary", "#1D1D1F")
+  t.colors.set("text_secondary", "#66666B")
+  t.colors.set("text_hint", "#667078")
+  { name: "apple", display_name: "Apple HIG", tokens: t, is_dark: false, }
+}
+
+///|
+/// Apple HIG 暗色（iOS Dark Mode 分层：#1C1C1E 底 / #2C2C2E 卡面）
+pub fn Theme::apple_dark() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#409CFF")
+  t.colors.set("primary_container", "#0F3A66")
+  t.colors.set("on_primary", "#06142B")
+  t.colors.set("on_secondary_container", "#F5F5F7")
+  t.colors.set("secondary", "#8F8CF0")
+  t.colors.set("secondary_container", "#3A3A3C")
+  t.colors.set("text_on_primary", "#06142B")
+  t.colors.set("surface", "#2C2C2E")
+  t.colors.set("surface_variant", "#3A3A3C")
+  t.colors.set("background", "#1C1C1E")
+  t.colors.set("error", "#FF6961")
+  t.colors.set("error_container", "#5C1A1A")
+  t.colors.set("success", "#4CD964")
+  t.colors.set("warning", "#FF9500")
+  t.colors.set("outline", "#48484A")
+  t.colors.set("outline_variant", "#3A3A3C")
+  t.colors.set("text_primary", "#F5F5F7")
+  t.colors.set("text_secondary", "#AEAEB2")
+  t.colors.set("text_hint", "#98989E")
+  {
+    name: "apple_dark",
+    display_name: "Apple HIG 暗色",
+    tokens: t,
+    is_dark: true,
+  }
+}
+
+///|
+/// HarmonyOS NEXT 浅色（#F1F3F5 画布 + #FFFFFF 卡面 + 鸿蒙蓝 #0A59F7）
+pub fn Theme::harmony() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#0A59F7")
+  t.colors.set("primary_container", "#E6EEFE")
+  t.colors.set("on_primary", "#FFFFFF")
+  t.colors.set("on_secondary_container", "#182431")
+  t.colors.set("secondary", "#46B1E3")
+  t.colors.set("secondary_container", "#EEF1F4")
+  t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("surface", "#FFFFFF")
+  t.colors.set("surface_variant", "#EEF0F3")
+  t.colors.set("background", "#F1F3F5")
+  t.colors.set("error", "#D0340F")
+  t.colors.set("error_container", "#FFE0DB")
+  t.colors.set("success", "#3D9134")
+  t.colors.set("warning", "#B25D00")
+  t.colors.set("outline", "#D3D7DC")
+  t.colors.set("outline_variant", "#E5E8EB")
+  t.colors.set("text_primary", "#182431")
+  t.colors.set("text_secondary", "#5A6470")
+  t.colors.set("text_hint", "#5F6A76")
+  { name: "harmony", display_name: "HarmonyOS", tokens: t, is_dark: false, }
+}
+
+///|
+/// HarmonyOS 暗色（#1C1E21 底 / #26292D 卡面；浮起蓝 #5291FF 配深字）
+pub fn Theme::harmony_dark() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#5291FF")
+  t.colors.set("primary_container", "#1B2C4D")
+  t.colors.set("on_primary", "#06142B")
+  t.colors.set("on_secondary_container", "#E6E8EB")
+  t.colors.set("secondary", "#5BB7E5")
+  t.colors.set("secondary_container", "#33373C")
+  t.colors.set("text_on_primary", "#06142B")
+  t.colors.set("surface", "#26292D")
+  t.colors.set("surface_variant", "#33373C")
+  t.colors.set("background", "#1C1E21")
+  t.colors.set("error", "#EA6A5A")
+  t.colors.set("error_container", "#5C1A1A")
+  t.colors.set("success", "#5DAA51")
+  t.colors.set("warning", "#E5753A")
+  t.colors.set("outline", "#454A50")
+  t.colors.set("outline_variant", "#33373C")
+  t.colors.set("text_primary", "#E6E8EB")
+  t.colors.set("text_secondary", "#B0B8C1")
+  t.colors.set("text_hint", "#9AA3AD")
+  {
+    name: "harmony_dark",
+    display_name: "HarmonyOS 暗色",
+    tokens: t,
+    is_dark: true,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 自动暗色推导
 // ---------------------------------------------------------------------------
 
@@ -264,6 +456,8 @@ pub fn Project::apply_theme(
   self : Project,
   theme_name : String,
 ) -> Result[String, String] {
+  // 美学别名先归一（ios/苹果/鸿蒙/harmonyos → apple/harmony）
+  let theme_name = theme_alias(theme_name)
   let themes = builtin_themes()
   let mut found : Theme? = None
   for i in 0..<themes.length() {

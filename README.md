@@ -343,11 +343,11 @@ moonviz/
 │   ├── responsive.mbt Responsive breakpoints (phone/tablet/desktop auto-adaptation)
 │   ├── collab.mbt     Multi-agent collaboration (operational transform/conflict detection/three-way merge)
 │   ├── history.mbt    Design version control (time travel/branching/change replay/undo-redo)
-│   ├── critique.mbt   AI design critique (automatic review against 9 design principles)
+│   ├── critique.mbt   AI design critique (automatic review against 10 design principles)
 │   ├── annotate.mbt   Design annotation (auto-generated spec docs/CSS variables/spacing-color-type annotations)
 │   ├── animation.mbt  Property animation (keyframes/easing/timeline choreography/CSS export)
 │   ├── extract.mbt    Design-system reverse extraction (infer tokens + component patterns from existing designs)
-│   ├── theme.mbt      Theme system (6 predefined themes/auto dark/token-level switching/registry)
+│   ├── theme.mbt      Theme system (10 predefined themes incl. Apple HIG / HarmonyOS presets/auto dark/token-level switching/registry)
 │   ├── slots.mbt      Component slot system (6 composable components/nested content distribution/recursive composition)
 │   ├── benchmark.mbt  Performance benchmark engine (node stats/complexity analysis/anti-pattern detection/optimization advice)
 │   ├── diff.mbt       Semantic diff (added/moved/resized/restyled)
@@ -561,7 +561,7 @@ h.diff(0, 2)     // → semantic diff between two revisions
 
 ## AI Design Critique Engine
 
-The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 9 design principles (the 9th, `norms`, scores component-craft deviations):
+The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 10 design principles (the 9th, `norms`, scores component-craft deviations; the 10th, `visual`, scores visual-language debts — shadow misuse, indistinguishable cards, non-concentric corners):
 
 | Principle | What is checked |
 |:---|:---|
@@ -574,12 +574,13 @@ The engine reviews prototypes like a **senior designer** — not rule checking (
 | Focus | A clear primary CTA exists (primary button) |
 | Rhythm | Spacing values unify to standard tokens |
 | Norms | Component norms: button-label fit, contrast, seam dividers, touch targets |
+| Visual | Visual language: shadows belong to containers, cards stay distinguishable, nested corners stay concentric |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":9,"results":[
+// → {"principles":10,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"norms","score":8,"verdict":"good",...},...]}
+//     {"principle":"visual","score":9,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -661,7 +662,7 @@ p.preview_themes("btn")            // preview the button under each theme
 p.enable_auto_dark()          // derive a dark variant from the current theme
 ```
 
-**6 predefined themes**:
+**10 predefined themes** (including first-class Apple HIG / HarmonyOS aesthetic presets, each with a dark variant):
 
 | Theme | Style | primary | surface |
 |:---|:---|:---|:---|
@@ -671,6 +672,18 @@ p.enable_auto_dark()          // derive a dark variant from the current theme
 | sepia | Sepia | #8D6E63 | #FAF6F0 |
 | nord | Nordic | #88C0D0 | #3B4252 |
 | sunset | Warm sunset | #FF7043 | #FFF8E1 |
+| apple | Apple HIG (#F2F2F7 grouped canvas) | #0068D6 | #FFFFFF |
+| apple_dark | Apple HIG dark | #409CFF | #2C2C2E |
+| harmony | HarmonyOS (#F1F3F5 layered canvas) | #0A59F7 | #FFFFFF |
+| harmony_dark | HarmonyOS dark | #5291FF | #26292D |
+
+The aesthetic presets are **accessible translations** of the official palettes, not
+copies: every tier is WCAG-calibrated (button text and all three text tiers on all
+three surfaces ≥ 4.5:1 — the readability standard applies to every theme). Aliases
+normalize: `ios`/`hig` → apple, `harmonyos`/`huawei` → harmony, and a dark word in the
+same name (`harmony dark`) lands on the dark preset. Three equivalent channels at
+generation time: an aesthetic word in the intent (`apple style login`), the design
+spec's `"style":"apple"` key (palette then overrides same-named roles), or `theme apple`.
 
 **Auto dark**: `Theme::auto_dark(light)` → invert each RGB channel (hue rotates 180°) → a dark variant is generated automatically.
 

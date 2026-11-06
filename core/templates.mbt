@@ -425,7 +425,8 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Dashboard")
 
-  // 统计卡片 2×2 网格
+  // 统计卡片 2×2 网格（单行 "Label: value"；卡内两级层级会经 normalize
+  // 收编进栈卡被重排——栈卡子节点的坐标语义是栈序而非绝对位，v1 不碰）
   let stats = [
     ("Revenue", "$12.4K"),
     ("Users", "8,421"),
@@ -445,17 +446,59 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
     }
   }
 
-  // 图表区域
-  let _ = self.place_comp(
-    ab,
-    "card",
-    "chart_area",
-    variant="elevated",
+  // 图表：白底面板（rect 组件——无栈布局，normalize 收编柱子后保持相对
+  // 坐标不重排；栈卡 card 会把子节点竖排溢出）+ 标题 + 7 根圆角主色柱。
+  // 面板实心覆盖整个图表区：不留可被合成导航按钮钻入的内容空洞。
+  let _ = self.place_component(
+    artboard=ab,
+    component_id="rect",
+    instance_id="chart_area",
+    variant="default",
     x=24.0,
     y=310.0,
+    w=342.0,
+    h=200.0,
   )
-  self.resize_node(ab, "chart_area", 342.0, 200.0, 12.0)
-  self.set_text(ab, "chart_area", "Weekly Revenue")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="chart_area",
+    kvs=[
+      ("fill", self.tokens.resolve_color("surface")),
+      ("radius", "12"),
+      ("shadow", "e1"),
+    ],
+  )
+  let _ = self.place_component(
+    artboard=ab,
+    component_id="body_text",
+    instance_id="chart_title",
+    variant="caption",
+    x=40.0,
+    y=326.0,
+    w=200.0,
+    h=16.0,
+  )
+  self.set_text(ab, "chart_title", "Weekly Revenue")
+  let bars = [42.0, 58.0, 50.0, 74.0, 66.0, 92.0, 84.0]
+  let bar_fill = self.tokens.resolve_color("primary")
+  for b in 0..<7 {
+    let bh = bars[b]
+    let _ = self.place_component(
+      artboard=ab,
+      component_id="rect",
+      instance_id="bar_\{b}",
+      variant="default",
+      x=48.0 + b.to_double() * 44.0,
+      y=486.0 - bh,
+      w=26.0,
+      h=bh,
+    )
+    let _ = self.edit_node(
+      artboard=ab,
+      node_id="bar_\{b}",
+      kvs=[("fill", bar_fill), ("radius", "6")],
+    )
+  }
 
   // 最近活动列表
   let _ = self.place_comp(

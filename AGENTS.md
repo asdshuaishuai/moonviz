@@ -155,6 +155,16 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 8. 原子快照（issue #28）：`session_snapshot` 返回 `{revision,seq,canonical,render,
    animations,delta}`；seq 随改文档路径严格递增，delta/渲染按板 content_seq 增量
   （未变板零成本，基准见 `scripts/bench-snapshot.mjs`）。
+9. 视觉语言（critique 第 10 维 `visual`，检测项只报不修）：文字节点不带阴影
+   （阴影只属于容器层次）、卡片与画布同色时必须有阴影或 hairline、嵌套圆角同心
+   （子 ≤ 父，胶囊/正圆豁免）。组件默认 elevation 归组件层（`component_default_shadow`：
+   内容卡 e1 / 临时浮层 e2 / 模态 e3），按钮族文字默认居中（`component_centers_text`）。
+   **美学第一要素**：Apple HIG / HarmonyOS 是一等主题预设（apple/apple_dark/
+   harmony/harmony_dark），色值是官方色板的 WCAG 校准翻译——新增或调整预设必须
+   过 `visual_lang_wbtest` 的逐档对比度断言（主按钮字 + 三级文字 × 三层底 ≥4.5），
+   不得照抄官方原值（#007AFF 白字仅 4.02）。三通道等价：意图美学词 / spec `style` 键 /
+   `theme` 命令；导出 HTML 的 chrome 全部由主题令牌派生（画布 = background，
+   卡面 = surface），不得硬编码颜色。
 
 交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中
 返回类节点（id 词边界 back/prev/return；文本 返回/后退/上一步/back/←/‹/«）
