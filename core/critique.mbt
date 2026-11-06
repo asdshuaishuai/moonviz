@@ -381,6 +381,7 @@ pub fn Project::critique(
         radius_base=prof.radius_base,
         contrast_min=prof.contrast_min,
         touch_min=prof.touch_min,
+        canvas_bg=self.tokens.resolve_color("background"),
       )
       // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
       // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
@@ -431,7 +432,10 @@ pub fn Project::critique(
       // ── 10. 视觉语言（visual：阴影只属于容器 · 卡片层次可辨 · 同心圆角）──
       // 检测项、只报不修（审美方向由 Agent 决定）；与 norms 维度分账——
       // norms 是「不出错」，visual 是「有层次」（Apple HIG / 鸿蒙共识）。
-      let vis_list = norm_visual_issues(doc)
+      let vis_list = norm_visual_issues(
+        doc,
+        canvas_bg=self.tokens.resolve_color("background"),
+      )
       let n_vis = vis_list.length()
       let vis_score = if n_vis == 0 {
         9

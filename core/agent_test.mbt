@@ -131,7 +131,7 @@ test "engine catalog: chip/tag/toast 引用的令牌角色必须已注册（回�
 ///|
 test "设计令牌解析：颜色/间距/圆角" {
   let t = DesignTokens::default()
-  assert_eq(t.resolve_color("primary"), "#4B6BFB")
+  assert_eq(t.resolve_color("primary"), "#4361EE")
   assert_eq(t.resolve_color("#FF0000"), "#FF0000") // 非→原样返回
   assert_true(t.resolve_spacing("md") == Some(8.0))
   assert_true(t.resolve_radius("lg") == Some(12.0))

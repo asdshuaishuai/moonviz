@@ -39,7 +39,7 @@ test "主题：Project 切换主题" {
   let p = Project::new()
   // 初始是 light
   let l_primary = p.tokens.resolve_color("primary")
-  assert_eq(l_primary, "#4B6BFB")
+  assert_eq(l_primary, "#4361EE")
   // 切换到 dark
   match p.apply_theme("dark") {
     Ok(json) => {
@@ -50,7 +50,7 @@ test "主题：Project 切换主题" {
   }
   // primary 应该变了
   let d_primary = p.tokens.resolve_color("primary")
-  assert_true(d_primary != "#4B6BFB")
+  assert_true(d_primary != "#4361EE")
   // surface 应该是暗色
   let d_surface = p.tokens.resolve_color("surface")
   assert_eq(d_surface, "#1A1C1E")
@@ -198,7 +198,7 @@ test "主题 + 模板：切换主题后组件颜色自动变化" {
       match x.doc.get("btn") {
         Some(n) => {
           let light_fill = n.style.fill
-          assert_eq(light_fill, "#4B6BFB")
+          assert_eq(light_fill, "#4361EE")
         }
         None => assert_true(false)
       }

@@ -317,7 +317,7 @@ pub fn extended_components(
     "default",
     patch3("secondary_container", "on_secondary_container", 6.0),
   )
-  tgv.set("outline", patch2("surface", 6.0))
+  tgv.set("outline", patch3("surface", "text_primary", 6.0))
   m.set("tag", {
     id: "tag",
     kind: "rect",
@@ -412,8 +412,8 @@ pub fn extended_components(
   })
 
   let bgv : Map[String, NodePatch] = Map::new()
-  bgv.set("default", patch2("surface_variant", 8.0))
-  bgv.set("attached", patch2("surface_variant", 0.0))
+  bgv.set("default", patch3("surface_variant", "text_primary", 8.0))
+  bgv.set("attached", patch3("surface_variant", "text_primary", 0.0))
   m.set("button_group", {
     id: "button_group",
     kind: "rect",

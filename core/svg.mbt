@@ -130,10 +130,16 @@ fn render_node(
                   Some(da) => sb.write_string(" stroke-dasharray=\"\{da}\"")
                   None => ()
                 }
-              } else if n.style.fill == "none" && n.text == "" && n.id != doc.root_id {
-                // 无填充无文字的容器：细虚线边界，避免"幽灵组件"融进背景。
-                // 根节点豁免——画板本身是画布边界（surface 底已由 wrapper
-                // rect 画出），给画布描虚线是每个模板都背一遍的视觉债。
+              } else if n.style.fill == "none" &&
+                n.text == "" &&
+                n.id != doc.root_id &&
+                n.children.length() == 0 &&
+                n.component != "spacer" {
+                // 无填充无文字的**叶子**矩形：细虚线边界，避免"幽灵组件"融
+                // 进背景。豁免三类——根节点（画板本身是画布边界，surface 底
+                // 已由 wrapper rect 画出）；有子节点的容器（结构式模板的布局
+                // Frame，描虚线整页像线框稿）；spacer（刻意留白，不是待填的
+                // 幽灵组件）。
                 sb.write_string(
                   " stroke=\"\{frame}\" stroke-width=\"1\" stroke-dasharray=\"4 3\"",
                 )
@@ -186,7 +192,7 @@ fn render_node(
                   _ => (r.x + r.width / 2.0, " middle")
                 }
                 sb.write_string(
-                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",
+                  "<text xml:space=\"preserve\" x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",
                 )
                 if n.style.font_style == "italic" {
                   sb.write_string(" font-style=\"italic\"")
@@ -207,11 +213,22 @@ fn render_node(
 }
 
 ///|
-/// 文本节点：支持 \n 多行、自定义行高、字距
+/// 文本节点：支持 \n 多行、按节点宽贪心折行（CJK 逐字断 / 拉丁按词断）、
+/// 自定义行高、字距；盒高大于内容块时整块在行盒内垂直居中（审计 detail
+/// 参数行 / checkout 费用行顶对齐、行盒下半空的根因）；xml:space=preserve
+/// 保留模板用空格做的字段间隔（SVG 默认折叠连续空白会把它们挤成一串）。
 fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
-  let lines = split_lines(n.text)
+  let lines = wrap_text_lines(n.text, n.style.font_size, r.width)
   let lh = n.style.font_size * n.style.line_height
-  let first_baseline = r.y + n.style.font_size * 1.0
+  let block_h = lines.length().to_double() * lh
+  // 行盒内垂直居中：盒高足够时整块下移居中；Hug 高由求解器按内容给值，
+  // block_h == r.height，此分支天然不触发（渲染与布局同口径）
+  let block_top = if r.height > block_h + 0.5 {
+    r.y + (r.height - block_h) / 2.0
+  } else {
+    r.y
+  }
+  let first_baseline = block_top + n.style.font_size * 1.0
   // 水平对齐：left（默认，x 起点）/ center / right（x 终点 + text-anchor）
   let (tx, anchor) = match n.style.text_align {
     "center" => (r.x + r.width / 2.0, " text-anchor=\"middle\"")
@@ -219,7 +236,7 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
     _ => (r.x, "")
   }
   sb.write_string(
-    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
+    "<text xml:space=\"preserve\" x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
   )
   if anchor != "" {
     sb.write_string(anchor)

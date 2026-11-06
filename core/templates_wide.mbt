@@ -5,14 +5,38 @@
 /// - Web：顶部导航 + 居中内容列 + 多栏网格 + footer
 /// - PC 应用：标题栏 + 侧边栏 + 工具栏 + 多面板 + 状态栏
 ///
-/// 模板仍只用设计令牌与组件系统，保证 Agent 后续修改的一致性。
+/// 颜色一律先经 self.tokens.resolve_color(角色) 解析成 hex 再落盘
+/// （edit_node 不解析角色名，直接传 "surface" 会原样写进文档）——
+/// 宽屏模板随主题明暗翻转，不再有暗色主题下的刺眼白板（审计 R3）。
+/// 例外是明确的「反色 chrome」：侧边栏/标题栏的深色底与其上的浅色文字
+/// 是刻意的品牌深色，不随主题翻转。
 const WIDE_W : Double = 1280.0
 
 ///|
 const WIDE_H : Double = 800.0
 
 ///|
-/// 模板内联样式辅助：直接落 k=v（fill/text_color/stroke/radius/opacity）
+/// 反色 chrome 常量（PC 桌面应用壳）：侧边栏/标题栏的深色底是产品身份色，
+/// 与主题无关；其上文字固定浅灰，对比度对深底达标。
+const WIDE_INVERSE_BG : String = "#1E2126"
+
+///|
+const WIDE_INVERSE_TITLEBAR : String = "#111318"
+
+///|
+const WIDE_INVERSE_TEXT : String = "#C8CCD2"
+
+///|
+const WIDE_INVERSE_MUTED : String = "#7C838C"
+
+///|
+/// 反色深底上的弱白（标题/文件名）：#FFFFFF 对 #1E2126 约 14:1，这里
+/// 收一档到 #E8EAED 保持层次且仍 ≥10:1
+const WIDE_INVERSE_BRIGHT : String = "#E8EAED"
+
+///|
+/// 模板内联样式辅助：直接落 k=v（fill/text_color/stroke/radius/opacity）。
+/// kvs 的值须是已解析的 hex（本文件统一经 resolve_color 预解析）。
 fn Project::w_style(
   self : Project,
   ab : String,
@@ -28,12 +52,18 @@ fn Project::w_style(
 
 ///|
 fn Project::template_web_landing(self : Project, name : String) -> String {
+  let t = self.tokens
+  let c = fn(role : String) -> String { t.resolve_color(role) }
   let ab = self.create_artboard(name~, width=WIDE_W, height=WIDE_H)
 
   // 顶部导航栏
   let _ = self.place_comp(ab, "rect", "nav_bar", x=0.0, y=0.0)
   self.resize_node(ab, "nav_bar", WIDE_W, 64.0, 0.0)
-  self.w_style(ab, "nav_bar", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "nav_bar",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let _ = self.place_comp(
     ab,
     "badge",
@@ -100,7 +130,8 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   self.resize_node(ab, "hero_btn2", 160.0, 48.0, 10.0)
   let _ = self.place_comp(ab, "rect", "hero_art", x=720.0, y=140.0)
   self.resize_node(ab, "hero_art", 464.0, 260.0, 16.0)
-  self.w_style(ab, "hero_art", [("fill", "#EDF0FE")])
+  // 插图占位 = 品牌容器色（primary_container 随主题翻转，亮暗都可辨）
+  self.w_style(ab, "hero_art", [("fill", c("primary_container"))])
 
   // 三列特性卡
   let feats = ["Fast", "Smart", "Open"]
@@ -146,18 +177,19 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     self.resize_node(ab, bid, 200.0, 20.0, 0.0)
   }
 
-  // Footer
+  // Footer：surface_variant 深一档的面板带 + text_secondary（随主题翻转，
+  // 不再硬编码近黑底触发纯黑禁令、亮字压暗底读不清）
   let _ = self.place_comp(ab, "rect", "footer", x=0.0, y=736.0)
   self.resize_node(ab, "footer", WIDE_W, 64.0, 0.0)
-  self.w_style(ab, "footer", [("fill", "#14161A")])
+  self.w_style(ab, "footer", [("fill", c("surface_variant"))])
   let _ = self.place_comp(ab, "body_text", "footer_note", x=32.0, y=758.0)
   self.set_text(ab, "footer_note", "© 2026 MoonViz — AI native prototyping")
   self.resize_node(ab, "footer_note", 400.0, 20.0, 0.0)
-  self.w_style(ab, "footer_note", [("text_color", "#9AA1AB")])
+  self.w_style(ab, "footer_note", [("text_color", c("text_secondary"))])
   let _ = self.place_comp(ab, "body_text", "footer_links", x=980.0, y=758.0)
   self.set_text(ab, "footer_links", "About   Privacy   Contact")
   self.resize_node(ab, "footer_links", 260.0, 20.0, 0.0)
-  self.w_style(ab, "footer_links", [("text_color", "#9AA1AB")])
+  self.w_style(ab, "footer_links", [("text_color", c("text_secondary"))])
 
   ab
 }
@@ -168,15 +200,17 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
 
 ///|
 fn Project::template_web_login(self : Project, name : String) -> String {
+  let t = self.tokens
+  let c = fn(role : String) -> String { t.resolve_color(role) }
   let ab = self.create_artboard(name~, width=WIDE_W, height=WIDE_H)
 
-  // 左侧品牌区
+  // 左侧品牌区：主色实底 + on_primary 文字（随主题翻转，不再一屏两套蓝）
   let _ = self.place_comp(ab, "rect", "brand_pane", x=0.0, y=0.0)
   self.resize_node(ab, "brand_pane", 560.0, WIDE_H, 0.0)
-  self.w_style(ab, "brand_pane", [("fill", "#4B6BFB")])
+  self.w_style(ab, "brand_pane", [("fill", c("primary"))])
   let _ = self.place_comp(ab, "badge", "brand_logo", x=96.0, y=120.0)
   self.resize_node(ab, "brand_logo", 64.0, 64.0, 999.0)
-  self.w_style(ab, "brand_logo", [("fill", "#FFFFFF")])
+  self.w_style(ab, "brand_logo", [("fill", c("on_primary"))])
   let _ = self.place_comp(
     ab,
     "heading",
@@ -187,18 +221,22 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "brand_title", "Design together\nwith your agent")
   self.resize_node(ab, "brand_title", 400.0, 112.0, 0.0)
-  self.w_style(ab, "brand_title", [("text_color", "#FFFFFF")])
+  self.w_style(ab, "brand_title", [("text_color", c("on_primary"))])
   let _ = self.place_comp(ab, "body_text", "brand_sub", x=96.0, y=452.0)
   self.set_text(
     ab, "brand_sub", "One plain-text source of truth for humans and AI.",
   )
   self.resize_node(ab, "brand_sub", 380.0, 24.0, 0.0)
-  self.w_style(ab, "brand_sub", [("text_color", "#DCE3FF")])
+  self.w_style(ab, "brand_sub", [("text_color", c("on_primary"))])
 
   // 右侧表单卡
   let _ = self.place_comp(ab, "rect", "form_card", x=680.0, y=180.0)
   self.resize_node(ab, "form_card", 440.0, 440.0, 16.0)
-  self.w_style(ab, "form_card", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "form_card",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let _ = self.place_comp(
     ab,
     "heading",
@@ -242,6 +280,7 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "wl_forgot", "Forgot password?")
   self.resize_node(ab, "wl_forgot", 144.0, 18.0, 0.0)
+  self.w_style(ab, "wl_forgot", [("text_color", c("primary"))])
   let _ = self.place_comp(
     ab,
     "button",
@@ -272,12 +311,14 @@ fn Project::template_web_login(self : Project, name : String) -> String {
 
 ///|
 fn Project::template_web_dashboard(self : Project, name : String) -> String {
+  let t = self.tokens
+  let c = fn(role : String) -> String { t.resolve_color(role) }
   let ab = self.create_artboard(name~, width=WIDE_W, height=WIDE_H)
 
-  // 侧边栏
+  // 侧边栏：反色 chrome（品牌深底），文字固定浅色
   let _ = self.place_comp(ab, "rect", "sb", x=0.0, y=0.0)
   self.resize_node(ab, "sb", 224.0, WIDE_H, 0.0)
-  self.w_style(ab, "sb", [("fill", "#1E2126")])
+  self.w_style(ab, "sb", [("fill", WIDE_INVERSE_BG)])
   let _ = self.place_comp(
     ab,
     "badge",
@@ -297,10 +338,17 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   )
   self.set_text(ab, "sb_name", "MoonViz")
   self.resize_node(ab, "sb_name", 120.0, 22.0, 0.0)
-  self.w_style(ab, "sb_name", [("text_color", "#FFFFFF")])
+  self.w_style(ab, "sb_name", [("text_color", WIDE_INVERSE_BRIGHT)])
   let items = ["Overview", "Analytics", "Projects", "Team", "Billing"]
   for i in 0..<5 {
     let id = "sb_i" + i.to_string()
+    // 选中项背景条先放（画在文字底下），不再重复绘制第二份文字
+    // （旧实现 sb_i0 与 sb_i0_fg 同坐标同文案叠两层，渲染发虚）
+    if i == 0 {
+      let _ = self.place_comp(ab, "rect", id + "_bg", x=16.0, y=88.0)
+      self.resize_node(ab, id + "_bg", 192.0, 36.0, 8.0)
+      self.w_style(ab, id + "_bg", [("fill", c("primary"))])
+    }
     let _ = self.place_comp(
       ab,
       "body_text",
@@ -311,27 +359,21 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
     self.set_text(ab, id, items[i])
     self.resize_node(ab, id, 160.0, 20.0, 0.0)
     let active : Array[(String, String)] = if i == 0 {
-      [("text_color", "#FFFFFF")]
+      [("text_color", WIDE_INVERSE_BRIGHT)]
     } else {
-      [("text_color", "#7C838C")]
+      [("text_color", WIDE_INVERSE_MUTED)]
     }
     self.w_style(ab, id, active)
-    // 选中项背景条
-    if i == 0 {
-      let _ = self.place_comp(ab, "rect", id + "_bg", x=16.0, y=88.0)
-      self.resize_node(ab, id + "_bg", 192.0, 36.0, 8.0)
-      self.w_style(ab, id + "_bg", [("fill", "#4B6BFB")])
-      let _ = self.place_comp(ab, "body_text", id + "_fg", x=28.0, y=96.0)
-      self.set_text(ab, id + "_fg", items[i])
-      self.resize_node(ab, id + "_fg", 160.0, 20.0, 0.0)
-      self.w_style(ab, id + "_fg", [("text_color", "#FFFFFF")])
-    }
   }
 
   // 顶栏
   let _ = self.place_comp(ab, "rect", "topbar", x=224.0, y=0.0)
   self.resize_node(ab, "topbar", WIDE_W - 224.0, 64.0, 0.0)
-  self.w_style(ab, "topbar", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "topbar",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let _ = self.place_comp(
     ab,
     "heading",
@@ -399,15 +441,20 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
     self.set_text(ab, did, deltas[i])
     // 164 而非 196：卡内容宽 204（236-2×16），交叉轴居中下 196 会溢出
     self.resize_node(ab, did, 164.0, 16.0, 0.0)
+    // 涨跌色走语义令牌（success/error 随主题校准，不再硬编码固定绿红）
     self.w_style(ab, did, [
-      ("text_color", if i == 3 { "#E57373" } else { "#81C784" }),
+      ("text_color", if i == 3 { c("error") } else { c("success") }),
     ])
   }
 
   // 图表区 + 侧面板
   let _ = self.place_comp(ab, "rect", "wd_chart", x=252.0, y=212.0)
   self.resize_node(ab, "wd_chart", 580.0, 360.0, 12.0)
-  self.w_style(ab, "wd_chart", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "wd_chart",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let _ = self.place_comp(
     ab,
     "heading",
@@ -430,11 +477,15 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       y=536.0 - bars[i],
     )
     self.resize_node(ab, id, 40.0, bars[i], 4.0)
-    self.w_style(ab, id, [("fill", "#4B6BFB")])
+    self.w_style(ab, id, [("fill", c("primary"))])
   }
   let _ = self.place_comp(ab, "rect", "wd_side", x=848.0, y=212.0)
   self.resize_node(ab, "wd_side", 408.0, 360.0, 12.0)
-  self.w_style(ab, "wd_side", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "wd_side",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let _ = self.place_comp(
     ab,
     "heading",
@@ -458,7 +509,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       y=276.0 + i.to_double() * 64.0,
     )
     self.resize_node(ab, id, 360.0, 52.0, 8.0)
-    self.w_style(ab, id, [("fill", "#F4F5F7")])
+    self.w_style(ab, id, [("fill", c("surface_variant"))])
     let tid = "wd_at" + i.to_string()
     let _ = self.place_comp(
       ab,
@@ -474,7 +525,11 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   // 底部表格区
   let _ = self.place_comp(ab, "rect", "wd_table", x=252.0, y=596.0)
   self.resize_node(ab, "wd_table", 1004.0, 180.0, 12.0)
-  self.w_style(ab, "wd_table", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "wd_table",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let heads = ["User", "Action", "Time"]
   let hx = [276.0, 700.0, 1050.0]
   for i in 0..<3 {
@@ -489,7 +544,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
     )
     self.set_text(ab, id, heads[i])
     self.resize_node(ab, id, 120.0, 18.0, 0.0)
-    self.w_style(ab, id, [("text_color", "#7C838C")])
+    self.w_style(ab, id, [("text_color", c("text_hint"))])
   }
   let rows = [
     ["ada", "move hero_art", "2m"],
@@ -520,12 +575,14 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
 
 ///|
 fn Project::template_pc_app(self : Project, name : String) -> String {
+  let t = self.tokens
+  let c = fn(role : String) -> String { t.resolve_color(role) }
   let ab = self.create_artboard(name~, width=WIDE_W, height=WIDE_H)
 
-  // 标题栏（红黄绿交通灯）
+  // 标题栏（红黄绿交通灯）：反色 chrome
   let _ = self.place_comp(ab, "rect", "title_bar", x=0.0, y=0.0)
   self.resize_node(ab, "title_bar", WIDE_W, 36.0, 0.0)
-  self.w_style(ab, "title_bar", [("fill", "#111318")])
+  self.w_style(ab, "title_bar", [("fill", WIDE_INVERSE_TITLEBAR)])
   let dots = ["#FF5F57", "#FEBC2E", "#28C840"]
   for i in 0..<3 {
     let id = "tl_dot" + i.to_string()
@@ -542,12 +599,12 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   let _ = self.place_comp(ab, "body_text", "tl_title", x=600.0, y=9.0)
   self.set_text(ab, "tl_title", "MoonViz Studio — login.mbt.md")
   self.resize_node(ab, "tl_title", 300.0, 18.0, 0.0)
-  self.w_style(ab, "tl_title", [("text_color", "#9AA1AB")])
+  self.w_style(ab, "tl_title", [("text_color", WIDE_INVERSE_MUTED)])
 
-  // 侧边栏
+  // 侧边栏：反色 chrome
   let _ = self.place_comp(ab, "rect", "pc_sb", x=0.0, y=36.0)
   self.resize_node(ab, "pc_sb", 240.0, 728.0, 0.0)
-  self.w_style(ab, "pc_sb", [("fill", "#1E2126")])
+  self.w_style(ab, "pc_sb", [("fill", WIDE_INVERSE_BG)])
   let files = ["login.mbt.md", "dashboard.mbt.md", "tokens.json", "history.log"]
   for i in 0..<4 {
     let id = "pc_f" + i.to_string()
@@ -564,9 +621,9 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       ab,
       id,
       if i == 0 {
-        [("text_color", "#FFFFFF")]
+        [("text_color", WIDE_INVERSE_BRIGHT)]
       } else {
-        [("text_color", "#7C838C")]
+        [("text_color", WIDE_INVERSE_MUTED)]
       },
     )
   }
@@ -580,7 +637,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   )
   self.set_text(ab, "pc_sbh", "Pages")
   self.resize_node(ab, "pc_sbh", 120.0, 20.0, 0.0)
-  self.w_style(ab, "pc_sbh", [("text_color", "#9AA1AB")])
+  self.w_style(ab, "pc_sbh", [("text_color", WIDE_INVERSE_MUTED)])
   let pages = ["login", "signup", "dashboard"]
   for i in 0..<3 {
     let id = "pc_p" + i.to_string()
@@ -593,13 +650,18 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     )
     self.set_text(ab, id, pages[i])
     self.resize_node(ab, id, 160.0, 20.0, 0.0)
-    self.w_style(ab, id, [("text_color", "#C8CCD2")])
+    self.w_style(ab, id, [("text_color", WIDE_INVERSE_TEXT)])
   }
 
-  // 工具栏
+  // 工具栏：随主题（暗色下不再白底压深灰按钮）；按钮归按钮族规范档
+  // （高 36 / 圆角 8——32 高的密集工具栏档会吃 norms 偏差）
   let _ = self.place_comp(ab, "rect", "pc_tb", x=240.0, y=36.0)
   self.resize_node(ab, "pc_tb", WIDE_W - 240.0, 52.0, 0.0)
-  self.w_style(ab, "pc_tb", [("fill", "#FFFFFF"), ("stroke", "#E0E0E0")])
+  self.w_style(
+    ab,
+    "pc_tb",
+    [("fill", c("surface")), ("stroke", c("outline_variant"))],
+  )
   let tbtns = ["Select", "Move", "Text"]
   for i in 0..<3 {
     let id = "pc_tbn" + i.to_string()
@@ -609,10 +671,10 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       id,
       variant="secondary",
       x=260.0 + i.to_double() * 96.0,
-      y=46.0,
+      y=44.0,
     )
     self.set_text(ab, id, tbtns[i])
-    self.resize_node(ab, id, 84.0, 32.0, 6.0)
+    self.resize_node(ab, id, 84.0, 36.0, 8.0)
   }
   let _ = self.place_comp(
     ab,
@@ -620,15 +682,15 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     "pc_run",
     variant="primary",
     x=1156.0,
-    y=46.0,
+    y=44.0,
   )
   self.set_text(ab, "pc_run", "Critique")
-  self.resize_node(ab, "pc_run", 92.0, 32.0, 6.0)
+  self.resize_node(ab, "pc_run", 92.0, 36.0, 8.0)
 
-  // 三面板：图层列表 / 画布 / 属性
+  // 三面板：图层列表 / 画布 / 属性（随主题，标题与列表文字走令牌）
   let _ = self.place_comp(ab, "rect", "pc_layers", x=240.0, y=88.0)
   self.resize_node(ab, "pc_layers", 280.0, 684.0, 0.0)
-  self.w_style(ab, "pc_layers", [("fill", "#F4F5F7")])
+  self.w_style(ab, "pc_layers", [("fill", c("surface_variant"))])
   let _ = self.place_comp(
     ab,
     "heading",
@@ -654,20 +716,24 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   }
   let _ = self.place_comp(ab, "rect", "pc_canvas", x=520.0, y=88.0)
   self.resize_node(ab, "pc_canvas", 560.0, 684.0, 0.0)
-  self.w_style(ab, "pc_canvas", [("fill", "#FFFFFF")])
-  // 画布内放一个居中手机画板缩略示意
+  self.w_style(ab, "pc_canvas", [("fill", c("surface"))])
+  // 画布内放一个手机画板缩略示意（品牌容器色，随主题翻转）
   let _ = self.place_comp(ab, "rect", "pc_phone", x=640.0, y=150.0)
   self.resize_node(ab, "pc_phone", 180.0, 380.0, 16.0)
-  self.w_style(ab, "pc_phone", [("fill", "#EDF0FE"), ("stroke", "#4B6BFB")])
+  self.w_style(
+    ab,
+    "pc_phone",
+    [("fill", c("primary_container")), ("stroke", c("primary"))],
+  )
   let _ = self.place_comp(ab, "rect", "pc_phone_hdr", x=656.0, y=174.0)
   self.resize_node(ab, "pc_phone_hdr", 148.0, 28.0, 6.0)
-  self.w_style(ab, "pc_phone_hdr", [("fill", "#4B6BFB")])
+  self.w_style(ab, "pc_phone_hdr", [("fill", c("primary"))])
   let _ = self.place_comp(ab, "rect", "pc_phone_btn", x=672.0, y=452.0)
   self.resize_node(ab, "pc_phone_btn", 116.0, 36.0, 18.0)
-  self.w_style(ab, "pc_phone_btn", [("fill", "#4B6BFB")])
+  self.w_style(ab, "pc_phone_btn", [("fill", c("primary"))])
   let _ = self.place_comp(ab, "rect", "pc_props", x=1080.0, y=88.0)
   self.resize_node(ab, "pc_props", 200.0, 684.0, 0.0)
-  self.w_style(ab, "pc_props", [("fill", "#F4F5F7")])
+  self.w_style(ab, "pc_props", [("fill", c("surface_variant"))])
   let _ = self.place_comp(
     ab,
     "heading",
@@ -692,10 +758,10 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     self.resize_node(ab, id, 160.0, 18.0, 0.0)
   }
 
-  // 状态栏
+  // 状态栏：surface_variant 面板带 + text_hint 说明字（全部主题 ≥4.5）
   let _ = self.place_comp(ab, "rect", "pc_status", x=240.0, y=772.0)
   self.resize_node(ab, "pc_status", WIDE_W - 240.0, 28.0, 0.0)
-  self.w_style(ab, "pc_status", [("fill", "#EDF0FE")])
+  self.w_style(ab, "pc_status", [("fill", c("surface_variant"))])
   let _ = self.place_comp(
     ab,
     "body_text",

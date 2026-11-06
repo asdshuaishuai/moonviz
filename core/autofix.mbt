@@ -32,7 +32,12 @@ pub fn Project::auto_fix(
       // 的谓词循环把新引入的违规一并清掉。
       let norm_layout = solve(ab.doc)
       let prof = self.norms_profile()
-      for f in norm_fix_pass(ab.doc, norm_layout, radius_base=prof.radius_base).iter() {
+      for f in norm_fix_pass(
+        ab.doc,
+        norm_layout,
+        radius_base=prof.radius_base,
+        canvas_bg=self.tokens.resolve_color("background"),
+      ).iter() {
         fixes.push(f)
       }
       // Norms v2 触控目标（44×44）在同一先修段：norm_fix_pass 改过尺寸，

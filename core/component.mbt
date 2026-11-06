@@ -48,7 +48,12 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
 
   let bv : Map[String, NodePatch] = Map::new()
   bv.set("primary", patch3("primary", "on_primary", 8.0))
-  bv.set("secondary", patch3("secondary_container", "text_primary", 8.0))
+  // secondary 容器底配 on_secondary_container（Material/HIG 的 tonal 按钮口径，
+  // 与 chip 同语义）：文字角色随容器底翻转，recolor 反查也单一化
+  bv.set(
+    "secondary",
+    patch3("secondary_container", "on_secondary_container", 8.0),
+  )
   bv.set("danger", patch3("error", "on_primary", 8.0))
   m.set("button", {
     id: "button",
@@ -62,10 +67,11 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let iv : Map[String, NodePatch] = Map::new()
-  iv.set("default", patch2("surface_variant", 8.0))
-  // filled 输入底用中性 surface_variant（输入层不是品牌 tint 层——HIG/
-  // 鸿蒙的 filled field 都是中性灰阶，品牌色留给主操作）
-  iv.set("filled", patch2("surface_variant", 12.0))
+  // 输入底用中性 surface_variant（输入层不是品牌 tint 层——HIG/
+  // 鸿蒙的 filled field 都是中性灰阶，品牌色留给主操作）；占位文字
+  // 绑 text_hint：占位是提示不是已填值，且暗色下出厂黑字会撞色（审计 R1）
+  iv.set("default", patch3("surface_variant", "text_hint", 8.0))
+  iv.set("filled", patch3("surface_variant", "text_hint", 12.0))
   m.set("text_input", {
     id: "text_input",
     kind: "rect",
@@ -78,7 +84,9 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let cv : Map[String, NodePatch] = Map::new()
-  cv.set("elevated", patch2("surface", 12.0))
+  // card 文字绑 text_primary：模板常直接把文案写在卡上，暗色主题下
+  // 出厂 #111111 压 surface 深底只有 1.35:1（审计 R1/dashboard/profile）
+  cv.set("elevated", patch3("surface", "text_primary", 12.0))
   m.set("card", {
     id: "card",
     kind: "frame",
@@ -96,8 +104,10 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let av : Map[String, NodePatch] = Map::new()
-  av.set("surface", patch1("surface"))
-  av.set("primary", patch1("primary"))
+  // app_bar 标题随底色取对文字角色：surface→text_primary、primary→on_primary
+  // （出厂 #111111 压主色蓝底 3.4~3.6:1 不达标，审计 dashboard:top_bar）
+  av.set("surface", patch3("surface", "text_primary", 0.0))
+  av.set("primary", patch3("primary", "on_primary", 0.0))
   m.set("app_bar", {
     id: "app_bar",
     kind: "rect",
@@ -227,8 +237,15 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let avv : Map[String, NodePatch] = Map::new()
-  avv.set("circle", patch2("secondary_container", 999.0))
-  avv.set("square", patch2("secondary_container", 8.0))
+  // avatar 常放首字母 text，文字角色随容器底（on_secondary_container）
+  avv.set(
+    "circle",
+    patch3("secondary_container", "on_secondary_container", 999.0),
+  )
+  avv.set(
+    "square",
+    patch3("secondary_container", "on_secondary_container", 8.0),
+  )
   m.set("avatar", {
     id: "avatar",
     kind: "rect",
@@ -300,8 +317,11 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let liv : Map[String, NodePatch] = Map::new()
-  liv.set("default", patch2("surface", 10.0))
-  liv.set("highlighted", patch2("secondary_container", 10.0))
+  liv.set("default", patch3("surface", "text_primary", 10.0))
+  liv.set(
+    "highlighted",
+    patch3("secondary_container", "on_secondary_container", 10.0),
+  )
   m.set("list_item", {
     id: "list_item",
     kind: "rect",
@@ -314,8 +334,11 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   })
 
   let tbv : Map[String, NodePatch] = Map::new()
-  tbv.set("default", patch2("surface_variant", 10.0))
-  tbv.set("active", patch2("primary", 10.0))
+  // tab_bar 是全宽底边条：圆角 0（norms.mbt:75 与 norm_is_full_bleed_component
+  // 同一判据，出厂圆角 10 会在 critique 自报偏差）；文字绑 text_secondary，
+  // active 变体主色底配 on_primary
+  tbv.set("default", patch3("surface_variant", "text_secondary", 0.0))
+  tbv.set("active", patch3("primary", "on_primary", 0.0))
   m.set("tab_bar", {
     id: "tab_bar",
     kind: "rect",

@@ -119,6 +119,7 @@ pub fn norm_issues(
   doc : Document,
   layout : SolvedLayout,
   radius_base? : Double = NORM_RADIUS_BASE,
+  canvas_bg? : String = "#FFFFFF",
 ) -> Array[String] {
   let issues : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
@@ -152,9 +153,16 @@ pub fn norm_issues(
             //    品牌色正常设计（微信绿白字 ≈2.4）不误伤。优先级最高——
             //    不可读比一切样式问题都严重。
             if n.text.length() > 0 {
-              match norm_text_collision(doc, id, n.style.fill, n.style.text_color, n.text) {
+              match norm_text_collision(
+                doc,
+                id,
+                n.style.fill,
+                n.style.text_color,
+                n.text,
+                canvas_bg~,
+              ) {
                 Some(cr) => {
-                  let bg = norm_effective_bg(doc, id, n.style.fill)
+                  let bg = norm_effective_bg(doc, id, n.style.fill, canvas_bg~)
                   issues.push(
                     "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字与背景撞色：\{bg} 底 \{n.style.text_color} 字，对比度仅 \{cr}（同色系严禁）→ auto_fix 翻转文字色",
                   )
@@ -230,6 +238,7 @@ pub fn norm_fix_pass(
   doc : Document,
   layout : SolvedLayout,
   radius_base? : Double = NORM_RADIUS_BASE,
+  canvas_bg? : String = "#FFFFFF",
 ) -> Array[String] {
   let fixes : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
@@ -252,7 +261,7 @@ pub fn norm_fix_pass(
             // 0) 撞色修复（严禁背景色和文字同色系）：对比度 < 2.0 时文字色按
             //    背景亮度翻转到黑/白——不可读比任何设计偏好都优先。
             if n.text.length() > 0 {
-              let bg = norm_effective_bg(doc, id, n.style.fill)
+              let bg = norm_effective_bg(doc, id, n.style.fill, canvas_bg~)
               if norm_is_hex6(bg) && norm_is_hex6(n.style.text_color) {
                 let cr = norm_contrast_ratio(
                   norm_luminance(bg),
@@ -614,11 +623,14 @@ fn norm_contrast_ratio(a : Double, b : Double) -> Double {
 
 ///|
 /// 有效背景色：自身实底优先；透明（none）向上找最近的实底祖先；
-/// 全透明按白底收尾。
+/// 全透明按画板/主题底色收尾（canvas_bg，默认白底保持向后兼容——
+/// 暗色主题下用白底兜底会把正确的亮色文字判成撞色并翻成深色，
+/// 反而在画板上不可见，审计 R6）。
 fn norm_effective_bg(
   doc : Document,
   node_id : String,
   own_fill : String,
+  canvas_bg? : String = "#FFFFFF",
 ) -> String {
   if own_fill != "none" && norm_is_hex6(own_fill) {
     return own_fill
@@ -641,7 +653,7 @@ fn norm_effective_bg(
       }
     }
   }
-  "#FFFFFF"
+  canvas_bg
 }
 
 ///|
@@ -653,17 +665,18 @@ fn norm_text_collision(
   fill : String,
   text_color : String,
   text : String,
+  canvas_bg? : String = "#FFFFFF",
 ) -> Double? {
   if text.length() == 0 {
     return None
   }
   if !norm_is_hex6(text_color) || !norm_is_hex6(fill) {
-    let bg = norm_effective_bg(doc, node_id, fill)
+    let bg = norm_effective_bg(doc, node_id, fill, canvas_bg~)
     if !norm_is_hex6(text_color) || !norm_is_hex6(bg) {
       return None
     }
   }
-  let bg = norm_effective_bg(doc, node_id, fill)
+  let bg = norm_effective_bg(doc, node_id, fill, canvas_bg~)
   if !norm_is_hex6(bg) || !norm_is_hex6(text_color) {
     return None
   }
@@ -1087,6 +1100,7 @@ pub fn norm_readability_issues(
   doc : Document,
   layout : SolvedLayout,
   contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
+  canvas_bg? : String = "#FFFFFF",
 ) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
@@ -1101,7 +1115,7 @@ pub fn norm_readability_issues(
           _ => false
         }
         if n.text.length() > 0 {
-          let bg = norm_effective_bg(doc, id, n.style.fill)
+          let bg = norm_effective_bg(doc, id, n.style.fill, canvas_bg~)
           if norm_is_hex6(bg) && norm_is_hex6(n.style.text_color) {
             let cr = norm_contrast_ratio(
               norm_luminance(bg),
@@ -1134,7 +1148,7 @@ pub fn norm_readability_issues(
           n.children.length() == 0 &&
           n.style.stroke == "none" &&
           norm_is_hex6(n.style.fill) {
-          let pbg = norm_effective_bg(doc, id, "none")
+          let pbg = norm_effective_bg(doc, id, "none", canvas_bg~)
           if norm_is_hex6(pbg) && n.style.fill.to_lower() == pbg.to_lower() {
             issues.push(
               "\{json_escape(id)}（\{n.component}）组件不可见：填充与父背景同为 \{pbg} 且无描边/文本 → 换填充或删除该节点",
@@ -1160,8 +1174,9 @@ pub fn norm_issues_v2(
   radius_base? : Double = NORM_RADIUS_BASE,
   contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
   touch_min? : Double = NORM_TOUCH_MIN,
+  canvas_bg? : String = "#FFFFFF",
 ) -> Array[String] {
-  let issues = norm_issues(doc, layout, radius_base~)
+  let issues = norm_issues(doc, layout, radius_base~, canvas_bg~)
   for issue in norm_touch_issues(doc, layout, touch_min~).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }
@@ -1175,7 +1190,7 @@ pub fn norm_issues_v2(
     if issues.length() < 8 { issues.push(issue) }
   }
   // issue #23：可读性硬标准（对比度 / 不可见 / 纯黑底），检测项
-  for issue in norm_readability_issues(doc, layout, contrast_min~).iter() {
+  for issue in norm_readability_issues(doc, layout, contrast_min~, canvas_bg~).iter() {
     if issues.length() < 8 { issues.push(issue) }
   }
   issues
@@ -1194,7 +1209,10 @@ pub fn norm_issues_v2(
 // ---------------------------------------------------------------------------
 
 ///|
-pub fn norm_visual_issues(doc : Document) -> Array[String] {
+pub fn norm_visual_issues(
+  doc : Document,
+  canvas_bg? : String = "#FFFFFF",
+) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
     if issues.length() >= 8 {
@@ -1221,7 +1239,7 @@ pub fn norm_visual_issues(doc : Document) -> Array[String] {
         let is_card = n.component == "card" || n.component == "stat"
         let no_edge = n.style.stroke == "none" || n.style.stroke_width <= 0.0
         if is_card && n.style.shadow == "none" && no_edge && norm_is_hex6(n.style.fill) {
-          let pbg = norm_effective_bg(doc, id, "none")
+          let pbg = norm_effective_bg(doc, id, "none", canvas_bg~)
           if norm_is_hex6(pbg) && n.style.fill.to_lower() == pbg.to_lower() {
             issues.push(
               "\{json_escape(id)}（\{n.component}）卡片层次不可辨：与画布同为 \{pbg} 且无阴影无描边（视觉语言）",

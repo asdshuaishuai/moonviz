@@ -127,7 +127,9 @@ pub fn Theme::dark() -> Theme {
   t.colors.set("outline_variant", "#2A2C2E")
   t.colors.set("text_primary", "#E0E0E0")
   t.colors.set("text_secondary", "#A0A5AD")
-  t.colors.set("text_hint", "#6B7078")
+  // text_hint 加亮一档：#6B7078 压 surface_variant 仅 2.81，
+  // #989EA6 达 5.19（sv）/ 6.33（surface）
+  t.colors.set("text_hint", "#989EA6")
   { name: "dark", display_name: "深色", tokens: t, is_dark: true, }
 }
 
@@ -144,6 +146,13 @@ pub fn Theme::high_contrast() -> Theme {
   t.colors.set("text_secondary", "#1A1A1A")
   t.colors.set("text_hint", "#333333")
   t.colors.set("outline", "#000000")
+  // 补齐角色集（模板按角色取色，缺角色会以原名落盘成非法色值）：
+  t.colors.set("error_container", "#FFD9D9")
+  t.colors.set("on_secondary_container", "#000000")
+  t.colors.set("outline_variant", "#666666")
+  t.colors.set("success", "#006600")
+  t.colors.set("warning", "#A85D00")
+  t.colors.set("text_on_primary", "#FFFFFF")
   {
     name: "high_contrast",
     display_name: "高对比度",
@@ -167,7 +176,15 @@ pub fn Theme::sepia() -> Theme {
   t.colors.set("text_primary", "#3E2723")
   t.colors.set("text_secondary", "#5D4037")
   t.colors.set("text_hint", "#8D6E63")
-  t.colors.set("outline", "#BCAAA4")
+  // text_hint 加深一档：#8D6E63 压 surface_variant 仅 4.07，#7A5C50 达 5.33
+  t.colors.set("text_hint", "#7A5C50")
+  // 补齐角色集（模板按角色取色，缺角色会以原名落盘成非法色值）：
+  t.colors.set("error_container", "#F3D9D2")
+  t.colors.set("on_secondary_container", "#3E2723")
+  t.colors.set("outline_variant", "#E3D8C8")
+  t.colors.set("success", "#2E5D34")
+  t.colors.set("warning", "#8A5A00")
+  t.colors.set("text_on_primary", "#FFFFFF")
   { name: "sepia", display_name: "复古棕", tokens: t, is_dark: false, }
 }
 
@@ -184,21 +201,29 @@ pub fn Theme::nord() -> Theme {
   t.colors.set("surface", "#3B4252")
   t.colors.set("surface_variant", "#434C5E")
   t.colors.set("background", "#2E3440")
-  t.colors.set("error", "#BF616A")
+  // error 提亮一档：#BF616A 压 surface 仅 2.46，#E49AA2 达 4.52
+  t.colors.set("error", "#E49AA2")
   t.colors.set("success", "#A3BE8C")
   t.colors.set("warning", "#EBCB8B")
   t.colors.set("outline", "#4C566A")
   t.colors.set("outline_variant", "#3B4252")
   t.colors.set("text_primary", "#ECEFF4")
   t.colors.set("text_secondary", "#D8DEE9")
-  t.colors.set("text_hint", "#7B88A1")
+  // text_hint 加亮一档：#7B88A1 压 surface_variant 仅 2.42，#B4BFD4 达 4.66
+  t.colors.set("text_hint", "#B4BFD4")
+  t.colors.set("error_container", "#53343A")
   { name: "nord", display_name: "Nord 极地", tokens: t, is_dark: true, }
 }
 
 ///|
 pub fn Theme::sunset() -> Theme {
   let t = DesignTokens::default()
-  t.colors.set("primary", "#FF7043")
+  // 逐档 WCAG 校准（美学第一要素同款口径）：
+  // - primary #FF7043 白字仅 2.74，加深到深橙 #BF360C（5.6）——浅橙留给
+  //   secondary/primary_container 做暖色点缀，主操作仍可读；
+  // - success #43A047 压米色底仅 3.1，#2E7D32 达 4.83/4.68；
+  // - text_hint #8D6E63 压 surface_variant 仅 3.94，#75593F 达 5.5。
+  t.colors.set("primary", "#BF360C")
   t.colors.set("primary_container", "#FBE9E7")
   t.colors.set("on_primary", "#FFFFFF")
   t.colors.set("secondary", "#FF8A65")
@@ -207,12 +232,17 @@ pub fn Theme::sunset() -> Theme {
   t.colors.set("surface_variant", "#FFECB3")
   t.colors.set("background", "#FFF3E0")
   t.colors.set("error", "#D32F2F")
-  t.colors.set("success", "#43A047")
+  t.colors.set("success", "#2E7D32")
   t.colors.set("warning", "#FB8C00")
   t.colors.set("outline", "#FFCC80")
   t.colors.set("text_primary", "#3E2723")
   t.colors.set("text_secondary", "#5D4037")
-  t.colors.set("text_hint", "#8D6E63")
+  t.colors.set("text_hint", "#75593F")
+  // 补齐角色集（模板按角色取色，缺角色会以原名落盘成非法色值）：
+  t.colors.set("error_container", "#FFE0D3")
+  t.colors.set("on_secondary_container", "#4E2A18")
+  t.colors.set("outline_variant", "#F2DCC0")
+  t.colors.set("text_on_primary", "#FFFFFF")
   { name: "sunset", display_name: "落日暖", tokens: t, is_dark: false, }
 }
 
@@ -248,13 +278,15 @@ pub fn Theme::apple() -> Theme {
   t.colors.set("background", "#F2F2F7")
   t.colors.set("error", "#D70015")
   t.colors.set("error_container", "#FFE0DE")
-  t.colors.set("success", "#248A3D")
+  // success 加深一档：#248A3D 压白 4.40 / 压画布 3.94，#217F38 达 5.05/4.53
+  t.colors.set("success", "#217F38")
   t.colors.set("warning", "#C93400")
   t.colors.set("outline", "#C6C6C8")
   t.colors.set("outline_variant", "#E5E5EA")
   t.colors.set("text_primary", "#1D1D1F")
   t.colors.set("text_secondary", "#66666B")
-  t.colors.set("text_hint", "#667078")
+  // text_hint 加深一档：#667078 压 surface_variant 仅 4.33，#616A72 达 4.72
+  t.colors.set("text_hint", "#616A72")
   { name: "apple", display_name: "Apple HIG", tokens: t, is_dark: false, }
 }
 
@@ -280,7 +312,8 @@ pub fn Theme::apple_dark() -> Theme {
   t.colors.set("outline_variant", "#3A3A3C")
   t.colors.set("text_primary", "#F5F5F7")
   t.colors.set("text_secondary", "#AEAEB2")
-  t.colors.set("text_hint", "#98989E")
+  // text_hint 加亮一档：#98989E 压 surface_variant 仅 3.96，#A6A6AB 达 4.68
+  t.colors.set("text_hint", "#A6A6AB")
   {
     name: "apple_dark",
     display_name: "Apple HIG 暗色",
@@ -305,7 +338,8 @@ pub fn Theme::harmony() -> Theme {
   t.colors.set("background", "#F1F3F5")
   t.colors.set("error", "#D0340F")
   t.colors.set("error_container", "#FFE0DB")
-  t.colors.set("success", "#3D9134")
+  // success 加深一档：#3D9134 压白 3.96 / 压画布 3.56，#2F7D2A 达 5.14/4.62
+  t.colors.set("success", "#2F7D2A")
   t.colors.set("warning", "#B25D00")
   t.colors.set("outline", "#D3D7DC")
   t.colors.set("outline_variant", "#E5E8EB")
@@ -613,6 +647,9 @@ fn Project::recolor_with(
   }
   // 引擎默认文字色 #111111（node/decl 出厂值）语义上就是 text_primary
   remember("#111111", "text_primary")
+  // 历史默认主色 #4B6BFB（WCAG 校准前的存量文档/模板字面量）仍按 primary
+  // 反查——默认调色板已换成校准值 #4361EE，老字面量不丢映射
+  remember("#4B6BFB", "primary")
   let pick = fn(lit : String, rank : (String) -> Int) -> String? {
     match lit_roles.get(lit) {
       None => None
@@ -654,8 +691,23 @@ fn Project::recolor_with(
           None => ()
         }
         // 文字角色按所在底色判别：primary/secondary 实底上的文字优先
-        // on_*（按钮），透明底/容器上的文字优先 text_*（正文/输入框）
-        let text_rank = match pick(node.style.fill, role_rank_for_fill) {
+        // on_*（按钮），secondary_container 底上的文字优先 on_secondary_
+        // container（chip/次级按钮的目录口径——字典序会让 on_primary 抢占
+        // 同分，必须按底色上下文显式指定），透明底/容器上的文字优先
+        // text_*（正文/输入框）
+        let fill_role = pick(node.style.fill, role_rank_for_fill)
+        let text_rank : (String) -> Int = match fill_role {
+          Some("secondary_container") =>
+            fn(role : String) -> Int {
+              if role == "on_secondary_container" {
+                1
+              } else if role_has_prefix(role, "on_") ||
+                role_has_prefix(role, "text_") {
+                2
+              } else {
+                role_rank_for_text(role) + 2
+              }
+            }
           Some(r) =>
             if r == "primary" || r == "secondary" {
               role_rank_for_text_on

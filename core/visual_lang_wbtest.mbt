@@ -5,14 +5,10 @@
 ///|
 /// 美学预设逐档 WCAG 校准：按钮主面白字/深字 ≥4.5、正文与辅助文字在
 /// 画布/卡面/输入底三层上 ≥4.5——这是从官方色板「翻译」而非照抄的依据。
-test "visual：美学预设色板逐档达可读性标准" {
-  let presets = [
-    Theme::apple(),
-    Theme::apple_dark(),
-    Theme::harmony(),
-    Theme::harmony_dark(),
-  ]
-  for th in presets.iter() {
+/// 覆盖全部 10 个内置主题（审计盲区：text_hint × surface_variant 这一
+/// 实测失败对曾被漏掉；default/light 的提示文字也曾全线低于 4.5）。
+test "visual：全部内置主题色板逐档达可读性标准" {
+  for th in builtin_themes().iter() {
     let t = th.tokens
     let cr = fn(fg : String, bg : String) -> Double {
       norm_contrast_ratio(
@@ -22,16 +18,17 @@ test "visual：美学预设色板逐档达可读性标准" {
     }
     // 主按钮文字（on_primary 叠 primary）
     assert_true(cr("on_primary", "primary") >= 4.5)
-    // 三级文字 × 三层底
+    // 三级文字 × 三层底（surface / background / surface_variant）
     for fg in ["text_primary", "text_secondary", "text_hint"].iter() {
-      for bg in ["surface", "background"].iter() {
+      for bg in ["surface", "background", "surface_variant"].iter() {
         assert_true(cr(fg, bg) >= 4.5)
       }
     }
-    assert_true(cr("text_primary", "surface_variant") >= 4.5)
-    assert_true(cr("text_secondary", "surface_variant") >= 4.5)
     // 次级按钮（secondary_container 底 + text_primary 字）
     assert_true(cr("text_primary", "secondary_container") >= 4.5)
+    // 语义色徽标（badge success 底 + on_secondary_container 字）
+    assert_true(cr("on_secondary_container", "secondary_container") >= 4.5)
+    assert_true(cr("on_primary", "success") >= 4.5)
   }
 }
 

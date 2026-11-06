@@ -215,7 +215,7 @@ pub fn Project::apply_template(
           name=ab_name,
           width=w,
           height=if height > 0.0 { height } else { 844.0 },
-          tree=login_tree(w),
+          tree=login_tree(w, self.tokens),
         ),
       )
     }
@@ -265,6 +265,13 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "welcome_title", "Welcome Back")
   self.resize_node(ab, "welcome_title", 200.0, 36.0, 0.0)
+  // 标题/副标题与居中的 logo、按钮同轴：盒心已在画板中线，文字对齐 center
+  // （文字比盒窄时左对齐会让视觉中心左偏，审计 login 四主题同现）
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="welcome_title",
+    kvs=[("align", "center"), ("weight", "700")],
+  )
 
   // 副标题
   let _ = self.place_comp(
@@ -277,6 +284,11 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "subtitle", "Sign in to continue")
   self.resize_node(ab, "subtitle", 200.0, 18.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="subtitle",
+    kvs=[("align", "center")],
+  )
 
   // 邮箱输入框
   let _ = self.place_comp(
@@ -302,19 +314,24 @@ fn Project::template_login(self : Project, name : String) -> String {
   self.set_text(ab, "password_input", "Password")
   self.resize_node(ab, "password_input", 342.0, 52.0, 12.0)
 
-  // 忘记密码链接
+  // 忘记密码链接（全宽盒 + 右对齐：右缘贴字段右缘，不再悬空 37px）
   let _ = self.place_comp(
     ab,
     "body_text",
     "forgot_link",
     variant="caption",
-    x=230.0,
+    x=24.0,
     y=468.0,
   )
   self.set_text(ab, "forgot_link", "Forgot password?")
-  self.resize_node(ab, "forgot_link", 140.0, 18.0, 0.0)
+  self.resize_node(ab, "forgot_link", 342.0, 18.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="forgot_link",
+    kvs=[("align", "right")],
+  )
 
-  // 登录按钮
+  // 登录按钮（主 CTA 文字 17/600，HIG 主按钮档；出厂 14/regular 太轻）
   let _ = self.place_comp(
     ab,
     "button",
@@ -325,6 +342,11 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "login_btn", "Sign In")
   self.resize_node(ab, "login_btn", 342.0, 52.0, 12.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="login_btn",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
 
   // 分隔线
   let _ = self.place_comp(ab, "divider", "divider1", x=24.0, y=600.0)
@@ -365,6 +387,11 @@ fn Project::template_signup(self : Project, name : String) -> String {
   let _ = self.place_comp(ab, "heading", "title", variant="h2", x=24.0, y=60.0)
   self.set_text(ab, "title", "Create Account")
   self.resize_node(ab, "title", 342.0, 36.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="title",
+    kvs=[("align", "center"), ("weight", "700")],
+  )
 
   let fields = ["Full Name", "Email", "Password", "Confirm Password"]
   let mut y = 140.0
@@ -386,17 +413,29 @@ fn Project::template_signup(self : Project, name : String) -> String {
   )
   self.set_text(ab, "create_btn", "Sign Up")
   self.resize_node(ab, "create_btn", 342.0, 52.0, 12.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="create_btn",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
 
+  // 全宽盒 + 居中：与上方 Sign Up 按钮文字（text-anchor middle）同一中轴，
+  // 不再靠手算文字宽把节点摆到「视觉中心偏左 8px」
   let _ = self.place_comp(
     ab,
     "body_text",
     "have_account",
     variant="caption",
-    x=95.0,
+    x=24.0,
     y=y + 90.0,
   )
   self.set_text(ab, "have_account", "Already have an account? Sign In")
-  self.resize_node(ab, "have_account", 200.0, 18.0, 0.0)
+  self.resize_node(ab, "have_account", 342.0, 18.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="have_account",
+    kvs=[("align", "center")],
+  )
 
   // 导航流：只在目标画板已经存在时写入，避免单页模板生成悬空引用。
   if self.artboards.contains("login") {
@@ -413,7 +452,7 @@ fn Project::template_signup(self : Project, name : String) -> String {
 fn Project::template_dashboard(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
-  // App Bar
+  // App Bar（标题提到页级：17/600，不再比分区标题还小）
   let _ = self.place_comp(
     ab,
     "app_bar",
@@ -424,9 +463,16 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Dashboard")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
 
-  // 统计卡片 2×2 网格（单行 "Label: value"；卡内两级层级会经 normalize
-  // 收编进栈卡被重排——栈卡子节点的坐标语义是栈序而非绝对位，v1 不碰）
+  // 统计卡片 2×2 网格：卡内「大数值 + 小标签」两级层级（数值 h3 20px，
+  // 标签 caption 12px），收编进栈卡后按栈序竖排；子节点宽取卡内容宽
+  // （163-2×16=131）+ 文字 align center——交叉轴视觉居中，且不给
+  // x_mode 留「先居中后收编」的错位空间。槽距统一 16。
   let stats = [
     ("Revenue", "$12.4K"),
     ("Users", "8,421"),
@@ -438,10 +484,35 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
     for col in 0..<2 {
       let cid = "stat_\{i}"
       let x = 24.0 + col.to_double() * 179.0
-      let y = 80.0 + row.to_double() * 110.0
+      let y = 80.0 + row.to_double() * 112.0
       let _ = self.place_comp(ab, "card", cid, variant="elevated", x~, y~)
       self.resize_node(ab, cid, 163.0, 96.0, 12.0)
-      self.set_text(ab, cid, "\{stats[i].0}: \{stats[i].1}")
+      // 数值（主层级）
+      let vid = "stat_v\{i}"
+      let _ = self.place_comp(
+        ab,
+        "heading",
+        vid,
+        variant="h3",
+        x~,
+        y=y + 20.0,
+      )
+      self.set_text(ab, vid, stats[i].1)
+      self.resize_node(ab, vid, 131.0, 28.0, 0.0)
+      let _ = self.edit_node(artboard=ab, node_id=vid, kvs=[("align", "center")])
+      // 标签（次层级）
+      let lid = "stat_l\{i}"
+      let _ = self.place_comp(
+        ab,
+        "body_text",
+        lid,
+        variant="caption",
+        x~,
+        y=y + 52.0,
+      )
+      self.set_text(ab, lid, stats[i].0)
+      self.resize_node(ab, lid, 131.0, 16.0, 0.0)
+      let _ = self.edit_node(artboard=ab, node_id=lid, kvs=[("align", "center")])
       i = i + 1
     }
   }
@@ -473,7 +544,8 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
     component_id="body_text",
     instance_id="chart_title",
     variant="caption",
-    x=40.0,
+    // 左缘与统计卡/活动行文字同一参考线：面板 24 + 形状标签 pad 12 = 36
+    x=36.0,
     y=326.0,
     w=200.0,
     h=16.0,
@@ -513,7 +585,10 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
   self.resize_node(ab, "activity_title", 200.0, 24.0, 0.0)
 
   let activities = [
-    "New order #1042", "User signup: alice@", "Payment received", "Refund processed",
+    "New order #1042",
+    "User signup — alice@corp.dev",
+    "Payment received",
+    "Refund processed",
   ]
   for j in 0..<4 {
     let aid = "activity_\{j}"
@@ -529,9 +604,8 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
     self.set_text(ab, aid, activities[j])
   }
 
-  // 底部导航
-  let _ = self.place_comp(ab, "divider", "bottom_div", x=0.0, y=820.0)
-  self.resize_node(ab, "bottom_div", 390.0, 1.0, 0.0)
+  // 底部不再放孤立 1px 分隔线（旧 bottom_div 像被截断的 Tab Bar，
+  // 末行阴影直接压线）：底部留白即 Home 指示条安全区。
 
   ab
 }
@@ -544,7 +618,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
 fn Project::template_profile(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
-  // App Bar
+  // App Bar（标题提到页级：17/600，不再是最小标题）
   let _ = self.place_comp(
     ab,
     "app_bar",
@@ -555,8 +629,13 @@ fn Project::template_profile(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Profile")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
 
-  // 头像（圆形）
+  // 头像（圆形，首字母按直径档放大——出厂 14px 在 104 圆里显得空）
   let _ = self.place_comp(
     ab,
     "badge",
@@ -567,8 +646,14 @@ fn Project::template_profile(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "avatar", 104.0, 104.0, 999.0)
   self.set_text(ab, "avatar", "AB")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="avatar",
+    kvs=[("font_size", "36"), ("weight", "600")],
+  )
 
-  // 姓名 + 简介
+  // 姓名 + 简介（盒心在画板中线，文字对齐 center——与头像同轴，
+  // 不再「名字落在头像左下方」）
   let _ = self.place_comp(
     ab,
     "heading",
@@ -579,6 +664,11 @@ fn Project::template_profile(self : Project, name : String) -> String {
   )
   self.set_text(ab, "user_name", "Alice Baker")
   self.resize_node(ab, "user_name", 200.0, 28.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="user_name",
+    kvs=[("align", "center"), ("weight", "700")],
+  )
 
   let _ = self.place_comp(
     ab,
@@ -590,15 +680,47 @@ fn Project::template_profile(self : Project, name : String) -> String {
   )
   self.set_text(ab, "user_bio", "Product Designer @ TechCorp")
   self.resize_node(ab, "user_bio", 200.0, 18.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="user_bio",
+    kvs=[("align", "center")],
+  )
 
-  // 统计行
+  // 统计行：「大数值 + 小标签、居中」，卡片加宽对齐 24px 内容栏。
+  // 子节点宽取卡内容宽（106-2×16=74）+ align center 交叉轴居中
+  // （旧 90 宽卡放 "Followers: 4.2K" 单行溢出 19px，norms 未报）。
   let stats = [("Posts", "128"), ("Followers", "4.2K"), ("Following", "389")]
   for i in 0..<3 {
     let sid = "stat_\{i}"
-    let x = 44.0 + i.to_double() * 110.0
+    let x = 24.0 + i.to_double() * 118.0
     let _ = self.place_comp(ab, "card", sid, variant="elevated", x~, y=290.0)
-    self.resize_node(ab, sid, 90.0, 60.0, 8.0)
-    self.set_text(ab, sid, "\{stats[i].0}: \{stats[i].1}")
+    // 高 80：contained_in_parent 按卡内容盒（pad 16 内缩）判 contained——
+    // 栈内容 22+8+14=44 必须 ≤ 80-32=48，64 高会底边越出内容盒
+    self.resize_node(ab, sid, 106.0, 80.0, 8.0)
+    let vid = "stat_v\{i}"
+    let _ = self.place_comp(
+      ab,
+      "heading",
+      vid,
+      variant="h4",
+      x~,
+      y=302.0,
+    )
+    self.set_text(ab, vid, stats[i].1)
+    self.resize_node(ab, vid, 74.0, 22.0, 0.0)
+    let _ = self.edit_node(artboard=ab, node_id=vid, kvs=[("align", "center")])
+    let lid = "stat_l\{i}"
+    let _ = self.place_comp(
+      ab,
+      "body_text",
+      lid,
+      variant="caption",
+      x~,
+      y=326.0,
+    )
+    self.set_text(ab, lid, stats[i].0)
+    self.resize_node(ab, lid, 74.0, 14.0, 0.0)
+    let _ = self.edit_node(artboard=ab, node_id=lid, kvs=[("align", "center")])
   }
 
   // 操作按钮
@@ -638,16 +760,32 @@ fn Project::template_profile(self : Project, name : String) -> String {
 
   for j in 0..<3 {
     let pid = "post_\{j}"
+    let py = 486.0 + j.to_double() * 110.0
+    let _ = self.place_comp(ab, "card", pid, variant="elevated", x=24.0, y=py)
+    self.resize_node(ab, pid, 342.0, 96.0, 12.0)
+    // 帖子卡两级内容：标题 h4 + 预览 caption（不再八成面积的空壳骨架）
+    let tid = "post_t\{j}"
     let _ = self.place_comp(
       ab,
-      "card",
-      pid,
-      variant="elevated",
-      x=24.0,
-      y=486.0 + j.to_double() * 110.0,
+      "heading",
+      tid,
+      variant="h4",
+      x=40.0,
+      y=py + 20.0,
     )
-    self.resize_node(ab, pid, 342.0, 96.0, 12.0)
-    self.set_text(ab, pid, "Post \{j + 1}")
+    self.set_text(ab, tid, "Post \{j + 1}")
+    self.resize_node(ab, tid, 200.0, 22.0, 0.0)
+    let bid = "post_b\{j}"
+    let _ = self.place_comp(
+      ab,
+      "body_text",
+      bid,
+      variant="body",
+      x=40.0,
+      y=py + 48.0,
+    )
+    self.set_text(ab, bid, "Short preview line for this post entry.")
+    self.resize_node(ab, bid, 280.0, 20.0, 0.0)
   }
 
   ab
@@ -671,6 +809,12 @@ fn Project::template_settings(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Settings")
+  // 页级标题提到 17/600（出厂 14/regular 比区块标题 h4 还小，层级倒挂）
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
 
   let sections = [
     ("Notifications", ["Push Notifications", "Email Alerts", "SMS Updates"]),
@@ -679,8 +823,9 @@ fn Project::template_settings(self : Project, name : String) -> String {
     ("About", ["Version", "Terms of Service", "Privacy Policy"]),
   ]
 
-  // 紧凑布局：4 组（标题 26 + 3 项 × 46 间距 + 组距 6 = 170/组）
-  // 从 72 起步共 680，退出按钮落在 758..798，严格包含在 844 画板内。
+  // 布局：4 组（标题 22 + 标题下间距 8 + 3 项 × 46 + 组距 10 = 176/组）
+  // 从 72 起步共 704，退出按钮落在 782..826，严格包含在 844 画板内。
+  // 标题与首行卡之间 8px、组与组之间 10px——分组从属关系靠留白可读。
   let mut y = 72.0
   for si in 0..<sections.length() {
     let (section_name, items) = sections[si]
@@ -689,7 +834,7 @@ fn Project::template_settings(self : Project, name : String) -> String {
     let _ = self.place_comp(ab, "heading", hid, variant="h4", x=24.0, y~)
     self.set_text(ab, hid, section_name)
     self.resize_node(ab, hid, 200.0, 22.0, 0.0)
-    y = y + 26.0
+    y = y + 30.0
 
     // 分组项
     for ii in 0..<items.length() {
@@ -699,10 +844,10 @@ fn Project::template_settings(self : Project, name : String) -> String {
       self.set_text(ab, iid, items[ii])
       y = y + 46.0
     }
-    y = y + 6.0 // 分组间距
+    y = y + 10.0 // 分组间距
   }
 
-  // 退出按钮
+  // 退出按钮（圆角归按钮族 8 档，与同页列表卡同语言）
   let _ = self.place_comp(
     ab,
     "button",
@@ -712,7 +857,7 @@ fn Project::template_settings(self : Project, name : String) -> String {
     y=y + 6.0,
   )
   self.set_text(ab, "logout_btn", "Log Out")
-  self.resize_node(ab, "logout_btn", 342.0, 44.0, 10.0)
+  self.resize_node(ab, "logout_btn", 342.0, 44.0, 8.0)
 
   ab
 }
@@ -735,7 +880,9 @@ fn Project::template_list(self : Project, name : String) -> String {
 
   // 分类横向标签（chip 档：高度按 NORM 的 chip 28）
   // chip 宽度必须**按规范预留**：norm 要求宽 ≥ 文案宽 + 24（左右各 12）。
-  // 中文按 1 字 ≈ 14pt、拉丁按 1 字 ≈ 8pt 保守估计，加 24 留白。
+  // 宽度用 text_intrinsic 估算（CJK 1.0 / ASCII 0.6 字号，与渲染/布局同一
+  // 口径）——出厂即合规，不再靠 auto_fix 事后撑宽（旧 length*8 对
+  // 「All」欠 1px、「Outdoor」欠 2px，critique norms 直接报 poor）。
   // 间距用 12：auto_fix 会把不达标的 chip 撑到合规宽度，如果排布时贴得太紧
   // （曾用 72 宽 + 80 间距），撑宽后就会与右侧邻居重叠，整页被
   // no_sibling_overlap 判债——生成完的页面再也不能接受任何新 flow。
@@ -744,30 +891,52 @@ fn Project::template_list(self : Project, name : String) -> String {
   for ci in 0..<cats.length() {
     let cid = "cat_\{ci}"
     let label = cats[ci]
-    let text_w = label.length().to_double() * 8.0
-    let w = text_w + 24.0
+    let w = text_intrinsic(label, 14.0).width + 24.0
     self.place_required(ab, "chip", cid, x=cx, y=118.0, w~, h=28.0)
     self.set_text(ab, cid, label)
     cx = cx + w + 12.0
   }
 
-  // 条目列表：卡片 + 行底分割线（≥3 行齐缝必须有 divider，norms 会查）
+  // 条目列表：卡片 + 行间分割线（≥3 行齐缝必须有 divider，norms 会查；
+  // 末行之后不再追加孤立 divider——它后面没有内容，像渲染残留）
   let mut y = 162.0
   for i in 0..<5 {
     let rid = "item_\{i}"
     self.place_required(ab, "list_item", rid, x=16.0, y~, w=358.0, h=72.0)
     self.set_text(ab, rid, "Item \{i + 1} — short description of this entry")
     y = y + 72.0
-    let did = "divider_\{i}"
-    self.place_required(ab, "divider", did, x=16.0, y~, w=358.0, h=1.0)
-    y = y + 1.0
+    if i < 4 {
+      let did = "divider_\{i}"
+      self.place_required(ab, "divider", did, x=16.0, y~, w=358.0, h=1.0)
+      y = y + 1.0
+    }
   }
 
-  // 底部导航（tab_bar 全宽直角）
+  // 底部导航（tab_bar 全宽直角；入口文字均分四槽、各自居中——
+  // 单行左对齐字符串只占条宽左半，不合移动端 tab 均分惯例）
   // y=780 + 64 = 844 正好顶到画板下边界，contained_in_parent 要求严格包含，
   // 差 0 也会被拒——上移到 776 留 4px 余量（视觉上仍贴底）
   self.place_required(ab, "tab_bar", "tab_bar", x=0.0, y=776.0, w=390.0, h=64.0)
-  self.set_text(ab, "tab_bar", "Home · Discover · Cart · Me")
+  let tabs = ["Home", "Discover", "Cart", "Me"]
+  for ti in 0..<tabs.length() {
+    let tid = "tab_\{ti}"
+    let slot = 390.0 / 4.0
+    self.place_required(
+      ab,
+      "body_text",
+      tid,
+      x=ti.to_double() * slot,
+      y=794.0,
+      w=slot,
+      h=24.0,
+    )
+    self.set_text(ab, tid, tabs[ti])
+    let _ = self.edit_node(
+      artboard=ab,
+      node_id=tid,
+      kvs=[("align", "center")],
+    )
+  }
   ab
 }
 
@@ -779,9 +948,18 @@ fn Project::template_list(self : Project, name : String) -> String {
 // ---------------------------------------------------------------------------
 fn Project::template_detail(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
-  // 顶栏带返回钮（引擎内置返回会识别，无需 flow）
+  // 顶栏：标题居中语义 + 独立返回钮（id/文案双命中引擎内置返回兜底，
+  // 无需 flow；不再用「Back」独占顶栏、页面标题无处安放）
   self.place_required(ab, "app_bar", "top_bar", x=0.0, y=0.0, w=390.0, h=56.0)
-  self.set_text(ab, "top_bar", "Back")
+  self.set_text(ab, "top_bar", "Product Detail")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600"), ("align", "center")],
+  )
+  self.place_required(ab, "button", "back_btn", variant="secondary", x=8.0, y=10.0)
+  self.resize_node(ab, "back_btn", 64.0, 36.0, 8.0)
+  self.set_text(ab, "back_btn", "‹ Back")
   // 大图区（占位 rect，Agent 可换成 image / 改 fill）
   self.place_required(ab, "rect", "hero", x=0.0, y=56.0)
   self.resize_node(ab, "hero", 390.0, 260.0, 0.0)
@@ -790,19 +968,25 @@ fn Project::template_detail(self : Project, name : String) -> String {
   self.place_required(ab, "heading", "title", x=24.0, y=332.0)
   self.resize_node(ab, "title", 342.0, 32.0, 0.0)
   self.set_text(ab, "title", "Product Name")
+  let _ = self.edit_node(artboard=ab, node_id="title", kvs=[("weight", "700")])
   self.place_required(ab, "body_text", "subtitle", x=24.0, y=370.0)
   self.resize_node(ab, "subtitle", 342.0, 20.0, 0.0)
   self.set_text(ab, "subtitle", "Short supporting line")
 
-  // 规格参数（三行 key-value，行底分割线）
+  // 规格参数：键、值拆成两个节点，值右对齐到 366 右缘——不再靠 4 个空格
+  // 拼「键    值」（SVG 折叠空白后键值糊成一串）；行盒垂直居中由渲染层
+  // 统一处理（文字不再顶在行首、分割线像上划线）
   let specs = [("Spec", "Value"), ("Size", "Standard"), ("Stock", "Available")]
   let mut y = 402.0
   for i in 0..<specs.length() {
     let (k, v) = specs[i]
-    let sid = "spec_\{i}"
-    self.place_required(ab, "body_text", sid, x=24.0, y~)
-    self.resize_node(ab, sid, 342.0, 36.0, 0.0)
-    self.set_text(ab, sid, k + "    " + v)
+    let sid = "spec_k\{i}"
+    self.place_required(ab, "body_text", sid, x=24.0, y~, w=170.0, h=36.0)
+    self.set_text(ab, sid, k)
+    let vid = "spec_v\{i}"
+    self.place_required(ab, "body_text", vid, x=194.0, y~, w=172.0, h=36.0)
+    self.set_text(ab, vid, v)
+    let _ = self.edit_node(artboard=ab, node_id=vid, kvs=[("align", "right")])
     y = y + 36.0
     let did = "divider_\{i}"
     self.place_required(ab, "divider", did, x=24.0, y~)
@@ -810,7 +994,7 @@ fn Project::template_detail(self : Project, name : String) -> String {
     y = y + 1.0
   }
 
-  // 描述段
+  // 描述段（渲染层按盒宽折行，不再单行溢出画板被裁切）
   self.place_required(ab, "body_text", "desc", x=24.0, y=y + 16.0)
   self.resize_node(ab, "desc", 342.0, 60.0, 0.0)
   self.set_text(
@@ -819,9 +1003,14 @@ fn Project::template_detail(self : Project, name : String) -> String {
     "A short paragraph describing this item in two or three lines of real copy.",
   )
 
-  // 底部主 CTA（全宽，避开 iPhone 底部安全区）
+  // 底部主 CTA（全宽，避开 iPhone 底部安全区；主 CTA 文字 17/600）
   self.place_required(ab, "button", "primary_btn", x=24.0, y=760.0, w=342.0, h=52.0)
   self.set_text(ab, "primary_btn", "Continue")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="primary_btn",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
   ab
 }
 
@@ -833,13 +1022,43 @@ fn Project::template_detail(self : Project, name : String) -> String {
 // ---------------------------------------------------------------------------
 fn Project::template_checkout(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
+  // 顶栏：标题 + 独立返回钮（与详情页同一形态，页面语义不再是纯「Back」）
   self.place_required(ab, "app_bar", "top_bar", x=0.0, y=0.0, w=390.0, h=56.0)
-  self.set_text(ab, "top_bar", "Back")
+  self.set_text(ab, "top_bar", "Confirm Order")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600"), ("align", "center")],
+  )
+  self.place_required(ab, "button", "back_btn", variant="secondary", x=8.0, y=10.0)
+  self.resize_node(ab, "back_btn", 64.0, 36.0, 8.0)
+  self.set_text(ab, "back_btn", "‹ Back")
 
-  // 订单摘要卡
-  self.place_required(ab, "card", "summary", x=16.0, y=72.0)
-  self.resize_node(ab, "summary", 358.0, 96.0, 12.0)
-  self.set_text(ab, "summary", "Order summary — 2 items")
+  // 内容列统一 24px 边距（旧卡/字段 16、按钮 24 两档边线参差）
+  // 订单摘要卡（两级内容：标题 + 条目说明，不再一行空壳）
+  self.place_required(ab, "card", "summary", x=24.0, y=72.0)
+  self.resize_node(ab, "summary", 342.0, 96.0, 12.0)
+  self.set_text(ab, "summary", "")
+  let _ = self.place_comp(
+    ab,
+    "heading",
+    "summary_t",
+    variant="h4",
+    x=40.0,
+    y=90.0,
+  )
+  self.set_text(ab, "summary_t", "Order summary")
+  self.resize_node(ab, "summary_t", 200.0, 22.0, 0.0)
+  let _ = self.place_comp(
+    ab,
+    "body_text",
+    "summary_b",
+    variant="caption",
+    x=40.0,
+    y=118.0,
+  )
+  self.set_text(ab, "summary_b", "2 items")
+  self.resize_node(ab, "summary_b", 200.0, 16.0, 0.0)
 
   // 表单字段（确认订单的真实形态：联系人/时间/地点）
   let fields = [
@@ -850,33 +1069,59 @@ fn Project::template_checkout(self : Project, name : String) -> String {
   let mut y = 184.0
   for f in fields {
     let (fid, label) = f
-    self.place_required(ab, "text_input", fid, x=16.0, y~)
-    self.resize_node(ab, fid, 358.0, 52.0, 12.0)
+    self.place_required(ab, "text_input", fid, x=24.0, y~)
+    self.resize_node(ab, fid, 342.0, 52.0, 12.0)
     self.set_text(ab, fid, label)
     y = y + 60.0
   }
 
-  // 费用明细（三行 + 行间分割线：齐缝列表的 norms 纪律）
+  // 费用明细：键、值拆两节点，值右对齐；Total 行加粗主色——应付合计
+  // 不再与小计同灰同重（一眼扫不到要付多少）。行盒垂直居中由渲染层统一。
   let rows = [("Subtotal", "¥ 320"), ("Deposit", "¥ 200"), ("Total", "¥ 520")]
   y = y + 8.0
   for i in 0..<rows.length() {
     let (k, v) = rows[i]
-    let rid = "fee_\{i}"
-    self.place_required(ab, "body_text", rid, x=16.0, y~)
-    self.resize_node(ab, rid, 358.0, 40.0, 0.0)
-    self.set_text(ab, rid, k + "          " + v)
+    let is_total = i == rows.length() - 1
+    let kid = "fee_k\{i}"
+    self.place_required(ab, "body_text", kid, x=24.0, y~, w=170.0, h=40.0)
+    self.set_text(ab, kid, k)
+    let vid = "fee_v\{i}"
+    self.place_required(ab, "body_text", vid, x=194.0, y~, w=172.0, h=40.0)
+    self.set_text(ab, vid, v)
+    let _ = self.edit_node(artboard=ab, node_id=vid, kvs=[("align", "right")])
+    if is_total {
+      let _ = self.edit_node(
+        artboard=ab,
+        node_id=kid,
+        kvs=[("weight", "700"), ("font_size", "16")],
+      )
+      let _ = self.edit_node(
+        artboard=ab,
+        node_id=vid,
+        kvs=[
+          ("weight", "700"),
+          ("font_size", "16"),
+          ("text_color", self.tokens.resolve_color("primary")),
+        ],
+      )
+    }
     y = y + 40.0
     if i < rows.length() - 1 {
       let did = "fee_div_\{i}"
-      self.place_required(ab, "divider", did, x=16.0, y~)
-      self.resize_node(ab, did, 358.0, 1.0, 0.0)
+      self.place_required(ab, "divider", did, x=24.0, y~)
+      self.resize_node(ab, did, 342.0, 1.0, 0.0)
       y = y + 1.0
     }
   }
 
-  // 提交按钮
+  // 提交按钮（主 CTA 文字 17/600）
   self.place_required(ab, "button", "submit_btn", x=24.0, y=752.0, w=342.0, h=52.0)
   self.set_text(ab, "submit_btn", "Place Order")
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="submit_btn",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
   ab
 }
 
@@ -897,7 +1142,14 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "top_bar", 390.0, 56.0, 0.0)
   self.set_text(ab, "top_bar", "Chats")
-  // 会话列表（头像 + 标题 + 预览）
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="top_bar",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
+  // 会话列表：list_item 行 + 头像（首字母）+ 两行内容（姓名 / 消息预览）
+  // ——兑现「聊天模板」的语义，不再是一行 "Alice — See you tomorrow!"
+  // 连排单行文字卡；行间 1px divider（齐缝列表 norms）
   let chats = [
     ("Alice", "See you tomorrow!"),
     ("Bob", "The prototype looks great"),
@@ -908,17 +1160,57 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
   let mut y = 68.0
   for ci in 0..<chats.length() {
     let (who, msg) = chats[ci]
-    let _ = self.place_comp(
+    self.place_required(ab, "list_item", "chat_\{ci}", x=12.0, y~, w=366.0, h=64.0)
+    // 头像（list_item 无栈布局，子节点保持绝对定位；坐标为收编后相对值）
+    self.place_required(
       ab,
-      "card",
-      "chat_\{ci}",
-      variant="elevated",
-      x=12.0,
-      y~,
+      "badge",
+      "chat_av\{ci}",
+      variant="primary",
+      x=24.0,
+      y=y + 12.0,
     )
-    self.resize_node(ab, "chat_\{ci}", 366.0, 64.0, 10.0)
-    self.set_text(ab, "chat_\{ci}", who + " — " + msg)
-    y = y + 72.0
+    self.resize_node(ab, "chat_av\{ci}", 40.0, 40.0, 999.0)
+    self.set_text(ab, "chat_av\{ci}", who.substring(start=0, end=1))
+    // 姓名 + 预览
+    self.place_required(
+      ab,
+      "body_text",
+      "chat_nm\{ci}",
+      x=76.0,
+      y=y + 12.0,
+      w=280.0,
+      h=20.0,
+    )
+    self.set_text(ab, "chat_nm\{ci}", who)
+    let _ = self.edit_node(
+      artboard=ab,
+      node_id="chat_nm\{ci}",
+      kvs=[("weight", "600")],
+    )
+    self.place_required(
+      ab,
+      "body_text",
+      "chat_ms\{ci}",
+      x=76.0,
+      y=y + 36.0,
+      w=280.0,
+      h=16.0,
+    )
+    self.set_text(ab, "chat_ms\{ci}", msg)
+    y = y + 64.0
+    if ci < chats.length() - 1 {
+      self.place_required(
+        ab,
+        "divider",
+        "chat_div\{ci}",
+        x=12.0,
+        y~,
+        w=366.0,
+        h=1.0,
+      )
+      y = y + 1.0
+    }
   }
   // 底部详情卡（占位内容区）
   let _ = self.place_comp(
@@ -951,6 +1243,11 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
   )
   self.set_text(ab, "ob_title", "Welcome aboard")
   self.resize_node(ab, "ob_title", 342.0, 40.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="ob_title",
+    kvs=[("align", "center"), ("weight", "700")],
+  )
   let _ = self.place_comp(
     ab,
     "body_text",
@@ -963,6 +1260,37 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     ab, "ob_sub", "Design together with your agent — one plain-text source of truth for humans and AI.",
   )
   self.resize_node(ab, "ob_sub", 342.0, 72.0, 0.0)
+  let _ = self.edit_node(artboard=ab, node_id="ob_sub", kvs=[("align", "center")])
+
+  // 轮播分页点（3 页：第 1 页激活主色、其余 surface_variant——
+  // 目录声明 wizard/carousel，之前只有单页连分页语义都没有）
+  let dot_inactive = self.tokens.resolve_color("surface_variant")
+  for di in 0..<3 {
+    let did = "ob_dot\{di}"
+    if di == 0 {
+      self.place_required(
+        ab,
+        "badge",
+        did,
+        variant="primary",
+        x=171.0 + di.to_double() * 20.0,
+        y=646.0,
+      )
+    } else {
+      self.place_required(
+        ab,
+        "rect",
+        did,
+        x=171.0 + di.to_double() * 20.0,
+        y=646.0,
+      )
+      let _ = self.edit_node(artboard=ab, node_id=did, kvs=[("fill", dot_inactive)])
+    }
+    self.resize_node(ab, did, 8.0, 8.0, 999.0)
+  }
+
+  // 主 CTA 文字 17/600；Skip 抬到 44 触控下限、圆角与主按钮同档 12，
+  // 底边 820 落在安全区之上，两个出口不再一高一矮
   let _ = self.place_comp(
     ab,
     "button",
@@ -973,16 +1301,21 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
   )
   self.set_text(ab, "ob_next", "Get Started")
   self.resize_node(ab, "ob_next", 342.0, 48.0, 12.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="ob_next",
+    kvs=[("font_size", "17"), ("weight", "600")],
+  )
   let _ = self.place_comp(
     ab,
     "button",
     "ob_skip",
     variant="secondary",
     x=24.0,
-    y=780.0,
+    y=776.0,
   )
   self.set_text(ab, "ob_skip", "Skip")
-  self.resize_node(ab, "ob_skip", 342.0, 40.0, 8.0)
+  self.resize_node(ab, "ob_skip", 342.0, 44.0, 12.0)
   ab
 }
 
@@ -994,7 +1327,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
 fn Project::template_empty_state(self : Project, name : String) -> String {
   let ab = self.create_artboard(name~, width=390.0, height=844.0)
 
-  // 插图占位（大圆角矩形）
+  // 插图占位（正圆盘，rx=高/2；阴影交给 card 组件的 e1 档）
   let _ = self.place_comp(
     ab,
     "card",
@@ -1006,7 +1339,8 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
   self.resize_node(ab, "illustration", 200.0, 200.0, 100.0)
   self.set_text(ab, "illustration", "")
 
-  // 主文案
+  // 主文案（与插图/按钮同一中轴：盒心 195 + align center，
+  // 不再两行文字各偏一条轴线）
   let _ = self.place_comp(
     ab,
     "heading",
@@ -1017,6 +1351,11 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
   )
   self.set_text(ab, "main_text", "No Items Yet")
   self.resize_node(ab, "main_text", 200.0, 28.0, 0.0)
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="main_text",
+    kvs=[("align", "center"), ("weight", "700")],
+  )
 
   // 副文案
   let _ = self.place_comp(
@@ -1029,6 +1368,7 @@ fn Project::template_empty_state(self : Project, name : String) -> String {
   )
   self.set_text(ab, "sub_text", "Items you add will appear here")
   self.resize_node(ab, "sub_text", 240.0, 20.0, 0.0)
+  let _ = self.edit_node(artboard=ab, node_id="sub_text", kvs=[("align", "center")])
 
   // 操作按钮
   let _ = self.place_comp(

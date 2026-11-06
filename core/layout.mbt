@@ -178,7 +178,18 @@ fn solve_stack(
                 0.0
               }
               Hug => {
-                let s = intrinsic_size(child, failures)
+                // 宽已定（Fill/Fill=内容宽 或 Fixed）且文本超宽时按折行取行数
+                // ——渲染层同口径折行（wrap_text_lines），Hug 高不再少算一行。
+                let s = if cross > 0.0 {
+                  text_intrinsic_wrapped(
+                    child.text,
+                    child.style.font_size,
+                    cross,
+                    line_height=child.style.line_height,
+                  )
+                } else {
+                  intrinsic_size(child, failures)
+                }
                 fixed_total = fixed_total + s.height
                 s.height
               }
@@ -294,7 +305,22 @@ fn solve_absolute(
         let h : Double = match child.height {
           Fixed(v) => v
           Fill => frame.height - y_base
-          Hug => intrinsic_size(child, failures).height
+          // 宽已定（Fixed/Fill）的文本按折行取真实行数（与渲染层同口径）
+          Hug =>
+            match child.kind {
+              Text =>
+                if w > 0.0 {
+                  text_intrinsic_wrapped(
+                    child.text,
+                    child.style.font_size,
+                    w,
+                    line_height=child.style.line_height,
+                  ).height
+                } else {
+                  intrinsic_size(child, failures).height
+                }
+              _ => intrinsic_size(child, failures).height
+            }
         }
         let x = resolve_pos(child.x, frame, w)
         let y = resolve_pos_y(child.y, frame, h)

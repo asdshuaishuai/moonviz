@@ -213,3 +213,144 @@ pub fn text_intrinsic(
   let w = if max_w == 0.0 { font_size * ASCII_ADVANCE_RATIO } else { max_w }
   { width: w, height: font_size * line_height * lines.to_double(), }
 }
+
+///|
+/// 单 token 估算宽度（按字符累加 char_advance）
+fn token_advance(tok : String, font_size : Double) -> Double {
+  let mut w = 0.0
+  for c in tok.iter() {
+    w = w + char_advance(c.to_int(), font_size)
+  }
+  w
+}
+
+///|
+/// 文本分词：拉丁词（空格分隔）/ 空格 token / CJK 单字 token。
+/// 折行断行点的最小单位——CJK 逐字可断，拉丁词整词可断。
+fn tokenize_text(seg : String) -> Array[String] {
+  let toks : Array[String] = []
+  let cur = StringBuilder::new()
+  for c in seg.iter() {
+    if c == ' ' {
+      if cur.to_string().length() > 0 {
+        toks.push(cur.to_string())
+        cur.reset()
+      }
+      toks.push(" ")
+    } else if c.to_int() >= CJK_CODEPOINT_MIN {
+      if cur.to_string().length() > 0 {
+        toks.push(cur.to_string())
+        cur.reset()
+      }
+      toks.push(c.to_string())
+    } else {
+      cur.write_char(c)
+    }
+  }
+  if cur.to_string().length() > 0 {
+    toks.push(cur.to_string())
+  }
+  toks
+}
+
+///|
+/// 贪心折行：max_width 内放不下就断行；行首空格丢弃、断行处行尾空格修剪；
+/// 单个超宽 token（长 URL 等）按字符硬断。max_width <= 0 不折行。
+pub fn wrap_text_lines(
+  text : String,
+  font_size : Double,
+  max_width : Double,
+) -> Array[String] {
+  let out : Array[String] = []
+  for seg in split_lines(text).iter() {
+    if max_width <= 0.0 {
+      out.push(seg)
+      continue
+    }
+    let cur = StringBuilder::new()
+    let mut cur_w = 0.0
+    let mut line_started = false
+    for tok in tokenize_text(seg).iter() {
+      let tw = token_advance(tok, font_size)
+      if tok == " " {
+        // 空格：行首丢弃，行内照加（渲染层 xml:space=preserve 保留对齐空格）
+        if line_started {
+          cur.write_char(' ')
+          cur_w = cur_w + tw
+        }
+        continue
+      }
+      if line_started && cur_w + tw > max_width {
+        // 断行：修剪行尾空格
+        let flushed = cur.to_string()
+        out.push(trim_trailing_space(flushed))
+        cur.reset()
+        cur_w = 0.0
+        line_started = false
+      }
+      if !line_started && tw > max_width {
+        // 超宽 token 硬断：逐字符塞行
+        for c in tok.iter() {
+          let ca = char_advance(c.to_int(), font_size)
+          if cur_w + ca > max_width && cur_w > 0.0 {
+            out.push(cur.to_string())
+            cur.reset()
+            cur_w = 0.0
+          }
+          cur.write_char(c)
+          cur_w = cur_w + ca
+        }
+        line_started = true
+        continue
+      }
+      cur.write_string(tok)
+      cur_w = cur_w + tw
+      line_started = true
+    }
+    let last = cur.to_string()
+    if last.length() > 0 {
+      out.push(trim_trailing_space(last))
+    } else if !line_started && out.length() == 0 && seg.length() == 0 {
+      out.push("")
+    }
+  }
+  out
+}
+
+///|
+fn trim_trailing_space(s : String) -> String {
+  let chars : Array[Char] = []
+  for c in s.iter() {
+    chars.push(c)
+  }
+  let mut end = chars.length()
+  while end > 0 && chars[end - 1] == ' ' {
+    end = end - 1
+  }
+  let sb = StringBuilder::new()
+  for i in 0..<end {
+    sb.write_char(chars[i])
+  }
+  sb.to_string()
+}
+
+///|
+/// 折行后的文本内在尺寸：供布局求解器在「宽已定、高 Hug」时取真实行数。
+/// 与 text_intrinsic 同口径（CJK 1.0 / ASCII 0.6 字号），只是行数按折行算。
+pub fn text_intrinsic_wrapped(
+  text : String,
+  font_size : Double,
+  max_width : Double,
+  line_height? : Double = TEXT_LINE_HEIGHT_RATIO,
+) -> Size {
+  let lines = wrap_text_lines(text, font_size, max_width)
+  let mut max_w = 0.0
+  for l in lines.iter() {
+    let w = token_advance(l, font_size)
+    if w > max_w {
+      max_w = w
+    }
+  }
+  let w = if max_w == 0.0 { font_size * ASCII_ADVANCE_RATIO } else { max_w }
+  { width: w, height: font_size * line_height * lines.length().to_double(), }
+}

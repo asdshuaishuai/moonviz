@@ -43,8 +43,9 @@ pub fn qa_is_mock_container(c : String) -> Bool {
 ///|
 /// 组件必须来自组件库（builtin 或用户组件注册表）。
 pub fn qa_component_known(self : Project, c : String) -> Bool {
-  // 结构组件（画布 frame）与空名不算「非组件库组件」——泛型容器合法。
-  if c == "frame" || c == "" {
+  // 结构组件（画布 frame / 弹性留白 spacer）与空名不算「非组件库组件」
+  // ——泛型容器合法。
+  if c == "frame" || c == "spacer" || c == "" {
     return true
   }
   if self.components.contains(c) {

@@ -20,7 +20,11 @@ pub fn DesignTokens::default() -> DesignTokens {
     typography: Map::new(),
   }
   // 颜色（Material 3 风格）
-  t.colors.set("primary", "#4B6BFB")
+  // primary/hint 为 WCAG 校准值：#4B6BFB 白字仅 4.38（可读性硬标准 ≥4.5）
+  // 加深到 #4361EE（5.02）；#9098A1 提示文字压 surface_variant 仅 2.63，
+  // 加深到 #686F79（sv 4.57 / surface 5.07 / background 4.82）——提示是
+  // 占位文字，必须可读（审计盲区：default/light 主题提示文字全线不达标）。
+  t.colors.set("primary", "#4361EE")
   t.colors.set("primary_container", "#DEE5FF")
   t.colors.set("on_primary", "#FFFFFF")
   t.colors.set("on_secondary_container", "#1A1C1E")
@@ -38,7 +42,7 @@ pub fn DesignTokens::default() -> DesignTokens {
   t.colors.set("outline_variant", "#E0E0E0")
   t.colors.set("text_primary", "#1A1C1E")
   t.colors.set("text_secondary", "#42474F")
-  t.colors.set("text_hint", "#9098A1")
+  t.colors.set("text_hint", "#686F79")
   // 间距（4px 基准）
   t.spacing.set("xs", 2.0)
   t.spacing.set("sm", 4.0)
