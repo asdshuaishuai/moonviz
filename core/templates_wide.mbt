@@ -76,8 +76,8 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "nav_logo", 40.0, 40.0, 999.0)
   let nav_items = ["Product", "Features", "Pricing", "Docs"]
-  // 等距 120：旧 320/440/560/660 末档 100 不均
-  let nav_x = [320.0, 440.0, 560.0, 680.0]
+  // 等距 120 且整组居中：墨迹 445..836 中心 ≈640（旧组 321..711 偏左 124）
+  let nav_x = [445.0, 565.0, 685.0, 805.0]
   for i in 0..<4 {
     let id = "nav_i" + i.to_string()
     self.place_required(ab, "body_text", id, x=nav_x[i], y=24.0)

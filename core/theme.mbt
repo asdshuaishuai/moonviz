@@ -572,6 +572,44 @@ fn role_rank_for_text_on(role : String) -> Int {
 }
 
 ///|
+/// 组件感知的 fill/stroke 反查权重（仅 recolor 反查用）：部分暗色主题
+/// （apple_dark/nord/harmony_dark）的 outline_variant 与
+/// secondary_container/surface_variant 同值，字面量反查在 base rank
+/// 平手时按字典序归入 surface_variant——apple→dark→apple 往返会把
+/// divider/次按钮塌缩成 #EDEDF2（14 模板 39 节点）。按组件语义加权
+/// 消歧：divider → outline_variant，按钮/chip 族 → secondary_container，
+/// badge → on_primary。放置路径 resolve_color 不经过本函数。
+fn role_rank_for_fill_ctx(component : String, role : String) -> Int {
+  if role == "outline_variant" && component == "divider" {
+    return -1
+  }
+  if role == "secondary_container" &&
+    (component == "button" ||
+    component == "chip" ||
+    component == "toggle_group" ||
+    component == "radio" ||
+    component == "switch" ||
+    component == "tag") {
+    return -1
+  }
+  if role == "on_primary" && component == "badge" {
+    return -1
+  }
+  role_rank_for_fill(role)
+}
+
+///|
+/// stroke 语境权重：描边几乎总是 outline 族——outline/outline_variant
+/// 优先于与它们同值的 surface_variant/secondary_container（暗色主题
+/// 三值同源），往返切换才能还原 outline 语义。
+fn role_rank_for_stroke_ctx(role : String) -> Int {
+  if role == "outline_variant" || role == "outline" {
+    return -1
+  }
+  role_rank_for_fill(role)
+}
+
+///|
 /// fill 语境的角色分级：底/容器优先，文字角色殿后（同一字面量被用作
 /// 面色时几乎总是 surface/container 语义）。
 fn role_rank_for_fill(role : String) -> Int {
@@ -682,7 +720,9 @@ fn Project::recolor_with(
     for nid in ab.doc.nodes.keys() {
       let _ = ab.doc.update_node(nid, fn(n) {
         let mut node = n
-        match pick(n.style.fill, role_rank_for_fill) {
+        match pick(n.style.fill, fn(role : String) -> Int {
+          role_rank_for_fill_ctx(n.component, role)
+        }) {
           Some(role) =>
             match target.colors.get(role) {
               Some(v) => {
@@ -738,7 +778,7 @@ fn Project::recolor_with(
         // outline 描边后，「template → theme」这条正常用户路径会把默认
         // 调色板的描边字面量（#C8CDD6/#E0E0E0）留在暗色控件上形成亮环。
         // "none" 不在任何调色板里，pick 返回 None 自然跳过。
-        match pick(n.style.stroke, role_rank_for_fill) {
+        match pick(n.style.stroke, role_rank_for_stroke_ctx) {
           Some(role) =>
             match target.colors.get(role) {
               Some(v) => {

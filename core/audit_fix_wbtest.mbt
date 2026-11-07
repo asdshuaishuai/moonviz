@@ -10,7 +10,11 @@
 /// 两条路径必须同效（暗色下出厂黑字压深底的整类事故由此锚死）。
 test "主题：容器文字角色在两种放置顺序下同效" {
   for theme_name in ["apple_dark", "harmony_dark", "dark", "nord"].iter() {
-    for tpl in ["login", "dashboard", "settings", "list"].iter() {
+    // web_login/detail 覆盖 badge on_primary 与 button secondary_container
+    // 两类反查歧义位（第 4 轮 web_login brand_logo 50/51 唯一差即前者）
+    for tpl in [
+      "login", "dashboard", "settings", "list", "web_login", "detail",
+    ].iter() {
       let pa = Project::new()
       let _ = pa.apply_theme(theme_name)
       let _ = pa.apply_template(template_id=tpl, name="board")
@@ -205,6 +209,40 @@ test "渲染：preserve / 折行 tspan / 行盒垂直居中" {
   // desc 节点应产出多个 tspan（折行生效）
   let seg = extract_g(svg, "desc")
   assert_true(seg.contains("<tspan"), msg="desc 未折行（无 tspan）")
+}
+
+///|
+/// 第 5 轮回归锚：主题往返切换（apple→apple_dark→apple）必须还原
+/// divider/次按钮的 outline_variant/secondary_container 角色——旧行为
+/// 按 base rank 字典序塌缩成 surface_variant #EDEDF2（14 模板 39 节点）。
+test "主题：往返切换还原描边与容器角色（消歧 ctx 回归锚）" {
+  let p = Project::new()
+  let _ = p.apply_template(template_id="detail", name="board")
+  let _ = p.apply_theme("apple_dark")
+  let _ = p.apply_theme("apple")
+  match p.artboards.get("board") {
+    None => assert_true(false)
+    Some(ab) => {
+      match ab.doc.get("divider_0") {
+        Some(n) =>
+          assert_eq(
+            n.style.fill,
+            "#E5E5EA",
+            msg="divider 往返后应还原 outline_variant",
+          )
+        None => assert_true(false, msg="divider_0 缺失")
+      }
+      match ab.doc.get("back_btn") {
+        Some(n) =>
+          assert_eq(
+            n.style.fill,
+            "#E9E9EE",
+            msg="次按钮往返后应还原 secondary_container",
+          )
+        None => assert_true(false, msg="back_btn 缺失")
+      }
+    }
+  }
 }
 
 ///|
