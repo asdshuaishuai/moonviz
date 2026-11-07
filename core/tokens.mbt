@@ -40,6 +40,13 @@ pub fn DesignTokens::default() -> DesignTokens {
   // warning 加深一档：#ED6C02 白字仅 3.11（可读性硬标准 ≥4.5，badge/
   // alert 的 warning 档文字色是 on_primary），#B85C00 达 4.6
   t.colors.set("warning", "#B85C00")
+  // 多彩感第三批角色（视觉语言 0.2）：info 语义色 + 三只 tinted 容器——
+  // chip/图标/插图的多彩用色面，文字一律 text_primary（深容器配亮主题深字、
+  // 暗容器配暗主题亮字，两Mode都 ≥4.5，见 visual_lang_wbtest 逐档断言）
+  t.colors.set("info", "#0060B8")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
   t.colors.set("outline", "#C8CDD6")
   t.colors.set("outline_variant", "#E0E0E0")
   t.colors.set("text_primary", "#1A1C1E")

@@ -90,6 +90,12 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
 - ✅ 呼吸感：导出画布 = tinted background、卡面 = 白浮起（iOS 分组语义），
   画板根节点不再描幽灵虚线；仪表盘模板画出真实主色圆角柱状图；
 - ✅ critique 第 10 维 `visual`（文字阴影 / 卡片融底 / 同心圆角，只报不修）；
+- ✅ spec 第一权威（需求 → Agent 提取 → 引擎跟随）：palette 扩展键
+  （secondary/info/warning/*Container），容器色从 spec 语义色对背景推导
+  （不落引擎预设），spec 令牌先于模板实例化，调色板外字面色进 `spec_violations`；
+  新色彩角色 info/success_container/warning_container/info_container 进全部
+  预设（text_primary 压每只 ≥4.5）；list 分类 chips 容器色四色轮换（角色用色）；
+  norms visual 容器可辨性扩到 tinted 全族（对比 < 1.10 且无阴影无描边）。
 - ✅ H5/CSS/JS：导出 chrome 全部令牌化为 CSS 变量（明暗随主题、theme-color、
   安全区呼吸边距、窄屏等比缩放）、Vibrancy 磨砂吸顶胶囊 tab、设备感画板（分层
   柔阴影 + hairline）、Hover Lift 仅给可交互节点、键盘 Enter/Space 可达、
@@ -114,7 +120,7 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
 |---|---|
 | 引擎内核 | 100% MoonBit，52 个核心模块、300+ 公开函数；不崩谓词 5 项 + 双门禁 |
 | 工具面 | CLI 63 命令（cli_help 文档化口径）· MCP 55 工具（含 inputSchema 字典）· WASM 双产物 75/75 导出（session 51）· Node SDK |
-| 组件与模板 | 65 组件 × 117 变体 · 14 个整页模板（移动 + Web/桌面） |
+| 组件与模板 | 65 组件 × 118 变体 · 14 个整页模板（移动 + Web/桌面） |
 | 分发 | npm 7 包 + GitHub Releases 全产物 10 项（4 平台 tarball + 双 wasm + npm 全家族） |
 | 人类体验 | Playground 设计工作台（设计/预览双模式）+ deepDesign Studio 画布 |
 | 质量治理 | 5 个下游 issue 全闭环；契约测试（wasm/contract_test.mbt）锁定回归 |

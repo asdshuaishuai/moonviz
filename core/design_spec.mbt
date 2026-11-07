@@ -34,7 +34,11 @@ pub fn design_spec_draft_json(intent_text : String) -> String {
   }
   "{\"v\":1,\"palette\":{\"primary\":\"" +
   primary +
-  "\",\"background\":\"#FFFFFF\",\"surface\":\"#F6F7F9\",\"text\":\"#1A1C1E\",\"muted\":\"#6B7280\",\"danger\":\"#DC2626\",\"success\":\"#16A34A\"},\"typography\":{\"display\":48,\"h1\":32,\"h2\":24,\"h3\":20,\"h4\":16,\"body\":14,\"caption\":12},\"spacing\":[4,8,12,16,24,32],\"radius\":{\"sm\":8,\"md\":12,\"lg\":16},\"rules\":[\"按钮不卡文案（宽≥文案+24）\",\"撞色零容忍\",\"齐缝列表行分隔\",\"触控目标 44\"]}"
+  "\",\"secondary\":\"#5856D6\",\"info\":\"#0060B8\",\"warning\":\"#B85C00\",\"background\":\"#FFFFFF\",\"surface\":\"#F6F7F9\",\"text\":\"#1A1C1E\",\"muted\":\"#6B7280\",\"danger\":\"#DC2626\",\"success\":\"#16A34A\"},\"typography\":{\"display\":48,\"h1\":32,\"h2\":24,\"h3\":20,\"h4\":16,\"body\":14,\"caption\":12},\"spacing\":[4,8,12,16,24,32],\"radius\":{\"sm\":8,\"md\":12,\"lg\":16},\"rules\":[\"按钮不卡文案（宽≥文案+24）\",\"撞色零容忍\",\"齐缝列表行分隔\",\"触控目标 44\"]}"
+  // palette 键集（Agent 提取需求时按此契约产出）：基础 7 键 primary/background/
+  // surface/text/muted/danger/success + 扩展键 secondary/info/warning/
+  // surfaceVariant/primaryContainer/…（容器键缺席时引擎从同名语义色对
+  // background 推导 tint，配色决策始终来自 spec 而非引擎预设）
 }
 
 ///|
@@ -291,34 +295,9 @@ pub fn Project::apply_design_spec(
       Err(_) => ()
     }
   }
-  // 1) 调色板 → token 覆盖（set_token 内建 tokens_snapshot + recolor_with
-  //    通道，逐角色重着色；无需额外整体 recolor）
-  let mut touched = false
-  let roles : Array[(String, String)] = [
-    ("primary", "primary"),
-    ("background", "background"),
-    ("surface", "surface"),
-    ("text", "text_primary"),
-    ("muted", "text_secondary"),
-    ("danger", "error"),
-    ("success", "success"),
-  ]
-  for pair in roles.iter() {
-    let (spec_key, token_role) = pair
-    match ds_string_value(spec, spec_key) {
-      Some(v) =>
-        if v != "" && norm_is_hex6(v) {
-          match self.set_token(token_role, v) {
-            Ok(_) => touched = true
-            Err(_) => ()
-          }
-        }
-      None => ()
-    }
-  }
-  if touched {
-    self.revision = self.revision + 1
-  }
+  // 1) 调色板 → token 覆盖（含扩展角色与容器推导，spec 是第一权威：
+  //    引擎预设只在 spec 未定义该角色时兜底）
+  let _ = self.apply_spec_tokens(spec)
   // 2) 字号阶与圆角档
   match self.artboards.get(artboard) {
     None => ()
@@ -330,6 +309,141 @@ pub fn Project::apply_design_spec(
   // 3) 记录生效 spec：norms 档位判定以 spec 为准（issue #24 第 2 条）
   self.design_spec = spec
   Ok(())
+}
+
+///|
+/// spec palette → 令牌的全量应用（spec 是第一权威，引擎默认只是缺省兜底）。
+///
+/// 三层语义：
+/// 1. 显式键直派：基础 7 键 + 扩展键（secondary/info/warning +
+///    primaryContainer/secondaryContainer/successContainer/warningContainer/
+///    infoContainer/surfaceVariant）逐角色 set_token；
+/// 2. 容器推导：spec 给了某语义色但没给它的容器键时，容器 =
+///    `hex_mix(语义色, background, 0.14)`——多彩层次从 spec 的色相派生，
+///    而不是落回引擎预设值（配色决策归 spec 文档，引擎只补层次）；
+/// 3. 返回生效角色数（信封/测试用）。
+///
+/// 独立于 apply_design_spec：generate 在**模板实例化之前**调用本函数，
+/// 组件补丁即以 spec 令牌取色，消除 theme→template 顺序依赖。
+pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
+  // 显式键：spec key → 令牌角色
+  let keys : Array[(String, String)] = [
+    ("primary", "primary"),
+    ("secondary", "secondary"),
+    ("accent", "secondary"),
+    ("info", "info"),
+    ("warning", "warning"),
+    ("background", "background"),
+    ("surface", "surface"),
+    ("surfaceVariant", "surface_variant"),
+    ("text", "text_primary"),
+    ("muted", "text_secondary"),
+    ("danger", "error"),
+    ("error", "error"),
+    ("success", "success"),
+    ("primaryContainer", "primary_container"),
+    ("secondaryContainer", "secondary_container"),
+    ("successContainer", "success_container"),
+    ("warningContainer", "warning_container"),
+    ("infoContainer", "info_container"),
+  ]
+  let present : Map[String, String] = Map::new() // 令牌角色 → hex
+  let mut applied = 0
+  for pair in keys.iter() {
+    let (spec_key, token_role) = pair
+    match ds_string_value(spec, spec_key) {
+      Some(v) =>
+        if v != "" && norm_is_hex6(v) {
+          match self.set_token(token_role, v) {
+            Ok(_) => {
+              present.set(token_role, v)
+              applied = applied + 1
+            }
+            Err(_) => ()
+          }
+        }
+      None => ()
+    }
+  }
+  // 容器推导：语义色在场而容器键缺席 → 从 spec 色相派生（背景取当前令牌值，
+  // 暗/亮主题各自得到同深度层次的 tint）
+  let bg = self.tokens.resolve_color("background")
+  let pairs : Array[(String, String)] = [
+    ("primary", "primary_container"),
+    ("secondary", "secondary_container"),
+    ("success", "success_container"),
+    ("warning", "warning_container"),
+    ("info", "info_container"),
+  ]
+  for pair in pairs.iter() {
+    let (base_role, container_role) = pair
+    if !present.contains(container_role) {
+      match present.get(base_role) {
+        Some(base_hex) => {
+          // tint = 背景 78% + 语义色 22%：贴近背景亮度（暗主题得暗 tint、
+          // 亮主题得亮 tint）且对背景对比 ≥1.10（容器可辨性检测线），
+          // 色相来自 spec 语义色
+          let tint = hex_mix(bg, base_hex, 0.22)
+          match self.set_token(container_role, tint) {
+            Ok(_) => applied = applied + 1
+            Err(_) => ()
+          }
+        }
+        None => ()
+      }
+    }
+  }
+  applied
+}
+
+///|
+/// 调色板遵从检测（spec 强制约束的可见面）：节点 fill/text_color 为字面
+/// hex 且不等于任何当前令牌值（即不是从 spec/主题角色解析出来的颜色）时
+/// 计入违规——模板/Agent 的一切用色都必须能追溯到 spec 调色板或语义角色。
+/// 渐变（含 ':'）与 "none" 不判；上限 8 条与 norms 各检测一致。
+pub fn Project::design_spec_color_violations(self : Project, artboard~ : String) -> Array[String] {
+  let out : Array[String] = []
+  let ab = match self.artboards.get(artboard) {
+    Some(a) => a
+    None => return out
+  }
+  // 当前令牌值全集（spec 应用后的生效调色板）
+  let allowed : Map[String, Bool] = Map::new()
+  for role in self.tokens.colors.keys() {
+    match self.tokens.colors.get(role) {
+      Some(v) => allowed.set(v.to_lower(), true)
+      None => ()
+    }
+  }
+  for id in ab.doc.nodes.keys() {
+    if out.length() >= 8 {
+      break
+    }
+    if id == ab.doc.root_id {
+      continue
+    }
+    match ab.doc.nodes.get(id) {
+      None => ()
+      Some(n) => {
+        let fill = n.style.fill
+        if norm_is_hex6(fill) && !allowed.contains(fill.to_lower()) {
+          out.push(
+            "\{json_escape(id)}（\{n.component}）填充 \{fill} 不在设计规范调色板内（palette/语义角色之外的字面色）",
+          )
+          continue
+        }
+        let tc = n.style.text_color
+        if out.length() < 8 &&
+          norm_is_hex6(tc) &&
+          !allowed.contains(tc.to_lower()) {
+          out.push(
+            "\{json_escape(id)}（\{n.component}）文字色 \{tc} 不在设计规范调色板内",
+          )
+        }
+      }
+    }
+  }
+  out
 }
 
 ///|

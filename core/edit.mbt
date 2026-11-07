@@ -235,15 +235,21 @@ pub fn Project::edit_node(
               applied.push("text")
             }
             "fill" => {
-              cur = { ..cur, style: { ..cur.style, fill: v, }, }
+              // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
+              // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
+              cur = { ..cur, style: { ..cur.style, fill: self.tokens.resolve_color(v), }, }
               applied.push("fill")
             }
             "text_color" => {
-              cur = { ..cur, style: { ..cur.style, text_color: v, }, }
+              // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
+              // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
+              cur = { ..cur, style: { ..cur.style, text_color: self.tokens.resolve_color(v), }, }
               applied.push("text_color")
             }
             "stroke" => {
-              cur = { ..cur, style: { ..cur.style, stroke: v, }, }
+              // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
+              // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
+              cur = { ..cur, style: { ..cur.style, stroke: self.tokens.resolve_color(v), }, }
               applied.push("stroke")
             }
             "radius" => {

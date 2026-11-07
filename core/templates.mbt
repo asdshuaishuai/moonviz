@@ -987,6 +987,17 @@ fn Project::template_list(self : Project, name : String) -> String {
     let w = text_intrinsic(label, 14.0).width + 24.0
     self.place_required(ab, "chip", cid, x=cx, y=118.0, w~, h=28.0)
     self.set_text(ab, cid, label)
+    // 多彩感（角色用色，非满屏彩）：分类 chips 按容器色四色轮换——
+    // 色相全部来自 spec/主题的角色令牌（edit_node 令牌名直填），spec
+    // 换调色板时整组 chips 跟随，不需要改模板
+    let chip_fills = [
+      "primary_container", "success_container", "warning_container", "info_container",
+    ]
+    let _ = self.edit_node(
+      artboard=ab,
+      node_id=cid,
+      kvs=[("fill", chip_fills[ci]), ("text_color", "text_primary")],
+    )
     cx = cx + w + 12.0
   }
 

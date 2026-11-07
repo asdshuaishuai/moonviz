@@ -184,6 +184,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   // 语义色，变体表缺 warning 时 place_comp 静默拒绝、第三卡图标丢失
   // （第 2 轮回归 feat_icon2）——语义色档在此补齐
   gv.set("warning", patch3("warning", "on_primary", 12.0))
+  gv.set("info", patch3("info", "on_primary", 12.0))
   gv.set("error", patch3("error", "on_primary", 12.0))
   m.set("badge", {
     id: "badge",
@@ -500,6 +501,12 @@ pub fn instantiate_component(
           n = { ..n, style: { ..n.style, text_color: hex, }, }
         }
         None => ()
+      }
+      // 描边语义默认：补丁给了 stroke 而宽度为 0 时落 1px——渲染器把
+      // sw<=0 画成 1px hairline（svg.mbt 同款兜底），数据却停留在 0，
+      // norms 的「无描边」判定与导出面读到的是 0：视觉与数据必须一致
+      if n.style.stroke != "none" && n.style.stroke_width <= 0.0 {
+        n = { ..n, style: { ..n.style, stroke_width: 1.0 }, }
       }
       n
     }

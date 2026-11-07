@@ -38,7 +38,7 @@ does not fit — falling through is correct behavior, not failure):**
    `{ok:false, error:"design_spec_required", design_spec_draft:{…}}` —
    persist the draft (DESIGN.md payload), then retry generate with that
    spec (CLI: `generate <intent> spec=<base64-json>`; MCP/wasm: `spec`
-   argument / `session_generate_spec`). The spec's palette / typography /
+   argument / `session_generate_spec`). The spec's palette (base keys primary/background/surface/text/muted/danger/success + extended secondary/info/warning/surfaceVariant/*Container; container keys absent from the spec are DERIVED from the spec's semantic colors over background — color decisions come from the spec, not engine presets) / typography /
    radius tiers / rules drive generation and norms judgment; the engine
    never silently falls back to its built-in design system. Mock data
    gaps (`mock_missing:[node ids]`) in the report/envelopes are for YOU

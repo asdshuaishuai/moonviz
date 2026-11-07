@@ -130,6 +130,10 @@ pub fn Theme::dark() -> Theme {
   // text_hint 加亮一档：#6B7078 压 surface_variant 仅 2.81，
   // #989EA6 达 5.19（sv）/ 6.33（surface）
   t.colors.set("text_hint", "#989EA6")
+  t.colors.set("info", "#82C1F5")
+  t.colors.set("success_container", "#1C4526")
+  t.colors.set("warning_container", "#4A2B00")
+  t.colors.set("info_container", "#0E3550")
   { name: "dark", display_name: "深色", tokens: t, is_dark: true, }
 }
 
@@ -292,6 +296,10 @@ pub fn Theme::apple() -> Theme {
   t.colors.set("text_secondary", "#66666B")
   // text_hint 加深一档：#667078 压 surface_variant 仅 4.33，#616A72 达 4.72
   t.colors.set("text_hint", "#616A72")
+  t.colors.set("info", "#0060B8")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
   { name: "apple", display_name: "Apple HIG", tokens: t, is_dark: false, }
 }
 
@@ -319,6 +327,10 @@ pub fn Theme::apple_dark() -> Theme {
   t.colors.set("text_secondary", "#AEAEB2")
   // text_hint 加亮一档：#98989E 压 surface_variant 仅 3.96，#A6A6AB 达 4.68
   t.colors.set("text_hint", "#A6A6AB")
+  t.colors.set("info", "#7CC4FF")
+  t.colors.set("success_container", "#0E3D22")
+  t.colors.set("warning_container", "#4A2B00")
+  t.colors.set("info_container", "#0E3550")
   {
     name: "apple_dark",
     display_name: "Apple HIG 暗色",
@@ -351,6 +363,10 @@ pub fn Theme::harmony() -> Theme {
   t.colors.set("text_primary", "#182431")
   t.colors.set("text_secondary", "#5A6470")
   t.colors.set("text_hint", "#5F6A76")
+  t.colors.set("info", "#0060B8")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
   { name: "harmony", display_name: "HarmonyOS", tokens: t, is_dark: false, }
 }
 
@@ -377,6 +393,10 @@ pub fn Theme::harmony_dark() -> Theme {
   t.colors.set("text_primary", "#E6E8EB")
   t.colors.set("text_secondary", "#B0B8C1")
   t.colors.set("text_hint", "#9AA3AD")
+  t.colors.set("info", "#82C1F5")
+  t.colors.set("success_container", "#123817")
+  t.colors.set("warning_container", "#4A2600")
+  t.colors.set("info_container", "#0E2F4D")
   {
     name: "harmony_dark",
     display_name: "HarmonyOS 暗色",
@@ -1049,4 +1069,19 @@ fn jstr21(parts : Array[String]) -> String {
     sb.write_string(parts[i])
   }
   sb.to_string()
+}
+
+///|
+/// 颜色线性插值（设计规范容器色推导用）：t=0 返回 a，t=1 返回 b。
+/// spec 只给 primary 时，容器 = mix(primary, background, 0.14)——多彩层次
+/// 从 spec 的色相派生，而不是落回引擎预设（spec 是第一权威）。
+pub fn hex_mix(a : String, b : String, t : Double) -> String {
+  let (ar, ag, ab) = parse_rgb5(a)
+  let (br, bg, bb) = parse_rgb5(b)
+  let mix = fn(x : Int, y : Int) -> Int {
+    let v = x.to_double() * (1.0 - t) + y.to_double() * t
+    let v = if v < 0.0 { 0.0 } else if v > 255.0 { 255.0 } else { v }
+    v.to_int()
+  }
+  to_hex(mix(ar, br), mix(ag, bg), mix(ab, bb))
 }

@@ -8,6 +8,13 @@
   spec palette drives recoloring, typography and radius tiers are remapped,
   and norms tiers judge against the spec (button radius base = `radius.sm`).
   New export `session_generate_spec`; CLI `generate <intent> spec=<base64>`.
+  **The spec is the first authority on color** (requirements → Agent extracts
+  the spec → the engine follows): palette takes the 7 base keys plus extended
+  keys (`secondary/info/warning/surfaceVariant/*Container`); container keys
+  absent from the spec are DERIVED from the spec's semantic colors over
+  background; spec tokens take effect BEFORE template instantiation (no
+  theme→template ordering hazard); literal colors outside the palette are
+  reported in `spec_violations`.
 - **Interaction & content QA + hard gates (issues #25/#26)** — unbound
   interactive components, placeholder residue, empty shells and non-registry
   components are reported into the norms dimension; same-node multi-flow and
@@ -41,7 +48,7 @@
   SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
   platform-package version alignment).
 - **Docs & site full sync** — every count re-anchored to live engine output
-  (55 tools / 27 ops / 75 wasm exports / 9-dimension critique / 52 core
+  (55 tools / 27 ops / 75 wasm exports / 10-dimension critique / 52 core
   modules), version examples moved to `<ver>` placeholders.
 - Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
 
@@ -141,7 +148,7 @@
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
 │  │ 17 colors/  │ │ 65 comps × │ │ multi-    │ │ lint/diff │ │
-│  │ 7 spacing/  │ │117 variants│ │ boards/   │ │ /suggest  │ │
+│  │ 7 spacing/  │ │118 variants│ │ boards/   │ │ /suggest  │ │
 │  │ 6 radii/    │ │            │ │ flows/    │ │           │ │
 │  │ 8 font sizes│ │            │ │ tokens    │ │           │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
@@ -226,7 +233,7 @@ Two modes, one engine — both fully retained:
 | `adaptive_landing` | Adaptive landing page for web widths |
 | `login_v2` | Login page, second style variant |
 
-## Built-in Component Library (65 components × 117 variants)
+## Built-in Component Library (65 components × 118 variants)
 
 | Component | Category | Variants |
 | :--- | :--- | :--- |
@@ -326,7 +333,7 @@ moonviz/
 │   ├── policy.mbt     Dual-route policy (human soft / agent hard)
 │   ├── patch.mbt      Transactional patches
 │   ├── tokens.mbt     Design tokens (Material 3 style)
-│   ├── component.mbt  Component system (65 components × 117 variants)
+│   ├── component.mbt  Component system (65 components × 118 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
 │   ├── agent_api.mbt  Agent tool API (55 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)

@@ -165,6 +165,13 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
    不得照抄官方原值（#007AFF 白字仅 4.02）。三通道等价：意图美学词 / spec `style` 键 /
    `theme` 命令；导出 HTML 的 chrome 全部由主题令牌派生（画布 = background，
    卡面 = surface），不得硬编码颜色。
+   **spec 是配色的第一权威（需求 → Agent 提取 spec → 引擎跟随）**：palette
+   基础 7 键 + 扩展键（secondary/info/warning/surfaceVariant/*Container）；
+   容器键缺席时从同名语义色对 background 推导 tint（`hex_mix(bg, base, 0.22)`，
+   配色决策来自 spec 而非引擎预设）；generate 在模板实例化**前**落 spec 令牌
+   （消除 theme→template 顺序依赖）；调色板外字面色随信封 `spec_violations`
+   上报（`design_spec_color_violations`）。容器色角色：info/success_container/
+   warning_container/info_container 已进全部预设（text_primary 压每只 ≥4.5）。
 
 交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中
 返回类节点（id 词边界 back/prev/return；文本 返回/后退/上一步/back/←/‹/«）

@@ -6,6 +6,11 @@
   spec 调色板驱动重着色、字号阶与圆角档重映射、norms 档位按 spec 裁决
   （按钮圆角基准 = `radius.sm`）。新导出 `session_generate_spec`；CLI
   `generate <意图> spec=<base64>`。
+  **spec 是配色的第一权威**（需求 → Agent 提取 spec → 引擎跟随）：palette
+  基础 7 键 + 扩展键（`secondary/info/warning/surfaceVariant/*Container`），
+  容器键缺席时从 spec 语义色对背景推导 tint（配色决策来自 spec 而非引擎
+  预设）；spec 令牌在模板实例化**前**生效（无 theme→template 顺序依赖）；
+  调色板外字面色随 `spec_violations` 上报。
 - **交互与内容完整性 QA + 硬门（issue #25/#26）**——可交互组件无去向、占位
   残留、空壳容器、非组件库组件并入 norms 检测；同节点多 flow 与可点热区
   相交是 AgentGate 硬错误（带定位）。
@@ -117,7 +122,7 @@
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
-│  │ 17色/7距/  │ │ 65组件×117 │ │ 多画板/流  │ │ lint/diff │ │
+│  │ 17色/7距/  │ │ 65组件×118 │ │ 多画板/流  │ │ lint/diff │ │
 │  │ 6角/8字号  │ │ 变体       │ │ /令牌/组件 │ │ /suggest  │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -198,7 +203,7 @@
 | `adaptive_landing` | 适配 Web 宽度的落地页 |
 | `login_v2` | 登录页第二种风格 |
 
-## 内置组件库（65 组件 × 117 变体）
+## 内置组件库（65 组件 × 118 变体）
 
 | 组件 | 分类 | 变体 |
 | :--- | :--- | :--- |

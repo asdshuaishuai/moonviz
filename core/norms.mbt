@@ -1224,8 +1224,9 @@ pub fn norm_issues_v2(
 // 三项全部机械可判、只报不修（审美方向不由引擎替 Agent 定）：
 // 1) 阴影滥用：文字节点带 elevation——阴影语言只属于容器层次（卡片/浮层/
 //    模态），文字投影是 2000 年代网页的发糊效果，HIG/鸿蒙均不用；
-// 2) 层次不可辨：内容卡片（card/stat）与所在画布同色且无阴影无描边——
-//    卡片的边界全靠「浮起」或「hairline」交代，两者皆无即融进画布；
+// 2) 层次不可辨：tinted 容器族（card/stat/search_bar/chip/tag/button/
+//    text_input）与有效背景对比 < 1.10 且无阴影无描边——边界全靠「浮起」
+//    或「hairline」交代，两者皆无即融进底色；
 // 3) 同心圆角（Apple HIG concentric corners）：子容器圆角大于父容器圆角
 //    时轮廓失衡（内角顶破外角弧线）；胶囊/正圆（≥高/2 或 999）豁免。
 // ---------------------------------------------------------------------------
@@ -1257,14 +1258,24 @@ pub fn norm_visual_issues(
           )
           continue
         }
-        // 2) 层次不可辨：卡片与画布同色且无阴影无描边
-        let is_card = n.component == "card" || n.component == "stat"
+        // 2) 层次不可辨：容器与有效背景近同色（对比 < 1.10）且无阴影无描边。
+        //    覆盖面从 card 扩到整个 tinted 容器族（search_bar/chip/tag/button/
+        //    text_input/card/stat）——harmony 的浅 tint 压浅画布（1.02~1.03）
+        //    曾整组隐形；阴影或 hairline 任一在场即豁免（浮起或描边都可辨）。
+        let tinted = n.component == "card" ||
+          n.component == "stat" ||
+          n.component == "search_bar" ||
+          n.component == "chip" ||
+          n.component == "tag" ||
+          n.component == "button" ||
+          n.component == "text_input"
         let no_edge = n.style.stroke == "none" || n.style.stroke_width <= 0.0
-        if is_card && n.style.shadow == "none" && no_edge && norm_is_hex6(n.style.fill) {
+        if tinted && n.style.shadow == "none" && no_edge && norm_is_hex6(n.style.fill) {
           let pbg = norm_effective_bg(doc, id, "none", canvas_bg~)
-          if norm_is_hex6(pbg) && n.style.fill.to_lower() == pbg.to_lower() {
+          if norm_is_hex6(pbg) &&
+            norm_contrast_ratio(norm_luminance(n.style.fill), norm_luminance(pbg)) < 1.10 {
             issues.push(
-              "\{json_escape(id)}（\{n.component}）卡片层次不可辨：与画布同为 \{pbg} 且无阴影无描边（视觉语言）",
+              "\{json_escape(id)}（\{n.component}）容器层次不可辨：填充 \{n.style.fill} 与背景 \{pbg} 对比 < 1.10 且无阴影无描边（视觉语言）",
             )
             continue
           }

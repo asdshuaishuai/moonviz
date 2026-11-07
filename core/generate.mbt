@@ -295,6 +295,9 @@ pub fn Project::generate(
       Err(_) => theme_applied = ""
     }
   }
+  // 设计规范第一权威：spec 令牌（含扩展角色与容器推导）在模板实例化
+  // **之前**生效——组件补丁以 spec 令牌取色，消除 theme→template 顺序依赖
+  let _ = self.apply_spec_tokens(spec)
   let ab = match
     self.apply_template(
       template_id=intent.template_id,
@@ -315,6 +318,9 @@ pub fn Project::generate(
   let mg_j = json_string_array(mock_gap_ids)
   // issue #24 要求 2：白名单/禁用项偏差随信封上报
   let spec_violations = self.design_spec_component_violations(artboard=ab)
+  for v in self.design_spec_color_violations(artboard=ab).iter() {
+    spec_violations.push(v)
+  }
   let sv_j = json_string_array(spec_violations)
   // 信封暴露实际宽高：模板可能不消费意图宽度（多数模板保留内建
   // 390×844），Agent 无从发现与意图不符，除非信封可见。
@@ -694,6 +700,8 @@ pub fn Project::generate_multi(
       Err(_) => theme_applied = ""
     }
   }
+  // 设计规范第一权威：spec 令牌先于全部模板实例化（与单通道同语义）
+  let _ = self.apply_spec_tokens(spec)
   // 3) 逐板实例化：同模板重名追加序号；name 参数归第一板。
   //    查重按 sanitize_id 归一口径：create_artboard 以 sanitize_id(name)
   //    为画板 id 做 Map upsert（大写转小写、非法字符转 _），未归一查重
@@ -737,6 +745,9 @@ pub fn Project::generate_multi(
       multi_mock_gaps.push(gid)
     }
     for v in self.design_spec_component_violations(artboard=ab).iter() {
+      multi_violations.push(v)
+    }
+    for v in self.design_spec_color_violations(artboard=ab).iter() {
       multi_violations.push(v)
     }
     ids.push(ab)
