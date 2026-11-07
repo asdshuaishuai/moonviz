@@ -735,12 +735,67 @@ fn Project::recolor_with(
             }
           None => ()
         }
-        // 文字角色按所在底色判别：primary/secondary 实底上的文字优先
-        // on_*（按钮），secondary_container 底上的文字优先 on_secondary_
-        // container（chip/次级按钮的目录口径——字典序会让 on_primary 抢占
-        // 同分，必须按底色上下文显式指定），透明底/容器上的文字优先
-        // text_*（正文/输入框）
-        let fill_role = pick(node.style.fill, role_rank_for_fill)
+        // 文字分派（第 6 轮升级）：语义色实底（primary/secondary/
+        // secondary_container/error/warning/success）上的文字直派目标主题
+        // 的 on_primary/on_secondary_container——旧逻辑只对自身 fill 的
+        // primary/secondary 走 _on 排序，logout_btn（error 底）与透明底
+        // 压 primary 面板（brand_title/brand_sub/sb_i0）被误归 text_*，
+        // light→dark→light 往返把白字永久漂成近黑；sunset 的
+        // on_secondary_container 文字（#4E2A18→apple #1D1D1F→sunset）因
+        // 跨调色板字面量改写漂成 text_primary #3E2723，直派消除两处漂移。
+        // 透明底向上找最近实底祖先的语义角色（最多 8 层防环）；非语义色
+        // 实底/祖先走原 text 排序（正文/输入框）
+        let strong_bg = fn(role : String) -> Bool {
+          role == "primary" ||
+          role == "secondary" ||
+          role == "secondary_container" ||
+          role == "error" ||
+          role == "warning" ||
+          role == "success"
+        }
+        // text 分派的 fill_role 也走组件感知消歧——否则 sunset 的
+        // primary_container/secondary_container 平手按字典序归
+        // primary_container，secondary 底的 on_secondary_container 直派
+        // 不触发（back_btn 文字漂 #3E2723）
+        let fill_role = pick(node.style.fill, fn(role : String) -> Int {
+          role_rank_for_fill_ctx(n.component, role)
+        })
+        let mut on_context = match fill_role {
+          Some(r) => strong_bg(r)
+          None => false
+        }
+        if !on_context && node.style.fill == "none" {
+          // 透明底：向上找最近实底祖先的语义角色
+          let mut cur_id = nid
+          let mut hop = 0
+          while hop < 8 && !on_context {
+            match ab.doc.find_parent(cur_id) {
+              None => hop = 8
+              Some(pid) => {
+                cur_id = pid
+                match ab.doc.nodes.get(pid) {
+                  Some(pn) =>
+                    if pn.style.fill != "none" && norm_is_hex6(pn.style.fill) {
+                      match pick(pn.style.fill, role_rank_for_fill) {
+                        Some(r) =>
+                          if strong_bg(r) {
+                            on_context = true
+                            hop = 8
+                          } else {
+                            hop = 8
+                          }
+                        None => hop = hop + 1
+                      }
+                    } else {
+                      hop = hop + 1
+                    }
+                  None => hop = 8
+                }
+              }
+            }
+          }
+        }
+        let secondary_fill = fill_role is Some("secondary_container")
         let text_rank : (String) -> Int = match fill_role {
           Some("secondary_container") =>
             fn(role : String) -> Int {
@@ -761,18 +816,43 @@ fn Project::recolor_with(
             }
           None => role_rank_for_text
         }
-        match pick(n.style.text_color, text_rank) {
-          Some(role) =>
-            match target.colors.get(role) {
-              Some(v) => {
-                if v != n.style.text_color {
-                  changed = changed + 1
-                }
-                node = { ..node, style: { ..node.style, text_color: v, }, }
+        // 空文本节点（容器 rect）的 text_color 不可见：跳过重写，
+        // 往返切换后与基线字节稳定（否则 #111111→on_primary→#FFFFFF
+        // 的无意义漂移污染 diff 与 .mbt.md）
+        let mut text_assigned = n.text.length() == 0
+        if on_context && !text_assigned && norm_is_hex6(n.style.text_color) && n.style.text_color != "none" {
+          // 语义底直派：secondary_container 底 → on_secondary_container，
+          // 其余语义底 → on_primary
+          let target_text = if secondary_fill {
+            target.colors.get("on_secondary_container")
+          } else {
+            target.colors.get("on_primary")
+          }
+          match target_text {
+            Some(v) => {
+              if v != n.style.text_color {
+                changed = changed + 1
               }
-              None => ()
+              node = { ..node, style: { ..node.style, text_color: v, }, }
+              text_assigned = true
             }
-          None => ()
+            None => ()
+          }
+        }
+        if !text_assigned {
+          match pick(n.style.text_color, text_rank) {
+            Some(role) =>
+              match target.colors.get(role) {
+                Some(v) => {
+                  if v != n.style.text_color {
+                    changed = changed + 1
+                  }
+                  node = { ..node, style: { ..node.style, text_color: v, }, }
+                }
+                None => ()
+              }
+            None => ()
+          }
         }
         // 描边同批重着色：第 2 轮给 text_input/search_bar/chip/次按钮普及
         // outline 描边后，「template → theme」这条正常用户路径会把默认

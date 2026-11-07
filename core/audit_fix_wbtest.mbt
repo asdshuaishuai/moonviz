@@ -246,6 +246,61 @@ test "主题：往返切换还原描边与容器角色（消歧 ctx 回归锚）
 }
 
 ///|
+/// 第 6 轮回归锚：text 语境直派——语义色实底（error/primary 面板）与
+/// secondary_container 底上的文字随主题直派 on_*，往返切换字节稳定。
+/// 旧行为：text_rank 只认自身 fill 的 primary/secondary，logout_btn
+/// （error 底）与透明底压 primary 面板的 brand_title 被误归 text_*，
+/// light→dark→light 把白字永久漂成近黑（撞色）。
+test "主题：语义底文字直派与往返稳定（text ctx 回归锚）" {
+  // settings logout_btn：button danger（error 底）→ on_primary
+  let p1 = Project::new()
+  let _ = p1.apply_theme("light")
+  let _ = p1.apply_template(template_id="settings", name="board")
+  let _ = p1.apply_theme("dark")
+  let _ = p1.apply_theme("light")
+  match p1.artboards.get("board") {
+    None => assert_true(false)
+    Some(ab) =>
+      match ab.doc.get("logout_btn") {
+        Some(n) => assert_eq(n.style.text_color, "#FFFFFF", msg="danger 底文字应还原 on_primary 白")
+        None => assert_true(false, msg="logout_btn 缺失")
+      }
+  }
+  // web_login brand_title：透明底压 brand_pane（primary）→ on_primary
+  let p2 = Project::new()
+  let _ = p2.apply_theme("light")
+  let _ = p2.apply_template(template_id="web_login", name="board")
+  let _ = p2.apply_theme("dark")
+  let _ = p2.apply_theme("light")
+  match p2.artboards.get("board") {
+    None => assert_true(false)
+    Some(ab) =>
+      match ab.doc.get("brand_title") {
+        Some(n) => assert_eq(n.style.text_color, "#FFFFFF", msg="primary 面板文字应还原 on_primary 白")
+        None => assert_true(false, msg="brand_title 缺失")
+      }
+  }
+  // sunset back_btn：button secondary（secondary_container 底）→
+  // on_secondary_container，sunset→apple→sunset 文字不漂 text_primary
+  let p3 = Project::new()
+  let _ = p3.apply_theme("sunset")
+  let _ = p3.apply_template(template_id="detail", name="board")
+  let _ = p3.apply_theme("apple")
+  let _ = p3.apply_theme("sunset")
+  match p3.artboards.get("board") {
+    None => assert_true(false)
+    Some(ab) =>
+      match ab.doc.get("back_btn") {
+        Some(n) => {
+          assert_eq(n.style.fill, "#FBE9E7", msg="次按钮底应还原 secondary_container")
+          assert_eq(n.style.text_color, "#4E2A18", msg="次按钮文字应还原 on_secondary_container")
+        }
+        None => assert_true(false, msg="back_btn 缺失")
+      }
+  }
+}
+
+///|
 fn extract_g(svg : String, id : String) -> String {
   let open = "<g id=\"n_" + id + "\""
   match find_sub(svg, open) {
