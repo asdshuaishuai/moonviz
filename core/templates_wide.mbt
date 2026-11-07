@@ -76,7 +76,8 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   )
   self.resize_node(ab, "nav_logo", 40.0, 40.0, 999.0)
   let nav_items = ["Product", "Features", "Pricing", "Docs"]
-  let nav_x = [320.0, 440.0, 560.0, 660.0]
+  // 等距 120：旧 320/440/560/660 末档 100 不均
+  let nav_x = [320.0, 440.0, 560.0, 680.0]
   for i in 0..<4 {
     let id = "nav_i" + i.to_string()
     self.place_required(ab, "body_text", id, x=nav_x[i], y=24.0)
@@ -166,7 +167,9 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
       "badge",
       iid,
       variant=icon_variant,
-      x=fx[i] + 24.0,
+      // x=8：栈内容盒已内缩 pad 16，resolve_pos 再叠加——8+16=24 才是
+      // 视觉左距 24（旧 24 落成 40，内容挤在左上）
+      x=fx[i] + 8.0,
       y=484.0,
       w=48.0,
       h=48.0,
@@ -177,7 +180,7 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
       "heading",
       tid,
       variant="h3",
-      x=fx[i] + 24.0,
+      x=fx[i] + 8.0,
       y=552.0,
       w=200.0,
       h=28.0,
@@ -189,12 +192,17 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
       ab,
       "body_text",
       bid,
-      x=fx[i] + 24.0,
+      x=fx[i] + 8.0,
       y=588.0,
       w=200.0,
       h=20.0,
     )
     self.set_text(ab, bid, descs[i])
+    let _ = self.edit_node(
+      artboard=ab,
+      node_id=cid,
+      kvs=[("justify", "center")],
+    )
     // 200 而非 240：收编进卡片后由栈布局接管排布，240 会溢出卡片内容盒
     // （issue #14：web_landing feat_bodyN contained_in_parent）
   }
@@ -210,8 +218,14 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   self.w_style(ab, "footer_note", [("text_color", c("text_secondary"))])
   self.place_required(ab, "body_text", "footer_links", x=980.0, y=758.0)
   self.set_text(ab, "footer_links", "About   Privacy   Contact")
-  self.resize_node(ab, "footer_links", 260.0, 20.0, 0.0)
+  // 盒右缘 980+268=1248 = nav_cta 右缘，右对齐——左锚曾让墨迹止于 ~1143
+  self.resize_node(ab, "footer_links", 268.0, 20.0, 0.0)
   self.w_style(ab, "footer_links", [("text_color", c("text_secondary"))])
+  let _ = self.edit_node(
+    artboard=ab,
+    node_id="footer_links",
+    kvs=[("align", "right")],
+  )
 
   ab
 }
@@ -349,6 +363,9 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   )
   self.set_text(ab, "wl_signup", "No account? Create one")
   self.resize_node(ab, "wl_signup", 368.0, 18.0, 0.0)
+  // 整行链接色（forgot 已是 primary）——拆节点会破坏居中，注册入口
+  // 整行可点是常见 UI 惯例
+  self.w_style(ab, "wl_signup", [("text_color", c("primary"))])
   let _ = self.edit_node(artboard=ab, node_id="wl_signup", kvs=[("align", "center")])
 
   ab
@@ -659,8 +676,9 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
 
   // 侧边栏：反色 chrome
   self.place_required(ab, "rect", "pc_sb", x=0.0, y=36.0)
-  // 高 736：底边 772 与三面板/状态栏对齐（原 764 缺 8px 错位+左下缺口）
-  self.resize_node(ab, "pc_sb", 240.0, 736.0, 0.0)
+  // 高 764：36+764=800 顶满画板底——旧 736（底 772 对齐状态栏）会在
+  // 左下角留 240×28 画布色缺口，状态栏本就从 x=240 起
+  self.resize_node(ab, "pc_sb", 240.0, 764.0, 0.0)
   self.w_style(ab, "pc_sb", [("fill", WIDE_INVERSE_BG)])
   let files = ["login.mbt.md", "dashboard.mbt.md", "tokens.json", "history.log"]
   for i in 0..<4 {

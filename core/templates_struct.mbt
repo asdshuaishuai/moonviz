@@ -315,7 +315,9 @@ fn login_tree(width : Double, tokens : DesignTokens) -> LT {
     ], tokens=t)
     .cx()
     .w(if desktop { Fixed(420.0) } else { Fill })
-    .h(Fixed(460.0)),
+    // 高 435：内容 285+84 gap+56 pad=425，留 10px——旧 460 上紧下松
+    // （顶距 logo 28 / 底距 signup ~69）
+    .h(Fixed(435.0)),
     lt_flex(id="bot_sp"),
   ])
 }

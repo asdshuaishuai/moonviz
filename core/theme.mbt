@@ -734,6 +734,23 @@ fn Project::recolor_with(
             }
           None => ()
         }
+        // 描边同批重着色：第 2 轮给 text_input/search_bar/chip/次按钮普及
+        // outline 描边后，「template → theme」这条正常用户路径会把默认
+        // 调色板的描边字面量（#C8CDD6/#E0E0E0）留在暗色控件上形成亮环。
+        // "none" 不在任何调色板里，pick 返回 None 自然跳过。
+        match pick(n.style.stroke, role_rank_for_fill) {
+          Some(role) =>
+            match target.colors.get(role) {
+              Some(v) => {
+                if v != n.style.stroke {
+                  changed = changed + 1
+                }
+                node = { ..node, style: { ..node.style, stroke: v, }, }
+              }
+              None => ()
+            }
+          None => ()
+        }
         node
       })
     }

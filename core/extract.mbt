@@ -17,7 +17,7 @@
 
 pub(all) struct ExtractedToken {
   name : String // "primary" / "surface" / "accent_1"
-  value : String // "#4B6BFB"
+  value : String // "#4361EE"
   usage_count : Int // 被多少节点使用
   confidence : Double // 0-1（推断置信度）
 }

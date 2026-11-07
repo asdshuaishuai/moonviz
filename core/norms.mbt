@@ -1156,7 +1156,7 @@ pub fn norm_readability_issues(
                   let block_h = lines.length().to_double() * n.style.font_size * n.style.line_height
                   if block_h > r.height + n.style.font_size * 0.5 {
                     issues.push(
-                      "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字折 \{lines.length()} 行高 \{block_h.to_int()} 超盒高 \{r.height.to_int()} → 加高盒子或精简文案（检测项）",
+                      "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字折 \{lines.length()} 行高 \{block_h.to_int()} 超盒高 \{r.height.to_int()}（norms 检测项）",
                     )
                   }
                 }
