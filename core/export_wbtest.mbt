@@ -690,3 +690,79 @@ test "export_html：无障碍焦点环/tab 键/reduced-motion/toast/lang/aria-la
     msg="无文字按钮标签应回落到组件名",
   )
 }
+
+///|
+/// 导出脚本括号平衡（回归锚）：P 系列曾把多加一个 `}` 写进 MV_ACT 绑定串，
+/// 浏览器「missing ) after argument list」→ 整页脚本中断、原型空白，而
+/// 子串断言（@keyframes 存在）全部照常通过。这里对 <script> 做一次
+/// 跳过字符串/转义的括号扫描，任何不平衡即失败——导出 JS 的语法门。
+test "export_html：脚本括号平衡（语法门）" {
+  let p = Project::new()
+  let _ = p.apply_template(template_id="login")
+  let _ = p.apply_template(template_id="list")
+  let _ = p.create_artboard(name="t_home")
+  let _ = p.add_flow(from="login", to="t_home", trigger="login_btn", transition="modal_present")
+  let _ = p.attach_interaction(
+    artboard="login",
+    node_id="email_input",
+    trigger="tap",
+    action_spec="submit_form:email_input,password_input",
+  )
+  let html = p.export_html()
+  // 取最后一个 <script> 块（页面只有一段主脚本）
+  let start = match html.find("<script>") {
+    Some(i) => i + 8
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let body = html.substring(start=start)
+  let end = match body.find("</script>") {
+    Some(i) => i
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let js = body.substring(start=0, end=end)
+  // 括号扫描：跳过 ' " ` 字符串与转义；JS 里没有模板字符串嵌套花括号的需求
+  let mut depth = 0
+  let mut in_str = 0 // 0=无 1=' 2=" 3=`
+  let mut bad = false
+  let chars = js.to_array()
+  let mut i = 0
+  while i < chars.length() {
+    let code = chars[i].to_int()
+    if in_str != 0 {
+      if code == 92 {
+        i = i + 2
+        continue
+      }
+      if (in_str == 1 && code == 39) ||
+        (in_str == 2 && code == 34) ||
+        (in_str == 3 && code == 96) {
+        in_str = 0
+      }
+    } else {
+      if code == 39 {
+        in_str = 1
+      } else if code == 34 {
+        in_str = 2
+      } else if code == 96 {
+        in_str = 3
+      } else if code == 40 || code == 91 || code == 123 {
+        depth = depth + 1
+      } else if code == 41 || code == 93 || code == 125 {
+        depth = depth - 1
+        if depth < 0 {
+          bad = true
+        }
+      }
+    }
+    i = i + 1
+  }
+  assert_false(bad)
+  assert_eq(depth, 0)
+  assert_eq(in_str, 0)
+}
