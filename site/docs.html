@@ -144,7 +144,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>resize-canvas</code> / <code>restyle</code> / <code>theme</code></td><td>画布尺寸 / 重排版式 / 主题</td></tr>
 <tr><td><code>collab-merge</code></td><td>多 Agent 三方合并（OT 冲突检测，规格：<code>&lt;base_rev&gt; &lt;agent&gt;=&lt;op&gt;[+op...]</code>）</td></tr>
 <tr><td><code>history</code></td><td>设计版本控制：init / commit / log / undo / redo / checkout / diff</td></tr>
-<tr><td><code>anim-css</code> / <code>anim-list</code></td><td>预设动画 CSS（6 预设）/ 预设清单</td></tr>
+<tr><td><code>anim-css</code> / <code>anim-list</code></td><td>预设动画 CSS（6 预设，选择器对齐 SVG DOM 的 <code>#n_&lt;id&gt;</code>）/ 预设清单</td></tr>
 <tr><td><code>protest</code></td><td>原型测试脚本（tap:x:y&gt;board; back&gt;board; noviol; render）</td></tr>
 <tr><td><code>export-mbt-human</code></td><td><b>HumanGate</b> 导出 canonical <code>.mbt.md</code>（结构违规硬阻断）</td></tr>
 <tr><td><code>export-mbt-agent</code></td><td><b>AgentGate</b> 导出（语义级校验）</td></tr>
@@ -283,7 +283,7 @@ moon build --release --target wasm wasm      # 标准 MVP → _build/wasm/releas
 <tr><td><code>export_html</code> / <code>export_svg</code></td><td>导出</td><td>自包含可交互 HTML 原型（节点级导航/状态切换/toast）/ 单画板 SVG</td></tr>
 <tr><td><code>collab_merge</code></td><td>协作</td><td>多 Agent 三方合并：OT 冲突检测 + 自动解决</td></tr>
 <tr><td><code>history</code></td><td>版本</td><td>设计版本控制：时间旅行 / 提交日志 / 语义 diff</td></tr>
-<tr><td><code>animation_presets</code> / <code>animation_css</code></td><td>动画</td><td>6 预设清单 / 节点 CSS @keyframes 生成</td></tr>
+<tr><td><code>animation_presets</code> / <code>animation_css</code></td><td>动画</td><td>6 预设清单 / 节点 CSS @keyframes 生成（规则选择器 <code>#n_&lt;id&gt;</code>，与 SVG DOM 一致）</td></tr>
 <tr><td><code>protest</code></td><td>测试</td><td>原型测试脚本（断言式：导航/输入/渲染/违规）</td></tr>
 <tr><td><code>list_ops</code></td><td>字典</td><td>27 条 mutating op 机器可读字典（usage/category/gates）</td></tr>
 <tr><td><code>lint_design</code> / <code>auto_fix</code></td><td>质量</td><td>设计 Lint 与自动修复</td></tr>
@@ -407,19 +407,19 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 
 <section id="motion">
 <h2>动效系统（dev 线，精致感/流畅性）</h2>
-<p>动效不是装饰，是交互反馈的一部分。<b>令牌单一来源</b>：<code>animation.mbt</code> 的时长刻度（120/240/360ms）与缓动曲线（<code>Easing::css_value</code>，含 spring/bounce 的 cubic-bezier 等价式）经 <code>motion_tokens_css()</code> 注出 <code>:root</code> 变量——引擎与导出面共用同一节拍，引擎侧不散落手写贝塞尔。</p>
+<p>动效不是装饰，是交互反馈的一部分。<b>令牌单一来源</b>：<code>animation.mbt</code> 的时长刻度（120/180/240/360ms）与缓动曲线（<code>Easing::css_value</code>，含 spring/bounce 的 cubic-bezier 等价式）经 <code>motion_tokens_css()</code> 注出 <code>:root</code> 变量——引擎与导出面共用同一节拍，导出层不写死毫秒、也不散落手写贝塞尔。</p>
 <table>
 <tr><th>能力</th><th>语义</th></tr>
 <tr><td>方向感知转场</td><td>navigate 前进（+1 滑入）/ back 返回（−1 反向）/ tab 纯淡入（0）；fill 用 backwards，动画结束即交还 transform 给按压反馈</td></tr>
 <tr><td>按压反馈</td><td>交互节点 :active 时 spring 回弹缩放（fill-box 居中）——SVG 原型的触感来源；组件状态的 fill 切换走引擎缓动，不再生硬跳变</td></tr>
-<tr><td>入场阶梯</td><td>画板子节点 24ms 步进依次浮现（前 8 个），克制不抢戏</td></tr>
+<tr><td>入场阶梯</td><td>画板顶层节点按 <code>--mv-stagger</code>（24ms）逐级浮现，第 8 个起饱和到 <code>--mv-stagger-max</code>（168ms）——长列表后段不再复位抢跑，克制不抢戏</td></tr>
 <tr><td>开屏页推断</td><td>export_html 开在导航流天然起点（未被任何 flow 指向的画板），不随 Map 遍历序漂移到任意画板</td></tr>
 <tr><td>流畅性细节</td><td>ESC = 返回（与内置返回导航语义对齐）；画板切换平滑回顶；tab hover 抬升 + 活动态投影</td></tr>
 <tr><td>微交互动效</td><td>set_text 文字更新 tick 滑入 / setState 状态切换 pop 回弹 / 页面入场 boot 淡入——令牌同源，prefers-reduced-motion 全覆盖</td></tr>
 <tr><td>动作面补齐</td><td>haptic（触觉反馈 toast）/ play_sound（音效提示）进导出绑定表——此前导出面静默丢弃；submit_form 的 spec 语法扩展列入后续</td></tr>
 <tr><td>无障碍</td><td>系统开启 prefers-reduced-motion 时全部动效关闭——精致感不含强制动；:focus-visible 键盘焦点可见；color-scheme 声明暗色控件</td></tr>
 </table>
-<p>测试锚点：<code>core/export_wbtest.mbt</code>（动效令牌/方向转场/按压反馈/入场推断）。</p>
+<p>测试锚点：<code>core/export_wbtest.mbt</code>（动效令牌/方向转场/按压反馈/入场推断）、<code>core/animation_wbtest.mbt</code>（选择器/声明面/同帧合并）。</p>
 </section>
 
 <section id="generative">

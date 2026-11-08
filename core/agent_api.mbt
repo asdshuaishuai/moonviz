@@ -377,7 +377,7 @@ pub fn list_tools() -> Array[AgentTool] {
   )
   add(
     "animation_css",
-    "Generate CSS @keyframes + animation for a node with a preset. args: node_id, preset",
+    "Generate CSS @keyframes + animation for a node with a preset. args: node_id, preset. The emitted rule targets the SVG DOM id `#n_<node_id>` (matches render_svg's `<g id=\"n_...\">`).",
     [
       arg("node_id", "string", "target node id", required=true),
       arg(

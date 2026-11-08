@@ -141,19 +141,16 @@ pub fn Project::export_html(self : Project) -> String {
   sb.write_string(
     "  @keyframes mv-board-in{from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}}\n",
   )
-  // 入场阶梯：画板顶层节点依次浮现（24ms 步进，前 8 个后同步），克制不抢戏。
+  // 入场阶梯：画板顶层节点依次浮现（步进与饱和上限都来自 animation.mbt 的
+  // 动效令牌，导出层不写死毫秒；第 8 个起饱和，长列表后段不抢跑）。
   // svg 的唯一直接子 g 是根 wrapper（render_svg 只对 root 调一次 render_node，
   // 节点 g 全嵌其内）——选择器下钻一层 >g>g 对准顶层节点；wrapper 自带一个
   // 非 g 的背景 rect 占位，故按 nth-of-type 对 g 计数，不受普通子元素挤位
   sb.write_string(
-    "  .board.active>svg>g>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n" +
-    "  .board.active>svg>g>g:nth-of-type(2){animation-delay:24ms}\n" +
-    "  .board.active>svg>g>g:nth-of-type(3){animation-delay:48ms}\n" +
-    "  .board.active>svg>g>g:nth-of-type(4){animation-delay:72ms}\n" +
-    "  .board.active>svg>g>g:nth-of-type(5){animation-delay:96ms}\n" +
-    "  .board.active>svg>g>g:nth-of-type(6){animation-delay:120ms}\n" +
-    "  .board.active>svg>g>g:nth-of-type(7){animation-delay:144ms}\n" +
-    "  .board.active>svg>g>g:nth-of-type(8){animation-delay:168ms}\n" +
+    "  .board.active>svg>g>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n",
+  )
+  sb.write_string(motion_stagger_css(".board.active>svg>g>g", indent="  "))
+  sb.write_string(
     "  @keyframes mv-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}\n",
   )
   sb.write_string(
@@ -177,13 +174,14 @@ pub fn Project::export_html(self : Project) -> String {
     "  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}\n" +
     // 无障碍精致：键盘焦点可见（主题主色）
     "  :focus-visible{outline:2px solid var(--mv-primary);outline-offset:2px}\n" +
-    // 入场淡入 + 状态切换 pop + 文字更新 tick（令牌同源，reduced-motion 全覆盖）
+    // 入场淡入 + 状态切换 pop + 文字更新 tick（时长全部走动效令牌，导出层
+    // 不再写死 .36s/.24s/.18s；reduced-motion 全覆盖）
     "  @keyframes mv-boot{from{opacity:0}to{opacity:1}}\n" +
-    "  body{animation:mv-boot .36s var(--mv-out) backwards}\n" +
+    "  body{animation:mv-boot var(--mv-dur-slow) var(--mv-out) backwards}\n" +
     "  @keyframes mv-pop{0%{transform:scale(1)}45%{transform:scale(1.035)}100%{transform:scale(1)}}\n" +
-    "  .mv-pop{animation:mv-pop .24s var(--mv-spring)}\n" +
+    "  .mv-pop{animation:mv-pop var(--mv-dur) var(--mv-spring)}\n" +
     "  @keyframes mv-tick{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}\n" +
-    "  .mv-tick{animation:mv-tick .18s var(--mv-out)}\n",
+    "  .mv-tick{animation:mv-tick var(--mv-dur-tick) var(--mv-out)}\n",
   )
   // 状态多态 CSS：每个非 default 状态生成一份视觉覆盖（fill/text_color/
   // font_size）。SVG 表现属性可被 CSS 覆盖，g[#n_x] 挂 .st-<state> 类切换。

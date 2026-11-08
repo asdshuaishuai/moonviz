@@ -52,6 +52,10 @@ test "export_html：动效令牌与交互流畅性" {
   // 动效令牌：时长刻度 + 引擎缓动曲线
   assert_true(html.contains("--mv-dur-fast:120ms"))
   assert_true(html.contains("--mv-dur:240ms"))
+  assert_true(html.contains("--mv-dur-slow:360ms"))
+  assert_true(html.contains("--mv-dur-tick:180ms"))
+  assert_true(html.contains("--mv-stagger:24ms"))
+  assert_true(html.contains("--mv-stagger-max:168ms"))
   assert_true(html.contains("--mv-spring:cubic-bezier(0.34, 1.56, 0.64, 1)"))
   // 方向感知转场：navigate 前进 / back 反向 / tab 纯淡入；backwards 不冻结交互
   assert_true(html.contains(
@@ -67,19 +71,48 @@ test "export_html：动效令牌与交互流畅性" {
   // 入场阶梯：选择器下钻到根 wrapper 内的顶层节点 g——svg 的唯一直接子 g
   // 是根 wrapper（render_svg 只对 root 调一次 render_node），旧选择器
   // >svg>g 只命中 wrapper 一层，逐节点阶梯从未生效；wrapper 自带非 g 的
-  // 背景 rect 占位，按 nth-of-type 对 g 计数，不受普通子元素挤位
+  // 背景 rect 占位，按 nth-of-type 对 g 计数，不受普通子元素挤位。
+  // 节拍走令牌（calc(var(--mv-stagger) × k)），第 8 个起饱和——第 9+ 个
+  // 不再把 delay 复位 0（此前级联只写到 nth-of-type(8)，长列表后段抢跑）
   assert_true(html.contains(".board.active>svg>g>g{animation:mv-rise"))
   assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(2){animation-delay:24ms}",
+    ".board.active>svg>g>g:nth-of-type(2){animation-delay:calc(var(--mv-stagger) * 1)}",
   ))
   assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(8){animation-delay:168ms}",
+    ".board.active>svg>g>g:nth-of-type(7){animation-delay:calc(var(--mv-stagger) * 6)}",
   ))
+  assert_true(html.contains(
+    ".board.active>svg>g>g:nth-of-type(n+8){animation-delay:var(--mv-stagger-max)}",
+  ))
+  // 裸毫秒不再出现在级联里（节拍只有一个来源）
+  assert_false(html.contains("animation-delay:24ms"))
+  assert_false(html.contains("animation-delay:168ms"))
   assert_false(html.contains(".board.active>svg>g{animation"))
   // 阶梯 keyframes / reduced-motion / ESC 返回
   assert_true(html.contains("@keyframes mv-rise"))
   assert_true(html.contains("prefers-reduced-motion"))
   assert_true(html.contains("if(e.key==='Escape')back()"))
+}
+
+///|
+/// 动效单一来源：boot/pop/tick 三处微动效全部引用 motion_tokens_css 的
+/// 时长变量，导出层不再写死秒数（此前 .36s/.24s/.18s 三处裸时长，
+/// 调刻度要回来同步三遍）。tick 与阶梯步进/饱和上限也只在令牌里定义一次。
+test "export_html：微动效时长全部引用令牌" {
+  let tokens = motion_tokens_css()
+  assert_true(tokens.contains("--mv-dur-tick:180ms"))
+  assert_true(tokens.contains("--mv-stagger:24ms"))
+  assert_true(tokens.contains("--mv-stagger-max:168ms"))
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let html = p.export_html()
+  assert_true(html.contains("body{animation:mv-boot var(--mv-dur-slow)"))
+  assert_true(html.contains(".mv-pop{animation:mv-pop var(--mv-dur)"))
+  assert_true(html.contains(".mv-tick{animation:mv-tick var(--mv-dur-tick)"))
+  // 旧的裸秒数彻底消失（时长只有一个来源）
+  assert_false(html.contains(".36s"))
+  assert_false(html.contains(".24s"))
+  assert_false(html.contains(".18s"))
 }
 
 ///|

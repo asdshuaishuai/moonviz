@@ -55,7 +55,7 @@ pub fn Easing::css_value(self : Easing) -> String {
 
 ///|
 /// 动效时长刻度（ms）。导出 HTML 与一切宿主共用同一套节拍：
-/// 即时反馈 120 / 标准转场 240 / 强调慢速 360。
+/// 即时反馈 120 / 微反馈 180 / 标准转场 240 / 强调慢速 360。
 pub const MOTION_FAST : Int = 120
 
 ///|
@@ -65,11 +65,60 @@ pub const MOTION_BASE : Int = 240
 pub const MOTION_SLOW : Int = 360
 
 ///|
-/// 动效令牌 CSS（:root 变量）：时长刻度 + 引擎缓动曲线（cubic-bezier 等价式）。
-/// 曲线一律出自 Easing::css_value——导出原型、宿主、运行时共用同一来源，
-/// 不允许各处手写贝塞尔（节拍/手感漂移是精致感的第一杀手）。
+/// 微反馈时长（ms）：文字更新 tick 一类"被看见但不打断"的反馈，
+/// 落在即时与标准转场之间。
+pub const MOTION_TICK : Int = 180
+
+///|
+/// 入场阶梯步进（ms）：画板顶层节点依次浮现的节拍。
+pub const MOTION_STAGGER : Int = 24
+
+///|
+/// 阶梯递增级数：第 2 个到第 MOTION_STAGGER_STEPS 个节点逐级递增，
+/// 之后饱和（不递增、也不复位）。
+pub const MOTION_STAGGER_STEPS : Int = 8
+
+///|
+/// 阶梯饱和延迟（ms）= (级数-1) × 步进：第 8 个起恒为 168ms。
+/// 此前导出层只写到 nth-of-type(8)，第 9 个起 delay 复位 0——长列表
+/// 后段节点抢跑，入场节拍整体断阶。
+pub const MOTION_STAGGER_MAX : Int = (MOTION_STAGGER_STEPS - 1) * MOTION_STAGGER
+
+///|
+/// 动效令牌 CSS（:root 变量）：时长刻度 + 阶梯节拍 + 引擎缓动曲线
+/// （cubic-bezier 等价式）。曲线一律出自 Easing::css_value——导出原型、
+/// 宿主、运行时共用同一来源，不允许各处手写贝塞尔（节拍/手感漂移是
+/// 精致感的第一杀手）。
 pub fn motion_tokens_css() -> String {
-  ":root{--mv-dur-fast:\{MOTION_FAST}ms;--mv-dur:\{MOTION_BASE}ms;--mv-dur-slow:\{MOTION_SLOW}ms;--mv-ease:\{Easing::css_value(EaseInOut)};--mv-out:\{Easing::css_value(EaseOut)};--mv-spring:\{Easing::css_value(Spring(1.0))}}"
+  ":root{--mv-dur-fast:\{MOTION_FAST}ms;--mv-dur:\{MOTION_BASE}ms;--mv-dur-slow:\{MOTION_SLOW}ms;--mv-dur-tick:\{MOTION_TICK}ms;--mv-stagger:\{MOTION_STAGGER}ms;--mv-stagger-max:\{MOTION_STAGGER_MAX}ms;--mv-ease:\{Easing::css_value(EaseInOut)};--mv-out:\{Easing::css_value(EaseOut)};--mv-spring:\{Easing::css_value(Spring(1.0))}}"
+}
+
+///|
+/// 入场阶梯规则：第 2 到第 MOTION_STAGGER_STEPS-1 个节点按
+/// `calc(var(--mv-stagger) * k)` 逐级递增，第 MOTION_STAGGER_STEPS 个起
+/// 饱和到 `var(--mv-stagger-max)`。
+///
+/// 用 CSS 变量 + calc 而不是把毫秒写死：节拍与饱和上限只有
+/// motion_tokens_css 一个来源，改刻度不必回来同步导出层。
+/// base 为节点选择器前缀，indent 为每条规则行首缩进（导出 CSS 排版）。
+pub fn motion_stagger_css(base : String, indent? : String = "") -> String {
+  let sb = StringBuilder::new()
+  let mut i = 2
+  while i < MOTION_STAGGER_STEPS {
+    let k = (i - 1).to_string()
+    sb.write_string(
+      indent +
+      base +
+      ":nth-of-type(\{i}){animation-delay:calc(var(--mv-stagger) * \{k})}\n",
+    )
+    i = i + 1
+  }
+  sb.write_string(
+    indent +
+    base +
+    ":nth-of-type(n+\{MOTION_STAGGER_STEPS}){animation-delay:var(--mv-stagger-max)}\n",
+  )
+  sb.to_string()
 }
 
 ///|
@@ -241,7 +290,11 @@ pub fn Timeline::add_sequence(
 // ---------------------------------------------------------------------------
 
 ///|
-/// 生成 CSS @keyframes + animation 属性
+/// 生成 CSS @keyframes + animation 属性。
+///
+/// target 选择器对齐 SVG DOM 的实际 id（render_svg 写 `id="n_<id>"`）——
+/// 此前输出 `#<id>`，落到导出原型上永远匹配不到节点，anim-css 生成的
+/// CSS 是死代码。
 pub fn Timeline::to_css(self : Timeline) -> String {
   let sb = StringBuilder::new()
   for i in 0..<self.clips.length() {
@@ -257,21 +310,26 @@ pub fn Timeline::to_css(self : Timeline) -> String {
         "0"
       }
       sb.write_string("  " + pct + "% {\n")
+      // 位移分量合并为单条 transform：同帧 AnimX+AnimY 各写一条会互相
+      // 覆盖（CSS 声明级覆盖），位移只剩后写的轴。
+      let moves : Array[String] = []
       for prop in kf.properties.iter() {
         match prop {
-          AnimFill(hex) =>
-            sb.write_string("    background-color: " + hex + ";\n")
+          AnimX(v) => moves.push("translateX(\{v.to_int()}px)")
+          AnimY(v) => moves.push("translateY(\{v.to_int()}px)")
+          _ => ()
+        }
+      }
+      if moves.length() > 0 {
+        sb.write_string("    transform: " + moves.join(" ") + ";\n")
+      }
+      for prop in kf.properties.iter() {
+        match prop {
+          // SVG 节点的着色属性是 fill（background-color 对图形不生效）
+          AnimFill(hex) => sb.write_string("    fill: " + hex + ";\n")
           AnimOpacity(v) => {
             let vs = v.to_string()
             sb.write_string("    opacity: " + vs + ";\n")
-          }
-          AnimX(v) => {
-            let vs = v.to_int().to_string()
-            sb.write_string("    transform: translateX(" + vs + "px);\n")
-          }
-          AnimY(v) => {
-            let vs = v.to_int().to_string()
-            sb.write_string("    transform: translateY(" + vs + "px);\n")
           }
           AnimWidth(v) => {
             let vs = v.to_int().to_string()
@@ -289,6 +347,7 @@ pub fn Timeline::to_css(self : Timeline) -> String {
             let vs = v.to_int().to_string()
             sb.write_string("    font-size: " + vs + "px;\n")
           }
+          _ => () // AnimX/AnimY 已在上方合并
         }
       }
       sb.write_string("  }\n")
@@ -298,7 +357,7 @@ pub fn Timeline::to_css(self : Timeline) -> String {
     let delay_ms = (clip.delay * 1000.0).to_int().to_string()
     let easing = clip.easing.css_value()
     sb.write_string(
-      "#" +
+      "#n_" +
       clip.node_id +
       " {\n  animation: " +
       anim_name +
