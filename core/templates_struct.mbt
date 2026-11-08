@@ -289,10 +289,15 @@ fn Project::template_adaptive_landing(
     height=h,
     tree=landing_tree(width, self.tokens),
   )
-  // 单页落地 demo 的出口闭环：三处 CTA 导航回自身，避免 norms 判
-  // 「可交互组件无去向 / 画板无返回或离开交互」
-  for btn in ["nav_cta", "hero_b1", "hero_b2"].iter() {
+  // 单页落地 demo 的出口闭环：只连当前结构分支真实存在的 CTA——
+  // nav_cta 只在桌面树（width≥1024），tablet/mobile 的 nav 是汉堡按钮；
+  // 无条件写 tap:nav_cta 会让 390/768 宽模板生成悬空 flow（canonical 被
+  // mbt_flow_unknown_node 拒绝）
+  for btn in ["hero_b1", "hero_b2"].iter() {
     self.add_flow(from=ab, to=ab, trigger="tap:" + btn)
+  }
+  if width >= 1024.0 {
+    self.add_flow(from=ab, to=ab, trigger="tap:nav_cta")
   }
   ab
 }

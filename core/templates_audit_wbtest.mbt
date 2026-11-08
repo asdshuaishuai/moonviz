@@ -406,3 +406,28 @@ test "模板审计：detail/checkout 底部操作条与 list_detail 尾部" {
   let tail = 844.0 - audit_max_top_bottom(docl)
   assert_true(tail <= 120.0, msg="list_detail 尾部应 ≤120，实际 \{tail}")
 }
+
+///|
+/// ⑧ 分宽度 flow 完整性：adaptive_landing 390/768/1280 三档生成的每条
+/// tap:<node> flow 都必须指向该画板真实存在的节点（nav_cta 只在桌面树）。
+test "模板审计：adaptive 全宽度 flow 目标都存在" {
+  for w in [390.0, 768.0, 1280.0].iter() {
+    let (p, ab) = audit_apply("adaptive_landing", width=w)
+    let doc = match p.artboards.get(ab) {
+      Some(a) => a.doc
+      None => {
+        assert_true(false)
+        return
+      }
+    }
+    for f in p.flows.iter() {
+      if f.from == ab && f.trigger.has_prefix("tap:") {
+        let nid = f.trigger.substring(start=4)
+        assert_true(
+          doc.has(nid),
+          msg="宽 \{w}：flow tap:\{nid} 指向不存在的节点",
+        )
+      }
+    }
+  }
+}
