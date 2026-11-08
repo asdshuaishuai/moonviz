@@ -1221,13 +1221,17 @@ function renderInteract(){
   box.innerHTML=`
     <div class="ilist">${items.map(it=>`<div class="irow"><span class="itrig">${it.trigger}</span><span class="iact" title="${it.action}">${it.action}</span><button onclick="uninteractSel()" class="danger" title="移除（flow 边不可在此删除）">✕</button></div>`).join('')||'<div class="empty-insp" style="padding:2px 0">暂无交互</div>'}</div>
     <div class="iform">
-      <div class="prow"><label>触发</label><select id="ix-trig">${['tap','long_press','swipe_left','swipe_right','swipe_up','swipe_down','keyboard_enter','focus','blur'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="prow"><label>触发</label><select id="ix-trig">${['tap','long_press','swipe_left','swipe_right','swipe_up','swipe_down','scroll_end','keyboard_enter','focus','blur'].map(t=>`<option>${t}</option>`).join('')}</select></div>
       <div class="prow"><label>动作</label><select id="ix-kind" onchange="intKindChanged()">
         <option value="navigate_to">跳转到画板…</option>
         <option value="back">返回上一页</option>
         <option value="show_toast">Toast 提示…</option>
         <option value="toggle_state">切换状态…</option>
+        <option value="set_state">设置状态…</option>
         <option value="set_text">设置文字…</option>
+        <option value="submit_form">提交表单…</option>
+        <option value="play_sound">播放音效…</option>
+        <option value="haptic">触觉反馈</option>
       </select></div>
       <div class="prow"><label>参数</label><span id="ix-param" style="flex:1;display:flex;gap:4px;min-width:0"></span></div>
       <div class="pbtns" style="margin:2px 0 0"><button onclick="intApply()">＋ 应用交互</button></div>
@@ -1244,8 +1248,14 @@ function intKindChanged(){
     box.innerHTML='<input id="ix-p1" type="text" placeholder="提示文案，如：已加入购物车">';
   }else if(kind==='toggle_state'){
     box.innerHTML=`<select id="ix-p1">${(ab&&ab.nodes||[]).map(n=>`<option ${n.id===selNode?'selected':''}>${n.id}</option>`).join('')}</select>`;
+  }else if(kind==='set_state'){
+    box.innerHTML=`<select id="ix-p1">${(ab&&ab.nodes||[]).map(n=>`<option ${n.id===selNode?'selected':''}>${n.id}</option>`).join('')}</select><input id="ix-p2" type="text" placeholder="状态名，如 pressed">`;
   }else if(kind==='set_text'){
     box.innerHTML=`<select id="ix-p1">${(ab&&ab.nodes||[]).map(n=>`<option ${n.id===selNode?'selected':''}>${n.id}</option>`).join('')}</select><input id="ix-p2" type="text" placeholder="新文字">`;
+  }else if(kind==='submit_form'){
+    box.innerHTML='<input id="ix-p1" type="text" placeholder="字段 id，逗号分隔：email,pwd">';
+  }else if(kind==='play_sound'){
+    box.innerHTML='<input id="ix-p1" type="text" placeholder="音效名，如：ding">';
   }else box.innerHTML='<span class="lbl">无参数</span>';
 }
 function intApply(){
@@ -1254,9 +1264,13 @@ function intApply(){
   let spec='';
   if(kind==='navigate_to')spec='navigate_to:'+$('ix-p1').value;
   else if(kind==='back')spec='back';
+  else if(kind==='haptic')spec='haptic';
   else if(kind==='show_toast')spec='show_toast:"'+($('ix-p1').value||'提示')+'"';
   else if(kind==='toggle_state')spec='toggle_state:'+($('ix-p1').value||selNode);
+  else if(kind==='set_state')spec='set_state:'+($('ix-p1').value||selNode)+':'+($('ix-p2')?$('ix-p2').value:'');
   else if(kind==='set_text')spec='set_text:'+($('ix-p1').value||selNode)+':"'+($('ix-p2')?$('ix-p2').value:'')+'"';
+  else if(kind==='submit_form')spec='submit_form:'+($('ix-p1')?$('ix-p1').value:'');
+  else if(kind==='play_sound')spec='play_sound:'+($('ix-p1').value||'ding');
   if(humanOp(`interact ${ab.id} ${selNode} ${trig} ${spec}`,true)){
     renderInteract();
     setStatus(true,`✓ 交互已绑定：⚡${trig} → ${spec}（预览模式即可体验）`);
@@ -1578,6 +1592,8 @@ function execAction(spec){
       if(ci>0&&humanOp('update '+curAb().id+' '+arg.slice(0,ci)+' text="'+arg.slice(ci+1)+'"',true))setStatus(null,'文字已更新');
       break;}
     case 'haptic':showToast('📳 触觉反馈');break;
+    case 'play_sound':showToast('🔊 '+arg);break;
+    case 'submit_form':showToast('📨 已提交 '+((arg||'').split(',').filter(Boolean).length)+' 项');break;
     default:showToast(spec);
   }
 }

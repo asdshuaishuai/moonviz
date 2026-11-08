@@ -371,6 +371,17 @@ fn MoonVizRT::run_marker(
               }
             }
           }
+        SubmitForm(ids) => {
+          // 收集字段当前输入值（未填字段记空串）→ FormSubmitted 携完整
+          // 键值——此前 FormSubmitted 只定义未构造，submit_form 标记在
+          // 运行时落到 `_ => false`，点提交毫无反馈
+          let data : Map[String, String] = Map::new()
+          for id in ids.iter() {
+            data.set(id, self.get_input(id))
+          }
+          changes.push(FormSubmitted(data))
+          true
+        }
         _ => false
       }
   }

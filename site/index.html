@@ -159,7 +159,7 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
   <p class="lead">返回交互是必须的——不再由各宿主自发实现，而是引擎内置语义，CLI / SDK / MCP / 嵌入 runtime 全部免费获得。</p>
   <div class="grid c3">
     <div class="card"><h3>↩ 返回类节点 tap 兜底</h3><p>tap 解析链 flow → marker → 内置返回：命中 back/prev/返回/← 类节点且无 flow/marker 时，弹导航栈返回上一层（栈底原地不动）。</p></div>
-    <div class="card"><h3>📍 返回热区随清单导出</h3><p>interactions 导出包含返回类节点（<code>"builtin":"back"</code>）——宿主热区直接消费引擎数据，无需自带启发式词表。</p></div>
+    <div class="card"><h3>📍 返回热区随清单导出</h3><p>interactions 导出包含返回类节点（list_interactions <code>"builtin":"back"</code>；v2 <code>source:"builtin"</code> + <code>action.kind:"back"</code>）——宿主热区直接消费引擎数据，无需自带启发式词表。</p></div>
     <div class="card"><h3>✅ 卡死页校验</h3><p>多画板文档中非入口画板无出边 flow 且无返回类节点 = 用户会卡死——norms 维度直接判偏差。</p></div>
   </div>
   <h2 class="sec">六种集成方式</h2>

@@ -176,6 +176,7 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中
 返回类节点（id 词边界 back/prev/return；文本 返回/后退/上一步/back/←/‹/«）
 且无 flow/marker 时强制返回上一层（导航栈弹出，栈底原地不动）；
-`list_interactions`/`interactions_json` 导出返回类节点（`"builtin":"back"`），
+`list_interactions`/`interactions_json` 导出返回类节点（v1 `"builtin":"back"` /
+v2 `"source":"builtin"` + `action.kind:"back"`），
 宿主热区直接消费；`norm_back_issues` 校验非入口画板必须有出边 flow 或返回类
 节点（卡死页判入 norms 维度）。测试锚点全在 `core/norms_wbtest.mbt`。

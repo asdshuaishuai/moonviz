@@ -406,7 +406,7 @@ Prototypes are not static pictures — MoonViz has a complete interaction runtim
 | Concept | Description |
 |:---|:---|
 | **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound (submit_form exists only at the API layer — no spec syntax yet) |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / submit_form (`submit_form:email,pwd`; runtime emits a keyed FormSubmitted) / show_toast / haptic / play_sound |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | Component polymorphism (default / pressed / disabled / loading) |
 | **NavigationState** | Navigation stack (push / pop / back) |

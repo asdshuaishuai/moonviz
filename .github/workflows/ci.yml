@@ -59,6 +59,17 @@ jobs:
           printf 'template login t_login 390 844\ncreate t_home 390 844\nupdate t_login welcome_title text="Welcome back"\nflow t_login t_home login_btn\nexport-mbt-human\nexit\n' \
             | _build/native/debug/build/cli/cli.exe | grep -q '"debt":'
 
+      - name: Interaction vocabulary parity
+        run: |
+          # manifest 由 CLI 单一来源产出；四层锁步（manifest ⇄ core ⇄ export ⇄ playground）
+          # 任一不一致即红——新增 trigger/action 必须同步 action_from_spec、导出绑定与 playground 下拉
+          set -o pipefail
+          export PATH="$HOME/.moon/bin:$PATH"
+          moon build --target native cli
+          printf 'interaction-manifest\nexit\n' \
+            | _build/native/debug/build/cli/cli.exe | sed -n 2p > moonviz-interactions.json
+          node scripts/check-interaction-parity.mjs moonviz-interactions.json
+
       - name: Setup Node 24 (wasm-gc + js-string builtins 断言需 ≥ 24)
         uses: actions/setup-node@v4
         with:

@@ -890,8 +890,9 @@ test "norms：critique 建议 v2 检测项给具体改法而非 auto_fix" {
 
 ///|
 /// 返回交互链宿主契约（此前三条均无断言）①：back-like 节点随
-/// list_interactions / interactions_json 导出 "builtin":"back"——
-/// 宿主热区直接消费，无 back-like 节点的画板不产出。
+/// list_interactions / interactions_json 导出（v1 "builtin":"back" /
+/// v2 source:builtin + action.kind:back）——宿主热区直接消费，
+/// 无 back-like 节点的画板不产出。
 test "back：back-like 热区导出 builtin:back（宿主契约）" {
   let p = norms_make_back_project()
   match p.list_interactions(artboard="detail") {
@@ -904,9 +905,9 @@ test "back：back-like 热区导出 builtin:back（宿主契约）" {
   match p.interactions_json(artboard="detail") {
     Ok(j) =>
       assert_true(
-        j.contains("\"builtin\":\"back\"") &&
+        j.contains("\"source\":\"builtin\"") &&
         j.contains("\"trigger\":\"tap\"") &&
-        j.contains("\"action\":\"back\""),
+        j.contains("\"kind\":\"back\""),
       )
     Err(_) => assert_true(false)
   }

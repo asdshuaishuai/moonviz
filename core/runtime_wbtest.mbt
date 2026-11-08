@@ -556,10 +556,13 @@ test "interactions 导出：含引号的 name/action 过 json_escape" {
   }
   match p.interactions_json(artboard=ab) {
     Ok(j) => {
-      // action spec 中的引号必须已转义
+      // action spec 中的引号必须已转义；v2 的 params 是结构化 JSON
+      // （"text":"hi" 是合法字符串值），不再以裸 spec 片段为红线
       assert_true(j.contains("set_text:lbl:\\\"hi\\\""))
       assert_true(j.contains("\"trigger\":\"tap\""))
-      assert_false(j.contains(":\"hi\""))
+      assert_true(j.contains("\"params\":{\"node\":\"lbl\",\"text\":\"hi\"}"))
+      // name 字段不得出现未转义的裸引号（a"b 形态）
+      assert_false(j.contains("a\"b ⚡"))
     }
     Err(_) => assert_true(false)
   }
@@ -632,5 +635,291 @@ test "组件状态：text 含逗号/方括号经名字标记往返保真" {
         None => assert_true(false)
       }
     None => assert_true(false)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 交互词表闭环（P3）：Action 全量 spec 往返 / 注册闸门 / SubmitForm 执行 /
+// interactions v2 字段契约
+// ---------------------------------------------------------------------------
+
+///|
+/// 表驱动遍历每个 Action：describe → action_from_spec → describe 必须相等。
+/// submit_form 的 spec 是真实字段 id 列表（不再是 [N fields] 占位），
+/// 解析后还原 SubmitForm(["email","pwd"])。
+test "交互词表：Action describe→parse 全量往返" {
+  let actions : Array[Action] = [
+    NavigateTo("home"),
+    Back,
+    ToggleState("cta", ""),
+    SetState("cta", "pressed"),
+    SetText("lbl", "hello"),
+    SubmitForm(["email", "pwd"]),
+    ShowToast("已保存"),
+    HapticFeedback,
+    PlaySound("ding"),
+  ]
+  for a in actions.iter() {
+    let spec = a.describe()
+    match action_from_spec(spec) {
+      None => fail("动作 spec 无法反解析：\{spec}")
+      Some(back) => assert_eq(back.describe(), spec)
+    }
+  }
+  // submit_form：字段列表而非字段数占位
+  assert_eq(SubmitForm(["email", "pwd"]).describe(), "submit_form:email,pwd")
+  match action_from_spec("submit_form:email,pwd") {
+    Some(SubmitForm(ids)) => {
+      assert_eq(ids.length(), 2)
+      assert_eq(ids[0], "email")
+      assert_eq(ids[1], "pwd")
+    }
+    _ => assert_true(false)
+  }
+  // 空字段列表非法；旧 describe 的 `[N fields]` 占位也不得伪绑定
+  match action_from_spec("submit_form:") {
+    Some(_) => assert_true(false)
+    None => ()
+  }
+  match action_from_spec("submit_form:[2 fields]") {
+    Some(_) => assert_true(false)
+    None => ()
+  }
+  assert_eq(SubmitForm(["email", "pwd"]).kind(), "submit_form")
+  assert_eq(
+    SubmitForm(["email", "pwd"]).params_json(),
+    "{\"fields\":[\"email\",\"pwd\"]}",
+  )
+  assert_eq(SetState("cta", "pressed").params_json(), "{\"node\":\"cta\",\"state\":\"pressed\"}")
+}
+
+///|
+/// 注册闸门：非法 trigger/action 必须 Err 且不写标记；合法值规范化写入
+/// （swipe_left + submit_form 组合）。
+test "交互词表：attach_interaction 校验 trigger/action" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="ix_gate")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="cta",
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="swipe:left",
+      action_spec="back",
+    ) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_trigger"))
+  }
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="swipe_left",
+      action_spec="nonsense:xyz",
+    ) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_action"))
+  }
+  // 被拒的调用不得留下任何标记
+  match p.interactions_json(artboard=ab) {
+    Ok(j) => assert_false(j.contains("nonsense"))
+    Err(_) => assert_true(false)
+  }
+  // 合法值：swipe_left + submit_form 组合 Ok，标记规范化为 canonical 名
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="swipe_left",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("合法交互应注册成功：\{e}")
+  }
+  match p.artboards.get(ab) {
+    Some(abd) =>
+      match abd.doc.nodes.get("cta") {
+        Some(n) =>
+          assert_true(n.name.contains("⚡swipe_left→submit_form:email,pwd"))
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // key_enter 别名规范化为 keyboard_enter
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="key_enter",
+      action_spec="back",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("key_enter 别名应接受：\{e}")
+  }
+  match p.artboards.get(ab) {
+    Some(abd) =>
+      match abd.doc.nodes.get("cta") {
+        Some(n) => assert_true(n.name.contains("⚡keyboard_enter→back"))
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+}
+
+///|
+/// SubmitForm 运行时闭环：收集字段输入值 → FormSubmitted 携完整键值
+/// （此前 FormSubmitted 只定义未构造，点提交无任何状态变更）。
+test "运行时：submit_form 收集输入值并构造 FormSubmitted" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="form", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="text_input",
+    instance_id="email",
+    x=20.0,
+    y=80.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="text_input",
+    instance_id="pwd",
+    x=20.0,
+    y=140.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="submit",
+    x=20.0,
+    y=220.0,
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="submit",
+      trigger="tap",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => {
+      fail("submit_form 注册失败：\{e}")
+      abort("")
+    }
+  }
+  let rt = match MoonVizRT::create(p, initial_artboard=ab) {
+    Ok(r) => r
+    Err(e) => {
+      fail("运行时创建失败：\{e}")
+      abort("")
+    }
+  }
+  rt.set_input("email", "a@b.c")
+  rt.set_input("pwd", "s3cret")
+  let doc = match rt.project.artboards.get(ab) {
+    Some(x) => x.doc
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let layout = solve(doc)
+  let rect = match layout.rect_of("submit") {
+    Some(r) => r
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let changes = rt.handle_event(
+    TapEvent(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0),
+  )
+  let mut found : Map[String, String]? = None
+  for c in changes.iter() {
+    match c {
+      FormSubmitted(data) => found = Some(data)
+      _ => ()
+    }
+  }
+  match found {
+    None => assert_true(false)
+    Some(data) => {
+      assert_eq(data.size(), 2)
+      match data.get("email") {
+        Some(v) => assert_eq(v, "a@b.c")
+        None => assert_true(false)
+      }
+      match data.get("pwd") {
+        Some(v) => assert_eq(v, "s3cret")
+        None => assert_true(false)
+      }
+    }
+  }
+}
+
+///|
+/// interactions v2 字段契约：node/name/artboard/trigger/action{kind,params}/
+/// transition/source/supported；非 tap 标记 supported=false，builtin 返回
+/// 热区走 source=builtin + action.kind=back。
+test "interactions v2：字段契约与 builtin 返回热区" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="v2_ab")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="back_btn",
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="sw",
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="tap",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => {
+      fail("v2 用例注册失败：\{e}")
+      abort("")
+    }
+  }
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="sw",
+    trigger="swipe_left",
+    action_spec="back",
+  )
+  match p.interactions_json(artboard=ab) {
+    Ok(j) => {
+      assert_true(j.contains("\"node\":\"cta\""))
+      assert_true(j.contains("\"name\":\""))
+      assert_true(j.contains("\"artboard\":\"v2_ab\""))
+      assert_true(j.contains("\"trigger\":\"tap\""))
+      assert_true(j.contains(
+        "\"action\":{\"kind\":\"submit_form\",\"params\":{\"fields\":[\"email\",\"pwd\"]}}",
+      ))
+      assert_true(j.contains("\"transition\":\"\""))
+      assert_true(j.contains("\"source\":\"marker\""))
+      assert_true(j.contains("\"supported\":true"))
+      // 非 tap 标记：v2 如实标 supported=false（导出运行时只绑 tap）
+      assert_true(j.contains("\"trigger\":\"swipe_left\""))
+      assert_true(j.contains("\"supported\":false"))
+      // builtin 返回热区：source=builtin + action.kind=back
+      assert_true(j.contains("\"source\":\"builtin\""))
+      assert_true(j.contains("\"kind\":\"back\""))
+    }
+    Err(_) => assert_true(false)
   }
 }

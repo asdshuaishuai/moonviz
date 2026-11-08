@@ -287,7 +287,7 @@ pub fn list_tools() -> Array[AgentTool] {
         "trigger", "tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|keyboard_enter|focus|blur",
       ),
       s(
-        "action_spec", "back|haptic|navigate_to:<board>|show_toast:\"msg\"|play_sound:<name>|toggle_state:<node>|set_state:<node>:<state>|set_text:<node>:\"txt\"",
+        "action_spec", "back|haptic|navigate_to:<board>|show_toast:\"msg\"|play_sound:<name>|toggle_state:<node>|set_state:<node>:<state>|set_text:<node>:\"txt\"|submit_form:<field>,<field>",
       ),
     ],
   )
@@ -297,7 +297,7 @@ pub fn list_tools() -> Array[AgentTool] {
   ])
   add(
     "interactions",
-    "List interactions of an artboard (node/trigger/action).",
+    "List interactions of an artboard (v2: node/trigger/action{kind,params}/source/supported; builtin back nodes included).",
     [s("artboard", "artboard id")],
   )
   add(

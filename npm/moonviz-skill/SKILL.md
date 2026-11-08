@@ -143,7 +143,8 @@ Back navigation is built in: a tap on a back-like node (id containing
 back/prev/return as a word; text 返回/后退/上一步/back/←/‹/«) with no flow or
 marker returns to the previous artboard on the navigation stack — every host
 gets this for free, no client-side heuristic needed. Back-like nodes are also
-included in the interactions listing (marked `"builtin":"back"`). Validation:
+included in the interactions listing (v1 `"builtin":"back"` / v2
+`"source":"builtin"` + `action.kind:"back"`). Validation:
 in multi-artboard documents every non-entry artboard must have an exit — an
 outbound `flow` or a back-like node; a page with neither strands the user and
 is flagged under the norms dimension.
@@ -173,7 +174,8 @@ BEFORE `set-state` can target it (otherwise `no_states`)
   scroll_end key_enter focus blur`
 - actions: `back` · `haptic` · `navigate_to:<board>` · `show_toast:<msg>` ·
   `set_text:<node>:<text>` · `set_state:<node>:<state>` ·
-  `toggle_state:<node>` · `play_sound:<name>`
+  `toggle_state:<node>` · `play_sound:<name>` ·
+  `submit_form:<field>,<field>`（运行时产出带键值 FormSubmitted）
 - interactions persist as name markers and are executed by the runtime:
   tap resolution is flow → marker → `NodeUpdated`
 - component states persist as `[state:name:k=v,...]` markers and apply as a

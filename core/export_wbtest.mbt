@@ -282,3 +282,47 @@ test "export_html：节点 motion 导出规则与 keyframes" {
   ))
   assert_false(html.contains("#n_other{animation:mv-p-"))
 }
+
+///|
+/// submit_form 导出绑定：绑定表携带真实字段 id 列表（此前导出 switch 的
+/// `_ => ()` 把该动作静默丢弃），JS 侧有 submit_form 处理器。
+test "export_html：submit_form 绑定携带字段 id 列表" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="text_input",
+    instance_id="email",
+    x=20.0,
+    y=80.0,
+  )
+  let _ = p.place_component(
+    artboard="home",
+    component_id="text_input",
+    instance_id="pwd",
+    x=20.0,
+    y=140.0,
+  )
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="submit",
+    x=20.0,
+    y=220.0,
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="submit",
+      trigger="tap",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("submit_form 注册失败：\{e}")
+  }
+  let html = p.export_html()
+  assert_true(html.contains("[\"home\",\"submit\",\"submit_form\",\"email,pwd\"]"))
+  // 不再出现 describe 的字段数占位
+  assert_false(html.contains("fields]"))
+  assert_true(html.contains("k==='submit_form'"))
+}

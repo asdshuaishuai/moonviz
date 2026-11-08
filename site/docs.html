@@ -399,7 +399,7 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 <table>
 <tr><th>能力</th><th>语义</th></tr>
 <tr><td>返回类节点 tap 兜底</td><td>tap 解析链 flow → marker → 内置返回：命中 back/prev/返回/← 类节点且无 flow/marker 绑定时，弹导航栈返回上一层（栈底原地不动）</td></tr>
-<tr><td>返回热区随清单导出</td><td>interactions 导出包含返回类节点（<code>"builtin":"back"</code>）——宿主热区直接消费引擎数据，无需自带启发式词表</td></tr>
+<tr><td>返回热区随清单导出</td><td>interactions 导出包含返回类节点（<code>"source":"builtin"</code> + <code>action.kind="back"</code>）——宿主热区直接消费引擎数据，无需自带启发式词表</td></tr>
 <tr><td>卡死页校验</td><td>多画板文档中非入口画板无出边 flow 且无返回类节点 = 用户会卡死——norms 维度直接判偏差</td></tr>
 </table>
 <p>测试锚点：<code>core/norms_wbtest.mbt</code>（规范五类）、返回语义随交互运行时测试。</p>
@@ -416,7 +416,9 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 <tr><td>开屏页推断</td><td>export_html 开在导航流天然起点（未被任何 flow 指向的画板），不随 Map 遍历序漂移到任意画板</td></tr>
 <tr><td>流畅性细节</td><td>ESC = 返回（与内置返回导航语义对齐）；画板切换平滑回顶；tab hover 抬升 + 活动态投影</td></tr>
 <tr><td>微交互动效</td><td>set_text 文字更新 tick 滑入 / setState 状态切换 pop 回弹 / 页面入场 boot 淡入——令牌同源，prefers-reduced-motion 全覆盖</td></tr>
-<tr><td>动作面补齐</td><td>haptic（触觉反馈 toast）/ play_sound（音效提示）进导出绑定表——此前导出面静默丢弃；submit_form 的 spec 语法扩展列入后续</td></tr>
+<tr><td>动作面补齐</td><td>haptic / play_sound / submit_form 全部进导出绑定表——<code>submit_form:email,pwd</code> 绑定携带真实字段 id 列表，运行时收集输入值产出带键值的 <code>FormSubmitted</code>；此前导出 switch 静默丢弃、<code>FormSubmitted</code> 只定义未构造</td></tr>
+<tr><td>词表闸门</td><td>interact 注册前校验 trigger/action（<code>unknown_trigger</code> / <code>unknown_action</code>），合法值规范化为 <code>Trigger::name</code> / <code>Action::describe</code> 标记；<code>interactions</code> v2 每项含 node/name/artboard/trigger/action{kind,params}/transition/source/supported，列表现存 <code>list_interactions</code></td></tr>
+<tr><td>词表锁步</td><td><code>interaction-manifest</code> 由 core 单一来源产出，<code>scripts/check-interaction-parity.mjs</code> 断言 manifest ⇄ <code>action_from_spec</code> ⇄ 导出 switch/JS 处理器 ⇄ playground 下拉一致（CI 硬门）</td></tr>
 <tr><td>动效声明面</td><td>刻度进 <code>DesignTokens.motion</code>（fast/base/slow/tick/stagger/stagger_max）：<code>token motion.base 320</code>、spec <code>motion:{…}</code>、frontmatter <code>tokens: motion.base: 320</code> 三通道覆盖并随文档往返；节点 <code>motion="fade_in"</code> 导出为 <code>#n_&lt;id&gt;</code> 入场动画（白名单先放行无写死几何的 fade_in，press/pop/modal 参数化后再开放）</td></tr>
 <tr><td>无障碍</td><td>系统开启 prefers-reduced-motion 时全部动效关闭——精致感不含强制动；:focus-visible 键盘焦点可见；color-scheme 声明暗色控件</td></tr>
 </table>

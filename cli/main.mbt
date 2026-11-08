@@ -367,6 +367,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
     }
     "list-tools" => @core.list_tools_json()
     "list-ops" => @core.list_ops_json()
+    // 交互词表 manifest（CI 产出 moonviz-interactions.json 的单一来源）
+    "interaction-manifest" => @core.interaction_manifest_json()
     "list-tokens" => p.tokens.to_json()
     "list-themes" => {
       let themes = @core.builtin_themes()
@@ -1061,7 +1063,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       // interact <ab> <node> <trigger> <action_spec> ：注册节点交互（写入标记）
       if parts.length() < 5 {
         cli_err(
-          "usage: interact <artboard> <node> <trigger> <action_spec>  (trigger: tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|key_enter|focus|blur；action: back|haptic|navigate_to:<ab>|show_toast:\\\"msg\\\"|set_text:<node>:\\\"txt\\\"|set_state:<node>:<st>|toggle_state:<node>|play_sound:<name>)",
+          "usage: interact <artboard> <node> <trigger> <action_spec>  (trigger: tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|key_enter|focus|blur；action: back|haptic|navigate_to:<ab>|show_toast:\\\"msg\\\"|set_text:<node>:\\\"txt\\\"|set_state:<node>:<st>|toggle_state:<node>|play_sound:<name>|submit_form:<field>,<field>)",
         )
       } else {
         match
@@ -1353,8 +1355,10 @@ fn cli_help() -> String {
   "      actions:  back | haptic | navigate_to:<board> | show_toast:<msg>\n" +
   "                | set_text:<node>:<text> | set_state:<node>:<state>\n" +
   "                | toggle_state:<node> | play_sound:<name>\n" +
+  "                | submit_form:<field>,<field>…\n" +
   "  uninteract <ab> <node>            Clear node interactions\n" +
-  "  interactions <ab>                 List (node/trigger/action)\n" +
+  "  interactions <ab>                 List v2 (node/trigger/action{kind,params})\n" +
+  "  interaction-manifest              Print the trigger/action vocabulary JSON\n" +
   "  flow <from> <to> <node>           Add tap navigation edge\n" +
   "  unflow <from> <to> <node>         Remove a tap navigation edge\n" +
   "  flows                             List navigation edges\n" +

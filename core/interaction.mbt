@@ -67,10 +67,55 @@ pub fn Action::describe(self : Action) -> String {
     ToggleState(id, _) => "toggle_state:\{id}"
     SetState(id, state) => "set_state:\{id}:\{state}"
     SetText(id, text) => "set_text:\{id}:\"\{text}\""
-    SubmitForm(ids) => "submit_form:[\{ids.length()} fields]"
+    // 字段 id 列表（不是 [N fields] 占位）：spec 语法要能反解析回节点集合，
+    // 导出层也据此把 submit_form 绑定成真实字段数组
+    SubmitForm(ids) => "submit_form:" + ids.join(",")
     ShowToast(msg) => "show_toast:\"\{msg}\""
     HapticFeedback => "haptic"
     PlaySound(name) => "play_sound:\{name}"
+  }
+}
+
+///|
+/// 动作种类名（interactions v2 / manifest / 一致性脚本的稳定标识）。
+pub fn Action::kind(self : Action) -> String {
+  match self {
+    NavigateTo(_) => "navigate_to"
+    Back => "back"
+    ToggleState(_, _) => "toggle_state"
+    SetState(_, _) => "set_state"
+    SetText(_, _) => "set_text"
+    SubmitForm(_) => "submit_form"
+    ShowToast(_) => "show_toast"
+    HapticFeedback => "haptic"
+    PlaySound(_) => "play_sound"
+  }
+}
+
+///|
+/// 动作参数 JSON（interactions v2 的 action.params）：按 kind 给出结构化
+/// 参数，供宿主/Agent 直接消费，不必再解析 spec 字符串。
+pub fn Action::params_json(self : Action) -> String {
+  match self {
+    NavigateTo(target) => "{\"target\":\"" + json_escape(target) + "\"}"
+    Back => "{}"
+    ToggleState(id, _) => "{\"node\":\"" + json_escape(id) + "\"}"
+    SetState(id, st) =>
+      "{\"node\":\"" +
+      json_escape(id) +
+      "\",\"state\":\"" +
+      json_escape(st) +
+      "\"}"
+    SetText(id, txt) =>
+      "{\"node\":\"" +
+      json_escape(id) +
+      "\",\"text\":\"" +
+      json_escape(txt) +
+      "\"}"
+    SubmitForm(ids) => "{\"fields\":" + json_string_array(ids) + "}"
+    ShowToast(msg) => "{\"message\":\"" + json_escape(msg) + "\"}"
+    HapticFeedback => "{}"
+    PlaySound(name) => "{\"name\":\"" + json_escape(name) + "\"}"
   }
 }
 
@@ -853,6 +898,7 @@ pub fn trigger_from_spec(spec : String) -> Trigger? {
 /// action 规格 → Action。规格语法与 Action::describe 的输出对称：
 ///   back | haptic | navigate_to:<board> | show_toast:"msg" | play_sound:<name>
 ///   | toggle_state:<node> | set_state:<node>:<state> | set_text:<node>:"text"
+///   | submit_form:<field>,<field>…
 pub fn action_from_spec(spec : String) -> Action? {
   match spec {
     "back" => Some(Back)
@@ -882,6 +928,27 @@ pub fn action_from_spec(spec : String) -> Action? {
               } else {
                 Some(PlaySound(rest))
               }
+            "submit_form" => {
+              // 旧 describe 的 `[N fields]` 占位没有可执行字段——按非法
+              // spec 处理（旧文档里该动效本来就未被导出，不做伪绑定）
+              if rest.has_prefix("[") && rest.has_suffix(" fields]") {
+                None
+              } else {
+                // 字段 id 列表（逗号分隔；空项忽略）。无字段 = 非法 spec。
+                let ids : Array[String] = []
+                for seg in rest.split(",") {
+                  let id = seg.to_string().trim().to_string()
+                  if id != "" {
+                    ids.push(id)
+                  }
+                }
+                if ids.length() == 0 {
+                  None
+                } else {
+                  Some(SubmitForm(ids))
+                }
+              }
+            }
             "toggle_state" =>
               if rest == "" {
                 None
@@ -933,8 +1000,49 @@ fn unquote_spec(s : String) -> String {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 交互词表清单（CLI interaction-manifest / 一致性脚本的单一来源）
+// ---------------------------------------------------------------------------
+
+///|
+/// 词表 manifest：triggers 为 trigger_from_spec 接受的规范名（与
+/// Trigger::name 同源），actions 为 Action::kind 全集。
+/// supported_in_export 表示导出运行时有对应绑定分支（由
+/// scripts/check-interaction-parity.mjs 对 core/export.mbt 做文本锁步）。
+pub fn interaction_manifest_json() -> String {
+  let triggers : Array[String] = []
+  for t in [
+    Tap, LongPress(0.5), SwipeLeft, SwipeRight, SwipeUp, SwipeDown, ScrollEnd,
+    KeyboardEnter, Focus, Blur,
+  ].iter() {
+    triggers.push("\"" + t.name() + "\"")
+  }
+  let action_list : Array[String] = []
+  let actions : Array[Action] = [
+    NavigateTo(""), Back, ToggleState("", ""), SetState("", ""), SetText("", ""),
+    SubmitForm([]), ShowToast(""), HapticFeedback, PlaySound(""),
+  ]
+  for a in actions.iter() {
+    action_list.push(
+      "{\"kind\":\"" +
+      a.kind() +
+      "\",\"supported_in_export\":true}",
+    )
+  }
+  "{\"ok\":true,\"version\":2,\"triggers\":[" +
+  triggers.join(",") +
+  "],\"actions\":[" +
+  action_list.join(",") +
+  "]}"
+}
+
 ///|
 /// 追加交互标记到节点名（幂等：同名标记不重复追加）。
+///
+/// 词表闸门：trigger/action 必须先通过 trigger_from_spec / action_from_spec
+/// ——此前原样写标记，`nonsense:xyz` 这类非法 spec 会静默落盘，运行时才
+/// 发现解析失败（写入成功、执行无效的半契约）。合法值统一规范化为
+/// Trigger::name / Action::describe 形态，标记因此可稳定反解析。
 pub fn Project::attach_interaction(
   self : Project,
   artboard~ : String,
@@ -950,9 +1058,21 @@ pub fn Project::attach_interaction(
     Some(n) => n
     None => return Err("unknown_node: \{node_id}")
   }
-  let marker = "⚡\{trigger}→\{action_spec}"
+  let parsed_trigger = match trigger_from_spec(trigger) {
+    Some(t) => t
+    None => return Err("unknown_trigger: " + trigger)
+  }
+  let parsed_action = match action_from_spec(action_spec) {
+    Some(a) => a
+    None => return Err("unknown_action: " + action_spec)
+  }
+  let trigger_name = parsed_trigger.name()
+  let action_norm = parsed_action.describe()
+  let marker = "⚡\{trigger_name}→\{action_norm}"
   if node.name.contains(marker) {
-    return Ok("{\"ok\":true,\"node\":\"\{node_id}\",\"unchanged\":true}")
+    return Ok(
+      "{\"ok\":true,\"node\":\"\{json_escape(node_id)}\",\"unchanged\":true}",
+    )
   }
   // 先清理旧标记，保证一个节点只有一个生效交互且标记不累积
   let base = strip_markers(node.name)
@@ -960,7 +1080,7 @@ pub fn Project::attach_interaction(
   let _ = ab.doc.update_node(node_id, fn(n) { { ..n, name: updated, } })
   self.revision = self.revision + 1
   Ok(
-    "{\"ok\":true,\"node\":\"\{node_id}\",\"trigger\":\"\{trigger}\",\"action\":\"\{action_spec}\"}",
+    "{\"ok\":true,\"node\":\"\{json_escape(node_id)}\",\"trigger\":\"\{json_escape(trigger_name)}\",\"action\":\"\{json_escape(action_norm)}\"}",
   )
 }
 
@@ -1004,7 +1124,17 @@ pub fn strip_markers(name : String) -> String {
 }
 
 ///|
-/// 结构化交互清单：解析标记 → trigger/action 字段（供 Agent 审阅与回读）。
+/// 结构化交互清单 v2：解析标记 → 词表化字段（供 Agent 审阅、宿主热区与
+/// 一致性脚本消费）。
+///
+/// 每项契约：{node, name, artboard, trigger, action:{kind,params},
+/// action_spec, transition, source, supported}。
+/// - action.kind 为 Action::kind 的稳定标识，params 为结构化参数 JSON；
+/// - action_spec 保留原始 spec 字符串（v1 读取方过渡用）；
+/// - transition 暂为空串（P5 分板过渡包填充）；
+/// - source = "marker" | "builtin"（返回类节点内置 tap→back 兜底）；
+/// - supported = 导出运行时是否有该绑定（非 tap 标记当前不导出）。
+/// 所有 id/name/trigger/参数值一律 json_escape（节点名可含字面引号）。
 pub fn Project::interactions_json(
   self : Project,
   artboard~ : String,
@@ -1017,12 +1147,35 @@ pub fn Project::interactions_json(
         match ab.doc.nodes.get(id) {
           Some(n) =>
             match parse_interaction_marker(n.name) {
-              Some((trig, spec)) =>
-                // trigger/action spec 来自节点名，值可含引号——与
-                // query_node_json 同约定过 json_escape（信封合法性）
+              Some((trig, spec)) => {
+                let (kind, params, supported) = match action_from_spec(spec) {
+                  Some(act) => (
+                    act.kind(),
+                    act.params_json(),
+                    trig == "tap", // 导出运行时目前只绑 tap
+                  )
+                  None => ("unknown", "{}", false)
+                }
                 items.push(
-                  "{\"node\":\"\{json_escape(id)}\",\"trigger\":\"\{json_escape(trig)}\",\"action\":\"\{json_escape(spec)}\"}",
+                  "{\"node\":\"" +
+                  json_escape(id) +
+                  "\",\"name\":\"" +
+                  json_escape(n.name) +
+                  "\",\"artboard\":\"" +
+                  json_escape(artboard) +
+                  "\",\"trigger\":\"" +
+                  json_escape(trig) +
+                  "\",\"action\":{\"kind\":\"" +
+                  kind +
+                  "\",\"params\":" +
+                  params +
+                  "},\"action_spec\":\"" +
+                  json_escape(spec) +
+                  "\",\"transition\":\"\",\"source\":\"marker\",\"supported\":" +
+                  (if supported { "true" } else { "false" }) +
+                  "}",
                 )
+              }
               None => ()
             }
           None => ()
@@ -1035,7 +1188,13 @@ pub fn Project::interactions_json(
           Some(n) =>
             if !n.name.contains("⚡") && is_back_like_node(n) {
               items.push(
-                "{\"node\":\"\{id}\",\"trigger\":\"tap\",\"action\":\"back\",\"builtin\":\"back\"}",
+                "{\"node\":\"" +
+                json_escape(id) +
+                "\",\"name\":\"" +
+                json_escape(n.name) +
+                "\",\"artboard\":\"" +
+                json_escape(artboard) +
+                "\",\"trigger\":\"tap\",\"action\":{\"kind\":\"back\",\"params\":{}},\"action_spec\":\"back\",\"transition\":\"\",\"source\":\"builtin\",\"supported\":true}",
               )
             }
           None => ()
