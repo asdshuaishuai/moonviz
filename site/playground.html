@@ -320,6 +320,23 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
 .retry:hover{background:rgba(224,82,82,.1)}
 .nosupport{padding:40px;text-align:center;color:var(--err);font-size:14px}
 #undobtn{display:none}
+
+/* ---------- 设计规范对比浮层 ---------- */
+#speccmp{position:fixed;inset:0;background:rgba(8,10,14,.86);backdrop-filter:blur(10px);display:none;z-index:70;overflow:auto;padding:32px 20px}
+#speccmp.on{display:block}
+#speccmp .cmp-wrap{max-width:1180px;margin:0 auto}
+#speccmp .cmp-head{display:flex;align-items:center;gap:14px;margin:0 0 18px;color:#eef2f7}
+#speccmp .cmp-head h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+#speccmp .cmp-close{margin-left:auto;background:rgba(255,255,255,.1);border:0;color:#eef2f7;border-radius:999px;padding:7px 16px;cursor:pointer;font-size:13px}
+#speccmp .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#speccmp figure{margin:0;background:rgba(255,255,255,.06);border-radius:16px;padding:14px}
+#speccmp figcaption{color:#dfe6ee;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;margin:0 0 10px}
+#speccmp figcaption small{color:#9aa6b4;font-weight:400;margin-left:auto}
+#speccmp .cmp-sw{display:inline-flex;gap:4px}
+#speccmp .cmp-sw i{width:12px;height:12px;border-radius:4px;box-shadow:0 0 0 .5px rgba(255,255,255,.25)}
+#speccmp img{width:100%;border-radius:10px;background:#fff;display:block}
+#speccmp .cmp-err{color:#f2a4a4;font-size:13px;margin:4px 0 0}
+@media (max-width:860px){#speccmp .cmp-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body class="mode-design">
@@ -430,7 +447,15 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
   <button class="retry" id="retryBtn" onclick="retryHuman()">↻ HumanGate 重试</button>
   <button id="undobtn" onclick="undo()">↩ 撤销</button>
   <input id="genuiIntent" placeholder="✦ 一句话生成：登录+注册（+ 连接多页）" style="width:270px;font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx)">
+  <select id="genuiSpecSel" title="设计规范（Agent 从需求提取的 spec 文档：调色板/字号阶/圆角档）" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx)">
+    <option value="indigo">规范 · 靛蓝默认</option>
+    <option value="violet">规范 · 紫罗兰</option>
+    <option value="ocean">规范 · 海蓝青</option>
+    <option value="sunset">规范 · 落日暖橙</option>
+    <option value="harmony">规范 · 鸿蒙蓝</option>
+  </select>
   <button onclick="genuiGenerate()" title="genUI 第一公民：一句话意图 → 完整画板 + 报告">✦ 生成</button>
+  <button onclick="genuiCompare()" title="同一需求、两种设计规范并排对比（各自独立会话生成，互不污染）">⇆ 规范对比</button>
   <button onclick="genuiAutofill()" title="把 infer_missing 报告物化为真实节点（幂等，auto_fix 清偿布局）">✚ 补缺</button>
   <button onclick="togglePlay()" id="playBtn">▶ 演示</button>
   <button onclick="downloadSvg()">导出 SVG</button>
@@ -778,7 +803,19 @@ function humanOp(op,silentOk){
   }catch(e){history.pop();setStatus(false,String(e.message||e));return false;}
 }
 
-const PG_SPEC='{"v":1,"palette":{"primary":"#4B6BFB","background":"#FFFFFF","surface":"#F6F7F9","text":"#1A1C1E","muted":"#6B7280","danger":"#DC2626","success":"#16A34A"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":8,"md":12,"lg":16},"rules":["按钮不卡文案"]}';
+// 设计规范预设库（Agent 从需求提取 spec 的落地样例）：每套是多色角色
+// 体系（primary/secondary/info/warning/success + 语义背景），空容器色由
+// 引擎从 spec 色相派生；全部经 WCAG 校准（白字主按钮与三级文字 ≥4.5）
+const PG_SPECS={
+  indigo:'{"v":1,"palette":{"primary":"#4B6BFB","background":"#FFFFFF","surface":"#F6F7F9","text":"#1A1C1E","muted":"#6B7280","danger":"#DC2626","success":"#16A34A"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":8,"md":12,"lg":16},"rules":["按钮不卡文案"]}',
+  violet:'{"v":1,"palette":{"primary":"#A21CAF","secondary":"#6D28D9","info":"#1D4ED8","warning":"#B45309","success":"#15803D","background":"#FBF7FF","surface":"#FFFFFF","text":"#1A0B2E","muted":"#6B5A7A","danger":"#B91C1C"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":8,"md":12,"lg":16},"rules":["按钮不卡文案","触控目标 44"]}',
+  ocean:'{"v":1,"palette":{"primary":"#0E7490","secondary":"#4F46E5","info":"#0369A1","warning":"#B45309","success":"#047857","background":"#F0F9FF","surface":"#FFFFFF","text":"#0C2233","muted":"#4B6475","danger":"#B91C1C"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":10,"md":14,"lg":18},"rules":["按钮不卡文案","触控目标 44"]}',
+  sunset:'{"v":1,"palette":{"primary":"#B45309","secondary":"#9A3412","info":"#0E7490","warning":"#A16207","success":"#4D7C0F","background":"#FFF7ED","surface":"#FFFFFF","text":"#291505","muted":"#6B4E33","danger":"#B91C1C"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":6,"md":10,"lg":14},"rules":["按钮不卡文案"]}',
+  harmony:'{"v":1,"style":"harmony","palette":{"primary":"#0A59F7","secondary":"#46B1E3","info":"#0060B8","warning":"#B25D00","success":"#3D9134","background":"#F1F3F5","surface":"#FFFFFF","text":"#182431","muted":"#5A6470","danger":"#D0340F"},"typography":{"display":48,"h1":32,"h2":24,"h3":20,"h4":16,"body":14,"caption":12},"spacing":[4,8,12,16,24,32],"radius":{"sm":8,"md":16,"lg":24},"rules":["按钮不卡文案","触控目标 44"]}',
+};
+function pgSpecKey(){const el=$('genuiSpecSel');return el&&PG_SPECS[el.value]?el.value:'indigo';}
+function pgSpec(){return PG_SPECS[pgSpecKey()];}
+const PG_SPEC=PG_SPECS.indigo; // 兼容旧调用
 
 /* ---------- 生成式 UI（genUI 第一公民）：一句话生成 / 报告驱动补缺 ---------- */
 function genuiApplyRefresh(r){
@@ -799,7 +836,9 @@ function genuiGenerate(){
   const intent=$('genuiIntent').value.trim();
   if(!intent)return setStatus(false,'先输入一句话意图（如：登录+注册 / 设置 dark / web 落地页）');
   try{
-    const r=engine.session_generate_spec(sessH,intent,'',PG_SPEC);
+    // 会话面统一信封 {ok,data:<inner>}（wasm sess_mut_json）——先解包
+    const r0=engine.session_generate_spec(sessH,intent,'',pgSpec());
+    const r=(r0&&r0.data)||r0;
     if(r.ok!==true)return setStatus(false,(r.error||'生成失败'));
     genuiApplyRefresh(r);
     if(r.mode==='multi'){
@@ -809,6 +848,47 @@ function genuiGenerate(){
     }
   }catch(e){setStatus(false,String(e.message||e));}
 }
+// 规范对比：同一意图在两套设计规范下各自独立会话生成，导出 SVG 并排展示。
+// 不触碰主设计会话；信封 spec_violations 计数随图展示（规范遵从的可见面）
+function pgCompareSvg(intent,spec){
+  const h=engine.session_open(mbt);
+  try{
+    const r0=engine.session_generate_spec(h,intent,'',spec);
+    const r=(r0&&r0.data)||r0;
+    if(r.ok!==true)return {err:r.error||'生成失败'};
+    const id=r.artboard||(r.artboards&&r.artboards[0]&&r.artboards[0].id)||'';
+    const sv0=engine.session_export_svg(h,id);
+    const sv=(sv0&&sv0.data)||sv0;
+    if(!sv||sv.ok===false||!sv.svg)return {err:(sv&&(sv.error||JSON.stringify(sv).slice(0,160)))||'导出失败'};
+    return {svg:sv.svg,violations:(r.spec_violations||[]).length,board:id};
+  }finally{engine.session_close(h);}
+}
+function genuiCompare(){
+  if(!engine)return setStatus(false,'引擎未就绪');
+  if(mode!=='design'||sessH<0)return setStatus(false,'规范对比在设计模式（有活动会话）下可用');
+  const intent=$('genuiIntent').value.trim();
+  if(!intent)return setStatus(false,'先输入一句话意图，再点「规范对比」');
+  const key=pgSpecKey();
+  const altMap={indigo:'violet',violet:'indigo',ocean:'violet',sunset:'harmony',harmony:'indigo'};
+  const alt=altMap[key]||'indigo';
+  const LABELS={indigo:'规范 · 靛蓝默认',violet:'规范 · 紫罗兰',ocean:'规范 · 海蓝青',sunset:'规范 · 落日暖橙',harmony:'规范 · 鸿蒙蓝'};
+  try{
+    const A=pgCompareSvg(intent,PG_SPECS[key]);
+    const B=pgCompareSvg(intent,PG_SPECS[alt]);
+    const cell=(r,label,spec)=>{
+      if(r.err)return `<figure><figcaption>${label}</figcaption><p class="cmp-err">${r.err}</p></figure>`;
+      const head=JSON.parse(spec).palette||{};
+      const swatch=['primary','secondary','info','warning','success'].filter(k=>head[k]).map(k=>`<i style="background:${head[k]}" title="${k} ${head[k]}"></i>`).join('');
+      return `<figure><figcaption>${label}<span class="cmp-sw">${swatch}</span><small>规范偏差 ${r.violations} · 板 ${r.board||'-'}</small></figcaption><img alt="${label}" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(r.svg)}"></figure>`;
+    };
+    $('speccmpBody').innerHTML=cell(A,LABELS[key],PG_SPECS[key])+cell(B,LABELS[alt],PG_SPECS[alt]);
+    $('speccmpTitle').textContent='设计规范对比 · “'+intent+'”';
+    $('speccmp').classList.add('on');
+    setStatus(true,`⇆ 两套规范并排：${LABELS[key]} vs ${LABELS[alt]}（各自独立会话，主画布未变）`);
+  }catch(e){setStatus(false,String(e.message||e));}
+}
+function speccmpClose(){$('speccmp').classList.remove('on');}
+window.genuiCompare=genuiCompare;window.speccmpClose=speccmpClose;
 function genuiAutofill(){
   if(!engine)return setStatus(false,'引擎未就绪');
   if(mode!=='design'||sessH<0)return setStatus(false,'补缺在设计模式（有活动会话）下可用');
@@ -1677,5 +1757,11 @@ window.switchPage=switchPage;window.addBlankPage=addBlankPage;window.delCurArtbo
 window.intKindChanged=intKindChanged;window.intApply=intApply;window.uninteractSel=uninteractSel;
 boot();
 </script>
+<div id="speccmp" role="dialog" aria-modal="true" aria-labelledby="speccmpTitle">
+  <div class="cmp-wrap">
+    <div class="cmp-head"><h3 id="speccmpTitle">设计规范对比</h3><button class="cmp-close" onclick="speccmpClose()">关闭 ✕</button></div>
+    <div class="cmp-grid" id="speccmpBody"></div>
+  </div>
+</div>
 </body>
 </html>
