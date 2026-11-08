@@ -273,6 +273,24 @@ fn find_from(text : String, needle : String, from : Int) -> Int? {
 }
 
 ///|
+/// 子串出现次数（motion= 只应在设置了该字段的节点上出现一次）。
+fn count_needle(text : String, needle : String) -> Int {
+  let mut count = 0
+  let mut idx = 0
+  let mut scanning = true
+  while scanning {
+    match find_from(text, needle, idx) {
+      None => scanning = false
+      Some(pos) => {
+        count = count + 1
+        idx = pos + needle.length()
+      }
+    }
+  }
+  count
+}
+
+///|
 /// 回归：节点 name 与容器 layout 必须经 MBT 往返存活。
 /// 此前 name 完全未序列化（交互标记写在其中，往返即丢），且 layout 只在
 /// frame/兜底分支解析——Rect/button/text/image 上的栈布局会被静默丢弃。
@@ -340,8 +358,7 @@ test "空态往返：零画板项目 → canonical → load 闭环（issue #27�
 }
 
 ///|
-test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue #20）" {
-  let src = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  entry: w\n  extra_section: hello\n  artboards:\n    - w\n  deepdesign_ink:\n    v: 1\ncustom_top: 42\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue #20）" {  let src = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  entry: w\n  extra_section: hello\n  artboards:\n    - w\n  deepdesign_ink:\n    v: 1\ncustom_top: 42\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
   let model = match load_mbt_project(src) {
     Ok(m) => m
     Err(e) => {
@@ -374,5 +391,60 @@ test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue 
   let needles = ["extra_section: hello", "deepdesign_ink:", "custom_top: 42"]
   for needle in needles.iter() {
     assert_true(canonical2.contains(needle), msg="二次往返必须保持 \{needle}")
+  }
+}
+
+///|
+/// 节点级 motion 声明面：generic_node 的 motion="fade_in" 解析进
+/// NodeStyle.motion；canonical 只在设置时输出 motion=，二次加载字节稳定。
+test "往返：节点 motion 经 MBT 存活且字节稳定" {
+  let src = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: hero\n---\n\n# Motion\n\n<!-- moonviz:artboard hero -->\n```mbt\nfn visual_hero() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"hero\", width=390.0, height=844.0)\n  page.add(@decl.generic_node(id=\"hero\", component=\"frame\", kind=\"frame\", width=@decl.fixed(390.0), height=@decl.fixed(200.0), fill=\"#FFFFFF\", motion=\"fade_in\"))\n  page.add(@decl.generic_node(id=\"plain\", component=\"rect\", kind=\"rect\", width=@decl.fixed(100.0), height=@decl.fixed(100.0), fill=\"#FFFFFF\"))\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("motion 文档加载失败：\{e}")
+      abort("")
+    }
+  }
+  match model.project.artboards.get("hero") {
+    Some(ab) =>
+      match ab.doc.nodes.get("hero") {
+        Some(n) => assert_eq(n.style.motion, "fade_in")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  let canonical = model.to_mbt()
+  assert_true(canonical.contains("motion=\"fade_in\""), msg=canonical)
+  // 未设置 motion 的节点不写该参数：canonical 每个节点出现两次
+  // （视觉块 + mbt check 块），所以只有 hero 带 motion 时计数应为 2
+  // （两个 plain 节点若被误写会到 4）
+  assert_eq(count_needle(canonical, "motion="), 2)
+  // 二次加载 + 再次序列化：字节稳定
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(back.to_mbt(), canonical)
+}
+
+///|
+/// 节点 motion 白名单：未知预设与写死几何的预设都必须拒绝（不静默降级
+/// 成无动画字段）——press/pop/modal_present 等参数化前不开放。
+test "节点 motion 白名单：未知与写死几何预设拒绝" {
+  let base = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: m\n---\n\n# M\n\n<!-- moonviz:artboard m -->\n```mbt\nfn visual_m() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"m\", width=390.0, height=844.0)\n  page.add(@decl.generic_node(id=\"n\", component=\"rect\", kind=\"rect\", width=@decl.fixed(10.0), height=@decl.fixed(10.0), motion=\"__P__\"))\n  page\n}\n```\n"
+  match load_mbt_project(base.replace(old="__P__", new="nope")) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_motion_preset"), msg=e)
+  }
+  for preset in ["press", "pop", "modal_present", "slide_in_right"].iter() {
+    match load_mbt_project(base.replace(old="__P__", new=preset)) {
+      Ok(_) => assert_true(false)
+      Err(e) =>
+        assert_true(e.contains("motion_preset_not_node_safe"), msg=e)
+    }
   }
 }

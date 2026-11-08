@@ -87,6 +87,9 @@ pub(all) struct NodeStyle {
   font_style : String // "normal" | "italic"
   stroke_dash : String // 描边线型 "solid" | "dashed" | "dotted"
   visible : Bool // false = 隐藏但仍存在于文档（不参与渲染与命中）
+  /// 节点级入场动效预设（"" = 无）：当前白名单只有 "fade_in"，
+  /// 由 animation.mbt 的 validate_node_motion 校验后写入/导出
+  motion : String
 }
 
 ///|
@@ -111,6 +114,7 @@ pub fn NodeStyle::default() -> NodeStyle {
     font_style: "normal",
     stroke_dash: "solid",
     visible: true,
+    motion: "",
   }
 }
 

@@ -213,3 +213,21 @@ test "主题 + 模板：切换主题后组件颜色自动变化" {
   let nord_primary = p.tokens.resolve_color("primary")
   assert_eq(nord_primary, "#88C0D0")
 }
+
+///|
+/// 主题切换保留动效覆盖：tokens: 段比主题更具体——换主题只换未覆盖的
+/// 颜色角色，motion.* 覆盖同样不能被主题默认值冲掉。
+test "主题：切换主题保留 motion 令牌覆盖" {
+  let p = Project::new()
+  match p.set_token("motion.base", "320") {
+    Ok(_) => ()
+    Err(e) => fail("motion.base 应可设置：\{e}")
+  }
+  match p.apply_theme("dark") {
+    Ok(_) => ()
+    Err(e) => fail("apply_theme dark 失败：\{e}")
+  }
+  assert_true(p.motion_tokens_css().contains("--mv-dur:320ms"))
+  // 未覆盖的刻度仍取默认常量
+  assert_true(p.motion_tokens_css().contains("--mv-dur-fast:120ms"))
+}

@@ -120,6 +120,12 @@ pub fn Project::clone(self : Project) -> Project {
       None => ()
     }
   }
+  for k in self.tokens.motion.keys() {
+    match self.tokens.motion.get(k) {
+      Some(v) => copy.tokens.motion.set(k, v)
+      None => ()
+    }
+  }
   for cid in self.components.keys() {
     match self.components.get(cid) {
       Some(def) => copy.components.set(cid, def)

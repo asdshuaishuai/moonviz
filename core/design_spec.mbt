@@ -6,6 +6,7 @@
 //     "style": "apple" | "harmony"（美学体系第一要素；缺省 = 保留当前主题）,
 //     "palette": { "primary": "#..", "background": "#..", "surface": "#..",
 //                  "text": "#..", "muted": "#..", "danger": "#..", "success": "#.." },
+//     "motion": { "fast/base/slow/tick/stagger/stagger_max": 毫秒数 },
 //     "typography": { "display/h1/h2/h3/h4/body/caption/overline": 数字 },
 //     "spacing": [..], "radius": { "sm":.., "md":.., "lg":.. },
 //     "components": {..}, "rules": [..] }
@@ -129,12 +130,40 @@ fn ds_number_value(json : String, key : String) -> Double? {
 }
 
 ///|
+/// spec JSON 中 key 对应对象 `{...}` 的体文本（首个 "key" 后的花括号内）。
+/// 只做单层：spec 契约里的对象都是扁平键值（palette/motion/radius…）。
+fn ds_object_body(json : String, key : String) -> String? {
+  let pat = "\"" + key + "\""
+  let pos = match json.find(pat) {
+    None => return None
+    Some(p) => p
+  }
+  let rest = json.substring(start=pos + pat.length())
+  let colon = match rest.find(":") {
+    None => return None
+    Some(c) => c
+  }
+  let after = rest.substring(start=colon + 1)
+  let open = match after.find("{") {
+    None => return None
+    Some(o) => o
+  }
+  let body = after.substring(start=open + 1)
+  let close = match body.find("}") {
+    None => return None
+    Some(c) => c
+  }
+  Some(body.substring(start=0, end=close))
+}
+
+///|
 fn ds_token_copy(src : DesignTokens) -> DesignTokens {
   let t : DesignTokens = {
     colors: Map::new(),
     spacing: Map::new(),
     radii: Map::new(),
     typography: Map::new(),
+    motion: Map::new(),
   }
   for k in src.colors.keys() {
     match src.colors.get(k) {
@@ -157,6 +186,12 @@ fn ds_token_copy(src : DesignTokens) -> DesignTokens {
   for k in src.typography.keys() {
     match src.typography.get(k) {
       Some(v) => t.typography.set(k, v)
+      None => ()
+    }
+  }
+  for k in src.motion.keys() {
+    match src.motion.get(k) {
+      Some(v) => t.motion.set(k, v)
       None => ()
     }
   }
@@ -413,6 +448,27 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
         None => ()
       }
     }
+  }
+  // motion：spec.motion 对象（毫秒）→ 动效令牌——与 palette 同级权威。
+  // 导出面/wasm 快照从令牌表取值，因此 spec 的节拍不需要在导出层再写一遍。
+  match ds_object_body(spec, "motion") {
+    Some(body) => {
+      for key in [
+        "fast", "base", "slow", "tick", "stagger", "stagger_max",
+      ].iter() {
+        match ds_number_value(body, key) {
+          Some(v) =>
+            if v > 0.0 {
+              match self.set_token("motion." + key, v.to_int().to_string()) {
+                Ok(_) => applied = applied + 1
+                Err(_) => ()
+              }
+            }
+          None => ()
+        }
+      }
+    }
+    None => ()
   }
   applied
 }

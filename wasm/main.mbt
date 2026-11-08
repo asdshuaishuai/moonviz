@@ -300,6 +300,8 @@ fn nd_sig(n : @core.Node) -> String {
   "|" +
   n.style.opacity.to_string() +
   "|" +
+  n.style.motion +
+  "|" +
   (if n.style.visible { "v" } else { "h" }) +
   "|" +
   kids
@@ -472,8 +474,36 @@ pub fn session_snapshot(handle : Int) -> String {
       out.write_string(boards_json)
       out.write_string("]},\"animations\":{\"presets\":")
       out.write_string(@core.animation_presets_json())
+      // 节点级 motion 绑定表：宿主据此给热区/节点挂同一套入场动效
+      out.write_string(",\"bound\":[")
+      let bound : Array[String] = []
+      for ab_id in p.artboards.keys() {
+        match p.artboards.get(ab_id) {
+          None => ()
+          Some(ab) =>
+            for nid in ab.doc.nodes.keys() {
+              match ab.doc.nodes.get(nid) {
+                Some(n) =>
+                  if n.style.motion != "" {
+                    bound.push(
+                      "{\"artboard\":\"" +
+                      @core.json_escape(ab_id) +
+                      "\",\"node\":\"" +
+                      @core.json_escape(nid) +
+                      "\",\"preset\":\"" +
+                      @core.json_escape(n.style.motion) +
+                      "\"}",
+                    )
+                  }
+                None => ()
+              }
+            }
+        }
+      }
+      out.write_string(bound.join(","))
+      out.write_string("]")
       out.write_string(",\"motion_css\":\"")
-      out.write_string(@core.json_escape(@core.motion_tokens_css()))
+      out.write_string(@core.json_escape(@core.motion_tokens_css_for(p.tokens)))
       out.write_string("\"},\"delta\":{\"added\":")
       out.write_string(nd_ids_json(added))
       out.write_string(",\"changed\":")

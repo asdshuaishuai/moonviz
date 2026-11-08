@@ -417,9 +417,10 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 <tr><td>流畅性细节</td><td>ESC = 返回（与内置返回导航语义对齐）；画板切换平滑回顶；tab hover 抬升 + 活动态投影</td></tr>
 <tr><td>微交互动效</td><td>set_text 文字更新 tick 滑入 / setState 状态切换 pop 回弹 / 页面入场 boot 淡入——令牌同源，prefers-reduced-motion 全覆盖</td></tr>
 <tr><td>动作面补齐</td><td>haptic（触觉反馈 toast）/ play_sound（音效提示）进导出绑定表——此前导出面静默丢弃；submit_form 的 spec 语法扩展列入后续</td></tr>
+<tr><td>动效声明面</td><td>刻度进 <code>DesignTokens.motion</code>（fast/base/slow/tick/stagger/stagger_max）：<code>token motion.base 320</code>、spec <code>motion:{…}</code>、frontmatter <code>tokens: motion.base: 320</code> 三通道覆盖并随文档往返；节点 <code>motion="fade_in"</code> 导出为 <code>#n_&lt;id&gt;</code> 入场动画（白名单先放行无写死几何的 fade_in，press/pop/modal 参数化后再开放）</td></tr>
 <tr><td>无障碍</td><td>系统开启 prefers-reduced-motion 时全部动效关闭——精致感不含强制动；:focus-visible 键盘焦点可见；color-scheme 声明暗色控件</td></tr>
 </table>
-<p>测试锚点：<code>core/export_wbtest.mbt</code>（动效令牌/方向转场/按压反馈/入场推断）、<code>core/animation_wbtest.mbt</code>（选择器/声明面/同帧合并）。</p>
+<p>测试锚点：<code>core/export_wbtest.mbt</code>（动效令牌/方向转场/按压反馈/入场推断/节点 motion 导出）、<code>core/animation_wbtest.mbt</code>（选择器/声明面/同帧合并/令牌六刻度）、<code>decl/token_wbtest.mbt</code> 与 <code>decl/mbt_wbtest.mbt</code>（frontmatter 往返/白名单）。</p>
 </section>
 
 <section id="generative">

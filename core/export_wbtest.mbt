@@ -232,3 +232,53 @@ test "export_html：set_text 绑定的画板字段回归锚" {
   assert_true(html.contains("[\"home\",\"btn_set\",\"set_text\""))
   assert_false(html.contains("[\"welcome\",\"btn_set\""))
 }
+
+///|
+/// spec.motion → 动效令牌：apply_design_spec 落值后，令牌入口与导出 HTML
+/// 同时生效（spec 是节拍的第一权威，导出层不写死毫秒）。
+test "export_html：spec.motion 覆盖动效刻度" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="home")
+  match
+    p.apply_design_spec(
+      artboard=ab,
+      spec="{\"v\":1,\"motion\":{\"base\":320,\"tick\":200}}",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("spec 应用失败：\{e}")
+  }
+  assert_true(p.motion_tokens_css().contains("--mv-dur:320ms"))
+  assert_true(p.motion_tokens_css().contains("--mv-dur-tick:200ms"))
+  let html = p.export_html()
+  assert_true(html.contains("--mv-dur:320ms"))
+  assert_true(html.contains("--mv-dur-tick:200ms"))
+}
+
+///|
+/// 节点级 motion 导出：#n_<id> 规则 + mv-p-<preset> keyframes；节拍在规则里
+/// 走 var(--mv-dur)，未设置 motion 的节点不产出任何动画规则。
+test "export_html：节点 motion 导出规则与 keyframes" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="hero",
+    x=10.0,
+    y=10.0,
+  )
+  match p.artboards.get("home") {
+    Some(ab) => {
+      let _ = ab.doc.update_node("hero", fn(n) {
+        { ..n, style: { ..n.style, motion: "fade_in", }, }
+      })
+    }
+    None => assert_true(false)
+  }
+  let html = p.export_html()
+  assert_true(html.contains("@keyframes mv-p-fade_in"))
+  assert_true(html.contains(
+    "#n_hero{animation:mv-p-fade_in var(--mv-dur) var(--mv-out) backwards}",
+  ))
+  assert_false(html.contains("#n_other{animation:mv-p-"))
+}

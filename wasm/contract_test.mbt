@@ -801,3 +801,32 @@ test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（is
   )
   let _ = session_close(h)
 }
+
+///|
+/// 动效声明面 seed：frontmatter `tokens: motion.base: 320` + 节点 motion=fade_in。
+/// 快照必须同时反映「项目令牌刻度」与「节点级绑定表」。
+const MOTION_SEED : String = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: M\n  entry: w\n  artboards:\n    - w\n  tokens:\n    motion.base: 320\n    motion.tick: 200\n---\n\n# M\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.generic_node(id=\"hero\", component=\"rect\", kind=\"rect\", width=@decl.fixed(100.0), height=@decl.fixed(100.0), fill=\"#FFFFFF\", motion=\"fade_in\"))\n  page\n}\n```\n"
+
+///|
+/// 动效声明面进快照：motion_css 走项目令牌（frontmatter motion.base/tick），
+/// animations.bound 逐条列出节点级 motion（artboard/node/preset）。
+test "契约：session_snapshot 携带节点 motion 绑定与项目动效令牌" {
+  let h = session_open(MOTION_SEED)
+  assert_true(h >= 0, msg="motion seed 必须可加载")
+  let s = session_snapshot(h)
+  assert_true(
+    s.contains("--mv-dur:320ms"),
+    msg="快照 motion_css 必须走项目令牌（base=320）：\{s}",
+  )
+  assert_true(
+    s.contains("--mv-dur-tick:200ms"),
+    msg="快照 motion_css 必须走项目令牌（tick=200）：\{s}",
+  )
+  assert_true(
+    s.contains(
+      "\"bound\":[{\"artboard\":\"w\",\"node\":\"hero\",\"preset\":\"fade_in\"}]",
+    ),
+    msg="快照必须携带动画绑定表：\{s}",
+  )
+  let _ = session_close(h)
+}

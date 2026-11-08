@@ -838,15 +838,26 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   }
   match self.project.token_overrides {
     Some(ov) => {
-      // 与默认调色板同值的覆盖不序列化：set 回原值即撤销自定义，
-      // canonical 里不该留下 primary: "#4B6BFB" 这类恒真条目
+      // 与默认值相同的覆盖不序列化：set 回默认即撤销自定义，
+      // canonical 里不该留下 primary: "#4B6BFB" / motion.base: 240 这类
+      // 恒真条目。motion.* 是数字（ms），按 `motion.base: 320` 免引号写出，
+      // 与颜色角色的引号形态区分（解析端按前缀分流）。
+      let default_tokens = @core.DesignTokens::default()
       let entries : Array[(String, String)] = []
       for role in ov.keys() {
         match ov.get(role) {
           Some(v) => {
-            let is_default = match @core.DesignTokens::default().colors.get(role) {
-              Some(dv) => v == dv
-              None => false
+            let is_default = if role.has_prefix("motion.") {
+              let key = role.substring(start=7)
+              match default_tokens.motion.get(key) {
+                Some(dv) => @core.parse_double(v) == dv
+                None => false
+              }
+            } else {
+              match default_tokens.colors.get(role) {
+                Some(dv) => v == dv
+                None => false
+              }
             }
             if !is_default {
               entries.push((role, v))
@@ -859,7 +870,11 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         out.write_string("  tokens:\n")
         for entry in entries.iter() {
           let (role, v) = entry
-          out.write_string("    " + role + ": \"" + v + "\"\n")
+          if role.has_prefix("motion.") {
+            out.write_string("    " + role + ": " + v + "\n")
+          } else {
+            out.write_string("    " + role + ": \"" + v + "\"\n")
+          }
         }
       }
     }

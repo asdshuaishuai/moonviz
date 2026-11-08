@@ -530,12 +530,21 @@ pub fn Project::apply_theme(
       let prior = self.tokens_snapshot()
       self.tokens = theme.tokens
       // 主题切换保留自定义令牌覆盖：tokens: 段是设计者明确意图，
-      // 换主题只换未覆盖的角色
+      // 换主题只换未覆盖的角色（motion.* 同理：覆盖的是刻度不是颜色）
       match self.token_overrides {
         Some(ov) =>
           for role in ov.keys() {
             match ov.get(role) {
-              Some(v) => self.tokens.colors.set(role, v)
+              Some(v) =>
+                if role.has_prefix("motion.") {
+                  let key = role.substring(start=7)
+                  let ms = parse_double(v)
+                  if ms > 0.0 {
+                    self.tokens.motion.set(key, ms)
+                  }
+                } else {
+                  self.tokens.colors.set(role, v)
+                }
               None => ()
             }
           }
@@ -942,6 +951,31 @@ pub fn Project::set_token(
   token_name : String,
   value : String,
 ) -> Result[String, String] {
+  // 动效刻度：`motion.<key>`（毫秒）。与颜色覆盖共用 token_overrides
+  // 通道，frontmatter 里写作 `motion.base: 320`（数字不带引号）；未知
+  // key / 非正值直接 Err 且不落值——不许静默写入无效节拍。
+  if token_name.has_prefix("motion.") {
+    let key = token_name.substring(start=7)
+    let ms = parse_double(value)
+    if value.trim() == "" || ms <= 0.0 {
+      return Err("invalid_token_value: " + value)
+    }
+    let previous = match self.tokens.motion.get(key) {
+      Some(v) => v
+      None => return Err("unknown_token: " + token_name)
+    }
+    self.tokens.motion.set(key, ms)
+    if self.token_overrides is None {
+      self.token_overrides = Some(Map::new())
+    }
+    match self.token_overrides {
+      Some(ov) => ov.set(token_name, value)
+      None => ()
+    }
+    return Ok(
+      "{\"ok\":true,\"token\":\"\{token_name}\",\"old\":\{previous},\"value\":\{ms},\"recolored\":0}",
+    )
+  }
   if !self.tokens.colors.contains(token_name) {
     return Err("unknown_token: " + token_name)
   }
@@ -969,11 +1003,18 @@ pub fn Project::set_token(
 }
 
 ///|
-/// 获取令牌当前值
+/// 获取令牌当前值（颜色角色或 `motion.<key>`）
 pub fn Project::get_token(
   self : Project,
   token_name : String,
 ) -> Result[String, String] {
+  if token_name.has_prefix("motion.") {
+    let key = token_name.substring(start=7)
+    match self.tokens.motion.get(key) {
+      Some(v) => return Ok(v.to_string())
+      None => return Err("unknown_token: " + token_name)
+    }
+  }
   match self.tokens.colors.get(token_name) {
     Some(v) => Ok(v)
     None => Err("unknown_token: " + token_name)

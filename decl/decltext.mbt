@@ -377,6 +377,11 @@ fn node_call(n : @core.Node) -> String {
   parts.push("font_style=\"\{decl_escape(n.style.font_style)}\"")
   parts.push("stroke_dash=\"\{decl_escape(n.style.stroke_dash)}\"")
   parts.push("visible=\{n.style.visible}")
+  // 节点级开场动效仅在实际设置时输出（未设置不写 motion=，保持既有
+  // canonical 字节面稳定）
+  if n.style.motion != "" {
+    parts.push("motion=\"\{decl_escape(n.style.motion)}\"")
+  }
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）
   if n.name != n.id {
@@ -801,6 +806,18 @@ fn apply_decl_style(
   }
   match opt_param(params, "constraint") {
     Some(v) => cur = { ..cur, constraint: str_val(v), }
+    None => ()
+  }
+  // 节点级开场动效：白名单校验在 core（animation.mbt）——未知预设与
+  // 写死几何的预设都返回 Err，不静默落成无动画字段
+  match opt_param(params, "motion") {
+    Some(v) => {
+      let preset = str_val(v)
+      match @core.validate_node_motion(preset) {
+        Ok(checked) => cur = { ..cur, style: { ..cur.style, motion: checked, }, }
+        Err(e) => return Err({ line, message: e })
+      }
+    }
     None => ()
   }
   Ok(cur)

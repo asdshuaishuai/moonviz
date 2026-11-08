@@ -9,6 +9,10 @@ pub(all) struct DesignTokens {
   mut spacing : Map[String, Double] // "sm" → 4, "md" → 8, "lg" → 16
   mut radii : Map[String, Double] // "sm" → 4, "md" → 8, "round" → 999
   mut typography : Map[String, Double] // "h1" → 32, "h2" → 24, "body" → 14
+  /// 动效刻度（ms）：fast/base/slow/tick/stagger/stagger_max。
+  /// 默认值与 animation.mbt 的 MOTION_* 常量同源；spec / theme /
+  /// frontmatter `tokens:` 覆盖后，导出面与 wasm 快照都从这里取。
+  mut motion : Map[String, Double]
 }
 
 ///|
@@ -18,6 +22,7 @@ pub fn DesignTokens::default() -> DesignTokens {
     spacing: Map::new(),
     radii: Map::new(),
     typography: Map::new(),
+    motion: Map::new(),
   }
   // 颜色（Material 3 风格）
   // primary/hint 为 WCAG 校准值：#4B6BFB 白字仅 4.38（可读性硬标准 ≥4.5）
@@ -83,6 +88,14 @@ pub fn DesignTokens::default() -> DesignTokens {
   t.typography.set("body", 14.0)
   t.typography.set("caption", 12.0)
   t.typography.set("overline", 10.0)
+  // 动效（ms）：与 animation.mbt 的 MOTION_* 常量同值（单一事实源是常量，
+  // 令牌表是可变声明面——set_token/spec/frontmatter 只在需要覆盖时写入）
+  t.motion.set("fast", MOTION_FAST.to_double())
+  t.motion.set("base", MOTION_BASE.to_double())
+  t.motion.set("slow", MOTION_SLOW.to_double())
+  t.motion.set("tick", MOTION_TICK.to_double())
+  t.motion.set("stagger", MOTION_STAGGER.to_double())
+  t.motion.set("stagger_max", MOTION_STAGGER_MAX.to_double())
   t
 }
 
@@ -127,6 +140,15 @@ pub fn DesignTokens::resolve_font(
   token : String,
 ) -> Double? {
   self.typography.get(token)
+}
+
+///|
+/// 解析动效令牌："base" → 240.0（ms）
+pub fn DesignTokens::resolve_motion(
+  self : DesignTokens,
+  token : String,
+) -> Double? {
+  self.motion.get(token)
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +214,15 @@ pub fn DesignTokens::to_json(self : DesignTokens) -> String {
     }
   }
   parts.push("\"typography\":[" + jstr5(ty) + "]")
+  // motion（时长刻度 ms）
+  let mo : Array[String] = []
+  for k in self.motion.keys() {
+    match self.motion.get(k) {
+      Some(v) => mo.push("{\"k\":\"\{k}\",\"v\":\{v}}")
+      None => ()
+    }
+  }
+  parts.push("\"motion\":[" + jstr5(mo) + "]")
   "{\{jstr5(parts)}}"
 }
 

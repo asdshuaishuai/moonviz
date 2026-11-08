@@ -103,8 +103,9 @@ pub fn Project::export_html(self : Project) -> String {
   sb.write_string("<meta name=\"theme-color\" content=\"\{c_bg}\">\n")
   sb.write_string("<title>MoonViz Prototype</title>\n")
   sb.write_string("<style>\n")
-  // 动效令牌：时长刻度 + 引擎缓动曲线（animation.mbt 单一来源，不手写贝塞尔）
-  sb.write_string("  \{motion_tokens_css()}\n")
+  // 动效令牌：时长刻度 + 引擎缓动曲线（animation.mbt 单一来源，不手写贝塞尔；
+  // 项目令牌表可被 spec/主题/frontmatter 覆盖——导出面从 Project 取）
+  sb.write_string("  \{self.motion_tokens_css()}\n")
   // 色彩令牌：主题 → CSS 变量（CSS 美感的单一事实源）
   sb.write_string(
     "  :root{--mv-bg:\{c_bg};--mv-fg:\{c_fg};--mv-surface:\{c_surface};--mv-primary:\{c_primary};--mv-on-primary:\{c_on_primary};--mv-muted:\{c_muted};--mv-line:\{c_line}}\n",
@@ -183,6 +184,52 @@ pub fn Project::export_html(self : Project) -> String {
     "  @keyframes mv-tick{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}\n" +
     "  .mv-tick{animation:mv-tick var(--mv-dur-tick) var(--mv-out)}\n",
   )
+  // 节点级开场动效（NodeStyle.motion）：@keyframes 每预设一份（去重），
+  // 节点规则按 #n_<id> 挂 var(--mv-dur)——节拍走令牌，声明面在 .mbt.md。
+  let used_presets : Array[String] = []
+  for ab_id in self.artboards.keys() {
+    match self.artboards.get(ab_id) {
+      None => ()
+      Some(ab) =>
+        for nid in ab.doc.nodes.keys() {
+          match ab.doc.nodes.get(nid) {
+            Some(n) =>
+              if n.style.motion != "" {
+                let mut seen = false
+                for p in used_presets.iter() {
+                  if p == n.style.motion {
+                    seen = true
+                  }
+                }
+                if !seen {
+                  used_presets.push(n.style.motion)
+                }
+              }
+            None => ()
+          }
+        }
+    }
+  }
+  for preset in used_presets.iter() {
+    sb.write_string(node_motion_keyframes_css(preset, indent="  "))
+  }
+  for ab_id in self.artboards.keys() {
+    match self.artboards.get(ab_id) {
+      None => ()
+      Some(ab) =>
+        for nid in ab.doc.nodes.keys() {
+          match ab.doc.nodes.get(nid) {
+            Some(n) =>
+              if n.style.motion != "" {
+                sb.write_string(
+                  node_motion_rule_css(nid, n.style.motion, indent="  "),
+                )
+              }
+            None => ()
+          }
+        }
+    }
+  }
   // 状态多态 CSS：每个非 default 状态生成一份视觉覆盖（fill/text_color/
   // font_size）。SVG 表现属性可被 CSS 覆盖，g[#n_x] 挂 .st-<state> 类切换。
   for node_id in self.node_states.keys() {

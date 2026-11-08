@@ -89,8 +89,38 @@ pub const MOTION_STAGGER_MAX : Int = (MOTION_STAGGER_STEPS - 1) * MOTION_STAGGER
 /// （cubic-bezier 等价式）。曲线一律出自 Easing::css_value——导出原型、
 /// 宿主、运行时共用同一来源，不允许各处手写贝塞尔（节拍/手感漂移是
 /// 精致感的第一杀手）。
+///
+/// 刻度从 DesignTokens.motion 读取（spec/theme/frontmatter `tokens:` 的
+/// 覆盖在这里生效）；缺表项回退 MOTION_* 常量。
+pub fn motion_tokens_css_for(tokens : DesignTokens) -> String {
+  let fast = motion_ms(tokens, "fast", MOTION_FAST)
+  let base = motion_ms(tokens, "base", MOTION_BASE)
+  let slow = motion_ms(tokens, "slow", MOTION_SLOW)
+  let tick = motion_ms(tokens, "tick", MOTION_TICK)
+  let stagger = motion_ms(tokens, "stagger", MOTION_STAGGER)
+  let stagger_max = motion_ms(tokens, "stagger_max", MOTION_STAGGER_MAX)
+  ":root{--mv-dur-fast:\{fast}ms;--mv-dur:\{base}ms;--mv-dur-slow:\{slow}ms;--mv-dur-tick:\{tick}ms;--mv-stagger:\{stagger}ms;--mv-stagger-max:\{stagger_max}ms;--mv-ease:\{Easing::css_value(EaseInOut)};--mv-out:\{Easing::css_value(EaseOut)};--mv-spring:\{Easing::css_value(Spring(1.0))}}"
+}
+
+///|
+/// 默认令牌表的动效 CSS（无项目上下文时的等价入口）。
 pub fn motion_tokens_css() -> String {
-  ":root{--mv-dur-fast:\{MOTION_FAST}ms;--mv-dur:\{MOTION_BASE}ms;--mv-dur-slow:\{MOTION_SLOW}ms;--mv-dur-tick:\{MOTION_TICK}ms;--mv-stagger:\{MOTION_STAGGER}ms;--mv-stagger-max:\{MOTION_STAGGER_MAX}ms;--mv-ease:\{Easing::css_value(EaseInOut)};--mv-out:\{Easing::css_value(EaseOut)};--mv-spring:\{Easing::css_value(Spring(1.0))}}"
+  motion_tokens_css_for(DesignTokens::default())
+}
+
+///|
+/// 项目级动效令牌 CSS：导出面与 wasm 快照的唯一取值入口。
+pub fn Project::motion_tokens_css(self : Project) -> String {
+  motion_tokens_css_for(self.tokens)
+}
+
+///|
+/// 令牌表中的毫秒刻度；缺项/非正值回退内置常量（0 时长会让动画瞬跳）。
+fn motion_ms(tokens : DesignTokens, key : String, fallback : Int) -> Int {
+  match tokens.resolve_motion(key) {
+    Some(v) => if v > 0.0 { v.to_int() } else { fallback }
+    None => fallback
+  }
 }
 
 ///|
@@ -290,6 +320,68 @@ pub fn Timeline::add_sequence(
 // ---------------------------------------------------------------------------
 
 ///|
+/// 单个裁剪 → @keyframes 文本（Timeline::to_css 与节点级 motion 共用）。
+///
+/// 位移分量合并为单条 transform：同帧 AnimX+AnimY 各写一条会互相覆盖
+/// （CSS 声明级覆盖），位移只剩后写的轴。颜色帧写 SVG 的 fill
+/// （background-color 对 SVG 图形不生效）。
+fn write_clip_keyframes(
+  sb : StringBuilder,
+  anim_name : String,
+  clip : AnimationClip,
+  indent? : String = "",
+) -> Unit {
+  sb.write_string(indent + "@keyframes " + anim_name + " {\n")
+  for kf in clip.keyframes.iter() {
+    let pct = if clip.duration > 0.0 {
+      (kf.time / clip.duration * 100.0).to_int().to_string()
+    } else {
+      "0"
+    }
+    sb.write_string(indent + "  " + pct + "% {\n")
+    let moves : Array[String] = []
+    for prop in kf.properties.iter() {
+      match prop {
+        AnimX(v) => moves.push("translateX(\{v.to_int()}px)")
+        AnimY(v) => moves.push("translateY(\{v.to_int()}px)")
+        _ => ()
+      }
+    }
+    if moves.length() > 0 {
+      sb.write_string(indent + "    transform: " + moves.join(" ") + ";\n")
+    }
+    for prop in kf.properties.iter() {
+      match prop {
+        AnimFill(hex) => sb.write_string(indent + "    fill: " + hex + ";\n")
+        AnimOpacity(v) => {
+          let vs = v.to_string()
+          sb.write_string(indent + "    opacity: " + vs + ";\n")
+        }
+        AnimWidth(v) => {
+          let vs = v.to_int().to_string()
+          sb.write_string(indent + "    width: " + vs + "px;\n")
+        }
+        AnimHeight(v) => {
+          let vs = v.to_int().to_string()
+          sb.write_string(indent + "    height: " + vs + "px;\n")
+        }
+        AnimRadius(v) => {
+          let vs = v.to_int().to_string()
+          sb.write_string(indent + "    border-radius: " + vs + "px;\n")
+        }
+        AnimFontSize(v) => {
+          let vs = v.to_int().to_string()
+          sb.write_string(indent + "    font-size: " + vs + "px;\n")
+        }
+        _ => () // AnimX/AnimY 已在上方合并
+      }
+    }
+    sb.write_string(indent + "  }\n")
+  }
+  sb.write_string(indent + "}\n\n")
+}
+
+///|
 /// 生成 CSS @keyframes + animation 属性。
 ///
 /// target 选择器对齐 SVG DOM 的实际 id（render_svg 写 `id="n_<id>"`）——
@@ -299,60 +391,8 @@ pub fn Timeline::to_css(self : Timeline) -> String {
   let sb = StringBuilder::new()
   for i in 0..<self.clips.length() {
     let clip = self.clips[i]
-    let nid = clip.node_id
-    let idx = i.to_string()
-    let anim_name = "anim_" + nid + "_" + idx
-    sb.write_string("@keyframes " + anim_name + " {\n")
-    for kf in clip.keyframes.iter() {
-      let pct = if clip.duration > 0.0 {
-        (kf.time / clip.duration * 100.0).to_int().to_string()
-      } else {
-        "0"
-      }
-      sb.write_string("  " + pct + "% {\n")
-      // 位移分量合并为单条 transform：同帧 AnimX+AnimY 各写一条会互相
-      // 覆盖（CSS 声明级覆盖），位移只剩后写的轴。
-      let moves : Array[String] = []
-      for prop in kf.properties.iter() {
-        match prop {
-          AnimX(v) => moves.push("translateX(\{v.to_int()}px)")
-          AnimY(v) => moves.push("translateY(\{v.to_int()}px)")
-          _ => ()
-        }
-      }
-      if moves.length() > 0 {
-        sb.write_string("    transform: " + moves.join(" ") + ";\n")
-      }
-      for prop in kf.properties.iter() {
-        match prop {
-          // SVG 节点的着色属性是 fill（background-color 对图形不生效）
-          AnimFill(hex) => sb.write_string("    fill: " + hex + ";\n")
-          AnimOpacity(v) => {
-            let vs = v.to_string()
-            sb.write_string("    opacity: " + vs + ";\n")
-          }
-          AnimWidth(v) => {
-            let vs = v.to_int().to_string()
-            sb.write_string("    width: " + vs + "px;\n")
-          }
-          AnimHeight(v) => {
-            let vs = v.to_int().to_string()
-            sb.write_string("    height: " + vs + "px;\n")
-          }
-          AnimRadius(v) => {
-            let vs = v.to_int().to_string()
-            sb.write_string("    border-radius: " + vs + "px;\n")
-          }
-          AnimFontSize(v) => {
-            let vs = v.to_int().to_string()
-            sb.write_string("    font-size: " + vs + "px;\n")
-          }
-          _ => () // AnimX/AnimY 已在上方合并
-        }
-      }
-      sb.write_string("  }\n")
-    }
-    sb.write_string("}\n\n")
+    let anim_name = "anim_" + clip.node_id + "_" + i.to_string()
+    write_clip_keyframes(sb, anim_name, clip)
     let dur_ms = (clip.duration * 1000.0).to_int().to_string()
     let delay_ms = (clip.delay * 1000.0).to_int().to_string()
     let easing = clip.easing.css_value()
@@ -371,6 +411,108 @@ pub fn Timeline::to_css(self : Timeline) -> String {
     )
   }
   sb.to_string()
+}
+
+// ---------------------------------------------------------------------------
+// 节点级 motion：声明面（NodeStyle.motion）→ 导出 CSS
+// ---------------------------------------------------------------------------
+
+///|
+/// 节点级 motion 白名单：只放行单节点播放且不含写死几何的预设。
+/// press / pop / modal_present（120×44、844px 起点一类）与
+/// slide_in_right（390px 起点）在参数化前不开放——节点尺寸任意，
+/// 写死几何会在不同节点上跳变。
+pub fn motion_node_safe_presets() -> Array[String] {
+  ["fade_in"]
+}
+
+///|
+/// 校验节点级 motion：空串 = 无动画；白名单内 = Ok；
+/// 已知但非节点安全 → Err(motion_preset_not_node_safe: …)；
+/// 未知 → Err(unknown_motion_preset: …)。
+pub fn validate_node_motion(preset : String) -> Result[String, String] {
+  if preset == "" {
+    return Ok("")
+  }
+  for p in motion_node_safe_presets().iter() {
+    if p == preset {
+      return Ok(preset)
+    }
+  }
+  for p in [
+    "press", "fade_in", "slide_in_right", "modal_present", "shake", "pop",
+  ].iter() {
+    if p == preset {
+      return Err("motion_preset_not_node_safe: " + preset)
+    }
+  }
+  Err("unknown_motion_preset: " + preset)
+}
+
+///|
+/// 预设名 → 裁剪（节点级导出用；未知预设返回 None）。
+fn motion_clip_for(preset : String) -> AnimationClip? {
+  match preset {
+    "fade_in" => Some(fade_in_animation(""))
+    "slide_in_right" => Some(slide_in_right(""))
+    "modal_present" => Some(modal_present(""))
+    "shake" => Some(shake_animation(""))
+    "pop" => Some(pop_animation(""))
+    "press" => Some(press_animation(""))
+    _ => None
+  }
+}
+
+///|
+/// 节点级 motion 的 @keyframes（每预设一份，导出层做去重）。
+/// 时长/曲线不写进 keyframes：节点规则用 var(--mv-dur) 取令牌。
+pub fn node_motion_keyframes_css(
+  preset : String,
+  indent? : String = "",
+) -> String {
+  match motion_clip_for(preset) {
+    None => ""
+    Some(clip) => {
+      let sb = StringBuilder::new()
+      write_clip_keyframes(sb, "mv-p-" + preset, clip, indent~)
+      sb.to_string()
+    }
+  }
+}
+
+///|
+/// 节点级 motion 的曲线引用：引擎三条曲线走 :root 令牌（--mv-out/
+/// --mv-ease/--mv-spring），其余（Linear/Bounce…）用字面量 css_value。
+fn easing_css_ref(easing : Easing) -> String {
+  match easing {
+    EaseOut => "var(--mv-out)"
+    EaseInOut => "var(--mv-ease)"
+    Spring(_) => "var(--mv-spring)"
+    _ => easing.css_value()
+  }
+}
+
+///|
+/// 节点级 motion 规则：`#n_<id>{animation:mv-p-<preset> var(--mv-dur) … backwards}`。
+/// 选择器对齐 render_svg 的 DOM id，节拍/曲线都走 :root 令牌
+/// （spec/主题可覆盖）。
+pub fn node_motion_rule_css(
+  node_id : String,
+  preset : String,
+  indent? : String = "",
+) -> String {
+  match motion_clip_for(preset) {
+    None => ""
+    Some(clip) =>
+      indent +
+      "#n_" +
+      node_id +
+      "{animation:mv-p-" +
+      preset +
+      " var(--mv-dur) " +
+      easing_css_ref(clip.easing) +
+      " backwards}\n"
+  }
 }
 
 // ---------------------------------------------------------------------------
