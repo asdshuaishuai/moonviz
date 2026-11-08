@@ -33,7 +33,8 @@ test "export_html：节点级交互与状态变体导出" {
     patch={ ..NodePatch::empty(), fill: Some("#0F1114"), },
   )
   let html = p.export_html()
-  let nav = "[\"home\",\"card\",\"navigate\",\"detail\"]"
+  // navigate 绑定第 5 位 = 分板过渡（默认 push）
+  let nav = "[\"home\",\"card\",\"navigate\",\"detail\",\"push\"]"
   assert_true(html.contains(nav))
   assert_true(html.contains("\"toast\""))
   assert_true(html.contains("st-pressed"))
@@ -59,11 +60,11 @@ test "export_html：动效令牌与交互流畅性" {
   assert_true(html.contains("--mv-spring:cubic-bezier(0.34, 1.56, 0.64, 1)"))
   // 方向感知转场：navigate 前进 / back 反向 / tab 纯淡入；backwards 不冻结交互
   assert_true(html.contains(
-    "animation:mv-board-in var(--mv-dur) var(--mv-out) backwards",
+    "animation:mv-board-push var(--mv-dur) var(--mv-out) backwards",
   ))
   assert_true(html.contains("--mv-dir"))
   assert_true(html.contains("show(MV_STACK[MV_STACK.length-1],false,-1)"))
-  assert_true(html.contains("if(k==='navigate')show(v,true,1)"))
+  assert_true(html.contains("if(k==='navigate')show(v,true,1,tr)"))
   assert_true(html.contains("onclick=\"show('a',true,0)\""))
   // 按压反馈（spring 触感）+ 状态 fill 平滑切换
   assert_true(html.contains("g[id^=n_]:active{transform:scale(.96)}"))
@@ -325,4 +326,46 @@ test "export_html：submit_form 绑定携带字段 id 列表" {
   // 不再出现 describe 的字段数占位
   assert_false(html.contains("fields]"))
   assert_true(html.contains("k==='submit_form'"))
+}
+
+///|
+/// 分板过渡单一来源：FlowEdge.transition 决定导出关键帧与 navigate 绑定；
+/// 默认 push 不写 frontmatter 但仍走 mv-board-push；none 显式禁用动画。
+test "export_html：分板过渡按 FlowEdge.transition 出关键帧与绑定" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let _ = p.create_artboard(name="b")
+  let _ = p.create_artboard(name="c")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="go",
+  )
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="plain",
+  )
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="skip",
+  )
+  p.add_flow(from="a", to="b", trigger="tap:go", transition="modal_present")
+  p.add_flow(from="a", to="c", trigger="tap:plain")
+  p.add_flow(from="a", to="c", trigger="tap:skip", transition="none")
+  let html = p.export_html()
+  // 每个 Transition::name() 一份关键帧 + 类覆盖；none 只出禁用规则
+  assert_true(html.contains("@keyframes mv-board-modal_present"))
+  assert_true(html.contains("@keyframes mv-board-push"))
+  assert_true(html.contains("@keyframes mv-board-fade"))
+  assert_true(html.contains(
+    ".board.active.mv-tr-modal_present{animation:mv-board-modal_present",
+  ))
+  assert_true(html.contains(".board.active.mv-tr-none{animation:none}"))
+  // show 四参 + 绑定表第 5 位携带该边过渡
+  assert_true(html.contains("show(id,push=true,dir=1,tr='')"))
+  assert_true(html.contains("[\"a\",\"go\",\"navigate\",\"b\",\"modal_present\"]"))
+  assert_true(html.contains("[\"a\",\"plain\",\"navigate\",\"c\",\"push\"]"))
+  assert_true(html.contains("[\"a\",\"skip\",\"navigate\",\"c\",\"none\"]"))
 }

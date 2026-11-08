@@ -891,18 +891,31 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "flow" =>
-      // 建立导航流：flow <from_ab> <to_ab> <trigger|node>
+      // 建立导航流：flow <from_ab> <to_ab> <trigger|node> [transition]
       // 裸节点 id 兼容为 tap:<node>；手势词（swipe_left/long_press[:秒]/
-      // focus[:node]/scroll_end/keyboard_enter）经 normalize_flow_trigger 校验
+      // focus[:node]/scroll_end/keyboard_enter）经 normalize_flow_trigger 校验；
+      // 可选分板过渡缺省 push，未知 Err(unknown_transition)
       if parts.length() < 4 {
-        cli_err("usage: flow <from_artboard> <to_artboard> <trigger|node_id>")
+        cli_err(
+          "usage: flow <from_artboard> <to_artboard> <trigger|node_id> [push|pop|modal_present|modal_dismiss|sheet_present|fade|none]",
+        )
       } else {
-        match @core.normalize_flow_trigger(parts[3]) {
+        let tr = if parts.length() >= 5 { parts[4] } else { "" }
+        match @core.normalize_transition(tr) {
           Err(e) => cli_err(e)
-          Ok(trigger) => {
-            p.add_flow(from=parts[1], to=parts[2], trigger~)
-            "{\"ok\":true,\"flow\":\"\{parts[1]} --\{trigger}--> \{parts[2]}\"}"
-          }
+          Ok(transition) =>
+            match @core.normalize_flow_trigger(parts[3]) {
+              Err(e) => cli_err(e)
+              Ok(trigger) => {
+                p.add_flow(
+                  from=parts[1],
+                  to=parts[2],
+                  trigger~,
+                  transition~,
+                )
+                "{\"ok\":true,\"flow\":\"\{parts[1]} --\{trigger}/\{transition}--> \{parts[2]}\"}"
+              }
+            }
         }
       }
     "flows" => p.flow_json()
@@ -1368,7 +1381,7 @@ fn cli_help() -> String {
   "  uninteract <ab> <node>            Clear node interactions\n" +
   "  interactions <ab>                 List v2 (node/trigger/action{kind,params})\n" +
   "  interaction-manifest              Print the trigger/action vocabulary JSON\n" +
-  "  flow <from> <to> <trigger|node>  Add navigation edge (trigger: swipe_left/long_press[:秒]/focus[:node]/scroll_end/keyboard_enter；裸节点 id = tap:<node>)\n" +
+  "  flow <from> <to> <trigger|node> [transition]  Add navigation edge (trigger: swipe_left/long_press[:秒]/focus[:node]/scroll_end/keyboard_enter；裸节点 id = tap:<node>；transition 缺省 push)\n" +
   "  unflow <from> <to> <trigger|node>  Remove a navigation edge\n" +
   "  flows                             List navigation edges\n" +
   "  tap <ab> <x> <y>                  Simulate a tap, return state changes\n" +

@@ -68,6 +68,49 @@ fn js_string_escape(s : String) -> String {
 }
 
 ///|
+/// 分板过渡关键帧 + 覆盖规则：名字统一由 Transition::name() 生成
+/// （mv-board-push / mv-board-modal_present / …），show(id,push,dir,tr)
+/// 只切换 .mv-tr-<name> 类；none 只出禁动画规则、不出关键帧。
+fn board_transition_css() -> String {
+  let sb = StringBuilder::new()
+  for t in [Push, Pop, ModalPresent, ModalDismiss, SheetPresent, Fade].iter() {
+    let n = t.name()
+    sb.write_string(
+      "  @keyframes mv-board-" + n + "{" + board_transition_frames(t) + "}\n",
+    )
+    sb.write_string(
+      "  .board.active.mv-tr-" +
+      n +
+      "{animation:mv-board-" +
+      n +
+      " var(--mv-dur) var(--mv-out) backwards}\n",
+    )
+  }
+  sb.write_string("  .board.active.mv-tr-none{animation:none}\n")
+  sb.to_string()
+}
+
+///|
+/// 每类过渡的 from/to 帧。push/pop 保留方向感知（--mv-dir），
+/// modal/sheet 用纵向位移，fade 只改透明度。
+fn board_transition_frames(t : Transition) -> String {
+  match t {
+    Push =>
+      "from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}"
+    Pop =>
+      "from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*-28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}"
+    ModalPresent =>
+      "from{opacity:0;transform:translateY(28px) scale(.98)}to{opacity:1;transform:none}"
+    ModalDismiss =>
+      "from{opacity:0;transform:translateY(-28px) scale(.98)}to{opacity:1;transform:none}"
+    SheetPresent =>
+      "from{opacity:0;transform:translateY(48px)}to{opacity:1;transform:none}"
+    Fade => "from{opacity:0}to{opacity:1}"
+    NoTransition => ""
+  }
+}
+
+///|
 /// 导出为自包含 HTML（SVG 内嵌 + 画板切换 + 导航流模拟）。
 ///
 /// 视觉语言（Apple HIG / HarmonyOS 共识）：chrome 全部由主题令牌派生为
@@ -135,13 +178,13 @@ pub fn Project::export_html(self : Project) -> String {
     "  .board>svg{display:block;max-width:100%;height:auto}\n",
   )
   // 画板转场：方向感知（navigate 前进 +1 / back 返回 -1 / tab 纯淡入 0），
-  // fill 用 backwards——结束后把 transform 交还按压反馈，不冻结交互
+  // fill 用 backwards——结束后把 transform 交还给按压反馈，不冻结交互。
+  // 每类过渡一份 keyframes（名字由 Transition::name() 生成）；无边/无类
+  // 走默认 push，mv-tr-none 显式禁用动画。
   sb.write_string(
-    "  .board.active{display:block;animation:mv-board-in var(--mv-dur) var(--mv-out) backwards}\n",
+    "  .board.active{display:block;animation:mv-board-push var(--mv-dur) var(--mv-out) backwards}\n",
   )
-  sb.write_string(
-    "  @keyframes mv-board-in{from{opacity:0;transform:translateX(calc(var(--mv-dir,1)*28px)) scale(.99)}to{opacity:1;transform:translateX(0) scale(1)}}\n",
-  )
+  sb.write_string(board_transition_css())
   // 入场阶梯：画板顶层节点依次浮现（步进与饱和上限都来自 animation.mbt 的
   // 动效令牌，导出层不写死毫秒；第 8 个起饱和，长列表后段不抢跑）。
   // svg 的唯一直接子 g 是根 wrapper（render_svg 只对 root 调一次 render_node，
@@ -317,8 +360,17 @@ pub fn Project::export_html(self : Project) -> String {
       ""
     }
     if node != "" {
+      // 第 5 位 = 该边的分板过渡（FlowEdge.transition；默认 push）
       acts.push(
-        "[\"\{js_string_escape(e.from)}\",\"\{js_string_escape(node)}\",\"navigate\",\"\{js_string_escape(e.to)}\"]",
+        "[\"" +
+        js_string_escape(e.from) +
+        "\",\"" +
+        js_string_escape(node) +
+        "\",\"navigate\",\"" +
+        js_string_escape(e.to) +
+        "\",\"" +
+        js_string_escape(e.transition) +
+        "\"]",
       )
     }
   }
@@ -334,7 +386,7 @@ pub fn Project::export_html(self : Project) -> String {
                     match action_from_spec(spec) {
                       Some(NavigateTo(t)) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"navigate\",\"\{js_string_escape(t)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"navigate\",\"\{js_string_escape(t)}\",\"\"]",
                         )
                       Some(Back) =>
                         acts.push(
@@ -416,7 +468,7 @@ pub fn Project::export_html(self : Project) -> String {
     "const MV_STACK=[];const cur=()=>MV_STACK[MV_STACK.length-1];\n",
   )
   sb.write_string(
-    "function show(id,push=true,dir=1){if(push&&cur()!==id)MV_STACK.push(id);const b=document.getElementById('board-'+id);if(b){b.style.setProperty('--mv-dir',dir);void b.offsetWidth}document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');b?.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}\n",
+    "function show(id,push=true,dir=1,tr=''){if(push&&cur()!==id)MV_STACK.push(id);const b=document.getElementById('board-'+id);if(b){b.style.setProperty('--mv-dir',dir);['push','pop','modal_present','modal_dismiss','sheet_present','fade','none'].forEach(t=>b.classList.remove('mv-tr-'+t));if(tr)b.classList.add('mv-tr-'+tr);void b.offsetWidth}document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');b?.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}\n",
   )
   sb.write_string(
     "function back(){if(MV_STACK.length>1){MV_STACK.pop();show(MV_STACK[MV_STACK.length-1],false,-1)}}\n",
@@ -428,7 +480,7 @@ pub fn Project::export_html(self : Project) -> String {
     "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st);el.classList.remove('mv-pop');void el.getBoundingClientRect();el.classList.add('mv-pop');el.addEventListener('animationend',()=>el.classList.remove('mv-pop'),{once:true})}\n",
   )
   sb.write_string(
-    "MV_ACT.forEach(([b,n,k,v])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;if(!el.classList.contains('mv-live')){el.classList.add('mv-live');el.setAttribute('tabindex','0');el.setAttribute('role','button');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.dispatchEvent(new MouseEvent('click',{bubbles:true}))}})}el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}else if(k==='submit_form'){const ids=v?v.split(','):[];toast('📨 已提交 '+ids.length+' 项')}}})});\n",
+    "MV_ACT.forEach(([b,n,k,v,tr])=>{const el=document.querySelector('#board-'+b+' #n_'+n);if(!el)return;if(!el.classList.contains('mv-live')){el.classList.add('mv-live');el.setAttribute('tabindex','0');el.setAttribute('role','button');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.dispatchEvent(new MouseEvent('click',{bubbles:true}))}})}el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1,tr);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+b+' #n_'+v);const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+b+' #n_'+i+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}else if(k==='submit_form'){const ids=v?v.split(','):[];toast('📨 已提交 '+ids.length+' 项')}}})});\n",
   )
   // 键盘返回：ESC = back()（与引擎内置返回导航语义对齐）
   sb.write_string(

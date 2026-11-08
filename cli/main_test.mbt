@@ -355,3 +355,21 @@ test "flow CLI：手势 trigger 与未知触发报错" {
   assert_true(flows.contains("\"trigger\":\"long_press:0.8\""), msg=flows)
   assert_true(flows.contains("\"trigger\":\"focus\""), msg=flows)
 }
+
+///|
+/// flow CLI 可选分板过渡：显式 transition 落边并可回读；未知过渡报错。
+test "flow CLI：分板过渡参数与未知过渡报错" {
+  let p = @core.Project::new()
+  let _ = cli_exec(p, "create fa 390 844")
+  let _ = cli_exec(p, "create fb 390 844")
+  let out = cli_exec(p, "flow fa fb swipe_left modal_present")
+  assert_true(out.contains("\"ok\":true"), msg=out)
+  assert_true(out.contains("modal_present"), msg=out)
+  let def = cli_exec(p, "flow fa fb focus")
+  assert_true(def.contains("\"ok\":true"), msg=def)
+  let bad = cli_exec(p, "flow fa fb swipe_left nonsense")
+  assert_true(bad.contains("unknown_transition"), msg=bad)
+  let flows = cli_exec(p, "flows")
+  assert_true(flows.contains("\"transition\":\"modal_present\""), msg=flows)
+  assert_true(flows.contains("\"transition\":\"push\""), msg=flows)
+}

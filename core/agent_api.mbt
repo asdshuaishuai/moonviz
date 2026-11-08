@@ -532,7 +532,7 @@ pub fn op_entries() -> Array[OpEntry] {
   )
   // ---- 导航 / 主题 / 令牌 / 债 ----
   add(
-    "flow", "flow <from> <to> <trigger|node>", "navigation", "Add a navigation edge: bare node id = tap:<node>; also accepts swipe_left/swipe_right/swipe_up/swipe_down, long_press[:sec], focus[:node], blur[:node], scroll_end, keyboard_enter.",
+    "flow", "flow <from> <to> <trigger|node> [transition]", "navigation", "Add a navigation edge: bare node id = tap:<node>; also accepts swipe_left/swipe_right/swipe_up/swipe_down, long_press[:sec], focus[:node], blur[:node], scroll_end, keyboard_enter. Optional transition: push (default)/pop/modal_present/modal_dismiss/sheet_present/fade/none.",
   )
   add(
     "unflow", "unflow <from> <to> <trigger|node>", "navigation", "Remove a single navigation edge (same trigger grammar as flow).",

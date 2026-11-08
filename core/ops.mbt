@@ -672,18 +672,32 @@ pub fn apply_operation(
       }
     "flow" =>
       if parts.length() < 4 {
-        Err("mbt_operation_usage:flow <from> <to> <trigger|node>")
+        Err(
+          "mbt_operation_usage:flow <from> <to> <trigger|node> [transition]",
+        )
       } else {
-        // trigger 不再硬编码 tap:：裸节点 id 仍兼容为 tap:<node>，
-        // 手势词（swipe_left / long_press:0.8 / focus[:node] / scroll_end /
-        // keyboard_enter）经 normalize_flow_trigger 校验，未知 → Err
-        match normalize_flow_trigger(parts[3]) {
+        // 可选第 5 参数 = 分板过渡（Transition::name()，缺省 push）；
+        // 未知过渡 Err(unknown_transition)
+        let tr = if parts.length() >= 5 { parts[4] } else { "" }
+        match normalize_transition(tr) {
           Err(error) => Err(error)
-          Ok(trigger) => {
-            project.add_flow(from=parts[1], to=parts[2], trigger~)
-            project.revision = project.revision + 1
-            Ok(())
-          }
+          Ok(transition) =>
+            // trigger 不再硬编码 tap:：裸节点 id 仍兼容为 tap:<node>，
+            // 手势词（swipe_left / long_press:0.8 / focus[:node] / scroll_end /
+            // keyboard_enter）经 normalize_flow_trigger 校验，未知 → Err
+            match normalize_flow_trigger(parts[3]) {
+              Err(error) => Err(error)
+              Ok(trigger) => {
+                project.add_flow(
+                  from=parts[1],
+                  to=parts[2],
+                  trigger~,
+                  transition~,
+                )
+                project.revision = project.revision + 1
+                Ok(())
+              }
+            }
         }
       }
     "unflow" =>

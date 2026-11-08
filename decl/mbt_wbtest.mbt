@@ -489,3 +489,41 @@ test "flows：手势 trigger 声明往返与未知触发报错" {
       assert_true(e.contains("mbt_flow_unknown_node:f1:missing"), msg=e)
   }
 }
+
+///|
+/// 分板过渡声明：transition: modal_present 落 frontmatter 并往返；默认
+/// push 不写（旧文档字节稳定）；未知过渡加载即报错。
+test "flows：transition 声明往返与默认 Push 省略" {
+  let src = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: t1\n  flows:\n    - from: t1\n      to: t2\n      trigger: focus\n      transition: modal_present\n    - from: t1\n      to: t2\n      trigger: swipe_left\n---\n\n# T\n\n<!-- moonviz:artboard t1 -->\n```mbt\nfn visual_t1() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t1\", width=390.0, height=844.0)\n  page\n}\n```\n\n<!-- moonviz:artboard t2 -->\n```mbt\nfn visual_t2() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t2\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("transition 文档加载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(model.project.flows.length(), 2)
+  assert_eq(model.project.flows[0].transition, "modal_present")
+  assert_eq(model.project.flows[1].transition, "push")
+  let canonical = model.to_mbt()
+  assert_true(canonical.contains("transition: modal_present"), msg=canonical)
+  // 默认 push 不写：全文只出现一次 transition:
+  assert_eq(count_needle(canonical, "transition:"), 1)
+  let fj = model.project.flow_json()
+  assert_true(fj.contains("\"transition\":\"modal_present\""), msg=fj)
+  assert_true(fj.contains("\"transition\":\"push\""), msg=fj)
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(back.project.flows[0].transition, "modal_present")
+  // 未知过渡
+  let bad = src.replace(old="transition: modal_present", new="transition: nonsense")
+  match load_mbt_project(bad) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("mbt_flow_unknown_transition"), msg=e)
+  }
+}

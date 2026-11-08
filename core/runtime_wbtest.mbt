@@ -29,7 +29,6 @@ test "交互注册：为节点添加 tap 交互" {
       node_id="ok_btn",
       trigger=Tap,
       action=NavigateTo("home"),
-      transition=Push,
     ) {
     Ok(json) => assert_true(json.contains("\"ok\":true"))
     Err(_) => assert_true(false)
@@ -1284,4 +1283,36 @@ test "flow op：不再硬编码 tap:，未知 trigger 报错" {
     Ok(_) => assert_true(false)
     Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
   }
+}
+
+///|
+/// 分板过渡单一来源：FlowEdge.transition 默认 push、显式值随 flow_json 回读；
+/// flow op 可选第 5 参数 transition，未知过渡 Err。
+test "分板过渡：FlowEdge.transition 默认 push 与 flow op 校验" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="ta")
+  let _ = p.create_artboard(name="tb")
+  p.add_flow(from="ta", to="tb", trigger="tap:x", transition="modal_present")
+  p.add_flow(from="ta", to="tb", trigger="tap:y")
+  assert_eq(p.flows[0].transition, "modal_present")
+  assert_eq(p.flows[1].transition, "push")
+  let fj = p.flow_json()
+  assert_true(fj.contains("\"transition\":\"modal_present\""), msg=fj)
+  assert_true(fj.contains("\"transition\":\"push\""), msg=fj)
+  // op：flow <from> <to> <trigger|node> [transition]
+  match apply_operation(p, "flow ta tb swipe_left fade") {
+    Ok(_) => ()
+    Err(e) => fail("flow 带 transition 应成功：\{e}")
+  }
+  assert_eq(p.flows[2].transition, "fade")
+  match apply_operation(p, "flow ta tb swipe_left nonsense") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_transition"), msg=e)
+  }
+  // 默认省略 = push
+  match apply_operation(p, "flow ta tb focus") {
+    Ok(_) => ()
+    Err(e) => fail("flow 缺省 transition 应成功：\{e}")
+  }
+  assert_eq(p.flows[3].transition, "push")
 }

@@ -513,6 +513,7 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
   let mut from = ""
   let mut to = ""
   let mut trigger = ""
+  let mut transition = ""
   for raw in lines.iter() {
     let line = mbt_trim(raw)
     if line == "flows:" {
@@ -532,15 +533,23 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
           } else {
             trigger
           },
+          transition: if transition == "" {
+            "push"
+          } else {
+            transition
+          },
         })
       }
       from = mbt_trim(line.substring(start=7))
       to = ""
       trigger = ""
+      transition = ""
     } else if mbt_has_prefix(line, "to:") {
       to = mbt_trim(line.substring(start=3))
     } else if mbt_has_prefix(line, "trigger:") {
       trigger = mbt_trim(line.substring(start=8))
+    } else if mbt_has_prefix(line, "transition:") {
+      transition = mbt_trim(line.substring(start=11))
     } else if line != "" &&
       !mbt_has_prefix(line, "-") &&
       !mbt_has_prefix(line, " ") {
@@ -556,6 +565,11 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
       } else {
         trigger
       },
+      transition: if transition == "" {
+        "push"
+      } else {
+        transition
+      },
     })
   }
   flows
@@ -566,6 +580,11 @@ pub fn mbt_validate_flows(project : @core.Project) -> Result[Unit, String] {
   for flow in project.flows.iter() {
     match (project.artboards.get(flow.from), project.artboards.get(flow.to)) {
       (Some(from), Some(_)) => {
+        // 分板过渡：只认 Transition::name() 的七值（空 = 默认 push）
+        match @core.normalize_transition(flow.transition) {
+          Ok(_) => ()
+          Err(e) => return Err("mbt_flow_" + e)
+        }
         // trigger spec 走 core 的同一规范化：swipe_left / long_press:0.8 /
         // focus[:node] / scroll_end / keyboard_enter 合法；未知触发 Err
         let trigger = match @core.normalize_flow_trigger(flow.trigger) {
@@ -924,6 +943,10 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
       out.write_string("    - from: " + flow.from + "\n")
       out.write_string("      to: " + flow.to + "\n")
       out.write_string("      trigger: " + flow.trigger + "\n")
+      // 默认 push 不写：旧文档字节稳定，只有显式分板过渡才落 frontmatter
+      if flow.transition != "push" {
+        out.write_string("      transition: " + flow.transition + "\n")
+      }
     }
   }
   // issue #20：frontmatter 未知键原样回写——宿主扩展通道（如

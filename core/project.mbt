@@ -17,6 +17,10 @@ pub(all) struct FlowEdge {
   /// "swipe_left" / "long_press:0.8" / "focus:<node>" / "scroll_end" /
   /// "keyboard_enter" 等
   trigger : String
+  /// 分板过渡（Transition::name()）：push / pop / modal_present /
+  /// modal_dismiss / sheet_present / fade / none。默认 "push"（不写
+  /// frontmatter，旧文档字节稳定）
+  transition : String
 }
 
 ///|
@@ -433,10 +437,11 @@ pub fn Project::add_flow(
   from~ : String,
   to~ : String,
   trigger? : String = "tap",
+  transition? : String = "push",
 ) -> Unit {
   // 审查修复：canonical 含 flows 段——变更必须推进 revision 以失效
   // 会话级 canon_cache（否则新导航边不出现在 canonical 里）
-  self.flows.push({ from, to, trigger, })
+  self.flows.push({ from, to, trigger, transition, })
   self.revision = self.revision + 1
 }
 
@@ -468,7 +473,15 @@ pub fn Project::flow_json(self : Project) -> String {
   let parts : Array[String] = []
   for e in self.flows.iter() {
     parts.push(
-      "{\"from\":\"\{e.from}\",\"to\":\"\{e.to}\",\"trigger\":\"\{e.trigger}\"}",
+      "{\"from\":\"" +
+      json_escape(e.from) +
+      "\",\"to\":\"" +
+      json_escape(e.to) +
+      "\",\"trigger\":\"" +
+      json_escape(e.trigger) +
+      "\",\"transition\":\"" +
+      json_escape(e.transition) +
+      "\"}",
     )
   }
   let j = join_str4(parts)

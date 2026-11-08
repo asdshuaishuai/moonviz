@@ -157,17 +157,36 @@ pub fn Transition::name(self : Transition) -> String {
   }
 }
 
+///|
+/// 过渡名 → Transition（frontmatter `transition:` / flow op / CLI 共用）。
+pub fn transition_from_name(name : String) -> Transition? {
+  match name {
+    "push" => Some(Push)
+    "pop" => Some(Pop)
+    "modal_present" => Some(ModalPresent)
+    "modal_dismiss" => Some(ModalDismiss)
+    "sheet_present" => Some(SheetPresent)
+    "fade" => Some(Fade)
+    "none" => Some(NoTransition)
+    _ => None
+  }
+}
+
+///|
+/// 过渡 spec 规范化：空 = 默认 push；未知 → Err(unknown_transition: …)。
+pub fn normalize_transition(name : String) -> Result[String, String] {
+  if name == "" {
+    return Ok("push")
+  }
+  match transition_from_name(name) {
+    Some(t) => Ok(t.name())
+    None => Err("unknown_transition: " + name)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 交互定义
 // ---------------------------------------------------------------------------
-
-///|
-pub(all) struct InteractionDef {
-  node_id : String // 触发交互的节点
-  trigger : Trigger // 触发条件
-  action : Action // 执行动作
-  transition : Transition // 页面转场方式
-}
 
 ///|
 /// 组件多态（同一组件的不同视觉状态）
@@ -183,13 +202,15 @@ pub(all) struct ComponentStateDef {
 
 ///|
 /// 为节点添加交互定义
+///
+/// 转场已下沉到 FlowEdge.transition（分板过渡单一来源）：标记本身只
+/// 表达 trigger→action，节点交互不再携带一份被丢弃的 transition。
 pub fn Project::add_interaction(
   self : Project,
   artboard~ : String,
   node_id~ : String,
   trigger~ : Trigger,
   action~ : Action,
-  transition? : Transition = Push,
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard")
@@ -197,7 +218,6 @@ pub fn Project::add_interaction(
       if !ab.doc.has(node_id) {
         return Err("unknown_node: \{node_id}")
       }
-      let inter : InteractionDef = { node_id, trigger, action, transition, }
       match ab.doc.nodes.get(node_id) {
         Some(n) => {
           // 把交互信息序列化到节点的 metadata（v1：存 text 前缀标记）
