@@ -13,11 +13,20 @@ pub fn render_svg(
   doc : Document,
   surface? : String = "#F6F7F9",
   frame? : String = "#C9CFDA",
+  filter_ns? : String = "",
 ) -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
     Some(r) => r
     None => Rect::new(0.0, 0.0, 390.0, 844.0)
+  }
+  // 多板 HTML 导出时 filter id 必须按画板命名空间化（e1_<ab> 等）：
+  // <defs> 内的 filter 是文档级 id，重复板会让 url(#e1) 互相串台/非法重复。
+  // 单板 SVG 导出保持空 ns（e1/e2/e3），兼容既有产物。
+  let ns = if filter_ns == "" {
+    ""
+  } else {
+    "_" + svg_id_tag(filter_ns)
   }
   let sb = StringBuilder::new()
   sb.write_string(
@@ -28,19 +37,19 @@ pub fn render_svg(
     "<style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}</style>",
   )
   // Paint v2：渐变 defs（linear:#a:#b@deg / radial:#a:#b）
-  let defs = collect_gradients(doc)
+  let defs = collect_gradients(doc, ns)
   if defs != "" {
     sb.write_string(defs)
   }
   sb.write_string(
-    "<defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"4\" flood-opacity=\"0.10\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"6\" stdDeviation=\"14\" flood-opacity=\"0.14\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"16\" stdDeviation=\"30\" flood-opacity=\"0.18\"/></filter></defs>",
+    "<defs><filter id=\"e1\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"4\" flood-opacity=\"0.10\"/></filter><filter id=\"e2\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"6\" stdDeviation=\"14\" flood-opacity=\"0.14\"/></filter><filter id=\"e3\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"16\" stdDeviation=\"30\" flood-opacity=\"0.18\"/></filter></defs>",
   )
   sb.write_string(
     "<rect x=\"0\" y=\"0\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" fill=\"\{surface}\" pointer-events=\"none\"/>",
   )
   // SVG viewBox 自带裁剪（root rect 与 viewBox 同尺寸），不再用 clipPath 包裹：
   // WebKit 对 clip-path 组内元素的 hit-test 会整体失效，原型交互点击会穿透。
-  render_node(sb, doc, doc.root_id, layout, surface~, frame~)
+  render_node(sb, doc, doc.root_id, layout, surface~, frame~, ns~)
   sb.write_string("</svg>")
   sb.to_string()
 }
@@ -53,6 +62,7 @@ fn render_node(
   layout : SolvedLayout,
   surface~ : String,
   frame~ : String,
+  ns~ : String,
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
@@ -151,11 +161,11 @@ fn render_node(
               // collect_gradients 生成）——输出两个同名属性是 XML 非良构，
               // 浏览器取首个导致 blur 静默丢失，严格解析器直接拒绝整个 SVG
               if n.style.shadow != "none" && n.style.blur > 0.0 {
-                sb.write_string(" filter=\"url(#fx_\{svg_id_tag(n.id)})\"")
+                sb.write_string(" filter=\"url(#fx_\{svg_id_tag(n.id)}\{ns})\"")
               } else if n.style.shadow != "none" {
-                sb.write_string(" filter=\"url(#\{n.style.shadow})\"")
+                sb.write_string(" filter=\"url(#\{n.style.shadow}\{ns})\"")
               } else if n.style.blur > 0.0 {
-                sb.write_string(" filter=\"url(#blur_\{svg_id_tag(n.id)})\"")
+                sb.write_string(" filter=\"url(#blur_\{svg_id_tag(n.id)}\{ns})\"")
               }
               // 单一 transform 属性：变换列表从右向左作用，
               // flip 矩阵写在左侧即左乘 rotate（先转后翻）
@@ -204,7 +214,7 @@ fn render_node(
             }
           }
           for cid in n.children.iter() {
-            render_node(sb, doc, cid, layout, surface~, frame~)
+            render_node(sb, doc, cid, layout, surface~, frame~, ns~)
           }
           sb.write_string("</g>")
         }
@@ -368,7 +378,7 @@ fn svg_id_tag(id : String) -> String {
 
 ///|
 /// 遍历文档收集全部渐变，生成 <defs> 段
-fn collect_gradients(doc : Document) -> String {
+fn collect_gradients(doc : Document, ns : String) -> String {
   let sb = StringBuilder::new()
   for id in doc.nodes.keys() {
     match doc.get(id) {
@@ -396,11 +406,11 @@ fn collect_gradients(doc : Document) -> String {
         if has_blur && has_shadow {
           let (dx, dy, std, op) = shadow_token_params(n.style.shadow)
           sb.write_string(
-            "<filter id=\"fx_\{svg_id_tag(id)}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"\{n.style.blur}\" result=\"b\"/><feDropShadow in=\"b\" dx=\"\{dx}\" dy=\"\{dy}\" stdDeviation=\"\{std}\" flood-opacity=\"\{op}\"/></filter>",
+            "<filter id=\"fx_\{svg_id_tag(id)}\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"\{n.style.blur}\" result=\"b\"/><feDropShadow in=\"b\" dx=\"\{dx}\" dy=\"\{dy}\" stdDeviation=\"\{std}\" flood-opacity=\"\{op}\"/></filter>",
           )
         } else if has_blur {
           sb.write_string(
-            "<filter id=\"blur_\{svg_id_tag(id)}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feGaussianBlur stdDeviation=\"\{n.style.blur}\"/></filter>",
+            "<filter id=\"blur_\{svg_id_tag(id)}\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feGaussianBlur stdDeviation=\"\{n.style.blur}\"/></filter>",
           )
         }
       }

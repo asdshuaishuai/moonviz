@@ -369,3 +369,191 @@ test "export_html：分板过渡按 FlowEdge.transition 出关键帧与绑定" {
   assert_true(html.contains("[\"a\",\"plain\",\"navigate\",\"c\",\"push\"]"))
   assert_true(html.contains("[\"a\",\"skip\",\"navigate\",\"c\",\"none\"]"))
 }
+
+// ---------------------------------------------------------------------------
+// 导出正确性（P6）：选择器转义 / ghost 导航 / 返回兜底 / filter 命名空间
+// ---------------------------------------------------------------------------
+
+///|
+fn find_from(s : String, needle : String, from : Int) -> Int? {
+  let n = needle.length()
+  let mut i = from
+  while i + n <= s.length() {
+    if s.substring(start=i, end=i + n) == needle {
+      return Some(i)
+    }
+    i = i + 1
+  }
+  None
+}
+
+///|
+/// 收集 `marker` 之后到下一个双引号的属性值（filter id / board id 等）。
+fn collect_attr_values(s : String, marker : String) -> Array[String] {
+  let out : Array[String] = []
+  let mut idx = 0
+  while true {
+    match find_from(s, marker, idx) {
+      None => break
+      Some(pos) => {
+        let start = pos + marker.length()
+        let rest = s.substring(start=start)
+        match rest.find("\"") {
+          None => break
+          Some(e) => {
+            out.push(rest.substring(start=0, end=e))
+            idx = start + e + 1
+          }
+        }
+      }
+    }
+  }
+  out
+}
+
+///|
+/// ① 选择器转义：ab'cd 这类 Agent 可控画板 id 不得裸拼进 querySelector；
+/// 所有 MV_ACT/setState 选择器走 cssEsc（CSS.escape 优先）。
+test "export_html：CSS.escape 防 id 注入（ab'cd 画板）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.place_component(
+    artboard="login",
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.duplicate_artboard(src="login", new_name="ab'cd")
+  match
+    p.attach_interaction(
+      artboard="ab'cd",
+      node_id="cta",
+      trigger="tap",
+      action_spec="show_toast:\"hi\"",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("引号画板交互注册失败：\{e}")
+  }
+  let html = p.export_html()
+  assert_true(html.contains("cssEsc"))
+  assert_true(html.contains("CSS.escape"))
+  assert_true(html.contains("'#board-'+cssEsc(b)+' #n_'+cssEsc(n)"))
+  assert_true(html.contains("'#board-'+cssEsc(b)+' #n_'+cssEsc(i)+' text'"))
+  // 选择器路径不再出现裸拼的 #board-ab'cd 字面量
+  assert_false(html.contains("#board-ab'cd"))
+  // DOM id 仍按原名存在（id 属性不需要 CSS 转义）
+  assert_true(html.contains("id=\"board-ab'cd\""))
+}
+
+///|
+/// ② ghost flow：目标板不存在时不写 navigate 绑定；show() 先查板再改栈，
+/// 目标不存在保留当前板并 toast。
+test "export_html：ghost flow 过滤与 show 存在性兜底" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let _ = p.create_artboard(name="b")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="go",
+  )
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="ok",
+  )
+  p.add_flow(from="a", to="ghost", trigger="tap:go")
+  p.add_flow(from="a", to="b", trigger="tap:ok")
+  let html = p.export_html()
+  assert_false(html.contains("\"navigate\",\"ghost\""))
+  assert_true(html.contains("\"navigate\",\"b\""))
+  // show 先取板再改栈：不存在直接 toast 返回
+  assert_true(html.contains("if(!b){toast('页面不存在: '+id);return}"))
+  assert_true(html.contains("const b=document.getElementById('board-'+id);if(!b)"))
+  // boot 只对一个板 show；ghost 不在 boot/绑定里
+  assert_true(html.contains("\nshow('a',true,0)\n"))
+  assert_false(html.contains("\nshow('ghost'"))
+}
+
+///|
+/// ③ 内置返回绑定：back-like 节点无 flow/marker 时写 back；普通节点、
+/// 已有 marker 或显式 flow 的节点都不重复绑定。
+test "export_html：返回类节点内置 back 绑定" {
+  let p = Project::new()
+  let home = p.create_artboard(name="home")
+  let _ = p.create_artboard(name="home2")
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="back_btn",
+  )
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="back_marked",
+  )
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="back_flow",
+  )
+  let _ = p.attach_interaction(
+    artboard=home,
+    node_id="back_marked",
+    trigger="tap",
+    action_spec="show_toast:\"x\"",
+  )
+  p.add_flow(from=home, to="home2", trigger="tap:back_flow")
+  let html = p.export_html()
+  assert_true(html.contains("[\"home\",\"back_btn\",\"back\",\"\"]"))
+  assert_false(html.contains("[\"home\",\"cta\",\"back\""))
+  assert_false(html.contains("[\"home\",\"back_marked\",\"back\""))
+  assert_false(html.contains("[\"home\",\"back_flow\",\"back\""))
+}
+
+///|
+/// ④ filter id 按画板命名空间化：duplicate 后 e1/fx_/blur_ 不再全局重复；
+/// 节点 g id 不做全局重命名（保持 #n_ 契约）。
+test "export_html：filter id 按画板命名空间唯一" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.place_component(
+    artboard="login",
+    component_id="card",
+    instance_id="card",
+  )
+  match p.artboards.get("login") {
+    Some(ab) => {
+      let _ = ab.doc.update_node("card", fn(n) {
+        { ..n, style: { ..n.style, shadow: "e2", }, }
+      })
+    }
+    None => assert_true(false)
+  }
+  let _ = p.duplicate_artboard(src="login", new_name="login2")
+  let html = p.export_html()
+  let filter_ids = collect_attr_values(html, "filter id=\"")
+  assert_true(filter_ids.length() >= 6, msg="两板各 3 个 elevation filter")
+  let seen : Map[String, Bool] = Map::new()
+  let mut dup = 0
+  for fid in filter_ids.iter() {
+    if seen.contains(fid) {
+      dup = dup + 1
+    } else {
+      seen.set(fid, true)
+    }
+  }
+  assert_eq(dup, 0, msg="filter id 必须全局唯一")
+  assert_true(seen.contains("e1_login"))
+  assert_true(seen.contains("e1_login2"))
+  assert_false(seen.contains("e1"))
+  assert_true(html.contains("filter=\"url(#e2_login)\""))
+  assert_true(html.contains("filter=\"url(#e2_login2)\""))
+  // 节点 g id 保持 #n_<id>（不随画板改名）
+  assert_true(html.contains("id=\"n_card\""))
+  assert_false(html.contains("id=\"n_card_login\""))
+}
