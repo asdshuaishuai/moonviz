@@ -208,8 +208,9 @@ test "模板审计：lint 对比度不误报 + balance 中心中性 + alignment 
 }
 
 ///|
-/// ② 五处卡片上下内边距对称（差 ≤2px）：dashboard 22/22、checkout 26/26、
-/// profile 21/21、web_dashboard 21/21、adaptive 居中。
+/// ② 五处卡片上下内边距对称（差 ≤2px）：dashboard 22/22、checkout 25/25、
+/// profile 18/18（stat 与 post 同档）、web_dashboard 18/18、adaptive 居中。
+/// 数值为 solve 后实测，改模板块距时须同步本注释。
 test "模板审计：五处卡片上下内边距差 ≤2px" {
   let cases : Array[(String, String)] = [
     ("dashboard", "stat_0"),
