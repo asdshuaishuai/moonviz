@@ -140,6 +140,43 @@ fn dom_id_in(m : Map[String, String]?, id : String) -> String {
 }
 
 ///|
+/// html lang 白名单清洗（只留 ASCII 字母与 '-'，空则 zh）：lang 是可选
+/// 入参，必须防止属性注入。
+fn sanitize_lang(lang : String) -> String {
+  let sb = StringBuilder::new()
+  for c in lang.iter() {
+    let code = c.to_int()
+    if (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) ||
+      code == 45 {
+      sb.write_char(c)
+    }
+  }
+  let out = sb.to_string()
+  if out == "" {
+    "zh"
+  } else {
+    out
+  }
+}
+
+///|
+/// 交互节点的无障碍标签：原样名（去标记）→ 文本 → 组件名 → id。
+/// 主图标按钮等无文字节点由组件名兜底，role=button 时不至于无名。
+fn a11y_label(n : Node) -> String {
+  let base = strip_all_markers(n.name)
+  if base != "" && base != n.id {
+    base
+  } else if n.text.trim() != "" {
+    n.text.trim().to_string()
+  } else if n.component != "" {
+    n.component
+  } else {
+    n.id
+  }
+}
+
+///|
 /// 导出为自包含 HTML（SVG 内嵌 + 画板切换 + 导航流模拟）。
 ///
 /// 视觉语言（Apple HIG / HarmonyOS 共识）：chrome 全部由主题令牌派生为
@@ -148,7 +185,10 @@ fn dom_id_in(m : Map[String, String]?, id : String) -> String {
 /// 屏幕（分层柔阴影 + hairline），页面按安全区留呼吸边距，窄屏自适应缩放。
 /// 交互：可交互节点挂 mv-live（Hover Lift + 指针 + 键盘 Enter/Space 可达），
 /// 非交互节点不再伪装可点（cursor 只给 mv-live）。
-pub fn Project::export_html(self : Project) -> String {
+pub fn Project::export_html(
+  self : Project,
+  lang? : String = "zh",
+) -> String {
   let sb = StringBuilder::new()
   // 节点 DOM id 唯一化：跨板重复的节点 id（duplicate_artboard）在后者加
   // __dupN 后缀——节点 g id 不做全局重命名，首个出现保持 #n_<id> 契约；
@@ -188,7 +228,9 @@ pub fn Project::export_html(self : Project) -> String {
     "light"
   }
   sb.write_string(
-    "<!DOCTYPE html>\n<html lang=\"zh\">\n<head>\n<meta charset=\"UTF-8\">\n",
+    "<!DOCTYPE html>\n<html lang=\"" +
+    sanitize_lang(lang) +
+    "\">\n<head>\n<meta charset=\"UTF-8\">\n",
   )
   sb.write_string(
     "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n",
@@ -260,8 +302,9 @@ pub fn Project::export_html(self : Project) -> String {
     "  g[id^=n_]{transform-box:fill-box;transform-origin:center;transition:transform var(--mv-dur-fast) var(--mv-spring),filter var(--mv-dur) var(--mv-out)}\n" +
     "  g.mv-live{cursor:pointer}\n" +
     "  @media (hover:hover){g.mv-live:hover{transform:translateY(-2px);filter:drop-shadow(0 6px 12px rgba(0,0,0,.10))}}\n" +
-    "  g[id^=n_]:active{transform:scale(.96)}\n" +
-    "  g.mv-live:focus{outline:none}\n" +
+    // 按压反馈只给可交互节点；不再用 g.mv-live:focus{outline:none} 压掉
+    // 全局 :focus-visible 焦点环（键盘可达性此前被这条覆盖）
+    "  g.mv-live:active{transform:scale(.96)}\n" +
     "  g.mv-live:focus-visible{filter:drop-shadow(0 0 0 var(--mv-primary)) drop-shadow(0 0 3px var(--mv-primary))}\n" +
     "  g[id^=n_] rect,g[id^=n_] text{transition:fill var(--mv-dur) var(--mv-out)}\n" +
     // toast：HUD 反相胶囊（前景色作底 + 磨砂），明暗主题自动反相
@@ -373,7 +416,7 @@ pub fn Project::export_html(self : Project) -> String {
   }
   sb.write_string("</style>\n</head>\n<body>\n")
   // Tab 栏
-  sb.write_string("<div class=\"tabs\">\n")
+  sb.write_string("<div class=\"tabs\" role=\"tablist\">\n")
   for id in self.artboards.keys() {
     match self.artboards.get(id) {
       Some(ab) => {
@@ -381,7 +424,7 @@ pub fn Project::export_html(self : Project) -> String {
         // 原样——getElementById('tab-'+id) 按 JS 解析后的串查 DOM，两侧一致
         let js_id = js_string_escape(id)
         sb.write_string(
-          "  <div class=\"tab\" onclick=\"show('\{js_id}',true,0)\" id=\"tab-\{id}\">\{ab.name}</div>\n",
+          "  <div class=\"tab\" role=\"tab\" tabindex=\"0\" onclick=\"show('\{js_id}',true,0)\" onkeydown=\"if(event.key==='Enter'||event.key===' '){event.preventDefault();show('\{js_id}',true,0)}\" id=\"tab-\{id}\">\{ab.name}</div>\n",
         )
       }
       None => ()
@@ -413,7 +456,10 @@ pub fn Project::export_html(self : Project) -> String {
     }
   }
   // JS
-  sb.write_string("<div id=\"mv-toast\"></div>\n")
+  // toast = 状态播报区：role=status + aria-live=polite，读屏器可感知
+  sb.write_string(
+    "<div id=\"mv-toast\" role=\"status\" aria-live=\"polite\"></div>\n",
+  )
   sb.write_string("<script>\n")
   // 交互数据表：[画板, 节点, 动作, 参数]。flows 的 tap:node 前缀与
   // ⚡trigger→action 词汇表在导出层合并为同一张绑定表。
@@ -565,10 +611,36 @@ pub fn Project::export_html(self : Project) -> String {
   }
   let states_js = state_defs.join(",")
   sb.write_string("const MV_STATES={\{states_js}};\n")
+  // 无障碍标签表：交互节点挂 role=button 时补 aria-label（无文字节点
+  // 由组件名兜底并去标记）；键与 MV_ACT 的 <画板>|<DOM id> 一致。
+  let label_defs : Array[String] = []
+  for ab_id in self.artboards.keys() {
+    match self.artboards.get(ab_id) {
+      None => ()
+      Some(ab) =>
+        for nid in ab.doc.nodes.keys() {
+          match ab.doc.nodes.get(nid) {
+            Some(n) => {
+              let dom = dom_id_in(dom_ids.get(ab_id), nid)
+              label_defs.push(
+                "\"" +
+                js_string_escape(ab_id + "|" + dom) +
+                "\":\"" +
+                js_string_escape(a11y_label(n)) +
+                "\"",
+              )
+            }
+            None => ()
+          }
+        }
+    }
+  }
+  sb.write_string("const MV_LABELS={\{label_defs.join(",")}};\n")
   let acts_js = acts.join(",")
   sb.write_string("const MV_ACT=[\{acts_js}];\n")
   sb.write_string(
-    "const MV_STACK=[];const cur=()=>MV_STACK[MV_STACK.length-1];\n",
+    // 减弱动态偏好同时约束 JS 侧滚动行为（CSS 只关动画/过渡）
+    "const MV_STACK=[];const cur=()=>MV_STACK[MV_STACK.length-1];const RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);\n",
   )
   // CSS 选择器转义：画板/节点 id 是 Agent 可控文本（duplicate 的 new_name
   // 可含单引号），裸拼 '#board-'+id 会让 querySelector 抛 SyntaxError 并
@@ -579,7 +651,7 @@ pub fn Project::export_html(self : Project) -> String {
   // show 先确认目标板存在再改导航栈/active：ghost 目标不回滚时会把
   // 当前板摘掉导致白屏（此前先 push、后查 b）。
   sb.write_string(
-    "function show(id,push=true,dir=1,tr=''){const b=document.getElementById('board-'+id);if(!b){toast('页面不存在: '+id);return}if(push&&cur()!==id)MV_STACK.push(id);b.style.setProperty('--mv-dir',dir);['push','pop','modal_present','modal_dismiss','sheet_present','fade','none'].forEach(t=>b.classList.remove('mv-tr-'+t));if(tr)b.classList.add('mv-tr-'+tr);void b.offsetWidth;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');b.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}\n",
+    "function show(id,push=true,dir=1,tr=''){const b=document.getElementById('board-'+id);if(!b){toast('页面不存在: '+id);return}if(push&&cur()!==id)MV_STACK.push(id);b.style.setProperty('--mv-dir',dir);['push','pop','modal_present','modal_dismiss','sheet_present','fade','none'].forEach(t=>b.classList.remove('mv-tr-'+t));if(tr)b.classList.add('mv-tr-'+tr);void b.offsetWidth;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');b.classList.add('active');window.scrollTo({top:0,behavior:RM?'auto':'smooth'})}\n",
   )
   sb.write_string(
     "function back(){if(MV_STACK.length>1){MV_STACK.pop();show(MV_STACK[MV_STACK.length-1],false,-1)}}\n",
@@ -591,7 +663,7 @@ pub fn Project::export_html(self : Project) -> String {
     "function setState(b,n,st,on=true){const el=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(n));if(!el)return;[...el.classList].filter(c=>c.startsWith('st-')).forEach(c=>el.classList.remove(c));if(on&&st)el.classList.add('st-'+st);el.classList.remove('mv-pop');void el.getBoundingClientRect();el.classList.add('mv-pop');el.addEventListener('animationend',()=>el.classList.remove('mv-pop'),{once:true})}\n",
   )
   sb.write_string(
-    "MV_ACT.forEach(([b,n,k,v,tr])=>{const el=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(n));if(!el)return;if(!el.classList.contains('mv-live')){el.classList.add('mv-live');el.setAttribute('tabindex','0');el.setAttribute('role','button');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.dispatchEvent(new MouseEvent('click',{bubbles:true}))}})}el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1,tr);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(v));const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(i)+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}else if(k==='submit_form'){const ids=v?v.split(','):[];toast('📨 已提交 '+ids.length+' 项')}}})});\n",
+    "MV_ACT.forEach(([b,n,k,v,tr])=>{const el=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(n));if(!el)return;if(!el.classList.contains('mv-live')){el.classList.add('mv-live');el.setAttribute('tabindex','0');el.setAttribute('role','button');const lbl=MV_LABELS[b+'|'+n];if(lbl)el.setAttribute('aria-label',lbl);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.dispatchEvent(new MouseEvent('click',{bubbles:true}))}})}el.addEventListener('click',ev=>{ev.stopPropagation();if(k==='navigate')show(v,true,1,tr);else if(k==='back')back();else if(k==='toast')toast(v);else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}else if(k==='play_sound')toast('🔊 '+v);else if(k==='set_state'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);setState(b,i,s)}else if(k==='toggle_state'){const el2=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(v));const on=el2&&[...el2.classList].some(c=>c.startsWith('st-'));setState(b,v,'',false);if(!on&&MV_STATES[v])setState(b,v,MV_STATES[v].split(',')[0])}else if(k==='set_text'){const i=v.substring(0,v.indexOf(':')),s=v.substring(v.indexOf(':')+1);const t=document.querySelector('#board-'+cssEsc(b)+' #n_'+cssEsc(i)+' text');if(t){t.textContent=s;t.classList.remove('mv-tick');void t.getBoundingClientRect();t.classList.add('mv-tick');t.addEventListener('animationend',()=>t.classList.remove('mv-tick'),{once:true})}}else if(k==='submit_form'){const ids=v?v.split(','):[];toast('📨 已提交 '+ids.length+' 项')}}})});\n",
   )
   // 键盘返回：ESC = back()（与引擎内置返回导航语义对齐）
   sb.write_string(

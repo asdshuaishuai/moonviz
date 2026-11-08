@@ -109,13 +109,13 @@ select,textarea,input{font:inherit;color:var(--tx)}
 select{border:1px solid var(--line);background:var(--panel);color:var(--tx);border-radius:8px;padding:4px 10px;font-size:12px;max-width:230px;cursor:pointer}
 select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 option{background:var(--panel);color:var(--tx)}
-main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(100vh - 50px)}
+main{display:grid;grid-template-columns:minmax(330px,36%) 1fr 252px;height:calc(100vh - 50px);min-height:0}
 /* 原型模式：单栏全宽舞台（Axure 玩家形态） */
 body.mode-preview main{grid-template-columns:1fr}
 @media (max-width:1080px){body.mode-preview main{grid-template-columns:1fr}}
 @media (max-width:1080px){main{grid-template-columns:minmax(300px,42%) 1fr}}
 .editor{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0;background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.canvaswrap{display:flex;flex-direction:column;min-width:0;position:relative}
+.canvaswrap{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
 .inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0;overflow:hidden;background:color-mix(in srgb,var(--panel) 55%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 @media (max-width:1080px){.inspector{display:none}}
 .bar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
@@ -212,7 +212,7 @@ header .themes{margin-left:8px}
 #ab-pills{display:flex;gap:4px;flex-wrap:wrap}
 #ab-pills button{font-size:11px;padding:3px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--tx2);cursor:pointer}
 #ab-pills button.on{border-color:var(--acc);color:var(--acc);font-weight:700}
-#stage{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1}
+#stage{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1}
 #stage .shot{max-height:none}
 .stage-empty{color:var(--tx3);font-size:13px}
 /* 交互面板 */
@@ -749,6 +749,8 @@ function zoomFit(){
   zoom=Math.max(.35,Math.min((c.clientWidth-110)/ab.width,(c.clientHeight-110)/ab.height,1.5));
   applyZoom();
 }
+// 视口变化时原型模式重新适配（否则 1280×800 下 844 板底部不可见）
+window.addEventListener('resize',()=>{if(mode==='preview')zoomFit();});
 $('canvas').addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();zoomBy(e.deltaY<0?.08:-.08);}},{passive:false});
 function applySource(){
   mbt=$('src').value;
@@ -1478,6 +1480,8 @@ function setMode(m){
     if(selNode)select(null);
   }
   render();
+  // 进入原型模式自动适配：844 高板在 1280×800 视口里需缩放/滚动可见
+  if(mode==='preview')requestAnimationFrame(()=>zoomFit());
 }
 function renderStage(){
   const st=$('stage');st.innerHTML='';
@@ -1492,9 +1496,23 @@ function renderStage(){
     browser?`<span class="chrome"><i></i><i></i><i></i><em>${a.id}</em></span>`:''
   }${a.svg}</div><button class="tag">${a.id} · ${a.width}×${a.height}</button>`;
   st.appendChild(d);
-  // Axure 式：画板上任何元素可点，绑定来自引擎 flows + ⚡标记
+  // Axure 式：画板上任何元素可点，绑定来自引擎 flows + ⚡标记。
+  // 有绑定的节点同时进入 Tab 序（role=button），Enter/Space 等价点击。
+  const flowList=(lastResult&&lastResult.flows||[]);
   d.querySelectorAll('g[id^="n_"]').forEach(g=>{
-    g.addEventListener('click',ev=>{ev.stopPropagation();playTap(g.id.slice(2));});
+    const nid=g.id.slice(2);
+    const nd=(a.nodes||[]).find(x=>x.id===nid);
+    const mk=nd&&nd.name?parseMarker(nd.name):null;
+    const bound=(mk&&mk.trigger==='tap')||flowList.some(f=>f.from===a.id&&f.trigger==='tap:'+nid);
+    if(bound){
+      g.setAttribute('tabindex','0');
+      g.setAttribute('role','button');
+      if(mk&&mk.action)g.setAttribute('aria-label',mk.action);
+      g.addEventListener('keydown',e=>{
+        if(e.key==='Enter'||e.key===' '){e.preventDefault();g.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+      });
+    }
+    g.addEventListener('click',ev=>{ev.stopPropagation();playTap(nid);});
   });
   applyZoom();updatePills();
 }

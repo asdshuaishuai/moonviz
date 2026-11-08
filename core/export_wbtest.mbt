@@ -66,8 +66,9 @@ test "export_html：动效令牌与交互流畅性" {
   assert_true(html.contains("show(MV_STACK[MV_STACK.length-1],false,-1)"))
   assert_true(html.contains("if(k==='navigate')show(v,true,1,tr)"))
   assert_true(html.contains("onclick=\"show('a',true,0)\""))
-  // 按压反馈（spring 触感）+ 状态 fill 平滑切换
-  assert_true(html.contains("g[id^=n_]:active{transform:scale(.96)}"))
+  // 按压反馈（spring 触感）+ 状态 fill 平滑切换；按压只给可交互节点
+  assert_true(html.contains("g.mv-live:active{transform:scale(.96)}"))
+  assert_false(html.contains("g[id^=n_]:active"))
   assert_true(html.contains("transition:fill var(--mv-dur) var(--mv-out)"))
   // 入场阶梯：选择器下钻到根 wrapper 内的顶层节点 g——svg 的唯一直接子 g
   // 是根 wrapper（render_svg 只对 root 调一次 render_node），旧选择器
@@ -639,4 +640,53 @@ test "export_html：重复画板节点 g id 加 __dupN 且绑定一致" {
   let has_raw = html.contains("[\"login2\",\"card\",\"toast\"")
   let has_dup = html.contains("[\"login2\",\"card__dup2\",\"toast\"")
   assert_true(has_raw != has_dup, msg="MV_ACT 绑定必须与 DOM id 同形")
+}
+
+///|
+/// 无障碍与 reduced-motion（P7）：焦点环不被压掉、tab 键盘可达、toast
+/// live region、lang 可选、无文字 role=button 有 aria-label。
+test "export_html：无障碍焦点环/tab 键/reduced-motion/toast/lang/aria-label" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="icon_btn",
+  )
+  // 无文字按钮：aria-label 应回落到组件名
+  match p.artboards.get("home") {
+    Some(ab) => {
+      let _ = ab.doc.update_node("icon_btn", fn(n) { { ..n, text: "", } })
+    }
+    None => assert_true(false)
+  }
+  let _ = p.attach_interaction(
+    artboard="home",
+    node_id="icon_btn",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
+  let html = p.export_html()
+  // ① 焦点环：不再有 outline:none 覆盖，全局 :focus-visible 生效；
+  //    tab 带 role/tabindex/Enter-Space；按压只给可交互节点
+  assert_false(html.contains("g.mv-live:focus{outline:none}"))
+  assert_true(html.contains(":focus-visible{outline:2px solid"))
+  assert_true(html.contains("role=\"tab\" tabindex=\"0\""))
+  assert_true(html.contains("role=\"tablist\""))
+  assert_true(html.contains("event.key==='Enter'||event.key===' '"))
+  assert_true(html.contains("g.mv-live:active{transform:scale(.96)}"))
+  assert_false(html.contains("g[id^=n_]:active"))
+  // ② reduced-motion 同时约束 JS 滚动行为
+  assert_true(html.contains("matchMedia('(prefers-reduced-motion: reduce)')"))
+  assert_true(html.contains("RM?'auto':'smooth'"))
+  // ③ toast live region + lang + 无文字 role=button 的 aria-label
+  assert_true(html.contains("id=\"mv-toast\" role=\"status\" aria-live=\"polite\""))
+  assert_true(html.contains("<html lang=\"zh\">"))
+  assert_true(p.export_html(lang="en").contains("<html lang=\"en\">"))
+  assert_true(html.contains("MV_LABELS"))
+  assert_true(html.contains("el.setAttribute('aria-label',lbl)"))
+  assert_true(
+    html.contains("\"home|icon_btn\":\"button\""),
+    msg="无文字按钮标签应回落到组件名",
+  )
 }
