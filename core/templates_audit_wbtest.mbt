@@ -209,8 +209,8 @@ test "模板审计：lint 对比度不误报 + balance 中心中性 + alignment 
 
 ///|
 /// ② 五处卡片上下内边距对称（差 ≤2px）：dashboard 22/22、checkout 25/25、
-/// profile 18/18（stat 与 post 同档）、web_dashboard 18/18、adaptive 居中。
-/// 数值为 solve 后实测，改模板块距时须同步本注释。
+/// profile stat 18/18 与 post 23/23（两卡不同档但各自对称）、
+/// web_dashboard 18/18、adaptive 居中。数值为 solve 后实测，改模板块距时须同步。
 test "模板审计：五处卡片上下内边距差 ≤2px" {
   let cases : Array[(String, String)] = [
     ("dashboard", "stat_0"),
@@ -428,6 +428,59 @@ test "模板审计：adaptive 全宽度 flow 目标都存在" {
           doc.has(nid),
           msg="宽 \{w}：flow tap:\{nid} 指向不存在的节点",
         )
+      }
+    }
+  }
+}
+
+///|
+/// ⑨ 8pt 栅格按字面锁定：login/onboarding/empty_state 的固定宽度与
+/// StackLayout 的 padding/gap 都必须是 8 的倍数。画布根宽 390 是设备
+/// 宽度、不属组件尺寸，跳过；Fill/Hug 由父约束求解，也不在此列。
+/// 这条是把验收③从「看起来对齐」变成「生成即满足」的回归锚。
+test "模板审计：login/onboarding/empty_state 宽度与间距取 8 的倍数" {
+  for id in ["login", "onboarding", "empty_state"].iter() {
+    let (p, ab) = audit_apply(id)
+    let doc = match p.artboards.get(ab) {
+      Some(a) => a.doc
+      None => {
+        abort("模板 \{id} 无画板")
+      }
+    }
+    for nid in doc.nodes.keys() {
+      if nid == "root" {
+        continue
+      }
+      let n = match doc.nodes.get(nid) {
+        Some(n) => n
+        None => {
+          abort("节点缺失：\{nid}")
+        }
+      }
+      match n.width {
+        Fixed(w) =>
+          if w % 8.0 != 0.0 {
+            abort("\{id}:\{nid} 宽度 \{w} 不是 8 的倍数")
+          }
+        _ => ()
+      }
+      match n.layout {
+        Some(l) => {
+          let pads : Array[(String, Double)] = [
+            ("top", l.padding.top),
+            ("right", l.padding.right),
+            ("bottom", l.padding.bottom),
+            ("left", l.padding.left),
+            ("gap", l.gap),
+          ]
+          for pad in pads.iter() {
+            let (side, v) = pad
+            if v % 8.0 != 0.0 {
+              abort("\{id}:\{nid} \{side} \{v} 不是 8 的倍数")
+            }
+          }
+        }
+        None => ()
       }
     }
   }

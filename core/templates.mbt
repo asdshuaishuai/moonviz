@@ -305,11 +305,11 @@ fn Project::template_login(self : Project, name : String) -> String {
     "text_input",
     "email_input",
     variant="filled",
-    x=24.0,
+    x=27.0,
     y=340.0,
   )
   self.set_text(ab, "email_input", "Email address")
-  self.resize_node(ab, "email_input", 342.0, 52.0, 12.0)
+  self.resize_node(ab, "email_input", 336.0, 52.0, 12.0)
 
   // 密码输入框
   self.place_required(
@@ -317,11 +317,11 @@ fn Project::template_login(self : Project, name : String) -> String {
     "text_input",
     "password_input",
     variant="filled",
-    x=24.0,
+    x=27.0,
     y=404.0,
   )
   self.set_text(ab, "password_input", "Password")
-  self.resize_node(ab, "password_input", 342.0, 52.0, 12.0)
+  self.resize_node(ab, "password_input", 336.0, 52.0, 12.0)
 
   // 忘记密码链接（全宽盒 + 右对齐：右缘贴字段右缘，不再悬空 37px）
   self.place_required(
@@ -329,11 +329,11 @@ fn Project::template_login(self : Project, name : String) -> String {
     "body_text",
     "forgot_link",
     variant="caption",
-    x=24.0,
+    x=27.0,
     y=468.0,
   )
   self.set_text(ab, "forgot_link", "Forgot password?")
-  self.resize_node(ab, "forgot_link", 342.0, 18.0, 0.0)
+  self.resize_node(ab, "forgot_link", 336.0, 18.0, 0.0)
   let _ = self.edit_node(
     artboard=ab,
     node_id="forgot_link",
@@ -346,11 +346,11 @@ fn Project::template_login(self : Project, name : String) -> String {
     "button",
     "login_btn",
     variant="primary",
-    x=24.0,
+    x=27.0,
     y=520.0,
   )
   self.set_text(ab, "login_btn", "Sign In")
-  self.resize_node(ab, "login_btn", 342.0, 52.0, 12.0)
+  self.resize_node(ab, "login_btn", 336.0, 52.0, 12.0)
   let _ = self.edit_node(
     artboard=ab,
     node_id="login_btn",
@@ -358,8 +358,8 @@ fn Project::template_login(self : Project, name : String) -> String {
   )
 
   // 分隔线
-  self.place_required(ab, "divider", "divider1", x=24.0, y=600.0)
-  self.resize_node(ab, "divider1", 342.0, 1.0, 0.0)
+  self.place_required(ab, "divider", "divider1", x=27.0, y=600.0)
+  self.resize_node(ab, "divider1", 336.0, 1.0, 0.0)
 
   // 注册按钮
   self.place_required(
@@ -367,11 +367,11 @@ fn Project::template_login(self : Project, name : String) -> String {
     "button",
     "signup_btn",
     variant="secondary",
-    x=24.0,
+    x=27.0,
     y=630.0,
   )
   self.set_text(ab, "signup_btn", "Create Account")
-  self.resize_node(ab, "signup_btn", 342.0, 52.0, 12.0)
+  self.resize_node(ab, "signup_btn", 336.0, 52.0, 12.0)
 
   // 导航流：只在目标画板已经存在时写入，避免单页模板生成悬空引用。
   if self.artboards.contains("signup") {
@@ -1452,11 +1452,11 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     "heading",
     "ob_title",
     variant="h2",
-    x=24.0,
+    x=27.0,
     y=180.0,
   )
   self.set_text(ab, "ob_title", "Welcome aboard")
-  self.resize_node(ab, "ob_title", 342.0, 40.0, 0.0)
+  self.resize_node(ab, "ob_title", 336.0, 40.0, 0.0)
   let _ = self.edit_node(
     artboard=ab,
     node_id="ob_title",
@@ -1467,18 +1467,18 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     "body_text",
     "ob_sub",
     variant="body",
-    x=24.0,
+    x=27.0,
     y=236.0,
   )
   self.set_text(
     ab, "ob_sub", "Design together with your agent — one plain-text source of truth for humans and AI.",
   )
-  self.resize_node(ab, "ob_sub", 342.0, 72.0, 0.0)
+  self.resize_node(ab, "ob_sub", 336.0, 72.0, 0.0)
   let _ = self.edit_node(artboard=ab, node_id="ob_sub", kvs=[("align", "center")])
 
   // 插图占位：目录写了插图但模板此前没有，画板中部约四成板面全空
   // （审计 onboarding:artboard 残留）——品牌容器色圆角块，亮暗都可辨
-  self.place_required(ab, "rect", "ob_art", x=48.0, y=372.0, w=294.0, h=240.0)
+  self.place_required(ab, "rect", "ob_art", x=47.0, y=372.0, w=296.0, h=240.0)
   let _ = self.edit_node(
     artboard=ab,
     node_id="ob_art",
@@ -1521,11 +1521,11 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     "button",
     "ob_next",
     variant="primary",
-    x=24.0,
+    x=27.0,
     y=720.0,
   )
   self.set_text(ab, "ob_next", "Get Started")
-  self.resize_node(ab, "ob_next", 342.0, 48.0, 12.0)
+  self.resize_node(ab, "ob_next", 336.0, 48.0, 12.0)
   let _ = self.edit_node(
     artboard=ab,
     node_id="ob_next",
@@ -1536,11 +1536,11 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
     "button",
     "ob_skip",
     variant="secondary",
-    x=24.0,
+    x=27.0,
     y=776.0,
   )
   self.set_text(ab, "ob_skip", "Skip")
-  self.resize_node(ab, "ob_skip", 342.0, 44.0, 12.0)
+  self.resize_node(ab, "ob_skip", 336.0, 44.0, 12.0)
   // 单页状板也要有出口：主 CTA 导航回自身（demo 闭环），否则 norms
   // 判「可交互组件无去向 + 画板无返回/离开交互」
   self.add_flow(from=ab, to=ab, trigger="tap:ob_next")
