@@ -127,6 +127,19 @@ fn board_transition_frames(t : Transition) -> String {
 }
 
 ///|
+/// 板内节点 id → DOM id（None/未知时原样）。
+fn dom_id_in(m : Map[String, String]?, id : String) -> String {
+  match m {
+    Some(map) =>
+      match map.get(id) {
+        Some(d) => d
+        None => id
+      }
+    None => id
+  }
+}
+
+///|
 /// 导出为自包含 HTML（SVG 内嵌 + 画板切换 + 导航流模拟）。
 ///
 /// 视觉语言（Apple HIG / HarmonyOS 共识）：chrome 全部由主题令牌派生为
@@ -137,6 +150,30 @@ fn board_transition_frames(t : Transition) -> String {
 /// 非交互节点不再伪装可点（cursor 只给 mv-live）。
 pub fn Project::export_html(self : Project) -> String {
   let sb = StringBuilder::new()
+  // 节点 DOM id 唯一化：跨板重复的节点 id（duplicate_artboard）在后者加
+  // __dupN 后缀——节点 g id 不做全局重命名，首个出现保持 #n_<id> 契约；
+  // 每个板一张 raw→dom 映射，MV_ACT/状态/动效选择器统一走它。
+  let dom_ids : Map[String, Map[String, String]] = Map::new()
+  let seen_ids : Map[String, Bool] = Map::new()
+  for ab_id in self.artboards.keys() {
+    match self.artboards.get(ab_id) {
+      None => ()
+      Some(ab) => {
+        let m : Map[String, String] = Map::new()
+        for nid in ab.doc.nodes.keys() {
+          let mut dom = nid
+          let mut n = 1
+          while seen_ids.contains(dom) {
+            n = n + 1
+            dom = nid + "__dup" + n.to_string()
+          }
+          seen_ids.set(dom, true)
+          m.set(nid, dom)
+        }
+        dom_ids.set(ab_id, m)
+      }
+    }
+  }
   // 主题令牌 → chrome 色板（单一来源：tokens，不再硬编码深底）
   let c_bg = self.tokens.resolve_color("background")
   let c_fg = self.tokens.resolve_color("text_primary")
@@ -281,7 +318,11 @@ pub fn Project::export_html(self : Project) -> String {
             Some(n) =>
               if n.style.motion != "" {
                 sb.write_string(
-                  node_motion_rule_css(nid, n.style.motion, indent="  "),
+                  node_motion_rule_css(
+                    dom_id_in(dom_ids.get(ab_id), nid),
+                    n.style.motion,
+                    indent="  ",
+                  ),
                 )
               }
             None => ()
@@ -317,7 +358,12 @@ pub fn Project::export_html(self : Project) -> String {
           }
           if rules.length() > 0 {
             let decl = rules.join(";")
-            let sel = "g#n_" + node_id + ".st-" + state_name
+            // 状态变体选择器跟随节点 DOM id（重复板后缀）
+            let dom = match self.find_node_artboard(node_id) {
+              Some(aid) => dom_id_in(dom_ids.get(aid), node_id)
+              None => node_id
+            }
+            let sel = "g#n_" + dom + ".st-" + state_name
             sb.write_string("  \{sel} rect,\{sel} text{\{decl}}\n")
           }
         }
@@ -354,6 +400,8 @@ pub fn Project::export_html(self : Project) -> String {
           frame=self.tokens.resolve_color("outline"),
           // 多板同页：filter id 按画板命名空间化，避免 e1/fx_ 重复串台
           filter_ns=id,
+          // 重复板节点 id 加 __dupN 后缀，保证同页 DOM id 唯一
+          node_ids=dom_ids.get(id),
         )
         sb.write_string(
           "<div class=\"board\" id=\"board-\{id}\" style=\"width:\{ab.width.to_int()}px\">\n",
@@ -381,11 +429,12 @@ pub fn Project::export_html(self : Project) -> String {
     // 但过滤后 MV_ACT 不会给幽灵目标挂热区，也避免无效导航噪声
     if node != "" && self.artboards.contains(e.to) {
       // 第 5 位 = 该边的分板过渡（FlowEdge.transition；默认 push）
+      let dmap = dom_ids.get(e.from)
       acts.push(
         "[\"" +
         js_string_escape(e.from) +
         "\",\"" +
-        js_string_escape(node) +
+        js_string_escape(dom_id_in(dmap, node)) +
         "\",\"navigate\",\"" +
         js_string_escape(e.to) +
         "\",\"" +
@@ -408,36 +457,36 @@ pub fn Project::export_html(self : Project) -> String {
                         // 只为存在的目标挂 navigate（ghost 目标不写绑定）
                         if self.artboards.contains(t) {
                           acts.push(
-                            "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"navigate\",\"\{js_string_escape(t)}\",\"\"]",
+                            "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"navigate\",\"\{js_string_escape(t)}\",\"\"]",
                           )
                         }
                       Some(Back) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"back\",\"\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"back\",\"\"]",
                         )
                       Some(ShowToast(msg)) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"toast\",\"\{js_string_escape(msg)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"toast\",\"\{js_string_escape(msg)}\"]",
                         )
                       Some(HapticFeedback) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"haptic\",\"\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"haptic\",\"\"]",
                         )
                       Some(PlaySound(name)) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"play_sound\",\"{js_string_escape(name)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"play_sound\",\"{js_string_escape(name)}\"]",
                         )
                       Some(SetState(id2, st)) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"set_state\",\"\{js_string_escape(id2)}:\{js_string_escape(st)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"set_state\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), id2))}:\{js_string_escape(st)}\"]",
                         )
                       Some(ToggleState(id2, _)) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"toggle_state\",\"\{js_string_escape(id2)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"toggle_state\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), id2))}\"]",
                         )
                       Some(SetText(id2, txt)) =>
                         acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(nid)}\",\"set_text\",\"\{js_string_escape(id2)}:\{js_string_escape(txt)}\"]",
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"set_text\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), id2))}:\{js_string_escape(txt)}\"]",
                         )
                       Some(SubmitForm(ids)) => {
                         // 绑定表携带真实字段 id 列表（此前该动作在导出
@@ -447,7 +496,7 @@ pub fn Project::export_html(self : Project) -> String {
                           "[\"" +
                           js_string_escape(ab_id) +
                           "\",\"" +
-                          js_string_escape(nid) +
+                          js_string_escape(dom_id_in(dom_ids.get(ab_id), nid)) +
                           "\",\"submit_form\",\"" +
                           js_string_escape(fields) +
                           "\"]",
@@ -481,7 +530,7 @@ pub fn Project::export_html(self : Project) -> String {
                   "[\"" +
                   js_string_escape(ab_id) +
                   "\",\"" +
-                  js_string_escape(nid) +
+                  js_string_escape(dom_id_in(dom_ids.get(ab_id), nid)) +
                   "\",\"back\",\"\"]",
                 )
               }
@@ -503,7 +552,12 @@ pub fn Project::export_html(self : Project) -> String {
         }
         if names.length() > 0 {
           let joined = names.join(",")
-          state_defs.push("\"\{js_string_escape(node_id)}\":\"\{joined}\"")
+          // 键用节点 DOM id（重复板后缀），与映射后的 toggle_state 参数一致
+          let dom = match self.find_node_artboard(node_id) {
+            Some(aid) => dom_id_in(dom_ids.get(aid), node_id)
+            None => node_id
+          }
+          state_defs.push("\"\{js_string_escape(dom)}\":\"\{joined}\"")
         }
       }
       None => ()

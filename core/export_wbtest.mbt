@@ -388,6 +388,23 @@ fn find_from(s : String, needle : String, from : Int) -> Int? {
 }
 
 ///|
+/// 子串出现次数（boot show 行 / transition 行等断言用）。
+fn count_needle(s : String, needle : String) -> Int {
+  let mut count = 0
+  let mut idx = 0
+  while true {
+    match find_from(s, needle, idx) {
+      None => break
+      Some(pos) => {
+        count = count + 1
+        idx = pos + needle.length()
+      }
+    }
+  }
+  count
+}
+
+///|
 /// 收集 `marker` 之后到下一个双引号的属性值（filter id / board id 等）。
 fn collect_attr_values(s : String, marker : String) -> Array[String] {
   let out : Array[String] = []
@@ -472,6 +489,8 @@ test "export_html：ghost flow 过滤与 show 存在性兜底" {
   // boot 只对一个板 show；ghost 不在 boot/绑定里
   assert_true(html.contains("\nshow('a',true,0)\n"))
   assert_false(html.contains("\nshow('ghost'"))
+  // .board.active 计数：boot show 行恰好 1 条（ghost 不会被激活）
+  assert_eq(count_needle(html, "\nshow("), 1)
 }
 
 ///|
@@ -556,4 +575,68 @@ test "export_html：filter id 按画板命名空间唯一" {
   // 节点 g id 保持 #n_<id>（不随画板改名）
   assert_true(html.contains("id=\"n_card\""))
   assert_false(html.contains("id=\"n_card_login\""))
+}
+
+///|
+/// ⑤ 对抗性画板 id：a-b 与 a_b 经可逆 svg_ns_tag 编码后命名空间不同，
+/// 同页 filter id 不再碰撞（此前的有损清洗会把两者都映射成 a_b）。
+test "export_html：对抗性画板 id 的 filter 命名空间不碰撞" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="t")
+  let _ = p.duplicate_artboard(src="t", new_name="a-b")
+  let _ = p.duplicate_artboard(src="t", new_name="a_b")
+  let html = p.export_html()
+  let filter_ids = collect_attr_values(html, "filter id=\"")
+  assert_true(filter_ids.length() >= 9, msg="三块板各有 e1/e2/e3")
+  let seen : Map[String, Bool] = Map::new()
+  let mut dup = 0
+  for fid in filter_ids.iter() {
+    if seen.contains(fid) {
+      dup = dup + 1
+    } else {
+      seen.set(fid, true)
+    }
+  }
+  assert_eq(dup, 0, msg="a-b 与 a_b 必须映射到不同命名空间")
+  assert_true(seen.contains("e1_a_2d_b"), msg="'-' 编码为 _2d_")
+  assert_true(seen.contains("e1_a__b"), msg="'_' 编码为 __（不是 _5f_）")
+}
+
+///|
+/// ⑥ 节点 g id 唯一化：duplicate 板的重复节点 id 加 __dupN 后缀，且
+/// MV_ACT 绑定必须引用实际存在的 DOM id（不能 raw/suffixed 错配）。
+test "export_html：重复画板节点 g id 加 __dupN 且绑定一致" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.place_component(
+    artboard="login",
+    component_id="button",
+    instance_id="card",
+  )
+  let _ = p.duplicate_artboard(src="login", new_name="login2")
+  let _ = p.attach_interaction(
+    artboard="login2",
+    node_id="card",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
+  let html = p.export_html()
+  let node_ids = collect_attr_values(html, "id=\"n_")
+  assert_true(node_ids.length() >= 4, msg="两板各 root+card")
+  let seen : Map[String, Bool] = Map::new()
+  let mut dup = 0
+  for nid in node_ids.iter() {
+    if seen.contains(nid) {
+      dup = dup + 1
+    } else {
+      seen.set(nid, true)
+    }
+  }
+  assert_eq(dup, 0, msg="节点 g id 必须全局唯一")
+  assert_eq(count_needle(html, "id=\"n_card\""), 1)
+  assert_eq(count_needle(html, "id=\"n_card__dup2\""), 1)
+  // 绑定只引用实际存在的 DOM id：raw 或 __dup2 恰好一种
+  let has_raw = html.contains("[\"login2\",\"card\",\"toast\"")
+  let has_dup = html.contains("[\"login2\",\"card__dup2\",\"toast\"")
+  assert_true(has_raw != has_dup, msg="MV_ACT 绑定必须与 DOM id 同形")
 }

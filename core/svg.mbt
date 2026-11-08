@@ -14,6 +14,7 @@ pub fn render_svg(
   surface? : String = "#F6F7F9",
   frame? : String = "#C9CFDA",
   filter_ns? : String = "",
+  node_ids? : Map[String, String]? = None,
 ) -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
@@ -23,10 +24,12 @@ pub fn render_svg(
   // 多板 HTML 导出时 filter id 必须按画板命名空间化（e1_<ab> 等）：
   // <defs> 内的 filter 是文档级 id，重复板会让 url(#e1) 互相串台/非法重复。
   // 单板 SVG 导出保持空 ns（e1/e2/e3），兼容既有产物。
+  // 可逆编码（svg_ns_tag）而非 svg_id_tag 的有损清洗：a-b 与 a_b 必须
+  // 映射到不同命名空间，否则同页 filter id 会重复（验收④的对抗性 id）
   let ns = if filter_ns == "" {
     ""
   } else {
-    "_" + svg_id_tag(filter_ns)
+    "_" + svg_ns_tag(filter_ns)
   }
   let sb = StringBuilder::new()
   sb.write_string(
@@ -49,7 +52,7 @@ pub fn render_svg(
   )
   // SVG viewBox 自带裁剪（root rect 与 viewBox 同尺寸），不再用 clipPath 包裹：
   // WebKit 对 clip-path 组内元素的 hit-test 会整体失效，原型交互点击会穿透。
-  render_node(sb, doc, doc.root_id, layout, surface~, frame~, ns~)
+  render_node(sb, doc, doc.root_id, layout, surface~, frame~, ns~, node_ids~)
   sb.write_string("</svg>")
   sb.to_string()
 }
@@ -63,6 +66,7 @@ fn render_node(
   surface~ : String,
   frame~ : String,
   ns~ : String,
+  node_ids~ : Map[String, String]?,
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
@@ -72,8 +76,20 @@ fn render_node(
       match layout.rect_of(id) {
         None => ()
         Some(r) => {
-          // 每个节点包一层 <g id>：编辑器据此把 DOM 元素与场景图节点关联
-          sb.write_string("<g id=\"n_\{id}\" data-kind=\"\{svg_kind_of(n)}\">")
+          // 每个节点包一层 <g id>：编辑器据此把 DOM 元素与场景图节点关联。
+          // node_ids 提供跨板重复节点 id → __dupN 的映射（DOM id 唯一化）；
+          // 首个出现保持原名，#n_<id> 契约不变。
+          let dom_id = match node_ids {
+            Some(m) =>
+              match m.get(id) {
+                Some(d) => d
+                None => id
+              }
+            None => id
+          }
+          sb.write_string(
+            "<g id=\"n_\{dom_id}\" data-kind=\"\{svg_kind_of(n)}\">",
+          )
           // issue #22：radius=999 只在方形节点上是圆；非方形必须钳制为
           // min(r, min(w,h)/2) 并同时输出 rx/ry，否则 SVG 各自半边钳制
           // 产出极端椭圆（420×40 搜索框 rx=210/ry=20）。
@@ -214,7 +230,7 @@ fn render_node(
             }
           }
           for cid in n.children.iter() {
-            render_node(sb, doc, cid, layout, surface~, frame~, ns~)
+            render_node(sb, doc, cid, layout, surface~, frame~, ns~, node_ids~)
           }
           sb.write_string("</g>")
         }
@@ -371,6 +387,54 @@ fn svg_id_tag(id : String) -> String {
       sb.write_char(c)
     } else {
       sb.write_char('_')
+    }
+  }
+  sb.to_string()
+}
+
+///|
+/// 可逆命名空间编码：字母数字原样；'_' → "__"；其余字符 → "_<hex>_"。
+/// 与有损的 svg_id_tag（任何非字母数字→'_'）不同，不同输入不会碰撞，
+/// 用于多板同页的 filter id 命名空间（a-b → a_2d_b / a_b → a_5f_b）。
+fn svg_ns_tag(id : String) -> String {
+  let sb = StringBuilder::new()
+  for c in id.iter() {
+    let code = c.to_int()
+    if (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) {
+      sb.write_char(c)
+    } else if c == '_' {
+      sb.write_string("__")
+    } else {
+      // 小写十六进制，两侧下划线作定界符（编码可逆）
+      let hex = StringBuilder::new()
+      let mut v = code
+      if v == 0 {
+        hex.write_char('0')
+      } else {
+        while v > 0 {
+          let d = v % 16
+          hex.write_char(
+            Char::from_int(if d < 10 { d + 48 } else { d + 87 }),
+          )
+          v = v / 16
+        }
+      }
+      // 反转十六进制串
+      let digits = hex.to_string()
+      let rev = StringBuilder::new()
+      let mut i = digits.length()
+      while i > 0 {
+        rev.write_char(
+          match digits.get_char(i - 1) {
+            Some(ch) => ch
+            None => '0'
+          },
+        )
+        i = i - 1
+      }
+      sb.write_string("_" + rev.to_string() + "_")
     }
   }
   sb.to_string()
