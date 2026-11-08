@@ -1,5 +1,32 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.1.12
+
+- **Visual language upgrade (Apple HIG / HarmonyOS as first-class aesthetics)** —
+  four first-class presets (`apple`/`apple_dark`/`harmony`/`harmony_dark`) as
+  WCAG-calibrated translations of the official palettes; three-tier component
+  elevation (card e1 / overlay e2 / modal e3); centered button family; the HTML
+  export is fully tokenized (themed chrome, Vibrancy tab bar, Hover Lift,
+  keyboard reachable, real haptic vibration).
+- **Design spec is the first authority (enforced)** — extended palette keys
+  (`secondary/info/warning/surfaceVariant/*Container`); container tints are
+  DERIVED from the spec's semantic colors over background (color decisions come
+  from requirements, not engine presets); spec tokens land before template
+  instantiation; literal colors outside the palette surface in
+  `spec_violations`; a vivid-spec conformance test locks all 17 templates at
+  zero violations. New color roles (info/success_container/warning_container/
+  info_container) in every preset; list category chips rotate four container
+  tints.
+- **Critique dimension 10 `visual`** — no text shadows, near-indistinguishable
+  containers (<1.10 with no shadow/stroke), concentric nested corners; component
+  strokes now default to 1px so data matches rendering.
+- **Playground spec switching & side-by-side comparison** — five requirement-spec
+  presets; the same intent rendered under two specs in independent sessions with
+  the violation count shown per panel.
+- **Full visual-audit loop** — 17 templates × 5 panels audited; six fix rounds
+  cleared systemic defects (text roles, theme round-trip, recolor strokes,
+  structural-template tokenization) to zero; catalog now 65x118 variants.
+
 ## What's New in 0.1.11
 
 - **Spec-driven generation (issue #24)** — `generate` now requires a design

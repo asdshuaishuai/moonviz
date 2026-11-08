@@ -1,4 +1,28 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.1.12 新特性
+
+- **视觉语言升级（Apple HIG / 鸿蒙美学第一要素）**——`apple`/`apple_dark`/
+  `harmony`/`harmony_dark` 四套一等主题预设，色值为官方色板的 WCAG 校准
+  翻译（三级文字 × 三层底 ≥4.5）；组件默认 elevation 三档（内容卡 e1 /
+  浮层 e2 / 模态 e3）、按钮族居中、H5 导出全部令牌化（主题化 chrome、
+  Vibrancy tab、Hover Lift、键盘可达、真振动 haptic）。
+- **设计规范第一权威（spec 强制遵从）**——palette 扩展键
+  （secondary/info/warning/surfaceVariant/*Container），容器键缺席时从
+  spec 语义色对背景推导 tint（配色决策来自需求而非引擎预设）；spec 令牌
+  先于模板实例化（无主题顺序依赖）；调色板外字面色随 `spec_violations`
+  上报；全 17 模板 vivid spec 遵从零违规入测。多彩角色
+  （info/success_container/warning_container/info_container）进全部预设，
+  list 分类 chips 四色轮换。
+- **critique 第 10 维 `visual`**——文字阴影禁用、容器与背景近同色
+  （<1.10）且无阴影无描边检测、嵌套同心圆角；组件描边默认落 1px
+  （数据与渲染一致）。
+- **Playground 规范切换与并排对比**——五套需求 spec 预设（靛蓝/紫罗兰/
+  海蓝青/落日暖橙/鸿蒙蓝），同一意图两套规范独立会话并排出图，信封
+  规范偏差计数随图展示。
+- **全域视觉审计闭环**——17 模板 × 5 面板渲染审计，6 轮修复包把文字角色/
+  主题往返/recolor 描边/结构式模板令牌化等系统性缺陷清到 0；组件目录
+  65×118 变体。
+
 ## 0.1.11 新特性
 
 - **规范驱动生成（issue #24）**——`generate` 必带 design spec（JSON：调色板/
