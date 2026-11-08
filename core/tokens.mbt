@@ -43,6 +43,13 @@ pub fn DesignTokens::default() -> DesignTokens {
   // 多彩感第三批角色（视觉语言 0.2）：info 语义色 + 三只 tinted 容器——
   // chip/图标/插图的多彩用色面，文字一律 text_primary（深容器配亮主题深字、
   // 暗容器配暗主题亮字，两Mode都 ≥4.5，见 visual_lang_wbtest 逐档断言）
+  // inverse chrome 角色（宽屏/PC 模板的深色侧栏一类「反相层」）：默认深
+  // 底亮字；spec 给 text/surface 时由 apply_spec_tokens 从 spec 色相派生
+  // （亮主题深侧栏、暗主题亮侧栏自动反相），颜色仍可追溯到 spec
+  t.colors.set("inverse_surface", "#1E2126")
+  t.colors.set("inverse_surface_variant", "#111318")
+  t.colors.set("inverse_text", "#F5F5F7")
+  t.colors.set("inverse_muted", "#868D97")
   t.colors.set("info", "#0060B8")
   t.colors.set("success_container", "#D8F5DE")
   t.colors.set("warning_container", "#FFE8CC")

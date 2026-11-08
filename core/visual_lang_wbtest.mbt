@@ -399,3 +399,52 @@ test "visual：list chips 四色轮换 + spec 令牌先行" {
     None => assert_true(false)
   }
 }
+
+///|
+/// spec 遵从的全模板契约（强制约束回归锚）：17 个模板在 vivid spec 下
+/// 0 条调色板外字面色——一切用色可追溯到 spec palette 或 spec 派生角色
+/// （inverse chrome / 容器 tint）。新增模板或改色必须保持本断言常绿。
+test "visual：全 17 模板 spec 遵从零违规" {
+  let spec = "{\"v\":1,\"style\":\"harmony\",\"palette\":{\"primary\":\"#C026D3\",\"secondary\":\"#0D9488\",\"info\":\"#2563EB\",\"warning\":\"#D97706\",\"success\":\"#16A34A\",\"background\":\"#FBF7FF\",\"surface\":\"#FFFFFF\",\"text\":\"#1A0B2E\",\"muted\":\"#6B5A7A\",\"danger\":\"#D70015\"}}"
+  for t in list_templates().iter() {
+    let p = Project::new()
+    let _ = p.apply_spec_tokens(spec)
+    let ab = match p.apply_template(template_id=t.id) {
+      Ok(a) => a
+      Err(_) => {
+        assert_true(false)
+        continue
+      }
+    }
+    let _ = p.apply_design_spec(artboard=ab, spec=spec)
+    let v = p.design_spec_color_violations(artboard=ab)
+    assert_true(v.length() == 0)
+  }
+  // spec 色确实到达输出：dashboard 柱状图 = spec primary；list chips =
+  // spec 派生的容器 tint（不等于引擎预设值）
+  let d = Project::new()
+  let _ = d.apply_spec_tokens(spec)
+  let _ = d.apply_template(template_id="dashboard")
+  match d.artboards.get("dashboard") {
+    Some(m) => {
+      match m.doc.get("bar_0") {
+        Some(n) => assert_eq(n.style.fill, "#C026D3")
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+  let l = Project::new()
+  let _ = l.apply_spec_tokens(spec)
+  let _ = l.apply_template(template_id="list")
+  match l.artboards.get("list") {
+    Some(m) => {
+      match m.doc.get("cat_0") {
+        Some(n) =>
+          assert_false(n.style.fill.to_lower() == "#dee5ff") // 引擎预设
+        None => assert_true(false)
+      }
+    }
+    None => assert_true(false)
+  }
+}

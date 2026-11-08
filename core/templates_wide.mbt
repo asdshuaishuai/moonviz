@@ -384,7 +384,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   // 侧边栏：反色 chrome（品牌深底），文字固定浅色
   self.place_required(ab, "rect", "sb", x=0.0, y=0.0)
   self.resize_node(ab, "sb", 224.0, WIDE_H, 0.0)
-  self.w_style(ab, "sb", [("fill", WIDE_INVERSE_BG)])
+  self.w_style(ab, "sb", [("fill", c("inverse_surface"))])
   self.place_required(
     ab,
     "badge",
@@ -404,7 +404,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   )
   self.set_text(ab, "sb_name", "MoonViz")
   self.resize_node(ab, "sb_name", 120.0, 22.0, 0.0)
-  self.w_style(ab, "sb_name", [("text_color", WIDE_INVERSE_BRIGHT)])
+  self.w_style(ab, "sb_name", [("text_color", c("inverse_text"))])
   let items = ["Overview", "Analytics", "Projects", "Team", "Billing"]
   for i in 0..<5 {
     let id = "sb_i" + i.to_string()
@@ -429,7 +429,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
     let active : Array[(String, String)] = if i == 0 {
       [("text_color", c("on_primary"))]
     } else {
-      [("text_color", WIDE_INVERSE_MUTED)]
+      [("text_color", c("inverse_muted"))]
     }
     self.w_style(ab, id, active)
   }
@@ -650,8 +650,8 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   // 标题栏（红黄绿交通灯）：反色 chrome
   self.place_required(ab, "rect", "title_bar", x=0.0, y=0.0)
   self.resize_node(ab, "title_bar", WIDE_W, 36.0, 0.0)
-  self.w_style(ab, "title_bar", [("fill", WIDE_INVERSE_TITLEBAR)])
-  let dots = ["#FF5F57", "#FEBC2E", "#28C840"]
+  self.w_style(ab, "title_bar", [("fill", c("inverse_surface_variant"))])
+  let dots = [c("error"), c("warning"), c("success")]
   for i in 0..<3 {
     let id = "tl_dot" + i.to_string()
     self.place_required(
@@ -671,7 +671,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   self.w_style(
     ab,
     "tl_title",
-    [("text_color", WIDE_INVERSE_MUTED), ("align", "center")],
+    [("text_color", c("inverse_muted")), ("align", "center")],
   )
 
   // 侧边栏：反色 chrome
@@ -679,7 +679,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   // 高 764：36+764=800 顶满画板底——旧 736（底 772 对齐状态栏）会在
   // 左下角留 240×28 画布色缺口，状态栏本就从 x=240 起
   self.resize_node(ab, "pc_sb", 240.0, 764.0, 0.0)
-  self.w_style(ab, "pc_sb", [("fill", WIDE_INVERSE_BG)])
+  self.w_style(ab, "pc_sb", [("fill", c("inverse_surface"))])
   let files = ["login.mbt.md", "dashboard.mbt.md", "tokens.json", "history.log"]
   for i in 0..<4 {
     let id = "pc_f" + i.to_string()
@@ -696,9 +696,9 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       ab,
       id,
       if i == 0 {
-        [("text_color", WIDE_INVERSE_BRIGHT)]
+        [("text_color", c("inverse_text"))]
       } else {
-        [("text_color", WIDE_INVERSE_MUTED)]
+        [("text_color", c("inverse_muted"))]
       },
     )
   }
@@ -712,7 +712,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   )
   self.set_text(ab, "pc_sbh", "Pages")
   self.resize_node(ab, "pc_sbh", 120.0, 20.0, 0.0)
-  self.w_style(ab, "pc_sbh", [("text_color", WIDE_INVERSE_MUTED)])
+  self.w_style(ab, "pc_sbh", [("text_color", c("inverse_muted"))])
   let pages = ["login", "signup", "dashboard"]
   for i in 0..<3 {
     let id = "pc_p" + i.to_string()
@@ -725,7 +725,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     )
     self.set_text(ab, id, pages[i])
     self.resize_node(ab, id, 160.0, 20.0, 0.0)
-    self.w_style(ab, id, [("text_color", WIDE_INVERSE_TEXT)])
+    self.w_style(ab, id, [("text_color", c("inverse_text"))])
   }
 
   // 工具栏：随主题（暗色下不再白底压深灰按钮）；按钮归按钮族规范档

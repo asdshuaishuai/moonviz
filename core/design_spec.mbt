@@ -365,6 +365,27 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
       None => ()
     }
   }
+  // inverse chrome 派生：spec 给了 text/surface → 反相层（宽屏侧栏一类）
+  // 从 spec 色相派生：亮主题得深侧栏、暗主题得亮侧栏，颜色仍可追溯到 spec
+  match present.get("text_primary") {
+    Some(tx) => {
+      let _ = self.set_token("inverse_surface", tx)
+      let _ = self.set_token("inverse_surface_variant", hex_mix(tx, "#000000", 0.30))
+    }
+    None => ()
+  }
+  match present.get("surface") {
+    Some(sf) => {
+      let _ = self.set_token("inverse_text", sf)
+    }
+    None => ()
+  }
+  match (present.get("text_primary"), present.get("surface")) {
+    (Some(tx), Some(sf)) => {
+      let _ = self.set_token("inverse_muted", hex_mix(tx, sf, 0.62))
+    }
+    _ => ()
+  }
   // 容器推导：语义色在场而容器键缺席 → 从 spec 色相派生（背景取当前令牌值，
   // 暗/亮主题各自得到同深度层次的 tint）
   let bg = self.tokens.resolve_color("background")
@@ -432,8 +453,11 @@ pub fn Project::design_spec_color_violations(self : Project, artboard~ : String)
           )
           continue
         }
+        // 无文字的节点不渲染文字色——text_color 停留出厂默认是惰性值，
+        // 判它只会把 divider/rect/spacer 的默认 #111111 当违规（误报源）
         let tc = n.style.text_color
         if out.length() < 8 &&
+          n.text != "" &&
           norm_is_hex6(tc) &&
           !allowed.contains(tc.to_lower()) {
           out.push(
