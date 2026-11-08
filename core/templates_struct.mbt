@@ -31,7 +31,7 @@ fn landing_desktop(t : DesignTokens) -> LT {
     // 顶部导航
     // pad 14 = (72−44)/2：内容盒恰装 44 高的 nav_cta；再大将触发
     // contained_in_parent（issue #14），再小则与 footer 的 bar 档留白不齐
-    lt_h(id="nav", pad=14.0, gap=16.0, kids=[
+    lt_h(id="nav", pad=24.0, gap=16.0, kids=[
       lt_dot(id="nav_logo", fill="primary", d=36.0, tokens=t).cy(),
       // Hug + 弹簧：链接按内在宽成组贴向 CTA（Fill 会与 lt_flex 平分、
       // 等距铺满整条导航，审计 adaptive_landing nav 横排残留）
@@ -42,14 +42,14 @@ fn landing_desktop(t : DesignTokens) -> LT {
       lt_text(id="nav_i3", role="body", s="Pricing", width=Hug, tokens=t).cy(),
       lt_text(id="nav_i4", role="body", s="Docs", width=Hug, tokens=t).cy(),
       lt_btn(id="nav_cta", label="Get Started", tokens=t).cy(),
-    ]).h(Fixed(72.0)),
+    ]).h(Fixed(92.0)),
     // Hero：左文案右插图
     // pad 24：内容盒 332 ≥ 300 高的 hero_art（pad 48 只剩 284 装不下）；
     // 与 features 同 24 内容栅格，不再 28/24/48 三条左线
     lt_h(id="hero", pad=24.0, gap=48.0, kids=[
       // justify Center：左栏内容块在 hero 行内垂直居中（原顶对齐，
       // 左下留 183px 空白、与右侧插图失衡）
-      lt_v(id="hero_copy", gap=14.0, justify=Center, kids=[
+      lt_v(id="hero_copy", gap=16.0, justify=Center, kids=[
         lt_text(
           id="hero_title",
           role="h1",
@@ -62,7 +62,7 @@ fn landing_desktop(t : DesignTokens) -> LT {
           s="Human drags, agent commands — one plain-text source of truth.",
           tokens=t,
         ).color(t.resolve_color("text_secondary")),
-        lt_h(id="hero_btns", gap=12.0, kids=[
+        lt_h(id="hero_btns", gap=16.0, kids=[
           lt_btn(id="hero_b1", label="Start Free", tokens=t),
           lt_btn(id="hero_b2", label="Watch Demo", variant="secondary", tokens=t),
         ]).h(Fixed(44.0)),
@@ -77,11 +77,11 @@ fn landing_desktop(t : DesignTokens) -> LT {
         stroke="outline",
         tokens=t,
       ),
-    ]).h(Fixed(380.0)),
+    ]).h(Fixed(360.0)),
     // 三列特性卡（Fill 平分）
     // pad 24：与 hero 同一内容栅格（此前 48 让特性卡左缘独占一条线）
     lt_h(id="features", pad=24.0, gap=24.0, kids=[
-      lt_card(id="feat_c0", gap=10.0, kids=[
+      lt_card(id="feat_c0", gap=16.0, justify=Center, kids=[
         lt_dot(id="feat_d0", fill="primary", d=44.0, tokens=t),
         lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
         lt_text(
@@ -91,7 +91,7 @@ fn landing_desktop(t : DesignTokens) -> LT {
           tokens=t,
         ).color(t.resolve_color("text_secondary")),
       ], tokens=t),
-      lt_card(id="feat_c1", gap=10.0, kids=[
+      lt_card(id="feat_c1", gap=16.0, justify=Center, kids=[
         lt_dot(id="feat_d1", fill="secondary", d=44.0, tokens=t),
         lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
         lt_text(
@@ -101,7 +101,7 @@ fn landing_desktop(t : DesignTokens) -> LT {
           tokens=t,
         ).color(t.resolve_color("text_secondary")),
       ], tokens=t),
-      lt_card(id="feat_c2", gap=10.0, kids=[
+      lt_card(id="feat_c2", gap=16.0, justify=Center, kids=[
         lt_dot(id="feat_d2", fill="success", d=44.0, tokens=t),
         lt_text(id="feat_t2", role="h3", s="Open", tokens=t),
         lt_text(
@@ -111,10 +111,10 @@ fn landing_desktop(t : DesignTokens) -> LT {
           tokens=t,
         ).color(t.resolve_color("text_secondary")),
       ], tokens=t),
-    ]).h(Fixed(280.0)),
+    ]).h(Fixed(260.0)),
     // Footer
     // pad 14：与 nav 同 bar 档留白（pad 24 时内容盒 16 装不下 caption）
-    lt_h(id="footer", pad=14.0, gap=16.0, kids=[
+    lt_h(id="footer", pad=24.0, gap=16.0, kids=[
       lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", width=Hug, tokens=t)
       .color(t.resolve_color("text_secondary"))
       .cy(),
@@ -129,7 +129,7 @@ fn landing_desktop(t : DesignTokens) -> LT {
       .color(t.resolve_color("text_secondary"))
       .cy(),
     ])
-    .h(Fixed(64.0))
+    .h(Fixed(72.0))
   ])
 }
 
@@ -179,13 +179,13 @@ fn landing_tablet(t : DesignTokens) -> LT {
       ),
     ]).h(Fixed(420.0)),
     lt_h(id="features", pad=32.0, gap=20.0, kids=[
-      lt_card(id="feat_c0", gap=8.0, kids=[
+      lt_card(id="feat_c0", gap=8.0, justify=Center, kids=[
         lt_dot(id="feat_d0", fill="primary", d=40.0, tokens=t),
         lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
         lt_text(id="feat_b0", role="body", s="Instant canvas.", tokens=t)
         .color(t.resolve_color("text_secondary")),
       ], tokens=t),
-      lt_card(id="feat_c1", gap=8.0, kids=[
+      lt_card(id="feat_c1", gap=8.0, justify=Center, kids=[
         lt_dot(id="feat_d1", fill="secondary", d=40.0, tokens=t),
         lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
         lt_text(id="feat_b1", role="body", s="Built-in critique.", tokens=t)
@@ -204,7 +204,7 @@ fn landing_tablet(t : DesignTokens) -> LT {
 /// 手机结构：汉堡导航 + 竖排 Hero + 单列卡
 fn landing_mobile(t : DesignTokens) -> LT {
   lt_v(id="page", kids=[
-    lt_h(id="nav", pad=16.0, gap=10.0, kids=[
+    lt_h(id="nav", pad=16.0, gap=12.0, kids=[
       lt_dot(id="nav_logo", fill="primary", d=30.0, tokens=t),
       lt_text(id="nav_name", role="h4", s="MoonViz", tokens=t),
       lt_flex(id="nav_sp"),
@@ -217,7 +217,7 @@ fn landing_mobile(t : DesignTokens) -> LT {
         tokens=t,
       ),
     ]).h(Fixed(56.0)),
-    lt_v(id="hero", pad=24.0, gap=14.0, kids=[
+    lt_v(id="hero", pad=24.0, gap=16.0, kids=[
       lt_text(
         id="hero_title",
         role="h2",
@@ -226,7 +226,7 @@ fn landing_mobile(t : DesignTokens) -> LT {
       ),
       lt_text(id="hero_sub", role="body", s="Human drags, agent commands.", tokens=t)
       .color(t.resolve_color("text_secondary")),
-      lt_h(id="hero_btns", gap=10.0, kids=[
+      lt_h(id="hero_btns", gap=16.0, kids=[
         lt_btn(id="hero_b1", label="Start Free", tokens=t),
         lt_btn(id="hero_b2", label="Demo", variant="secondary", tokens=t),
       ]).h(Fixed(44.0)),
@@ -241,9 +241,9 @@ fn landing_mobile(t : DesignTokens) -> LT {
         tokens=t,
       ),
     ]).h(Fixed(440.0)),
-    lt_v(id="features", pad=24.0, gap=14.0, kids=[
-      lt_card(id="feat_c0", gap=6.0, kids=[
-        lt_h(id="feat_r0", gap=10.0, kids=[
+    lt_v(id="features", pad=24.0, gap=16.0, kids=[
+      lt_card(id="feat_c0", gap=8.0, justify=Center, kids=[
+        lt_h(id="feat_r0", gap=12.0, kids=[
           lt_dot(id="feat_d0", fill="primary", d=36.0, tokens=t),
           lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
         ]).h(Fixed(36.0)),
@@ -254,8 +254,8 @@ fn landing_mobile(t : DesignTokens) -> LT {
           tokens=t,
         ).color(t.resolve_color("text_secondary")),
       ], tokens=t),
-      lt_card(id="feat_c1", gap=6.0, kids=[
-        lt_h(id="feat_r1", gap=10.0, kids=[
+      lt_card(id="feat_c1", gap=8.0, justify=Center, kids=[
+        lt_h(id="feat_r1", gap=12.0, kids=[
           lt_dot(id="feat_d1", fill="secondary", d=36.0, tokens=t),
           lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
         ]).h(Fixed(36.0)),
@@ -283,12 +283,18 @@ fn Project::template_adaptive_landing(
   width : Double,
 ) -> String {
   let h = if width >= 1024.0 { 800.0 } else { 844.0 }
-  self.build_artboard(
+  let ab = self.build_artboard(
     name~,
     width~,
     height=h,
     tree=landing_tree(width, self.tokens),
   )
+  // 单页落地 demo 的出口闭环：三处 CTA 导航回自身，避免 norms 判
+  // 「可交互组件无去向 / 画板无返回或离开交互」
+  for btn in ["nav_cta", "hero_b1", "hero_b2"].iter() {
+    self.add_flow(from=ab, to=ab, trigger="tap:" + btn)
+  }
+  ab
 }
 
 ///|

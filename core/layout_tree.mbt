@@ -89,9 +89,17 @@ pub fn lt_text(
     "h3" | "h4" => "600"
     _ => "400"
   }
+  // 组件语义必须落注册表名（heading/body_text）：Node::make(Text) 的
+  // 出厂 "text" 不在组件库，norms 会把结构式模板的标题/副标题全判
+  // 「非组件库组件」（login_v2 5→3 分的根因）
+  let comp = match role {
+    "h1" | "h2" | "h3" | "h4" => "heading"
+    _ => "body_text"
+  }
   {
     node: {
       ..Node::make(id, Text),
+      component: comp,
       // width=Hug 用于横排导航/页脚：文字按内在宽收缩，弹簧留白吃掉
       // 剩余空间，链接成组贴向 CTA（Fill 会与 lt_flex 平分、铺满整条）
       width,
@@ -179,13 +187,16 @@ pub fn lt_btn(
   {
     node: {
       ..Node::make(id, Rect),
+      // 按钮语义进注册表（focus 维度按 component=="button" 数主 CTA），
+      // 圆角取按钮族 8（NORM_RADIUS_BASE）
+      component: "button",
       width: Fixed(if variant == "primary" { 152.0 } else { 140.0 }),
       height: Fixed(44.0),
       style: {
         ..NodeStyle::default(),
         fill,
         text_color: tc,
-        corner_radius: 10.0,
+        corner_radius: 8.0,
         shadow: "e1",
         text_align: "center",
         stroke,
@@ -207,6 +218,7 @@ pub fn lt_input(
   {
     node: {
       ..Node::make(id, Rect),
+      component: "text_input",
       width: Fill,
       height: Fixed(46.0),
       style: {
@@ -260,6 +272,7 @@ pub fn lt_card(
   id~ : String,
   gap? : Double = 8.0,
   pad? : Double = 20.0,
+  justify? : Justify = Start,
   kids? : Array[LT] = [],
   tokens? : DesignTokens = DesignTokens::default(),
 ) -> LT {
@@ -272,7 +285,7 @@ pub fn lt_card(
       layout: Some({
         dir: Vertical,
         gap,
-        justify: Start,
+        justify,
         padding: Padding::uniform(pad),
       }),
       style: {

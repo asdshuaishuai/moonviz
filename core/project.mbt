@@ -713,6 +713,53 @@ pub(all) struct DesignLint {
 }
 
 ///|
+/// 父节点查找（lint 背景回溯用；Document 只存 children，无 parent 指针）。
+fn lint_parent_of(doc : Document, id : String) -> String? {
+  for pid in doc.nodes.keys() {
+    match doc.nodes.get(pid) {
+      Some(p) =>
+        for c in p.children.iter() {
+          if c == id {
+            return Some(pid)
+          }
+        }
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+/// 有效背景：自身实底 → 最近实底祖先 → 画布 background 令牌。
+/// 渐变/透明跳过（无法可靠计算时按画布底兜底）。此前只看自身 fill，
+/// 深色侧栏/标题栏上的浅色文字（fill=none）对白底算对比度 → 全量误报
+/// （pc_app 9 条、web_dashboard 6 条）。
+fn Project::lint_effective_bg(self : Project, doc : Document, id : String) -> String {
+  let mut cur : String? = Some(id)
+  while true {
+    match cur {
+      None => break
+      Some(nid) =>
+        match doc.nodes.get(nid) {
+          Some(n) => {
+            let f = n.style.fill
+            if f != "none" &&
+              f != "" &&
+              !f.has_prefix("linear:") &&
+              !f.has_prefix("radial:") &&
+              !f.has_prefix("url(") {
+              return f
+            }
+            cur = lint_parent_of(doc, nid)
+          }
+          None => break
+        }
+    }
+  }
+  self.tokens.resolve_color("background")
+}
+
+///|
 /// 设计质量检查：对比度/触控目标/间距/一致性
 pub fn Project::lint(
   self : Project,
@@ -750,11 +797,9 @@ pub fn Project::lint(
                 // L2: 文字对比度
                 if is_text_kind(n) || n.text != "" {
                   let fg = n.style.text_color
-                  let bg = if n.style.fill != "none" && n.style.fill != "" {
-                    n.style.fill
-                  } else {
-                    "#FFFFFF"
-                  }
+                  // 背景回溯祖先实底（深色侧栏/标题栏上的浅色文字不再
+                  // 被当成压在白底上误报）
+                  let bg = self.lint_effective_bg(ab.doc, id)
                   let ratio = contrast_ratio(fg, bg)
                   if ratio < 4.5 {
                     lints.push(

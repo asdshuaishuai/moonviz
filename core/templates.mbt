@@ -210,14 +210,16 @@ pub fn Project::apply_template(
     }
     "login_v2" => {
       let w = if width > 0.0 { width } else { 390.0 }
-      Ok(
-        self.build_artboard(
-          name=ab_name,
-          width=w,
-          height=if height > 0.0 { height } else { 844.0 },
-          tree=login_tree(w, self.tokens),
-        ),
+      let ab = self.build_artboard(
+        name=ab_name,
+        width=w,
+        height=if height > 0.0 { height } else { 844.0 },
+        tree=login_tree(w, self.tokens),
       )
+      // 单页登录 demo 的出口：Sign In 导航回自身（否则 norms 判
+      // login_btn 可交互组件无去向）
+      self.add_flow(from=ab, to=ab, trigger="tap:login_btn")
+      Ok(ab)
     }
     _ => Err("unknown_template: \{template_id}")
   }
@@ -502,6 +504,9 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
       let y = 80.0 + row.to_double() * 112.0
       self.place_required(ab, "card", cid, variant="elevated", x~, y~)
       self.resize_node(ab, cid, 163.0, 96.0, 12.0)
+      // card 组件自带 vertical stack（pad16/gap8）——子节点 y 由栈排布，
+      // 上下留白必须靠 justify center 对称（手写 y 在栈布局里被忽略）
+      let _ = self.edit_node(artboard=ab, node_id=cid, kvs=[("justify", "center")])
       // 数值（主层级）
       let vid = "stat_v\{i}"
       self.place_required(
@@ -510,7 +515,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
         vid,
         variant="h3",
         x~,
-        y=y + 20.0,
+        y=y + 22.0,
       )
       self.set_text(ab, vid, stats[i].1)
       self.resize_node(ab, vid, 131.0, 28.0, 0.0)
@@ -523,7 +528,7 @@ fn Project::template_dashboard(self : Project, name : String) -> String {
         lid,
         variant="caption",
         x~,
-        y=y + 52.0,
+        y=y + 58.0,
       )
       self.set_text(ab, lid, stats[i].0)
       self.resize_node(ab, lid, 131.0, 16.0, 0.0)
@@ -740,6 +745,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
     // 高 80：contained_in_parent 按卡内容盒（pad 16 内缩）判 contained——
     // 栈内容 22+8+14=44 必须 ≤ 80-32=48，64 高会底边越出内容盒
     self.resize_node(ab, sid, 106.0, 80.0, 8.0)
+    let _ = self.edit_node(artboard=ab, node_id=sid, kvs=[("justify", "center")])
     let vid = "stat_v\{i}"
     self.place_required(
       ab,
@@ -747,7 +753,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
       vid,
       variant="h4",
       x~,
-      y=302.0,
+      y=311.0,
     )
     self.set_text(ab, vid, stats[i].1)
     self.resize_node(ab, vid, 74.0, 22.0, 0.0)
@@ -759,7 +765,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
       lid,
       variant="caption",
       x~,
-      y=326.0,
+      y=335.0,
     )
     self.set_text(ab, lid, stats[i].0)
     self.resize_node(ab, lid, 74.0, 14.0, 0.0)
@@ -806,6 +812,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
     let py = 486.0 + j.to_double() * 110.0
     self.place_required(ab, "card", pid, variant="elevated", x=24.0, y=py)
     self.resize_node(ab, pid, 342.0, 96.0, 12.0)
+    let _ = self.edit_node(artboard=ab, node_id=pid, kvs=[("justify", "center")])
     // 帖子卡两级内容：标题 h4 + 预览 caption（不再八成面积的空壳骨架）
     let tid = "post_t\{j}"
     self.place_required(
@@ -814,7 +821,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
       tid,
       variant="h4",
       x=40.0,
-      y=py + 20.0,
+      y=py + 24.0,
     )
     self.set_text(ab, tid, "Post \{j + 1}")
     self.resize_node(ab, tid, 200.0, 22.0, 0.0)
@@ -825,7 +832,7 @@ fn Project::template_profile(self : Project, name : String) -> String {
       bid,
       variant="body",
       x=40.0,
-      y=py + 48.0,
+      y=py + 52.0,
     )
     self.set_text(ab, bid, "Short preview line for this post entry.")
     self.resize_node(ab, bid, 280.0, 20.0, 0.0)
@@ -987,6 +994,9 @@ fn Project::template_list(self : Project, name : String) -> String {
     let w = text_intrinsic(label, 14.0).width + 24.0
     self.place_required(ab, "chip", cid, x=cx, y=118.0, w~, h=28.0)
     self.set_text(ab, cid, label)
+    // 12px 标签档：list 此前只有 17/14 两档字号（hierarchy 6）——chip
+    // 文案按 caption 档是移动端惯例，同时补出第三档层次
+    let _ = self.edit_node(artboard=ab, node_id=cid, kvs=[("font_size", "12")])
     // 多彩感（角色用色，非满屏彩）：分类 chips 按容器色四色轮换——
     // 色相全部来自 spec/主题的角色令牌（edit_node 令牌名直填），spec
     // 换调色板时整组 chips 跟随，不需要改模板
@@ -1007,7 +1017,32 @@ fn Project::template_list(self : Project, name : String) -> String {
   for i in 0..<5 {
     let rid = "item_\{i}"
     self.place_required(ab, "list_item", rid, x=16.0, y~, w=358.0, h=72.0)
-    self.set_text(ab, rid, "Item \{i + 1} — short description of this entry")
+    // 行内两级内容（标题 + 描述）：list_item 单行文字是「一行一条」的
+    // 组件放置器形态；真实列表行至少要有主/次两段（audit：list 行 children=0）
+    let tid = "item_t\{i}"
+    self.place_required(
+      ab,
+      "body_text",
+      tid,
+      x=28.0,
+      y=y + 14.0,
+      w=300.0,
+      h=20.0,
+    )
+    self.set_text(ab, tid, "Item \{i + 1}")
+    let _ = self.edit_node(artboard=ab, node_id=tid, kvs=[("weight", "600")])
+    let mid = "item_m\{i}"
+    self.place_required(
+      ab,
+      "body_text",
+      mid,
+      x=28.0,
+      y=y + 38.0,
+      w=300.0,
+      h=16.0,
+    )
+    self.set_text(ab, mid, "Short description of this entry")
+    let _ = self.edit_node(artboard=ab, node_id=mid, kvs=[("font_size", "12")])
     y = y + 72.0
     if i < 4 {
       let did = "divider_\{i}"
@@ -1115,8 +1150,19 @@ fn Project::template_detail(self : Project, name : String) -> String {
     "A short paragraph describing this item in two or three lines of real copy.",
   )
 
-  // 底部主 CTA（全宽，避开 iPhone 底部安全区；主 CTA 文字 17/600）
-  self.place_required(ab, "button", "primary_btn", x=24.0, y=760.0, w=342.0, h=52.0)
+  // 底部主 CTA：0..390 全宽 bar（surface + 顶部 hairline + 直角），
+  // 按钮内缩 24、bar 顶到按钮 16——操作区与内容滚动区在视觉上分层
+  self.place_required(ab, "rect", "cta_bar", x=0.0, y=752.0)
+  self.resize_node(ab, "cta_bar", 390.0, 92.0, 0.0)
+  self.w_style(ab, "cta_bar", [
+    ("fill", self.tokens.resolve_color("surface")),
+    ("stroke", self.tokens.resolve_color("outline_variant")),
+  ])
+  self.place_required(ab, "divider", "cta_hair", x=0.0, y=752.0, w=390.0, h=1.0)
+  self.w_style(ab, "cta_hair", [
+    ("fill", self.tokens.resolve_color("outline_variant")),
+  ])
+  self.place_required(ab, "button", "primary_btn", x=24.0, y=768.0, w=342.0, h=52.0)
   self.set_text(ab, "primary_btn", "Continue")
   let _ = self.edit_node(
     artboard=ab,
@@ -1151,13 +1197,14 @@ fn Project::template_checkout(self : Project, name : String) -> String {
   self.place_required(ab, "card", "summary", x=24.0, y=72.0)
   self.resize_node(ab, "summary", 342.0, 96.0, 12.0)
   self.set_text(ab, "summary", "")
+  let _ = self.edit_node(artboard=ab, node_id="summary", kvs=[("justify", "center")])
   self.place_required(
     ab,
     "heading",
     "summary_t",
     variant="h4",
     x=40.0,
-    y=90.0,
+    y=98.0,
   )
   self.set_text(ab, "summary_t", "Order summary")
   self.resize_node(ab, "summary_t", 200.0, 22.0, 0.0)
@@ -1167,7 +1214,7 @@ fn Project::template_checkout(self : Project, name : String) -> String {
     "summary_b",
     variant="caption",
     x=40.0,
-    y=118.0,
+    y=126.0,
   )
   self.set_text(ab, "summary_b", "2 items")
   self.resize_node(ab, "summary_b", 200.0, 16.0, 0.0)
@@ -1248,6 +1295,18 @@ fn Project::template_checkout(self : Project, name : String) -> String {
     }
   }
 
+  // 提交区：0..390 全宽 bar（surface + 顶部 hairline + 直角），
+  // 按钮内缩 24、bar 顶到按钮 24——与详情页同一底部操作条形态
+  self.place_required(ab, "rect", "cta_bar", x=0.0, y=728.0)
+  self.resize_node(ab, "cta_bar", 390.0, 116.0, 0.0)
+  self.w_style(ab, "cta_bar", [
+    ("fill", self.tokens.resolve_color("surface")),
+    ("stroke", self.tokens.resolve_color("outline_variant")),
+  ])
+  self.place_required(ab, "divider", "cta_hair", x=0.0, y=728.0, w=390.0, h=1.0)
+  self.w_style(ab, "cta_hair", [
+    ("fill", self.tokens.resolve_color("outline_variant")),
+  ])
   // 提交按钮（主 CTA 文字 17/600）
   self.place_required(ab, "button", "submit_btn", x=24.0, y=752.0, w=342.0, h=52.0)
   self.set_text(ab, "submit_btn", "Place Order")
@@ -1290,6 +1349,10 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
     ("Carol", "Design sync at 3pm"),
     ("Dave", "Sent the files over"),
     ("Eve", "Let me check and reply"),
+    ("Frank", "On my way"),
+    ("Grace", "Shared the spec"),
+    ("Heidi", "Looks good to me"),
+    ("Ivan", "Will review tonight"),
   ]
   let mut y = 68.0
   for ci in 0..<chats.length() {
@@ -1332,6 +1395,23 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
       h=16.0,
     )
     self.set_text(ab, "chat_ms\{ci}", msg)
+    // 时间戳（第三档字号 + 行内第 4 个子节点）：聊天行 = 头像/姓名/预览/时间
+    let tid = "chat_tm\{ci}"
+    self.place_required(
+      ab,
+      "body_text",
+      tid,
+      x=310.0,
+      y=y + 12.0,
+      w=56.0,
+      h=16.0,
+    )
+    self.set_text(ab, tid, "9:4\{ci}")
+    let _ = self.edit_node(
+      artboard=ab,
+      node_id=tid,
+      kvs=[("font_size", "12"), ("align", "right")],
+    )
     y = y + 64.0
     if ci < chats.length() - 1 {
       self.place_required(
@@ -1418,7 +1498,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
         "badge",
         did,
         variant="primary",
-        x=171.0 + di.to_double() * 20.0,
+        x=168.0 + di.to_double() * 24.0,
         y=646.0,
       )
     } else {
@@ -1426,7 +1506,7 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
         ab,
         "rect",
         did,
-        x=171.0 + di.to_double() * 20.0,
+        x=168.0 + di.to_double() * 24.0,
         y=646.0,
       )
       let _ = self.edit_node(artboard=ab, node_id=did, kvs=[("fill", dot_inactive)])
@@ -1461,6 +1541,9 @@ fn Project::template_onboarding(self : Project, name : String) -> String {
   )
   self.set_text(ab, "ob_skip", "Skip")
   self.resize_node(ab, "ob_skip", 342.0, 44.0, 12.0)
+  // 单页状板也要有出口：主 CTA 导航回自身（demo 闭环），否则 norms
+  // 判「可交互组件无去向 + 画板无返回/离开交互」
+  self.add_flow(from=ab, to=ab, trigger="tap:ob_next")
   ab
 }
 

@@ -71,13 +71,13 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     "badge",
     "nav_logo",
     variant="primary",
-    x=32.0,
+    x=96.0,
     y=12.0,
   )
   self.resize_node(ab, "nav_logo", 40.0, 40.0, 999.0)
   let nav_items = ["Product", "Features", "Pricing", "Docs"]
   // 等距 120 且整组居中：墨迹 445..836 中心 ≈640（旧组 321..711 偏左 124）
-  let nav_x = [445.0, 565.0, 685.0, 805.0]
+  let nav_x = [440.0, 560.0, 680.0, 800.0]
   for i in 0..<4 {
     let id = "nav_i" + i.to_string()
     self.place_required(ab, "body_text", id, x=nav_x[i], y=24.0)
@@ -89,7 +89,7 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     "button",
     "nav_cta",
     variant="primary",
-    x=1120.0,
+    x=1056.0,
     y=14.0,
   )
   self.set_text(ab, "nav_cta", "Get Started")
@@ -131,7 +131,7 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
     "button",
     "hero_btn2",
     variant="secondary",
-    x=276.0,
+    x=272.0,
     y=317.0,
   )
   self.set_text(ab, "hero_btn2", "Watch Demo")
@@ -212,11 +212,11 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   self.place_required(ab, "rect", "footer", x=0.0, y=736.0)
   self.resize_node(ab, "footer", WIDE_W, 64.0, 0.0)
   self.w_style(ab, "footer", [("fill", c("surface_variant"))])
-  self.place_required(ab, "body_text", "footer_note", x=32.0, y=758.0)
+  self.place_required(ab, "body_text", "footer_note", x=96.0, y=758.0)
   self.set_text(ab, "footer_note", "© 2026 MoonViz — AI native prototyping")
   self.resize_node(ab, "footer_note", 400.0, 20.0, 0.0)
   self.w_style(ab, "footer_note", [("text_color", c("text_secondary"))])
-  self.place_required(ab, "body_text", "footer_links", x=980.0, y=758.0)
+  self.place_required(ab, "body_text", "footer_links", x=916.0, y=758.0)
   self.set_text(ab, "footer_links", "About   Privacy   Contact")
   // 盒右缘 980+268=1248 = nav_cta 右缘，右对齐——左锚曾让墨迹止于 ~1143
   self.resize_node(ab, "footer_links", 268.0, 20.0, 0.0)
@@ -475,6 +475,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
     // 116 而非 100：栈内容 16+18+8+30+8+16=96 + 底 pad 16 = 112 才装得下
     // 三行（issue #14：wd_sdN contained_in_parent）
     self.resize_node(ab, cid, 236.0, 116.0, 12.0)
+    let _ = self.edit_node(artboard=ab, node_id=cid, kvs=[("justify", "center")])
     let lid = "wd_sl" + i.to_string()
     self.place_required(
       ab,
@@ -482,7 +483,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       lid,
       variant="caption",
       x=sx[i] + 20.0,
-      y=102.0,
+      y=109.0,
     )
     self.set_text(ab, lid, stats[i])
     self.resize_node(ab, lid, 160.0, 18.0, 0.0)
@@ -493,7 +494,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       vid,
       variant="h3",
       x=sx[i] + 20.0,
-      y=124.0,
+      y=131.0,
     )
     self.set_text(ab, vid, vals[i])
     self.resize_node(ab, vid, 180.0, 30.0, 0.0)
@@ -504,7 +505,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
       did,
       variant="caption",
       x=sx[i] + 20.0,
-      y=160.0,
+      y=167.0,
     )
     self.set_text(ab, did, deltas[i])
     // 164 而非 196：卡内容宽 204（236-2×16），交叉轴居中下 196 会溢出
@@ -665,13 +666,13 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     self.w_style(ab, id, [("fill", dots[i])])
   }
   // 标题居中窗口轴线（macOS 惯例）：盒 490..790 中心 640，文字 align center
-  self.place_required(ab, "body_text", "tl_title", x=490.0, y=9.0)
+  self.place_required(ab, "body_text", "tl_title", x=272.0, y=9.0)
   self.set_text(ab, "tl_title", "MoonViz Studio — login.mbt.md")
   self.resize_node(ab, "tl_title", 300.0, 18.0, 0.0)
   self.w_style(
     ab,
     "tl_title",
-    [("text_color", c("inverse_muted")), ("align", "center")],
+    [("text_color", c("inverse_muted"))],
   )
 
   // 侧边栏：反色 chrome
@@ -848,7 +849,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
     "body_text",
     "pc_st",
     variant="caption",
-    x=256.0,
+    x=272.0,
     y=778.0,
   )
   self.set_text(ab, "pc_st", "ops: 3   revision: 12   gate: AGENT ✓")

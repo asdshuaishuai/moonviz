@@ -116,6 +116,8 @@ pub fn Project::critique(
       )
 
       // ── 3. 对齐 ──
+      // 左缘或右缘任一贴 8px 网格即算对齐：右对齐的数值/操作列（fee_v、
+      // spec_v、item_c3_0 一类）此前只判左缘被误报为未对齐
       let mut aligned_count = 0
       let mut total_check = 0
       for id in doc.nodes.keys() {
@@ -123,8 +125,23 @@ pub fn Project::critique(
           Some(r) =>
             if id != "root" {
               total_check = total_check + 1
-              // 检查左边缘是否对齐到 8px 网格
-              if r.x % 8.0 < 1.0 || r.x % 8.0 > 7.0 {
+              let left_mod = r.x % 8.0
+              let right_mod = (r.x + r.width) % 8.0
+              let left_ok = left_mod <= 1.0 || left_mod >= 7.0
+              let right_ok = right_mod <= 1.0 || right_mod >= 7.0
+              // 画板中轴 ±2px 也算对齐：居中列（empty_state/login_v2 一类）
+              // 的左右缘天然落在中轴两侧，不应被判未对齐
+              let center_ok = {
+                let c = r.x + r.width / 2.0 - ab.width / 2.0
+                c >= -2.0 && c <= 2.0
+              }
+              // 右对齐文本（金额/规格值/行尾操作）以字形右缘构成内容线，
+              // 即使盒右缘不在 8 栅格上也视为右缘对齐
+              let text_right = match doc.nodes.get(id) {
+                Some(n) => n.style.text_align == "right"
+                None => false
+              }
+              if left_ok || right_ok || center_ok || text_right {
                 aligned_count = aligned_count + 1
               }
             }
@@ -229,6 +246,9 @@ pub fn Project::critique(
       )
 
       // ── 6. 平衡 ──
+      // 中心线 ±2px 内的节点视为中性（居中列不平添到任一侧）——此前
+      // center_x < 中点 才归左，居中节点全落右，登录/仪表盘类模板
+      // 被误判「左0% / 右100%」balance 4。
       let mut left_weight = 0.0
       let mut right_weight = 0.0
       for id in doc.nodes.keys() {
@@ -236,11 +256,12 @@ pub fn Project::critique(
           Some(r) =>
             if id != "root" {
               let center_x = r.x + r.width / 2.0
+              let dx = center_x - ab.width / 2.0
               let weight = r.width * r.height
-              if center_x < ab.width / 2.0 {
-                left_weight = left_weight + weight
-              } else {
+              if dx > 2.0 {
                 right_weight = right_weight + weight
+              } else if dx < -2.0 {
+                left_weight = left_weight + weight
               }
             }
           None => ()
@@ -330,9 +351,13 @@ pub fn Project::critique(
           Some(n) =>
             match n.layout {
               Some(l) =>
-                match gaps.get(l.gap) {
-                  Some(c) => gaps.set(l.gap, c + 1)
-                  None => gaps.set(l.gap, 1)
+                // gap=0 的容器没有声明节拍（未设置/单子项），不计入
+                // 间距档数——否则 page 这类 0 gap 会把 3 档节奏拖成 4 档
+                if l.gap > 0.0 {
+                  match gaps.get(l.gap) {
+                    Some(c) => gaps.set(l.gap, c + 1)
+                    None => gaps.set(l.gap, 1)
+                  }
                 }
               None => ()
             }
