@@ -180,3 +180,11 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 v2 `"source":"builtin"` + `action.kind:"back"`），
 宿主热区直接消费；`norm_back_issues` 校验非入口画板必须有出边 flow 或返回类
 节点（卡死页判入 norms 维度）。测试锚点全在 `core/norms_wbtest.mbt`。
+
+手势事件同链（0.2）：**long_press（带时长）/ focus / blur / scroll_end /
+keyboard_enter / swipe 与 tap 一样派发标记与 flow**，标记按同族闸门执行
+（tap 标记不吃 long_press）；flow trigger 走同一 spec（`swipe_left` /
+`long_press:0.8` / `focus[:node]` / `scroll_end` / `keyboard_enter`，裸节点 id
+兼容 `tap:<node>`，未知报错）；wasm 宿主经 `session_event` / classic
+`session_event_in` 送手势。锚点：`core/runtime_wbtest.mbt`、`decl/mbt_wbtest.mbt`、
+`wasm/contract_test.mbt`。

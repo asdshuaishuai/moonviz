@@ -1188,6 +1188,144 @@ pub fn session_tap(
 }
 
 ///|
+/// 手势事件入口：`<kind>[:args]` 单行 spec → 运行时事件。宿主不再只能
+/// 送 tap——long_press/focus/blur/scroll_end/swipe/keyboard 都能驱动原型。
+///   tap:<x>:<y> | long_press:<x>:<y>:<ms> | scroll_end |
+///   swipe:left|right|up|down（也接受 swipe_left 单 token）|
+///   focus:<node> | blur:<node> | key:<key> | key_enter|keyboard_enter
+/// 非法 spec → {"ok":false,"error":"unknown_event"}（不抛、不改会话）。
+pub fn session_event(handle : Int, artboard : String, spec : String) -> String {
+  let event : @core.VizEvent = match parse_viz_event(spec) {
+    Some(e) => e
+    None => return "{\"ok\":false,\"error\":\"unknown_event\"}"
+  }
+  match session_get(handle) {
+    None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
+    Some(p) =>
+      match @core.MoonVizRT::create(p, initial_artboard=artboard) {
+        Err(e) => "{\"ok\":false,\"error\":\"\{@core.json_escape(e)}\"}"
+        Ok(rt) => {
+          let changes = rt.handle_event(event)
+          let items : Array[String] = []
+          for c in changes.iter() {
+            items.push("\"\{@core.json_escape(c.describe())}\"")
+          }
+          let joined = items.join(",")
+          sess_mut_ok(
+            handle,
+            p,
+            "{\"ok\":true,\"changes\":[\{joined}],\"current\":\"\{@core.json_escape(rt.nav.current)}\"}",
+          )
+        }
+      }
+  }
+}
+
+///|
+/// 事件 spec → VizEvent。数字段严格校验（非数字/空 → None，不静默当 0）。
+fn parse_viz_event(spec : String) -> @core.VizEvent? {
+  let parts : Array[String] = []
+  for seg in spec.split(":") {
+    parts.push(seg.to_string().trim().to_string())
+  }
+  if parts.length() == 0 {
+    return None
+  }
+  let kind = parts[0]
+  match kind {
+    "tap" =>
+      if parts.length() != 3 {
+        None
+      } else {
+        match (viz_num(parts[1]), viz_num(parts[2])) {
+          (Some(x), Some(y)) => Some(@core.TapEvent(x, y))
+          _ => None
+        }
+      }
+    "long_press" =>
+      // long_press:<x>:<y>:<ms>
+      if parts.length() != 4 {
+        None
+      } else {
+        match (viz_num(parts[1]), viz_num(parts[2]), viz_num(parts[3])) {
+          (Some(x), Some(y), Some(ms)) =>
+            if ms > 0.0 {
+              Some(@core.LongPressEvent(x, y, ms / 1000.0))
+            } else {
+              None
+            }
+          _ => None
+        }
+      }
+    "scroll_end" => Some(@core.ScrollEndEvent)
+    "swipe" =>
+      if parts.length() != 2 || !is_swipe_dir(parts[1]) {
+        None
+      } else {
+        Some(@core.SwipeEvent(parts[1]))
+      }
+    "swipe_left" => Some(@core.SwipeEvent("left"))
+    "swipe_right" => Some(@core.SwipeEvent("right"))
+    "swipe_up" => Some(@core.SwipeEvent("up"))
+    "swipe_down" => Some(@core.SwipeEvent("down"))
+    "focus" =>
+      if parts.length() != 2 || parts[1] == "" {
+        None
+      } else {
+        Some(@core.FocusEvent(parts[1]))
+      }
+    "blur" =>
+      if parts.length() != 2 || parts[1] == "" {
+        None
+      } else {
+        Some(@core.BlurEvent(parts[1]))
+      }
+    "key" =>
+      if parts.length() != 2 || parts[1] == "" {
+        None
+      } else {
+        Some(@core.KeyEvent(parts[1]))
+      }
+    "key_enter" | "keyboard_enter" => Some(@core.KeyEvent("enter"))
+    _ => None
+  }
+}
+
+///|
+fn is_swipe_dir(dir : String) -> Bool {
+  dir == "left" || dir == "right" || dir == "up" || dir == "down"
+}
+
+///|
+/// 严格十进制数字段（仅数字/小数点/前导负号；必须有数字）。
+fn viz_num(s : String) -> Double? {
+  if s == "" {
+    return None
+  }
+  let mut seen_digit = false
+  let mut seen_dot = false
+  for i in 0..<s.length() {
+    match s.get_char(i) {
+      Some(c) =>
+        if c >= '0' && c <= '9' {
+          seen_digit = true
+        } else if c == '.' && !seen_dot {
+          seen_dot = true
+        } else if c == '-' && i == 0 {
+          ()
+        } else {
+          return None
+        }
+      None => return None
+    }
+  }
+  if !seen_digit {
+    return None
+  }
+  Some(@core.parse_double(s))
+}
+
+///|
 fn encode_mbt_b64(text : String) -> String {
   @base64.encode(@utf8.encode(text))
 }
@@ -1396,6 +1534,13 @@ pub fn session_constrain_in(handle : Int) -> String {
 ///|
 pub fn session_tap_in(handle : Int, x : Double, y : Double) -> String {
   session_tap(handle, slot_string(g_arg_bytes), x, y)
+}
+
+///|
+/// 手势事件的 classic 入口：辅槽 = artboard，主槽 = 事件 spec。
+/// （如主槽压 "long_press:20:20:800"、辅槽压 "home"。）
+pub fn session_event_in(handle : Int) -> String {
+  session_event(handle, slot_string(g_arg_bytes), slot_string(g_in_bytes))
 }
 
 ///|

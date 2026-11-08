@@ -405,6 +405,19 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 <p>测试锚点：<code>core/norms_wbtest.mbt</code>（规范五类）、返回语义随交互运行时测试。</p>
 </section>
 
+<section id="gestures">
+<h2>手势事件闭环（0.2）</h2>
+<p>运行时不再只消费 tap：long_press / focus / blur / scroll_end / keyboard_enter / swipe 都能驱动标记与导航流；flow 的 trigger 不再硬编码 <code>tap:</code>。</p>
+<table>
+<tr><th>能力</th><th>语义</th></tr>
+<tr><td>事件矩阵</td><td>标记按同族事件执行：tap 标记不吃 long_press；long_press 按命中节点、focus/blur 携节点 id、scroll_end/swipe/keyboard 走画板级派发。只有 tap 标记的节点收到 long_press 不触发</td></tr>
+<tr><td>长按时长</td><td><code>Trigger::LongPress(0.8)</code> ⇄ <code>trigger_from_spec("long_press:0.8")</code> 往返保留；<code>LongPressEvent(x,y,0.8)</code> 带时长，flow <code>long_press:0.8</code> 只在事件时长 ≥ 阈值时命中</td></tr>
+<tr><td>flow 触发词</td><td><code>tap:&lt;node&gt;</code> / <code>swipe_left|right|up|down</code> / <code>long_press[:秒]</code> / <code>focus[:node]</code> / <code>blur[:node]</code> / <code>scroll_end</code> / <code>keyboard_enter</code>；flow op 与 CLI 同规，未知 trigger 返回 Err</td></tr>
+<tr><td>wasm 手势入口</td><td><code>session_event(handle, artboard, "long_press:20:20:800")</code>（classic 走 <code>session_event_in</code> 字符串槽：主槽 spec、辅槽 artboard）返回 ok + changes；非法 spec 返回 <code>unknown_event</code></td></tr>
+</table>
+<p>测试锚点：<code>core/runtime_wbtest.mbt</code>（事件矩阵/长按时长/flow 手势）、<code>decl/mbt_wbtest.mbt</code>（flows 声明）、<code>wasm/contract_test.mbt</code>（session_event）。</p>
+</section>
+
 <section id="motion">
 <h2>动效系统（dev 线，精致感/流畅性）</h2>
 <p>动效不是装饰，是交互反馈的一部分。<b>令牌单一来源</b>：<code>animation.mbt</code> 的时长刻度（120/180/240/360ms）与缓动曲线（<code>Easing::css_value</code>，含 spring/bounce 的 cubic-bezier 等价式）经 <code>motion_tokens_css()</code> 注出 <code>:root</code> 变量——引擎与导出面共用同一节拍，导出层不写死毫秒、也不散落手写贝塞尔。</p>

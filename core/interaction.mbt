@@ -42,6 +42,16 @@ pub fn Trigger::name(self : Trigger) -> String {
   }
 }
 
+///|
+/// Trigger → 规范 spec（与 trigger_from_spec 对称）。LongPress 保留时长
+/// （"long_press:0.8"）——此前 name() 丢时长，0.8s 与 0.5s 无法区分。
+pub fn Trigger::spec(self : Trigger) -> String {
+  match self {
+    LongPress(sec) => "long_press:" + double_text(sec)
+    _ => self.name()
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 动作
 // ---------------------------------------------------------------------------
@@ -877,7 +887,8 @@ pub fn parse_interaction_marker(name : String) -> (String, String)? {
 
 ///|
 /// trigger 规格 → Trigger（CLI / Agent 语法共用）。
-/// 别名与 Trigger::name 保持一致；keyboard_enter 接受 key_enter 简写。
+/// 别名与 Trigger::name 保持一致；keyboard_enter 接受 key_enter 简写；
+/// long_press 可带时长（"long_press:0.8"，缺省 0.5s）。
 pub fn trigger_from_spec(spec : String) -> Trigger? {
   match spec {
     "tap" => Some(Tap)
@@ -890,7 +901,66 @@ pub fn trigger_from_spec(spec : String) -> Trigger? {
     "key_enter" | "keyboard_enter" => Some(KeyboardEnter)
     "focus" => Some(Focus)
     "blur" => Some(Blur)
-    _ => None
+    _ =>
+      // 仅 long_press 有参形态；其余带冒号的 spec 不在此接受
+      match spec.find(":") {
+        None => None
+        Some(i) => {
+          let head = spec.substring(start=0, end=i)
+          let rest = spec.substring(start=i + 1, end=spec.length())
+          if head == "long_press" && rest != "" {
+            let sec = parse_double(rest)
+            if sec > 0.0 { Some(LongPress(sec)) } else { None }
+          } else {
+            None
+          }
+        }
+      }
+  }
+}
+
+///|
+/// flow trigger 规范化（.mbt.md flows / flow op / CLI 共用）：
+/// - `tap:<node>` 原样；裸词若不在手势词表内按节点 id 兼容旧写法
+///   （`<node>` → `tap:<node>`）；
+/// - `swipe_left/swipe_right/swipe_up/swipe_down`、`long_press[:秒]`、
+///   `scroll_end`、`keyboard_enter/key_enter` 取规范形；
+/// - `focus:<node>` / `blur:<node>` 保留节点后缀；
+/// - 带冒号但头不在已知触发族 → Err(unknown_trigger: …)。
+pub fn normalize_flow_trigger(spec : String) -> Result[String, String] {
+  let raw = spec.trim().to_string()
+  if raw == "" {
+    return Err("unknown_trigger: ")
+  }
+  if raw.has_prefix("tap:") {
+    let node = raw.substring(start=4)
+    if node == "" {
+      return Err("unknown_trigger: " + raw)
+    }
+    return Ok(raw)
+  }
+  // 裸 long_press = 任意时长（flow 语义）；带秒数的走 trigger_from_spec
+  if raw == "long_press" {
+    return Ok(raw)
+  }
+  match trigger_from_spec(raw) {
+    Some(t) => return Ok(t.spec())
+    None => ()
+  }
+  match raw.find(":") {
+    Some(i) => {
+      let head = raw.substring(start=0, end=i)
+      let node = raw.substring(start=i + 1, end=raw.length())
+      if node == "" {
+        return Err("unknown_trigger: " + raw)
+      }
+      if head == "focus" || head == "blur" {
+        return Ok(head + ":" + node)
+      }
+      Err("unknown_trigger: " + raw)
+    }
+    // 无冒号且不在手势词表：按旧写法视作节点 id（tap:<node>）
+    None => Ok("tap:" + raw)
   }
 }
 

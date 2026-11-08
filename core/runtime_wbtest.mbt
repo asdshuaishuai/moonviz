@@ -923,3 +923,365 @@ test "interactions v2：字段契约与 builtin 返回热区" {
     Err(_) => assert_true(false)
   }
 }
+
+// ---------------------------------------------------------------------------
+// 手势事件闭环（P4）：事件矩阵 / long_press 时长 / flow 触发词
+// ---------------------------------------------------------------------------
+
+///|
+fn gesture_setup() -> Project {
+  let p = Project::new()
+  let ab = p.create_artboard(name="g", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="target", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="lp",
+    x=20.0,
+    y=20.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="fo",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="bl",
+    x=20.0,
+    y=180.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="se",
+    x=20.0,
+    y=260.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="kb",
+    x=20.0,
+    y=340.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="tp",
+    x=20.0,
+    y=420.0,
+  )
+  let _ = p.define_component_state(
+    artboard=ab,
+    node_id="fo",
+    state_name="pressed",
+    patch={ ..NodePatch::empty(), fill: Some("#123456") },
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="lp",
+    trigger="long_press",
+    action_spec="navigate_to:target",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="fo",
+    trigger="focus",
+    action_spec="set_state:fo:pressed",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="bl",
+    trigger="blur",
+    action_spec="set_text:bl:\"blurred\"",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="se",
+    trigger="scroll_end",
+    action_spec="navigate_to:target",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="kb",
+    trigger="keyboard_enter",
+    action_spec="navigate_to:target",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="tp",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
+  p
+}
+
+///|
+fn changes_have_nav(changes : Array[StateChange]) -> Bool {
+  for c in changes.iter() {
+    match c {
+      NavigationPushed(_) | ArtboardChanged(_) => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn changes_have_node(changes : Array[StateChange], id : String) -> Bool {
+  for c in changes.iter() {
+    match c {
+      NodeUpdated(nid) => if nid == id {
+        return true
+      }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn array_has(items : Array[String], want : String) -> Bool {
+  for it in items.iter() {
+    if it == want {
+      return true
+    }
+  }
+  false
+}
+
+///|
+test "手势事件矩阵：long_press/focus/blur/scroll_end/keyboard_enter 驱动标记" {
+  let p = gesture_setup()
+  // long_press 命中 lp → NavigationPushed
+  let rt = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch = rt.handle_event(LongPressEvent(80.0, 42.0, 0.8))
+  assert_true(changes_have_nav(ch), msg="long_press 标记应触发导航")
+  assert_eq(rt.current_artboard(), "target")
+  // focus → set_state → NodeUpdated 且状态切换
+  let rt2 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch2 = rt2.handle_event(FocusEvent("fo"))
+  assert_true(changes_have_node(ch2, "fo"), msg="focus 标记应触发 set_state")
+  match p.node_states.get("fo") {
+    Some(def) => assert_eq(def.current, "pressed")
+    None => assert_true(false)
+  }
+  // blur → set_text
+  let rt3 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch3 = rt3.handle_event(BlurEvent("bl"))
+  assert_true(changes_have_node(ch3, "bl"), msg="blur 标记应触发 set_text")
+  match p.artboards.get("g") {
+    Some(abd) =>
+      match abd.doc.nodes.get("bl") {
+        Some(n) => assert_eq(n.text, "blurred")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // scroll_end → 画板级标记导航
+  let rt4 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch4 = rt4.handle_event(ScrollEndEvent)
+  assert_true(changes_have_nav(ch4), msg="scroll_end 标记应触发导航")
+  assert_eq(rt4.current_artboard(), "target")
+  // keyboard enter → keyboard_enter 标记导航
+  let rt5 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch5 = rt5.handle_event(KeyEvent("enter"))
+  assert_true(changes_have_nav(ch5), msg="keyboard_enter 标记应触发导航")
+  assert_eq(rt5.current_artboard(), "target")
+  // 只有 tap 标记的节点收到 long_press 不得触发（事件矩阵闸门）
+  let rt6 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch6 = rt6.handle_event(LongPressEvent(80.0, 442.0, 0.8))
+  assert_eq(ch6.length(), 0, msg="tap 标记不应被 long_press 误触发")
+  assert_eq(rt6.current_artboard(), "g")
+}
+
+///|
+test "手势：Trigger spec 往返保留长按时长" {
+  match trigger_from_spec("long_press:0.8") {
+    Some(LongPress(sec)) => {
+      assert_true(sec > 0.79 && sec < 0.81, msg="0.8 应被保留：\{sec}")
+      assert_eq(LongPress(sec).spec(), "long_press:0.8")
+    }
+    _ => assert_true(false)
+  }
+  match trigger_from_spec("long_press") {
+    Some(LongPress(sec)) => assert_eq(sec, 0.5)
+    _ => assert_true(false)
+  }
+  match trigger_from_spec("long_press:0") {
+    Some(_) => assert_true(false)
+    None => ()
+  }
+  let triggers : Array[Trigger] = [
+    Tap, SwipeLeft, SwipeRight, SwipeUp, SwipeDown, ScrollEnd, KeyboardEnter,
+    Focus, Blur,
+  ]
+  for t in triggers.iter() {
+    match trigger_from_spec(t.spec()) {
+      Some(back) => assert_eq(back.spec(), t.spec())
+      None => assert_true(false, msg="无法反解析 \{t.spec()}")
+    }
+  }
+}
+
+///|
+test "手势 flow：swipe_left / long_press:0.8 / focus 导航，阈值以下不触发" {
+  let p = Project::new()
+  let a = p.create_artboard(name="ga")
+  let b = p.create_artboard(name="gb")
+  let c = p.create_artboard(name="gc")
+  let d = p.create_artboard(name="gd")
+  p.add_flow(from=a, to=b, trigger="swipe_left")
+  p.add_flow(from=a, to=c, trigger="long_press:0.8")
+  p.add_flow(from=a, to=d, trigger="focus")
+  let rt = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let _ = rt.handle_event(SwipeEvent("left"))
+  assert_eq(rt.current_artboard(), b)
+  // 0.5s < 0.8s 阈值：不触发
+  let rt2 = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch = rt2.handle_event(LongPressEvent(10.0, 10.0, 0.5))
+  assert_eq(ch.length(), 0)
+  assert_eq(rt2.current_artboard(), a)
+  // 0.8s 达标 → 导航
+  let rt3 = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let _ = rt3.handle_event(LongPressEvent(10.0, 10.0, 0.8))
+  assert_eq(rt3.current_artboard(), c)
+  // focus（画板级）→ 导航
+  let rt4 = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let _ = rt4.handle_event(FocusEvent("any_node"))
+  assert_eq(rt4.current_artboard(), d)
+}
+
+///|
+test "flow trigger 规范化：手势词、裸节点与未知错误" {
+  let cases : Array[(String, String)] = [
+    ("swipe_left", "swipe_left"),
+    ("long_press", "long_press"),
+    ("long_press:0.8", "long_press:0.8"),
+    ("focus", "focus"),
+    ("focus:email", "focus:email"),
+    ("blur:email", "blur:email"),
+    ("scroll_end", "scroll_end"),
+    ("key_enter", "keyboard_enter"),
+    ("btn", "tap:btn"),
+    ("tap:btn", "tap:btn"),
+  ]
+  for pair in cases.iter() {
+    let (input, want) = pair
+    match normalize_flow_trigger(input) {
+      Ok(v) => assert_eq(v, want)
+      Err(e) => fail("应接受 \{input}：\{e}")
+    }
+  }
+  for bad in ["nonsense:xyz", "long_press:0", "focus:", "tap:"].iter() {
+    match normalize_flow_trigger(bad) {
+      Ok(v) => assert_true(false, msg="应拒绝 \{bad}（得到 \{v}）")
+      Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
+    }
+  }
+}
+
+///|
+test "flow op：不再硬编码 tap:，未知 trigger 报错" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="oa")
+  let _ = p.create_artboard(name="ob")
+  for spec in ["swipe_left", "long_press:0.8", "focus", "node_x"] {
+    match apply_operation(p, "flow oa ob " + spec) {
+      Ok(_) => ()
+      Err(e) => fail("flow \{spec} 应成功：\{e}")
+    }
+  }
+  let trigs : Array[String] = []
+  for f in p.flows.iter() {
+    trigs.push(f.trigger)
+  }
+  assert_true(array_has(trigs, "swipe_left"))
+  assert_true(array_has(trigs, "long_press:0.8"))
+  assert_true(array_has(trigs, "focus"))
+  assert_true(array_has(trigs, "tap:node_x"))
+  match apply_operation(p, "flow oa ob nonsense:xyz") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
+  }
+  // unflow 同规：手势 trigger 可删
+  match apply_operation(p, "unflow oa ob swipe_left") {
+    Ok(_) => ()
+    Err(e) => fail("unflow swipe_left 应成功：\{e}")
+  }
+  let left : Array[String] = []
+  for f in p.flows.iter() {
+    if f.trigger == "swipe_left" {
+      left.push(f.trigger)
+    }
+  }
+  assert_eq(left.length(), 0)
+  match apply_operation(p, "unflow oa ob nonsense:xyz") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
+  }
+}

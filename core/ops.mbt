@@ -672,27 +672,34 @@ pub fn apply_operation(
       }
     "flow" =>
       if parts.length() < 4 {
-        Err("mbt_operation_usage:flow <from> <to> <node>")
+        Err("mbt_operation_usage:flow <from> <to> <trigger|node>")
       } else {
-        project.add_flow(from=parts[1], to=parts[2], trigger="tap:" + parts[3])
-        project.revision = project.revision + 1
-        Ok(())
-      }
-    "unflow" =>
-      if parts.length() < 4 {
-        Err("mbt_operation_usage:unflow <from> <to> <node>")
-      } else {
-        match
-          project.remove_flow(
-            from=parts[1],
-            to=parts[2],
-            trigger="tap:" + parts[3],
-          ) {
-          Ok(_) => {
+        // trigger 不再硬编码 tap:：裸节点 id 仍兼容为 tap:<node>，
+        // 手势词（swipe_left / long_press:0.8 / focus[:node] / scroll_end /
+        // keyboard_enter）经 normalize_flow_trigger 校验，未知 → Err
+        match normalize_flow_trigger(parts[3]) {
+          Err(error) => Err(error)
+          Ok(trigger) => {
+            project.add_flow(from=parts[1], to=parts[2], trigger~)
             project.revision = project.revision + 1
             Ok(())
           }
+        }
+      }
+    "unflow" =>
+      if parts.length() < 4 {
+        Err("mbt_operation_usage:unflow <from> <to> <trigger|node>")
+      } else {
+        match normalize_flow_trigger(parts[3]) {
           Err(error) => Err(error)
+          Ok(trigger) =>
+            match project.remove_flow(from=parts[1], to=parts[2], trigger~) {
+              Ok(_) => {
+                project.revision = project.revision + 1
+                Ok(())
+              }
+              Err(error) => Err(error)
+            }
         }
       }
     "theme" =>

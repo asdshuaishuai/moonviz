@@ -448,3 +448,44 @@ test "节点 motion 白名单：未知与写死几何预设拒绝" {
     }
   }
 }
+
+///|
+/// 手势 flow 声明：.mbt.md 的 trigger 可写 swipe_left / long_press:0.8 /
+/// focus（不再只认 tap:），canonical 往返保留；未知 trigger 与 focus:<node>
+/// 指向不存在节点都必须报错。
+test "flows：手势 trigger 声明往返与未知触发报错" {
+  let src = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: f1\n  flows:\n    - from: f1\n      to: f2\n      trigger: swipe_left\n    - from: f1\n      to: f2\n      trigger: long_press:0.8\n    - from: f1\n      to: f2\n      trigger: focus\n---\n\n# F\n\n<!-- moonviz:artboard f1 -->\n```mbt\nfn visual_f1() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"f1\", width=390.0, height=844.0)\n  page\n}\n```\n\n<!-- moonviz:artboard f2 -->\n```mbt\nfn visual_f2() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"f2\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("手势 flow 文档加载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(model.project.flows.length(), 3)
+  let canonical = model.to_mbt()
+  assert_true(canonical.contains("trigger: swipe_left"), msg=canonical)
+  assert_true(canonical.contains("trigger: long_press:0.8"), msg=canonical)
+  assert_true(canonical.contains("trigger: focus"), msg=canonical)
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(back.project.flows.length(), 3)
+  // 未知 trigger
+  let bad = src.replace(old="trigger: swipe_left", new="trigger: nonsense:xyz")
+  match load_mbt_project(bad) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("mbt_flow_unknown_trigger"), msg=e)
+  }
+  // focus:<node> 指向不存在节点
+  let bad2 = src.replace(old="trigger: focus", new="trigger: focus:missing")
+  match load_mbt_project(bad2) {
+    Ok(_) => assert_true(false)
+    Err(e) =>
+      assert_true(e.contains("mbt_flow_unknown_node:f1:missing"), msg=e)
+  }
+}

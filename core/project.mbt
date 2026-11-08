@@ -13,7 +13,10 @@ pub(all) struct ArtboardMeta {
 pub(all) struct FlowEdge {
   from : String // artboard id
   to : String
-  trigger : String // "tap:login" / "swipe:left" 等
+  /// 触发 spec（与 normalize_flow_trigger 同规）："tap:<node>" /
+  /// "swipe_left" / "long_press:0.8" / "focus:<node>" / "scroll_end" /
+  /// "keyboard_enter" 等
+  trigger : String
 }
 
 ///|

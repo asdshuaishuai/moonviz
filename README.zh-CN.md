@@ -369,7 +369,7 @@ moonviz/
 
 | 概念 | 说明 |
 |:---|:---|
-| **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
+| **Trigger** | tap / long_press（保留时长）/ swipe / scroll_end / keyboard / focus / blur——全部由运行时派发 |
 | **Action** | navigate_to / back / toggle_state / set_state / set_text / submit_form（`submit_form:email,pwd`，运行时产出带键值的 FormSubmitted）/ show_toast / haptic / play_sound |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | 组件多态（default / pressed / disabled / loading） |

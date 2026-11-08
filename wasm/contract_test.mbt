@@ -830,3 +830,51 @@ test "契约：session_snapshot 携带节点 motion 绑定与项目动效令牌"
   )
   let _ = session_close(h)
 }
+
+///|
+/// 主输入槽压入 ASCII 字符串（session_event_in 测试用）。
+fn push_event_in(s : String) -> Unit {
+  in_reset()
+  for c in s.to_array() {
+    in_push(c.to_int(), 1)
+  }
+}
+
+///|
+/// 辅输入槽压入 ASCII 字符串（artboard 名）。
+fn push_event_arg(s : String) -> Unit {
+  arg_reset()
+  for c in s.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+}
+
+///|
+/// 手势事件导出：session_event 送 long_press 驱动标记导航；session_event_in
+/// 走字符串槽等价；非法 spec 返回 unknown_event（不改会话、不抛）。
+test "契约：session_event 手势事件与非法 spec" {
+  let h = session_open(SEED)
+  assert_true(h >= 0, msg="session_open 应成功")
+  // SEED 的 btn 在 (20,20) 120×44；注册 long_press → 自导航标记
+  let op = session_apply_human(h, "interact w btn long_press navigate_to:w")
+  assert_true(op.contains("\"ok\":true"), msg="interact 应成功：\{op}")
+  let ev = session_event(h, "w", "long_press:80:42:800")
+  assert_true(ev.contains("\"ok\":true"), msg="long_press 事件应成功：\{ev}")
+  assert_true(ev.contains("\"changes\":[\""), msg="changes 应为非空数组：\{ev}")
+  assert_true(ev.contains("nav_push:w"), msg="应产生导航变更：\{ev}")
+  // classic 入口：主槽 spec + 辅槽 artboard
+  push_event_arg("w")
+  push_event_in("long_press:80:42:800")
+  let ev2 = session_event_in(h)
+  assert_true(ev2.contains("\"ok\":true"), msg="session_event_in 应成功：\{ev2}")
+  assert_true(ev2.contains("nav_push:w"), msg=ev2)
+  // 非法 spec：unknown_event，会话不变
+  let bad = session_event(h, "w", "nonsense:1")
+  assert_true(bad.contains("unknown_event"), msg=bad)
+  let bad2 = session_event(h, "w", "long_press:80:42:0")
+  assert_true(bad2.contains("unknown_event"), msg="0ms 长按应判非法：\{bad2}")
+  // tap 仍可走同一入口
+  let tap = session_event(h, "w", "tap:80:42")
+  assert_true(tap.contains("\"ok\":true"), msg=tap)
+  let _ = session_close(h)
+}

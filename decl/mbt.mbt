@@ -565,13 +565,31 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
 pub fn mbt_validate_flows(project : @core.Project) -> Result[Unit, String] {
   for flow in project.flows.iter() {
     match (project.artboards.get(flow.from), project.artboards.get(flow.to)) {
-      (Some(from), Some(_)) =>
-        if mbt_has_prefix(flow.trigger, "tap:") {
-          let node_id = flow.trigger.substring(start=4)
-          if !from.doc.has(node_id) {
-            return Err("mbt_flow_unknown_node:" + flow.from + ":" + node_id)
-          }
+      (Some(from), Some(_)) => {
+        // trigger spec 走 core 的同一规范化：swipe_left / long_press:0.8 /
+        // focus[:node] / scroll_end / keyboard_enter 合法；未知触发 Err
+        let trigger = match @core.normalize_flow_trigger(flow.trigger) {
+          Ok(t) => t
+          Err(e) => return Err("mbt_flow_" + e)
         }
+        // 节点级触发（tap:/focus:/blur:）必须指向存在的节点
+        let node = if trigger.has_prefix("tap:") {
+          Some(trigger.substring(start=4))
+        } else if trigger.has_prefix("focus:") {
+          Some(trigger.substring(start=6))
+        } else if trigger.has_prefix("blur:") {
+          Some(trigger.substring(start=5))
+        } else {
+          None
+        }
+        match node {
+          Some(node_id) =>
+            if !from.doc.has(node_id) {
+              return Err("mbt_flow_unknown_node:" + flow.from + ":" + node_id)
+            }
+          None => ()
+        }
+      }
       _ => return Err("mbt_flow_unknown_artboard:" + flow.from + ":" + flow.to)
     }
   }

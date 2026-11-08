@@ -335,3 +335,23 @@ test "unflow 从 CLI 行协议删除单条导航边" {
   let again = cli_exec(p, "unflow home detail go_btn")
   assert_true(again.contains("\"error\""), msg=again)
 }
+
+///|
+/// flow CLI 不再硬编码 tap:：手势 trigger（swipe_left / long_press:0.8 /
+/// focus）可建边，未知 trigger 返回错误；flows 回读保留原 spec。
+test "flow CLI：手势 trigger 与未知触发报错" {
+  let p = @core.Project::new()
+  let _ = cli_exec(p, "create ga 390 844")
+  let _ = cli_exec(p, "create gb 390 844")
+  for spec in ["swipe_left", "long_press:0.8", "focus"] {
+    let out = cli_exec(p, "flow ga gb " + spec)
+    assert_true(out.contains("\"ok\":true"), msg="flow \{spec} 应成功：\{out}")
+    assert_true(out.contains(spec), msg=out)
+  }
+  let bad = cli_exec(p, "flow ga gb nonsense:xyz")
+  assert_true(bad.contains("unknown_trigger"), msg=bad)
+  let flows = cli_exec(p, "flows")
+  assert_true(flows.contains("\"trigger\":\"swipe_left\""), msg=flows)
+  assert_true(flows.contains("\"trigger\":\"long_press:0.8\""), msg=flows)
+  assert_true(flows.contains("\"trigger\":\"focus\""), msg=flows)
+}

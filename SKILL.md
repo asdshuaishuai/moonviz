@@ -189,6 +189,15 @@ BEFORE `set-state` can target it (otherwise `no_states`)
   `submit_form:<field>,<field>`（运行时产出带键值 FormSubmitted）
 - interactions persist as name markers and are executed by the runtime:
   tap resolution is flow → marker → `NodeUpdated`
+- gestures are first-class: `long_press[:seconds]` (duration preserved),
+  `focus[:node]`, `blur[:node]`, `scroll_end`, `keyboard_enter` and
+  `swipe_left|right|up|down` all dispatch markers/flows; a tap marker does
+  NOT fire on long_press
+- flow triggers share the same grammar: bare node id = `tap:<node>`;
+  `flow <from> <to> <trigger|node>` rejects unknown triggers
+- wasm hosts send gestures via `session_event(handle, artboard,
+  "long_press:20:20:800")` (classic: `session_event_in`, main slot = spec,
+  arg slot = artboard); invalid spec → `unknown_event`
 - component states persist as `[state:name:k=v,...]` markers and apply as a
   render-time transform when activated
 

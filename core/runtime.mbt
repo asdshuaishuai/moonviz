@@ -16,7 +16,8 @@
 
 pub(all) enum VizEvent {
   TapEvent(Double, Double) // (x, y)
-  LongPressEvent(Double, Double)
+  LongPressEvent(Double, Double, Double) // (x, y, duration 秒)——0.8s 与 0.5s 可区分
+  ScrollEndEvent // 滚动到底（画板级，无坐标）
   SwipeEvent(String) // "left" | "right" | "up" | "down"
   KeyEvent(String) // "enter" | "escape" | ...
   FocusEvent(String) // node_id
@@ -27,7 +28,9 @@ pub(all) enum VizEvent {
 pub fn VizEvent::describe(self : VizEvent) -> String {
   match self {
     TapEvent(x, y) => "tap(\{x.to_int()}, \{y.to_int()})"
-    LongPressEvent(x, y) => "long_press(\{x.to_int()}, \{y.to_int()})"
+    LongPressEvent(x, y, dur) =>
+      "long_press(\{x.to_int()}, \{y.to_int()}, \{dur}s)"
+    ScrollEndEvent => "scroll_end"
     SwipeEvent(dir) => "swipe_\{dir}"
     KeyEvent(key) => "key_\{key}"
     FocusEvent(id) => "focus(\{id})"
@@ -163,7 +166,7 @@ pub fn MoonVizRT::handle_event(
                   // 时强制返回上一层（返回交互是必须的：原型绝不因漏接 flow
                   // 而无路可退；与宿主端 isBackish 同语义，2026-10-11 下沉引擎）。
                   // 栈底再返回 = 原地不动；都不是才报状态更新
-                  if !self.run_marker(node_id, changes) {
+                  if !self.run_marker(node_id, "tap", changes) {
                     let node = ab.doc.nodes.get(node_id)
                     let back_like = match node {
                       Some(n) => is_back_like_node(n)
@@ -188,6 +191,27 @@ pub fn MoonVizRT::handle_event(
         }
         None => ()
       }
+    LongPressEvent(x, y, duration) => {
+      // 手势闭环：flow 优先（long_press / long_press:<秒>，事件时长 ≥ 阈值），
+      // 否则命中节点的 long_press 标记执行——此前该事件落 `_ => ()` 被吞
+      let hit = match self.project.artboards.get(self.nav.current) {
+        Some(ab) => pick_node(ab.doc, solve(ab.doc), x, y)
+        None => None
+      }
+      if !self.run_long_press_flow(duration, changes) {
+        match hit {
+          Some(node_id) => {
+            let _ = self.run_marker(node_id, "long_press", changes)
+          }
+          None => ()
+        }
+      }
+    }
+    ScrollEndEvent =>
+      // 滚动到底：画板级 flow，其次画板内 scroll_end 标记
+      if !self.run_flow("scroll_end", changes) {
+        let _ = self.run_markers_for_trigger("scroll_end", changes)
+      }
     KeyEvent(key) =>
       if key == "escape" || key == "back" {
         // 返回上一页
@@ -199,36 +223,42 @@ pub fn MoonVizRT::handle_event(
           None => ()
         }
       } else {
-        // 键盘导航流：flow <from> <to> - key_<key>
-        let trigger = "key_\{key}"
-        for e in self.project.flows.iter() {
-          if e.from == self.nav.current && e.trigger == trigger {
-            let _ = self.nav.navigate(e.to)
-            changes.push(NavigationPushed(e.to))
-            changes.push(ArtboardChanged(e.to))
-            break
+        // 键盘导航流：flow <from> <to> - key_<key>；回车额外接受
+        // keyboard_enter / key_enter 规范名，再退到画板内同名标记
+        let mut fired = self.run_flow("key_" + key, changes)
+        if !fired && key == "enter" {
+          fired = self.run_flow("keyboard_enter", changes) ||
+            self.run_flow("key_enter", changes)
+          if !fired {
+            fired = self.run_markers_for_trigger("keyboard_enter", changes)
           }
         }
+        let _ = fired
       }
-    SwipeEvent(dir) =>
+    SwipeEvent(dir) => {
       // 滑动也可能触发导航。与 KeyEvent 臂同语义：命中首条即停——
       // 同画板多条同 trigger 的 swipe flow 只执行第一条，否则导航栈
-      // 连推多个画板、成串状态变更（此前漏 break，与 tap/key 不一致）
-      match self.project.artboards.get(self.nav.current) {
-        Some(ab) => {
-          let trigger = "swipe_\{dir}"
-          for e in self.project.flows.iter() {
-            if e.from == self.nav.current && e.trigger == trigger {
-              let _ = self.nav.navigate(e.to)
-              changes.push(NavigationPushed(e.to))
-              changes.push(ArtboardChanged(e.to))
-              break
-            }
-          }
-        }
-        None => ()
+      // 连推多个画板、成串状态变更（此前漏 break，与 tap/key 不一致）。
+      // 无 flow 时退到画板内 swipe_<dir> 标记。
+      let trigger = "swipe_" + dir
+      let fired = self.run_flow(trigger, changes) ||
+        self.run_flow("swipe:" + dir, changes)
+      if !fired {
+        let _ = self.run_markers_for_trigger(trigger, changes)
       }
-    _ => ()
+    }
+    FocusEvent(id) =>
+      // 焦点事件：节点级 flow（focus:<node>）优先，其次画板级 focus，
+      // 再退到该节点的 focus 标记
+      if !self.run_flow("focus:" + id, changes) &&
+        !self.run_flow("focus", changes) {
+        let _ = self.run_marker(id, "focus", changes)
+      }
+    BlurEvent(id) =>
+      if !self.run_flow("blur:" + id, changes) &&
+        !self.run_flow("blur", changes) {
+        let _ = self.run_marker(id, "blur", changes)
+      }
   }
   // 通知监听器
   for c in changes.iter() {
@@ -237,6 +267,89 @@ pub fn MoonVizRT::handle_event(
     }
   }
   changes
+}
+
+///|
+/// 执行当前画板匹配 trigger 的第一条 flow（导航）；返回是否命中。
+fn MoonVizRT::run_flow(
+  self : MoonVizRT,
+  trigger : String,
+  changes : Array[StateChange],
+) -> Bool {
+  for e in self.project.flows.iter() {
+    if e.from == self.nav.current && e.trigger == trigger {
+      let _ = self.nav.navigate(e.to)
+      changes.push(NavigationPushed(e.to))
+      changes.push(ArtboardChanged(e.to))
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// 长按 flow 匹配：long_press（任意时长）或 long_press:<秒>（事件时长 ≥ 阈值）。
+fn MoonVizRT::run_long_press_flow(
+  self : MoonVizRT,
+  duration : Double,
+  changes : Array[StateChange],
+) -> Bool {
+  for e in self.project.flows.iter() {
+    if e.from != self.nav.current {
+      continue
+    }
+    let t = e.trigger
+    let mut matched = t == "long_press"
+    if !matched && t.has_prefix("long_press:") && t.length() > 11 {
+      let sec = parse_double(t.substring(start=11, end=t.length()))
+      if sec > 0.0 && duration >= sec {
+        matched = true
+      }
+    }
+    if matched {
+      let _ = self.nav.navigate(e.to)
+      changes.push(NavigationPushed(e.to))
+      changes.push(ArtboardChanged(e.to))
+      return true
+    }
+  }
+  false
+}
+
+///|
+/// 画板级标记派发：执行当前画板中 trigger 同族的第一条标记，返回是否命中。
+/// 用于没有命中坐标/节点的事件（scroll_end、keyboard_enter、swipe）。
+fn MoonVizRT::run_markers_for_trigger(
+  self : MoonVizRT,
+  trigger : String,
+  changes : Array[StateChange],
+) -> Bool {
+  let ids : Array[String] = []
+  match self.project.artboards.get(self.nav.current) {
+    None => ()
+    Some(ab) =>
+      for id in ab.doc.nodes.keys() {
+        match ab.doc.nodes.get(id) {
+          Some(n) =>
+            match parse_interaction_marker(n.name) {
+              Some((mt, _)) => {
+                let mt = if mt == "key_enter" { "keyboard_enter" } else { mt }
+                if mt == trigger {
+                  ids.push(id)
+                }
+              }
+              None => ()
+            }
+          None => ()
+        }
+      }
+  }
+  for id in ids.iter() {
+    if self.run_marker(id, trigger, changes) {
+      return true
+    }
+  }
+  false
 }
 
 ///|
@@ -276,6 +389,7 @@ fn MoonVizRT::apply_active_state(self : MoonVizRT, node_id : String) -> Unit {
 fn MoonVizRT::run_marker(
   self : MoonVizRT,
   node_id : String,
+  event_trigger : String,
   changes : Array[StateChange],
 ) -> Bool {
   let node_name = match self.project.artboards.get(self.nav.current) {
@@ -290,8 +404,15 @@ fn MoonVizRT::run_marker(
     Some(t) => t
     None => return false
   }
-  // 标记仅在 tap 命中时执行；其他触发器由对应事件路径处理
-  if trigger != "tap" {
+  // 事件矩阵闸门：标记只在同族事件上执行——tap 标记不吃 long_press，
+  // long_press/focus/blur/scroll_end/keyboard_enter 标记也不再被统一丢弃。
+  // key_enter 是 keyboard_enter 的旧写法别名。
+  let marker_trigger = if trigger == "key_enter" {
+    "keyboard_enter"
+  } else {
+    trigger
+  }
+  if marker_trigger != event_trigger {
     return false
   }
   match action_from_spec(spec) {

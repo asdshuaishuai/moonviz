@@ -532,10 +532,10 @@ pub fn op_entries() -> Array[OpEntry] {
   )
   // ---- 导航 / 主题 / 令牌 / 债 ----
   add(
-    "flow", "flow <from> <to> <node>", "navigation", "Add a tap navigation edge between artboards.",
+    "flow", "flow <from> <to> <trigger|node>", "navigation", "Add a navigation edge: bare node id = tap:<node>; also accepts swipe_left/swipe_right/swipe_up/swipe_down, long_press[:sec], focus[:node], blur[:node], scroll_end, keyboard_enter.",
   )
   add(
-    "unflow", "unflow <from> <to> <node>", "navigation", "Remove a single navigation edge.",
+    "unflow", "unflow <from> <to> <trigger|node>", "navigation", "Remove a single navigation edge (same trigger grammar as flow).",
   )
   add(
     "theme", "theme <name>", "theme", "Switch global theme: role-recolors matching literals (reversible) and persists via frontmatter `theme:`.",
