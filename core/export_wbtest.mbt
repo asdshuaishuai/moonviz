@@ -766,3 +766,83 @@ test "export_html：脚本括号平衡（语法门）" {
   assert_eq(depth, 0)
   assert_eq(in_str, 0)
 }
+
+///|
+/// 转义安全面：状态名含 </script> 不提前闭合脚本、play_sound 参数真实
+/// 落值（无字面量占位符残留）、tab 的 DOM id/标签文本 HTML 转义 +
+/// aria-selected/tabpanel 角色齐备（WAI-ARIA tabs）。
+test "export_html：MV_STATES/play_sound/tab 转义与 ARIA tabs" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="t_login")
+  let _ = p.place_component(
+    artboard="t_login",
+    component_id="button",
+    instance_id="login_btn",
+    x=10.0,
+    y=10.0,
+  )
+  // 状态名是 Agent 可控文本：含 </script> 的合法状态名不得截断脚本
+  let _ = p.define_component_state(
+    artboard="t_login",
+    node_id="login_btn",
+    state_name="on</script>x",
+    patch={ ..NodePatch::empty(), fill: Some("#FF0000"), },
+  )
+  // play_sound 参数（音效名）：绑定表必须是真实值，不再输出字面量
+  // 占位符（此前 {js_string_escape(name)} 缺 \{} 插值，运行时 toast
+  // 播报占位符原文而非音效名）
+  let _ = p.attach_interaction(
+    artboard="t_login",
+    node_id="login_btn",
+    trigger="tap",
+    action_spec="play_sound:beep_wav",
+  )
+  let html = p.export_html()
+  // MV_STATES 值里 </script> 转成 \x3c/script>，脚本数据区不被状态名
+  // 提前闭合（CSS 类名区的状态名残留是 style 原文，不构成脚本闭合，
+  // 属独立检测面不在本断言内）
+  assert_true(html.contains("\":\"on\\x3c/script>x\""))
+  // play_sound 占位符字面量不再出现，参数真实落值
+  assert_false(html.contains("{js_string_escape"))
+  assert_true(html.contains("\"play_sound\",\"beep_wav\""))
+  // tab：DOM id/文本转义后无裸 <b> 元素；ARIA tabs 属性齐备
+  let _ = p.duplicate_artboard(src="t_login", new_name="it's<b>")
+  let html2 = p.export_html()
+  assert_false(html2.contains("id=\"tab-it's<b>\""))
+  assert_false(html2.contains(">it's<b></div>"))
+  assert_true(html2.contains("aria-selected=\"false\""))
+  assert_true(html2.contains("aria-controls=\"board-"))
+  assert_true(html2.contains("role=\"tabpanel\""))
+  // onclick 的 id 落 JS 字符串：js_string_escape 转义单引号与 <（> 无害）
+  assert_true(html2.contains("it\\'s\\x3cb>"))
+  // show() 切换时同步 aria-selected（JS 侧）
+  assert_true(html2.contains("setAttribute('aria-selected','true')"))
+}
+
+///|
+/// SVG 严格面：text-anchor 属性值不带前导空格（严格 XML/SVG 消费者按
+/// 属性值校验，" start" 非法）。
+test "export_svg：text-anchor 值无前导空格" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="btn",
+    x=10.0,
+    y=10.0,
+  )
+  let _ = p.edit_node(
+    artboard="a",
+    node_id="btn",
+    kvs=[("align", "left"), ("text", "确定")],
+  )
+  let svg = p.export_svg(artboard="a")
+  match svg {
+    Ok(s) => {
+      assert_true(s.contains("text-anchor=\"start\""))
+      assert_false(s.contains("text-anchor=\" "))
+    }
+    Err(_) => assert_true(false)
+  }
+}

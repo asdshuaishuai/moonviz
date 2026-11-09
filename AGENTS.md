@@ -29,7 +29,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 - `core/version.mbt` 的 `ENGINE_VERSION`（wasm version_info / CLI banner / MCP serverInfo / artifact meta_version 的唯一来源）
 - `.github/workflows/binaries.yml` 的 `MOONVIZ_VERSION`（全产物构建与资产命名基准）
 
-`moon.mod.json` 的 version 随上述两处同步，**例外**：mooncakes 拒绝同版本
+`moon.mod` 的 version 随上述两处同步，**例外**：mooncakes 拒绝同版本
 重发（409 duplicate）时的文档勘误重包，可在 moon.mod version 加打包后缀
 （如 `0.1.9-fix-2`）而 ENGINE_VERSION/MOONVIZ_VERSION 不动——打包号是
 注册表元数据，不是引擎版本（0.1.9-fix-2 先例，2026-10-13）。文档中引用版本示例时用 `<ver>` 占位或动态表述，
@@ -94,7 +94,7 @@ main 除合并节点与发布基线提交外，不直接承载开发/发布提�
 模块名固定为 `asdshuaishuai/moonviz`——**新建 moon 包时 import 必须用此前缀**
 （`"asdshuaishuai/moonviz/core"` 等），改名需全仓同步并跑三目标验证。
 发布：`moon login`（mooncakes.io 账号）→ `moon publish`，由仓库所有者执行；
-版本取自 moon.mod.json，须与 `ENGINE_VERSION` 基线协调。
+版本取自 moon.mod，须与 `ENGINE_VERSION` 基线协调。
 **已知坑与绕过**（2026-10-07 首次上架验证）：本地网络路径会掐断 mooncake 的
 HTTP/2 上传（`receiver is gone`）。绕过 = 协议直发（FastAPI multipart）：
 ```

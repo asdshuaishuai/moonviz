@@ -699,11 +699,12 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "generate-doc" =>
-      // 强制规范流程：只从设计文档生成（缺关键项拒绝）
+      // 强制规范流程：只从设计文档生成（缺关键项拒绝）。多词意图与
+      // generate 同款拼接（未加引号的「web 落地页」不能静默截成一词）
       if parts.length() < 3 {
         cli_err("usage: generate-doc <意图一句话> doc=<base64(设计文档)> [as <name>]")
       } else {
-        let intent = parts[1]
+        let mut intent = parts[1]
         let mut doc_md = ""
         let mut artboard_name = ""
         let mut i = 2
@@ -718,12 +719,28 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             }
             i = i + 1
           } else {
+            intent = intent + " " + parts[i]
             i = i + 1
           }
         }
         match p.generate_from_doc(intent_text=intent, doc=doc_md, name=artboard_name) {
           Ok(json) => json
-          Err(e) => cli_err(e)
+          Err(e) =>
+            // 缺口信封与 MCP 同形：结构化 {ok:false,error,gaps,spec_draft}
+            //（此前是 {"error":"design_doc_spec_gaps:<分号串>"}，gaps 非
+            // 数组、无草案，宿主无法机读）
+            if e.has_prefix("design_doc_spec_gaps:") {
+              let ex = @core.design_doc_extract(doc_md)
+              let parts_g : Array[String] = []
+              for g in ex.gaps.iter() {
+                parts_g.push("\"" + @core.json_escape(g) + "\"")
+              }
+              "{\"ok\":false,\"error\":\"design_doc_spec_gaps\",\"gaps\":[" +
+              parts_g.join(",") +
+              "],\"spec_draft\":" + ex.spec_json + "}"
+            } else {
+              cli_err(e)
+            }
         }
       }
     "comply" =>
@@ -1388,7 +1405,7 @@ fn cli_help() -> String {
   "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h] [k=v ...]  Place at final size\n" +
   "  query <ab>           Query nodes in artboard\n" +
   "  lint <ab>            Run design lint\n" +
-  "  critique <ab>        Run 9-principle critique\n" +
+  "  critique <ab>        Run 10-principle critique\n" +
   "  benchmark            Run performance benchmark\n" +
   "  fix <ab>             Auto-fix violations\n" +
   "  theme <name>         Switch theme\n" +
@@ -1398,6 +1415,9 @@ fn cli_help() -> String {
   "\n" +
   "Generative (execution ladder, always start from the top):\n" +
   "  generate <意图一句话> [spec=<b64>] [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score); \"a+b\" composite → multi-artboard + auto nav flows (max 4)\n" +
+  "  generate-doc <意图一句话> doc=<b64(设计文档)> [as <name>]  Enforced spec workflow: extract spec from a design document, missing key items refuse with design_doc_spec_gaps\n" +
+  "  spec-extract doc=<b64(设计文档)>  Extract design spec JSON from a design document (palette/typography/radius/motion/touch), gaps reported\n" +
+  "  comply <ab>          Design-spec compliance check (color/type/radius/motion) — the UI must fully obey the spec\n" +
   "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
   "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
   "  autofill <ab>        Materialize the infer_missing report as real nodes, then auto_fix settles layout\n" +

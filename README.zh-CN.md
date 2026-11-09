@@ -35,7 +35,7 @@
   export_react JSX）、出口面修复（CLI `unflow` 臂、set-state off-by-one、MCP
   JSON-RPC id/通知语义、缺参校验）、norms v2 触控规则与 v1 档位调和、SDK 修复
   （Project 六方法、sessionGenerate、DDP decrypt mode、npm 平台包版本对齐）。
-- **文档与官网全量同步**——全部计数锚定引擎实测（55 工具 / 27 op / 73 wasm
+- **文档与官网全量同步**——全部计数锚定引擎实测（58 工具 / 27 op / 77 wasm
   导出 / 九维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
 - 测试矩阵增至 298（默认目标）/ 314（`--target native`），全绿。
 
@@ -117,7 +117,7 @@
 │  Agent (任意 LLM)                                            │
 │  发现组件 → 创建画板 → 放置元素 → lint → 修复 → 导出         │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (57 tools, JSON in/out)
+               │ Agent Tools API (58 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -140,9 +140,9 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent 工具清单（55 个，节选）
+## Agent 工具清单（58 个，节选）
 
-下表每个名字都与运行面字典逐字一致（CLI `list-tools` / MCP `tools/list`，55 个）——没有一个占位名。
+下表每个名字都与运行面字典逐字一致（CLI `list-tools` / MCP `tools/list`，58 个）——没有一个占位名。
 
 | 工具 | 语义 |
 | :--- | :--- |
@@ -179,16 +179,19 @@
 - **genUI（主通道）**——`generate` 一句话意图 → 完整画板 + 报告
   （autofix/missing/score）；`autofill` 把报告缺失物化为真实节点；
   `batch_apply` 确定精修一次提交。
-- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（57 工具 / 27 op）
+- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（58 工具 / 27 op）
   原样保留：自由形态画板、模板之外的布局、外科手术式修改、探查。阶梯按
   成本排通道、不设权限门槛——配方表达不了你的意图时，逐层下探用工具
   就是正确行为。
 
-## 内置页面模板（14 个完整页面）
+## 内置页面模板（17 个完整页面）
 
 | 模板 | 内容 |
 |:---|:---|
 | `login` | Logo + 标题 + 邮箱 + 密码 + 登录按钮 + 注册链接 |
+| `list` | App Bar + 搜索栏 + 分类标签 + 条目列表（行底分割线）+ 底部导航 |
+| `detail` | 返回栏 + 大图区 + 标题 + 规格参数 + 描述 + 底部主按钮 |
+| `checkout` | 返回栏 + 订单摘要 + 表单字段 + 费用明细（行底分割线）+ 提交按钮 |
 | `signup` | 标题 + 姓名 + 邮箱 + 密码 × 2 + 注册按钮 |
 | `dashboard` | App Bar + 统计卡片 2×2 + 图表 + 活动列表 |
 | `profile` | 头像 + 姓名 + 简介 + 统计 + 操作 + 内容列表 |
@@ -305,7 +308,7 @@ moonviz/
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
 │   ├── component.mbt  组件系统（65 组件×117 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（57 工具 + list-ops 字典）
+│   ├── agent_api.mbt  Agent 工具 API（58 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
 │   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
 │   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）
@@ -320,7 +323,7 @@ moonviz/
 │   ├── responsive.mbt 响应式断点（手机/平板/桌面自动适配）
 │   ├── collab.mbt     多Agent协作（操作变换OT/冲突检测/三方合并）
 │   ├── history.mbt    设计版本控制（时间旅行/分支/变更回放/undo-redo）
-│   ├── critique.mbt   AI设计批评（9项设计原则自动评审）
+│   ├── critique.mbt   AI设计批评（10项设计原则自动评审）
 │   ├── annotate.mbt   设计标注（自动生成Spec文档/CSS变量/间距颜色字体标注）
 │   ├── animation.mbt  属性动画（关键帧/缓动函数/时间线编排/CSS导出）
 │   ├── extract.mbt    设计系统反向提取（从现有设计推推断牌+组件模式）
@@ -333,8 +336,8 @@ moonviz/
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── desktop/           自渲染服务（客户端引导：引擎无 UI，渲染面由客户端 webview 承载；无 webview 走系统层兜底返回结果）
-├── mcp/               MCP Server（stdio JSON-RPC，57 工具，工具面同 CLI）
-├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 30 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
+├── mcp/               MCP Server（stdio JSON-RPC，58 工具，工具面同 CLI）
+├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；各 77 导出（gc/classic 清单逐字相等）：31 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ 22 个 session_*_in 槽位变体 + 24 个无状态 API 与槽位辅助（classic 实导 78，含 memory）
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）

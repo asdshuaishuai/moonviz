@@ -294,6 +294,8 @@ test "visual：容器色角色全预设逐档达可读性标准" {
     Theme::harmony_dark(),
     Theme::dark(),
     Theme::light(),
+    Theme::nord(),
+    Theme::sunset(),
   ]
   for th in presets.iter() {
     let t = th.tokens
@@ -309,6 +311,39 @@ test "visual：容器色角色全预设逐档达可读性标准" {
     // info 语义档是实底（badge 底），on_primary 白字/深字 ≥4.5
     assert_true(cr("on_primary", "info") >= 4.5)
   }
+}
+
+///|
+/// 反相层（宽屏/PC 模板侧栏 chrome）：暗色预设显式亮侧栏——inverse_text/
+/// inverse_muted 压 inverse_surface ≥4.5，inverse_surface 亮度 >0.5
+/// （亮面），与暗画布拉开层级边界；浅色预设继承 default 深反相层
+/// （亮主题深侧栏意图）。
+test "visual：暗色预设反相层亮侧栏且文字可读" {
+  let dark_presets = [
+    Theme::dark(),
+    Theme::nord(),
+    Theme::apple_dark(),
+    Theme::harmony_dark(),
+  ]
+  for th in dark_presets.iter() {
+    let t = th.tokens
+    let inv = t.resolve_color("inverse_surface")
+    let lum = norm_luminance(inv)
+    assert_true(lum > 0.5, msg="\{th.name} inverse_surface 应为亮侧栏: \{inv}")
+    let cr = fn(fg : String) -> Double {
+      norm_contrast_ratio(
+        norm_luminance(t.resolve_color(fg)),
+        norm_luminance(inv),
+      )
+    }
+    assert_true(cr("inverse_text") >= 4.5, msg="\{th.name} inverse_text")
+    assert_true(cr("inverse_muted") >= 4.5, msg="\{th.name} inverse_muted")
+  }
+  let light = Theme::light()
+  assert_true(
+    norm_luminance(light.tokens.resolve_color("inverse_surface")) < 0.5,
+    msg="浅色预设继承 default 深反相层（亮主题深侧栏意图）",
+  )
 }
 
 ///|

@@ -213,9 +213,11 @@ fn render_node(
                 let baseline = r.y + (r.height + n.style.font_size * 0.7) / 2.0
                 let pad = 12.0
                 let (tx, anchor) = match n.style.text_align {
-                  "left" => (r.x + pad, " start")
-                  "right" => (r.x + r.width - pad, " end")
-                  _ => (r.x + r.width / 2.0, " middle")
+                  // text-anchor 值不带前导空格：浏览器容忍渲染，严格
+                  // XML/SVG 消费者按属性值校验会拒收（"start" 不是 " start"）
+                  "left" => (r.x + pad, "start")
+                  "right" => (r.x + r.width - pad, "end")
+                  _ => (r.x + r.width / 2.0, "middle")
                 }
                 sb.write_string(
                   "<text xml:space=\"preserve\" x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",

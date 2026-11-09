@@ -475,6 +475,26 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           }
       }
     }
+    "spec_extract" => {
+      // 提取不生成：宿主可在 generate_from_doc 前验证/预演文档
+      //（与 CLI spec-extract 命令同一输出形状）
+      let doc = extract_arg_string(request_line, "doc")
+      if doc == "" {
+        return err_json("missing doc (design document markdown)")
+      }
+      let ex = @core.design_doc_extract(doc)
+      let parts_e : Array[String] = []
+      for x in ex.extracted.iter() {
+        parts_e.push("\"" + @core.json_escape(x) + "\"")
+      }
+      let parts_g : Array[String] = []
+      for g in ex.gaps.iter() {
+        parts_g.push("\"" + @core.json_escape(g) + "\"")
+      }
+      "{\"ok\":true,\"spec\":" + ex.spec_json +
+      ",\"extracted\":[" + parts_e.join(",") +
+      "],\"gaps\":[" + parts_g.join(",") + "]}"
+    }
     "design_compliance" => {
       if artboard == "" {
         return err_json("missing artboard")

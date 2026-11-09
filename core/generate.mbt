@@ -170,6 +170,16 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
         "cart", "place order", "payment", "支付",
       ],
     ),
+    // login_v2 必须排在 login 之前：「登录页 v2」同时命中两族各 1 分，
+    // 平局由候选顺序裁决——更具体的意图排前面（与 list_detail 同款纪律）
+    (
+      "login_v2",
+      "登录页 v2",
+      [
+        "login v2", "login_v2", "登录页v2", "登录页 v2", "v2登录", "v2 登录",
+        "登录 v2", "登陆v2", "登陆 v2",
+      ],
+    ),
     (
       "login",
       "登录页",
@@ -348,7 +358,7 @@ pub fn Project::generate(
   }
   let alts_j = alts.join(",")
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"mock_missing\":[\{mg_j}],\"spec_violations\":[\{sv_j}],\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"artboard\":\"\{ab}\",\"template\":\"\{intent.template_id}\",\"width\":\{actual_w},\"height\":\{actual_h},\"replaced\":\{replaced},\"page_hint\":\"\{json_escape(intent.page_hint)}\",\"theme_applied\":\"\{theme_applied}\",\"alternatives\":[\{alts_j}],\"autofix\":\{autofix_json},\"missing\":\{missing_json},\"score\":\{score_json},\"mock_missing\":\{mg_j},\"spec_violations\":\{sv_j},\"summary\":\"\{json_escape(summary)}\",\"next\":\"autofill \{ab} 一键补缺 → critique 审阅 → ops 精修\"}",
   )
 }
 
@@ -762,7 +772,8 @@ pub fn Project::generate_multi(
   for v in multi_violations.iter() {
     mv_items.push("\"" + json_escape(v) + "\"")
   }
-  let mv_j = mv_items.join(",")
+  // 自带方括号（此前信封外层包 [ ]，移除后空值会退化成非法 JSON）
+  let mv_j = "[" + mv_items.join(",") + "]"
   let flows_json : Array[String] = []
   let mut i = 0
   while i + 1 < ids.length() {
@@ -827,6 +838,6 @@ pub fn Project::generate_multi(
     skipped_j.push("\"" + json_escape(s) + "\"")
   }
   Ok(
-    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"mock_missing\":[\{mmg_j}],\"spec_violations\":[\{mv_j}],\"next\":\"逐画板 autofill/critique → ops 精修\"}",
+    "{\"ok\":true,\"op\":\"generate\",\"mode\":\"multi\",\"count\":\{ids.length()},\"summary\":\"\{json_escape(ms)}\",\"theme_applied\":\"\{theme_applied}\",\"skipped\":[\{skipped_j.join(",")}],\"artboards\":[\{arts_j}],\"flows\":[\{flows_j}],\"mock_missing\":\{mmg_j},\"spec_violations\":\{mv_j},\"next\":\"逐画板 autofill/critique → ops 精修\"}",
   )
 }
