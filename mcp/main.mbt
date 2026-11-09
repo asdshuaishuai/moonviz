@@ -573,9 +573,13 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
     }
     "export_html" => {
+      // preview 必须过 json_escape：H5 导出的 DOCTYPE/头部位含真实换行，
+      // 裸插会让信封 JSON 字符串带控制字符——宿主解析 content.text 即炸
+      //（H5 契约：MCP 通道导出信封必须是合法 JSON，CLI 通道同败面）
       let html = p.export_html()
       let len = html.length().to_string()
-      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{html.substring(start=0, end=120)}...\"}"
+      let preview = @core.json_escape(html.substring(start=0, end=120))
+      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{preview}...\"}"
     }
     "export_svg" => {
       if artboard == "" {
@@ -583,8 +587,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       match p.export_svg(artboard~) {
         Ok(svg) => {
+          // 同 export_html：SVG 多行文本裸插 = 非法 JSON 信封
           let len = svg.length().to_string()
-          "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{svg.substring(start=0, end=100)}...\"}"
+          let preview = @core.json_escape(svg.substring(start=0, end=100))
+          "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{preview}...\"}"
         }
         Err(e) => err_json(e)
       }
