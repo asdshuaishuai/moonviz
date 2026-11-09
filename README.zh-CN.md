@@ -117,7 +117,7 @@
 │  Agent (任意 LLM)                                            │
 │  发现组件 → 创建画板 → 放置元素 → lint → 修复 → 导出         │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (55 tools, JSON in/out)
+               │ Agent Tools API (57 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -179,7 +179,7 @@
 - **genUI（主通道）**——`generate` 一句话意图 → 完整画板 + 报告
   （autofix/missing/score）；`autofill` 把报告缺失物化为真实节点；
   `batch_apply` 确定精修一次提交。
-- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（55 工具 / 27 op）
+- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（57 工具 / 27 op）
   原样保留：自由形态画板、模板之外的布局、外科手术式修改、探查。阶梯按
   成本排通道、不设权限门槛——配方表达不了你的意图时，逐层下探用工具
   就是正确行为。
@@ -305,7 +305,7 @@ moonviz/
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
 │   ├── component.mbt  组件系统（65 组件×117 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（55 工具 + list-ops 字典）
+│   ├── agent_api.mbt  Agent 工具 API（57 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
 │   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
 │   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）
@@ -333,7 +333,7 @@ moonviz/
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── desktop/           自渲染服务（客户端引导：引擎无 UI，渲染面由客户端 webview 承载；无 webview 走系统层兜底返回结果）
-├── mcp/               MCP Server（stdio JSON-RPC，55 工具，工具面同 CLI）
+├── mcp/               MCP Server（stdio JSON-RPC，57 工具，工具面同 CLI）
 ├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 30 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）

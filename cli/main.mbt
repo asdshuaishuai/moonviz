@@ -675,6 +675,63 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             }
         }
       }
+    "spec-extract" =>
+      // 设计文档 → 设计规范提取（0.2 规范流程入口）：doc=<b64(markdown)>
+      if parts.length() < 2 || !parts[1].has_prefix("doc=") || parts[1].length() <= 4 {
+        cli_err("usage: spec-extract doc=<base64(设计文档 markdown)>")
+      } else {
+        match decode_mbt_b64(parts[1].substring(start=4)) {
+          Err(e) => cli_err(e)
+          Ok(md) => {
+            let ex = @core.design_doc_extract(md)
+            let parts_e : Array[String] = []
+            for x in ex.extracted.iter() {
+              parts_e.push("\"" + @core.json_escape(x) + "\"")
+            }
+            let parts_g : Array[String] = []
+            for g in ex.gaps.iter() {
+              parts_g.push("\"" + @core.json_escape(g) + "\"")
+            }
+            "{\"ok\":true,\"spec\":" + ex.spec_json +
+            ",\"extracted\":[" + parts_e.join(",") +
+            "],\"gaps\":[" + parts_g.join(",") + "]}"
+          }
+        }
+      }
+    "generate-doc" =>
+      // 强制规范流程：只从设计文档生成（缺关键项拒绝）
+      if parts.length() < 3 {
+        cli_err("usage: generate-doc <意图一句话> doc=<base64(设计文档)> [as <name>]")
+      } else {
+        let intent = parts[1]
+        let mut doc_md = ""
+        let mut artboard_name = ""
+        let mut i = 2
+        while i < parts.length() {
+          if parts[i] == "as" && i + 2 == parts.length() {
+            artboard_name = parts[i + 1]
+            i = i + 2
+          } else if parts[i].has_prefix("doc=") && parts[i].length() > 4 {
+            match decode_mbt_b64(parts[i].substring(start=4)) {
+              Ok(text) => doc_md = text
+              Err(e) => return cli_err(e)
+            }
+            i = i + 1
+          } else {
+            i = i + 1
+          }
+        }
+        match p.generate_from_doc(intent_text=intent, doc=doc_md, name=artboard_name) {
+          Ok(json) => json
+          Err(e) => cli_err(e)
+        }
+      }
+    "comply" =>
+      if parts.length() < 2 {
+        cli_err("usage: comply <artboard>  （设计规范遵从校验：颜色/字号/圆角/动效）")
+      } else {
+        p.design_spec_compliance(artboard=parts[1])
+      }
     "ops-batch-b64" =>
       // 执行策略第二级：确定的多条精修一次提交（base64(换行分隔 ops)）。
       // 顺序执行、遇错即停（index 随错误返回，供断点续批）。

@@ -38,7 +38,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ### 同步产物时的检查单（每项都过，缺一项即未完成）
 
 1. **计数类**：组件/变体/工具/测试数改动时，同步清扫 `README.md`、`README.zh-CN.md`、
-   `site/docs.html`(`55 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
+   `site/docs.html`(`57 工具`/`65×118` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
    以及测试断言（如 `core/agent_test.mbt` 的 catalog 数量测试）。
 2. **playground**：`COMP_ZH` / `COMP_ICON` 随组件目录补全（JS 语法自校验：两表 key 数
    必须与 `builtin_components()` 一致）；界面方法表与 wasm 导出面对齐。
@@ -170,7 +170,13 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
    容器键缺席时从同名语义色对 background 推导 tint（`hex_mix(bg, base, 0.22)`，
    配色决策来自 spec 而非引擎预设）；generate 在模板实例化**前**落 spec 令牌
    （消除 theme→template 顺序依赖）；调色板外字面色随信封 `spec_violations`
-   上报（`design_spec_color_violations`）。容器色角色：info/success_container/
+   上报（`design_spec_color_violations`）。**强制规范流程（0.2）**：
+   `generate_from_doc`（CLI `generate-doc`）从设计文档确定性提取 spec
+   （配色/字号/圆角/间距/动效/触控章节），缺关键项返回
+   `design_doc_spec_gaps` 拒绝生成；信封带 `spec_source:"design_doc"`。
+   `design_compliance`（CLI `comply`）四项机械校验 UI 与交互的遵从性
+   （color/type/radius/motion）——交互节拍必须等于 spec.motion 令牌。
+   容器色角色：info/success_container/
    warning_container/info_container 已进全部预设（text_primary 压每只 ≥4.5）。
 
 交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中

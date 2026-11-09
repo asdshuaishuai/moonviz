@@ -48,7 +48,7 @@
   SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
   platform-package version alignment).
 - **Docs & site full sync** — every count re-anchored to live engine output
-  (55 tools / 27 ops / 75 wasm exports / 10-dimension critique / 52 core
+  (57 tools / 27 ops / 77 wasm exports / 10-dimension critique / 52 core
   modules), version examples moved to `<ver>` placeholders.
 - Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
 
@@ -142,7 +142,7 @@
 │  discover components → create artboard → place → lint →      │
 │  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (55 tools, JSON in/out)
+               │ Agent Tools API (57 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -170,7 +170,7 @@
 
 ## Selected Agent Tools (subset)
 
-Every name below is taken verbatim from the live dictionary (`list-tools` on the CLI / `tools/list` on MCP, 55 entries) — nothing here is a placeholder.
+Every name below is taken verbatim from the live dictionary (`list-tools` on the CLI / `tools/list` on MCP, 57 entries) — nothing here is a placeholder.
 
 | Tool | Semantics |
 | :--- | :--- |
@@ -209,7 +209,7 @@ Two modes, one engine — both fully retained:
   materializes the report's missing elements; `batch_apply` packs a
   refinement pass into one call.
 - **Tool mode (fallback, fully retained)** — the complete per-node
-  vocabulary (all 55 tools / 27 ops) stays unchanged: freeform artboards,
+  vocabulary (all 57 tools / 27 ops) stays unchanged: freeform artboards,
   layouts no template matches, surgical edits, probes. The ladder ranks
   channels by cost, not by permission — falling through to tools is correct
   behavior whenever no recipe expresses your intent.
@@ -335,7 +335,7 @@ moonviz/
 │   ├── tokens.mbt     Design tokens (Material 3 style)
 │   ├── component.mbt  Component system (65 components × 118 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
-│   ├── agent_api.mbt  Agent tool API (55 tools + list-ops op dictionary)
+│   ├── agent_api.mbt  Agent tool API (57 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
 │   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
 │   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)
@@ -364,7 +364,7 @@ moonviz/
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
 ├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
-├── mcp/               MCP Server (stdio JSON-RPC; 55 tools mirroring the CLI)
+├── mcp/               MCP Server (stdio JSON-RPC; 57 tools mirroring the CLI)
 ├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 28 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
