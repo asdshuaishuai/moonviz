@@ -143,6 +143,15 @@ pub fn Theme::dark() -> Theme {
   t.colors.set("inverse_surface_variant", "#E4E6E9")
   t.colors.set("inverse_text", "#1A1C1E")
   t.colors.set("inverse_muted", "#4A5058")
+  t.colors.set("info", "#9FA8DA")
+  t.colors.set("success_container", "#1C4526")
+  t.colors.set("warning_container", "#4A2B00")
+  t.colors.set("info_container", "#0E3550")
+  // 暗主题反相层取亮面板（侧栏/浮层与画布分离；文字换深字）
+  t.colors.set("inverse_surface", "#ECEFF1")
+  t.colors.set("inverse_surface_variant", "#DADDE0")
+  t.colors.set("inverse_text", "#1A1C1E")
+  t.colors.set("inverse_muted", "#5A5E63")
   { name: "dark", display_name: "深色", tokens: t, is_dark: true, }
 }
 
@@ -166,6 +175,10 @@ pub fn Theme::high_contrast() -> Theme {
   t.colors.set("success", "#006600")
   t.colors.set("warning", "#A85D00")
   t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("info", "#0033CC")
+  t.colors.set("success_container", "#D6E7D6")
+  t.colors.set("warning_container", "#F3E3D8")
+  t.colors.set("info_container", "#D6E1EF")
   {
     name: "high_contrast",
     display_name: "高对比度",
@@ -201,6 +214,11 @@ pub fn Theme::sepia() -> Theme {
   t.colors.set("success", "#2E5D34")
   t.colors.set("warning", "#8A5A00")
   t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("info", "#01579B")
+  t.colors.set("warning", "#B25000")
+  t.colors.set("success_container", "#D1DECA")
+  t.colors.set("warning_container", "#F7DAC0")
+  t.colors.set("info_container", "#C8E0EA")
   { name: "sepia", display_name: "复古棕", tokens: t, is_dark: false, }
 }
 
@@ -236,6 +254,15 @@ pub fn Theme::nord() -> Theme {
   t.colors.set("warning_container", "#585551")
   t.colors.set("info_container", "#404C5C")
   // 反相层显式亮侧栏（snow storm 亮面），暗画布上拉开层级
+  t.colors.set("inverse_surface", "#ECEFF4")
+  t.colors.set("inverse_surface_variant", "#D8DEE9")
+  t.colors.set("inverse_text", "#2E3440")
+  t.colors.set("inverse_muted", "#4C566A")
+  t.colors.set("info", "#81A1C1")
+  t.colors.set("success_container", "#515D57")
+  t.colors.set("warning_container", "#676156")
+  t.colors.set("info_container", "#475567")
+  t.colors.set("error_container", "#5A424D")
   t.colors.set("inverse_surface", "#ECEFF4")
   t.colors.set("inverse_surface_variant", "#D8DEE9")
   t.colors.set("inverse_text", "#2E3440")
@@ -279,6 +306,11 @@ pub fn Theme::sunset() -> Theme {
   t.colors.set("success_container", "#D1D9BA")
   t.colors.set("warning_container", "#EED1AF")
   t.colors.set("info_container", "#DBD5CE")
+  t.colors.set("info", "#1565C0")
+  t.colors.set("warning", "#A64B00")
+  t.colors.set("success_container", "#D2DFBB")
+  t.colors.set("warning_container", "#FEDAAA")
+  t.colors.set("info_container", "#C9D9E1")
   { name: "sunset", display_name: "落日暖", tokens: t, is_dark: false, }
 }
 
@@ -363,6 +395,10 @@ pub fn Theme::apple_dark() -> Theme {
   t.colors.set("inverse_surface_variant", "#E8E8ED")
   t.colors.set("inverse_text", "#1C1C1E")
   t.colors.set("inverse_muted", "#6E6E73")
+  t.colors.set("inverse_surface", "#F5F5F7")
+  t.colors.set("inverse_surface_variant", "#E5E5EA")
+  t.colors.set("inverse_text", "#1D1D1F")
+  t.colors.set("inverse_muted", "#6E6E73")
   {
     name: "apple_dark",
     display_name: "Apple HIG 暗色",
@@ -434,6 +470,10 @@ pub fn Theme::harmony_dark() -> Theme {
   t.colors.set("inverse_surface_variant", "#D5D8DC")
   t.colors.set("inverse_text", "#1C1E21")
   t.colors.set("inverse_muted", "#565D66")
+  t.colors.set("inverse_surface", "#F1F3F5")
+  t.colors.set("inverse_surface_variant", "#E5E8EB")
+  t.colors.set("inverse_text", "#182431")
+  t.colors.set("inverse_muted", "#5A6470")
   {
     name: "harmony_dark",
     display_name: "HarmonyOS 暗色",

@@ -331,7 +331,8 @@ pub fn Project::export_html(
   // 节点 g 全嵌其内）——选择器下钻一层 >g>g 对准顶层节点；wrapper 自带一个
   // 非 g 的背景 rect 占位，故按 nth-of-type 对 g 计数，不受普通子元素挤位
   sb.write_string(
-    "  .board.active>svg>g>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n",
+    "  .board.active>svg>g>g{animation:mv-rise var(--mv-dur) var(--mv-out) backwards}\n" +
+    "  .board.active>svg>g>g:nth-of-type(n+10){animation:none}\n",
   )
   sb.write_string(motion_stagger_css(".board.active>svg>g>g", indent="  "))
   sb.write_string(
