@@ -162,7 +162,7 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
    **美学第一要素**：Apple HIG / HarmonyOS 是一等主题预设（apple/apple_dark/
    harmony/harmony_dark），色值是官方色板的 WCAG 校准翻译——新增或调整预设必须
    过 `visual_lang_wbtest` 的逐档对比度断言（主按钮字 + 三级文字 × 三层底 ≥4.5），
-   不得照抄官方原值（#007AFF 白字仅 4.02）。三通道等价：意图美学词 / spec `style` 键 /
+   不得照抄官方原值（#007AFF 白字仅 4.02）。三通道等价：意图美学词 / spec `style` 键（`apple|harmony|vivid|editorial|playful`）/
    `theme` 命令；导出 HTML 的 chrome 全部由主题令牌派生（画布 = background，
    卡面 = surface），不得硬编码颜色。
    **spec 是配色的第一权威（需求 → Agent 提取 spec → 引擎跟随）**：palette

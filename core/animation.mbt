@@ -43,7 +43,21 @@ pub fn Easing::css_value(self : Easing) -> String {
     EaseIn => "cubic-bezier(0.4, 0, 1, 1)"
     EaseOut => "cubic-bezier(0, 0, 0.2, 1)"
     EaseInOut => "cubic-bezier(0.4, 0, 0.2, 1)"
-    Spring(k) => "cubic-bezier(0.34, 1.56, 0.64, 1)" // 近似 spring
+    Spring(k) => {
+      // 过冲随刚度 k 调制：k=1 时保持历史默认 1.56（导出/测试兼容），
+      // k 越大过冲越强、k 越小越接近线性——Spring(0.5) 与 Spring(3.0)
+      // 此前导出完全一样（k 被忽略），快照/导出两套手感无法区分
+      let kk = if k <= 0.0 { 1.0 } else if k > 2.5 { 2.5 } else { k }
+      let cents = ((1.0 + 0.56 * kk) * 100.0 + 0.5).to_int()
+      let head = (cents / 100).to_string()
+      let tail = cents % 100
+      let tail_s = if tail < 10 {
+        "0" + tail.to_string()
+      } else {
+        tail.to_string()
+      }
+      "cubic-bezier(0.34, " + head + "." + tail_s + ", 0.64, 1)"
+    }
     Bounce => "cubic-bezier(0.68, -0.55, 0.265, 1.55)"
     None => "steps(1, end)"
   }

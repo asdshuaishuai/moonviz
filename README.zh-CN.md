@@ -634,7 +634,7 @@ p.preview_themes("btn")            // 预览各主题下按钮的颜色
 p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 ```
 
-**10 种预定义主题**（含 Apple HIG / HarmonyOS 两族一等美学预设，各带暗色）：
+**13 种预定义主题**（含 Apple HIG / HarmonyOS 两族一等美学预设各带暗色，以及 vivid/editorial/playful 三套风格画像）：
 
 | 主题 | 风格 | primary | surface |
 |:---|:---|:---|:---|
@@ -648,10 +648,13 @@ p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 | apple_dark | Apple HIG 暗色 | #409CFF | #2C2C2E |
 | harmony | HarmonyOS（#F1F3F5 分层画布） | #0A59F7 | #FFFFFF |
 | harmony_dark | HarmonyOS 暗色 | #5291FF | #26292D |
+| vivid | Vivid 多彩（tinted 画布） | #6D28D9 | #FFFFFF |
+| editorial | Editorial 杂志（纸感暖底） | #111827 | #FFFFFF |
+| playful | Playful 童趣（青橙互补） | #0F766E | #FFFFFF |
 
 美学预设的色值是官方色板的**无障碍翻译**而非照抄：每档按 WCAG 校准（主按钮
 文字/三级文字 × 三层底全部 ≥4.5:1，可读性硬标准对全部主题生效）。别名归一：
-`ios`/`苹果`/`hig` → apple，`harmonyos`/`鸿蒙`/`华为` → harmony，同名带暗色词
+`ios`/`苹果`/`hig` → apple，`harmonyos`/`鸿蒙`/`华为` → harmony；`style: vivid|editorial|playful` 直接点名风格画像（三通道同权），同名带暗色词
 （`苹果暗色`/`harmony dark`）直达暗色预设。生成时三条通道等价：意图句里的美学词
 （`apple 风格登录页`、`暗色 鸿蒙 设置页`）、design spec 的 `"style":"apple"` 键
 （palette 随后覆盖同名角色）、或 `theme apple`。

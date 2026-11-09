@@ -354,7 +354,7 @@ moonviz/
 │   ├── annotate.mbt   Design annotation (auto-generated spec docs/CSS variables/spacing-color-type annotations)
 │   ├── animation.mbt  Property animation (keyframes/easing/timeline choreography/CSS export)
 │   ├── extract.mbt    Design-system reverse extraction (infer tokens + component patterns from existing designs)
-│   ├── theme.mbt      Theme system (10 predefined themes incl. Apple HIG / HarmonyOS presets/auto dark/token-level switching/registry)
+│   ├── theme.mbt      Theme system (13 predefined themes incl. Apple HIG / HarmonyOS / style profiles, auto dark/token switching/registry)
 │   ├── slots.mbt      Component slot system (6 composable components/nested content distribution/recursive composition)
 │   ├── benchmark.mbt  Performance benchmark engine (node stats/complexity analysis/anti-pattern detection/optimization advice)
 │   ├── diff.mbt       Semantic diff (added/moved/resized/restyled)
@@ -669,7 +669,7 @@ p.preview_themes("btn")            // preview the button under each theme
 p.enable_auto_dark()          // derive a dark variant from the current theme
 ```
 
-**10 predefined themes** (including first-class Apple HIG / HarmonyOS aesthetic presets, each with a dark variant):
+**13 predefined themes** (first-class Apple HIG / HarmonyOS aesthetic presets with dark variants, plus vivid/editorial/playful style profiles):
 
 | Theme | Style | primary | surface |
 |:---|:---|:---|:---|
@@ -683,6 +683,9 @@ p.enable_auto_dark()          // derive a dark variant from the current theme
 | apple_dark | Apple HIG dark | #409CFF | #2C2C2E |
 | harmony | HarmonyOS (#F1F3F5 layered canvas) | #0A59F7 | #FFFFFF |
 | harmony_dark | HarmonyOS dark | #5291FF | #26292D |
+| vivid | Vivid (tinted canvas) | #6D28D9 | #FFFFFF |
+| editorial | Editorial (paper warm) | #111827 | #FFFFFF |
+| playful | Playful (teal + orange) | #0F766E | #FFFFFF |
 
 The aesthetic presets are **accessible translations** of the official palettes, not
 copies: every tier is WCAG-calibrated (button text and all three text tiers on all

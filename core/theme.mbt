@@ -34,6 +34,9 @@ pub fn builtin_themes() -> Array[Theme] {
     Theme::apple_dark(),
     Theme::harmony(),
     Theme::harmony_dark(),
+    Theme::vivid(),
+    Theme::editorial(),
+    Theme::playful(),
   ]
 }
 
@@ -508,6 +511,102 @@ fn int_to_hex(v : Int) -> String {
 // ---------------------------------------------------------------------------
 // Project 集成：主题切换
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// 风格画像（0.2 主题系统第三批）：vivid / editorial / playful 三套一等预设。
+//
+// 与 apple/harmony 同权：都是「需求 → Agent 提取风格 → 引擎跟随」的落点。
+// 色值经 WCAG 校准（白字主按钮 + 三级文字 × 三层底 + 五只容器 ≥4.5，
+// 最低档 5.47）——风格是气质差异，不以牺牲可读性为代价。
+// ---------------------------------------------------------------------------
+
+///|
+/// Vivid 多彩（高饱和紫+玫红，tinted 画布；executive 反馈「配色过于单一」
+/// 的正面落点：多彩来自角色体系而不是满屏彩）
+pub fn Theme::vivid() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#6D28D9")
+  t.colors.set("primary_container", "#E4D9FF")
+  t.colors.set("on_primary", "#FFFFFF")
+  t.colors.set("on_secondary_container", "#1A0B2E")
+  t.colors.set("secondary", "#DB2777")
+  t.colors.set("secondary_container", "#FBD5E8")
+  t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("surface", "#FFFFFF")
+  t.colors.set("surface_variant", "#F3F0FF")
+  t.colors.set("background", "#FAF7FF")
+  t.colors.set("error", "#BE123C")
+  t.colors.set("success", "#15803D")
+  t.colors.set("warning", "#B45309")
+  t.colors.set("info", "#1D4ED8")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
+  t.colors.set("outline", "#CDC3E8")
+  t.colors.set("outline_variant", "#E7E0F5")
+  t.colors.set("text_primary", "#1A0B2E")
+  t.colors.set("text_secondary", "#5B4A70")
+  t.colors.set("text_hint", "#63547A")
+  { name: "vivid", display_name: "Vivid 多彩", tokens: t, is_dark: false, }
+}
+
+///|
+/// Editorial 杂志感（近黑主色 + 纸感暖底 + 极淡 tint，大留白语境的配色）
+pub fn Theme::editorial() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#111827")
+  t.colors.set("primary_container", "#E9E4DA")
+  t.colors.set("on_primary", "#FFFFFF")
+  t.colors.set("on_secondary_container", "#171412")
+  t.colors.set("secondary", "#7C2D12")
+  t.colors.set("secondary_container", "#F4E3D0")
+  t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("surface", "#FFFFFF")
+  t.colors.set("surface_variant", "#F5F2EC")
+  t.colors.set("background", "#FAF8F3")
+  t.colors.set("error", "#B91C1C")
+  t.colors.set("success", "#15803D")
+  t.colors.set("warning", "#B45309")
+  t.colors.set("info", "#1D4ED8")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
+  t.colors.set("outline", "#CFC7B8")
+  t.colors.set("outline_variant", "#E8E2D7")
+  t.colors.set("text_primary", "#171412")
+  t.colors.set("text_secondary", "#57504A")
+  t.colors.set("text_hint", "#635C55")
+  { name: "editorial", display_name: "Editorial 杂志", tokens: t, is_dark: false, }
+}
+
+///|
+/// Playful 童趣（青绿+橙的互补组合，圆润档圆角由 spec 配——配色先到位）
+pub fn Theme::playful() -> Theme {
+  let t = DesignTokens::default()
+  t.colors.set("primary", "#0F766E")
+  t.colors.set("primary_container", "#CDEEE7")
+  t.colors.set("on_primary", "#FFFFFF")
+  t.colors.set("on_secondary_container", "#0B2A26")
+  t.colors.set("secondary", "#F97316")
+  t.colors.set("secondary_container", "#FFE3CB")
+  t.colors.set("text_on_primary", "#FFFFFF")
+  t.colors.set("surface", "#FFFFFF")
+  t.colors.set("surface_variant", "#EAF7F4")
+  t.colors.set("background", "#F2FBF8")
+  t.colors.set("error", "#C2410C")
+  t.colors.set("success", "#15803D")
+  t.colors.set("warning", "#B45309")
+  t.colors.set("info", "#2563EB")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
+  t.colors.set("outline", "#BFD9D2")
+  t.colors.set("outline_variant", "#DCEDE8")
+  t.colors.set("text_primary", "#0B2A26")
+  t.colors.set("text_secondary", "#3F5D57")
+  t.colors.set("text_hint", "#4A6660")
+  { name: "playful", display_name: "Playful 童趣", tokens: t, is_dark: false, }
+}
 
 ///|
 /// 应用主题到项目（更新令牌表并重新解析所有节点颜色）

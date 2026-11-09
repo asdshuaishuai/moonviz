@@ -3,7 +3,7 @@
 ///|
 test "主题：预定义主题清单" {
   let themes = builtin_themes()
-  assert_eq(themes.length(), 10)
+  assert_eq(themes.length(), 13)
   assert_eq(themes[0].name, "light")
   assert_eq(themes[1].name, "dark")
   assert_eq(themes[2].name, "high_contrast")
@@ -15,6 +15,10 @@ test "主题：预定义主题清单" {
   assert_eq(themes[7].name, "apple_dark")
   assert_eq(themes[8].name, "harmony")
   assert_eq(themes[9].name, "harmony_dark")
+  // 风格画像（0.2 主题系统第三批）
+  assert_eq(themes[10].name, "vivid")
+  assert_eq(themes[11].name, "editorial")
+  assert_eq(themes[12].name, "playful")
 }
 
 ///|

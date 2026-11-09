@@ -281,7 +281,11 @@ pub fn ds_style_theme(spec : String) -> String {
   match ds_string_value(spec, "style") {
     Some(v) => {
       let a = theme_alias(v)
-      if a == "apple" || a == "harmony" {
+      if a == "apple" ||
+        a == "harmony" ||
+        a == "vivid" ||
+        a == "editorial" ||
+        a == "playful" {
         a
       } else {
         ""

@@ -448,3 +448,42 @@ test "visual：全 17 模板 spec 遵从零违规" {
     None => assert_true(false)
   }
 }
+
+///|
+/// 风格画像（vivid/editorial/playful）与美学预设同权：逐档 WCAG 断言
+/// （白字主按钮、三级文字 × 三层底、五只容器），且 spec style 分发到
+/// 对应主题、暗色不强行折算（画像本身只有浅色一套）。
+test "visual：风格画像预设逐档达标且 style 分发" {
+  for th in [Theme::vivid(), Theme::editorial(), Theme::playful()].iter() {
+    let t = th.tokens
+    let cr = fn(fg : String, bg : String) -> Double {
+      norm_contrast_ratio(
+        norm_luminance(t.resolve_color(fg)),
+        norm_luminance(t.resolve_color(bg)),
+      )
+    }
+    assert_true(cr("on_primary", "primary") >= 4.5)
+    for fg in ["text_primary", "text_secondary", "text_hint"].iter() {
+      for bg in ["surface", "background", "surface_variant"].iter() {
+        assert_true(cr(fg, bg) >= 4.5)
+      }
+    }
+    for cont in [
+      "primary_container", "secondary_container", "success_container",
+      "warning_container", "info_container",
+    ].iter() {
+      assert_true(cr("text_primary", cont) >= 4.5)
+    }
+  }
+  // style 分发：vivid/editorial/playful 各自落到同名主题
+  let p = Project::new()
+  let spec = "{\"v\":1,\"style\":\"vivid\",\"palette\":{\"primary\":\"#312E81\"}}"
+  match p.generate(spec~, intent_text="登录页") {
+    Ok(_) => ()
+    Err(_) => assert_true(false)
+  }
+  assert_eq(p.active_theme, "vivid")
+  // style 不在场时仍保持当前主题（不静默换装）
+  assert_eq(ds_style_theme("{\"style\":\"calm\"}"), "")
+  assert_eq(ds_style_theme("{\"style\":\"editorial\"}"), "editorial")
+}
