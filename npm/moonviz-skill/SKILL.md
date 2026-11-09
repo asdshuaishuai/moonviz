@@ -18,7 +18,7 @@ owns page structure, component choice, spacing norms, and visual consistency.
   The default path for anything a page recipe can express.
 - **tool mode（兜底 / fallback, 以前的不抛弃）** — the full per-node
   vocabulary (`create` / `place` / `update` / `move` / `align` / `group` /
-  `flip` / `reorder` …, 55 tools / 27 ops) is retained unchanged and is the
+  `flip` / `reorder` …, 58 tools / 27 ops) is retained unchanged and is the
   legitimate channel for everything genUI does not cover: freeform
   artboards, layouts no template matches, surgical single-node edits, and
   exploratory probing.

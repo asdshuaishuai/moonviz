@@ -159,6 +159,32 @@ fn html_attr_escape(s : String) -> String {
 }
 
 ///|
+/// CSS 标识符转义（与导出 JS 侧 cssEsc 的 fallback 同语义）：非
+/// [A-Za-z0-9_-] 且 < U+00A0 的字符写成 `\` + 小写 hex + 尾空格。
+/// 转义只作用于「选择器字面」，DOM 类名/元素 id 原文不变，与 JS 侧
+/// classList.add('st-'+原文)/getElementById(原文) 天然一致。状态名与
+/// DOM id 是 Agent 可控文本，裸插 `<` 会截断 <style> 块（</style> 提前
+/// 闭合整页样式）并破坏选择器语法。
+fn css_ident_escape(s : String) -> String {
+  let sb = StringBuilder::new()
+  for c in s.iter() {
+    let code = c.to_int()
+    let safe = (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) ||
+      (code >= 48 && code <= 57) ||
+      code == 45 ||
+      code == 95 ||
+      code >= 160
+    if safe {
+      sb.write_char(c)
+    } else {
+      sb.write_string("\\" + int_to_hex(code) + " ")
+    }
+  }
+  sb.to_string()
+}
+
+///|
 /// html lang 白名单清洗（只留 ASCII 字母与 '-'，空则 zh）：lang 是可选
 /// 入参，必须防止属性注入。
 fn sanitize_lang(lang : String) -> String {
@@ -379,9 +405,11 @@ pub fn Project::export_html(
           match ab.doc.nodes.get(nid) {
             Some(n) =>
               if n.style.motion != "" {
+                // DOM id 是 Agent 可控文本，选择器面过 CSS 标识符转义
+                //（DOM id 原文由 render_svg 的 id 属性保持，两侧匹配）
                 sb.write_string(
                   node_motion_rule_css(
-                    dom_id_in(dom_ids.get(ab_id), nid),
+                    css_ident_escape(dom_id_in(dom_ids.get(ab_id), nid)),
                     n.style.motion,
                     indent="  ",
                   ),
@@ -420,12 +448,15 @@ pub fn Project::export_html(
           }
           if rules.length() > 0 {
             let decl = rules.join(";")
-            // 状态变体选择器跟随节点 DOM id（重复板后缀）
+            // 状态变体选择器跟随节点 DOM id（重复板后缀）；dom 与状态名
+            // 都过 CSS 标识符转义——类名字面（JS classList.add）保持原文，
+            // 转义只在选择器面，两侧匹配
             let dom = match self.find_node_artboard(node_id) {
               Some(aid) => dom_id_in(dom_ids.get(aid), node_id)
               None => node_id
             }
-            let sel = "g#n_" + dom + ".st-" + state_name
+            let sel =
+              "g#n_" + css_ident_escape(dom) + ".st-" + css_ident_escape(state_name)
             sb.write_string("  \{sel} rect,\{sel} text{\{decl}}\n")
           }
         }

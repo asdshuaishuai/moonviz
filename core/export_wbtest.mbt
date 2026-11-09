@@ -846,3 +846,51 @@ test "export_svg：text-anchor 值无前导空格" {
     Err(_) => assert_true(false)
   }
 }
+
+///|
+/// H5 契约（CSS 面）：状态名与 DOM id 是 Agent 可控文本——含 </style>
+/// 的状态名经选择器转义后不得提前闭合样式块；转义只作用于选择器字面
+/// （类名字面保持原文，与 JS classList.add 一致）；正常状态名选择器
+/// 不变形。
+test "export_html：CSS 状态名转义（</style> 不提前闭合样式块）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="cs")
+  let _ = p.place_component(
+    artboard="cs",
+    component_id="button",
+    instance_id="btn",
+    x=10.0,
+    y=10.0,
+  )
+  let _ = p.define_component_state(
+    artboard="cs",
+    node_id="btn",
+    state_name="a</style><b>z",
+    patch={ ..NodePatch::empty(), fill: Some("#FF0000"), },
+  )
+  let _ = p.define_component_state(
+    artboard="cs",
+    node_id="btn",
+    state_name="pressed",
+    patch={ ..NodePatch::empty(), fill: Some("#0F1114"), },
+  )
+  let html = p.export_html()
+  // </style> 恰 2 处（head 样式块 + 每个 SVG 内嵌的 font-family 样式块，
+  // 本用例 1 板 1 SVG）：样式块不被状态名提前闭合（注入前该值是 4）
+  let mut n_closer = 0
+  for _ in html.split("</style>").iter() {
+    n_closer = n_closer + 1
+  }
+  assert_eq(n_closer, 3, msg="样式块被状态名提前闭合（</style> 多于结构基线）")
+  // 选择器字面为 CSS 标识符转义形态（\3c = '<'、\2f = '/'，hex 小写 +
+  // 尾空格终止）；类名字面原文不变，与 JS classList.add 两侧匹配
+  assert_true(
+    html.contains(".st-a\\3c \\2f style\\3e \\3c b\\3e z"),
+    msg="状态名选择器应为转义形态",
+  )
+  // 正常状态名选择器不变形；类名字面（JS classList.add 原文）由
+  // MV_STATES 转义面守卫（见 MV_STATES 转义测试），此处锚定 CSS 面
+  assert_true(html.contains(".st-pressed"))
+  // 注入内容不再以可闭合样式块的形态出现在 style 区
+  assert_false(html.contains(".st-a</style>"))
+}

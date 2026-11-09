@@ -36,7 +36,7 @@
   JSON-RPC id/通知语义、缺参校验）、norms v2 触控规则与 v1 档位调和、SDK 修复
   （Project 六方法、sessionGenerate、DDP decrypt mode、npm 平台包版本对齐）。
 - **文档与官网全量同步**——全部计数锚定引擎实测（58 工具 / 27 op / 77 wasm
-  导出 / 九维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
+  导出 / 10 维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
 - 测试矩阵增至 298（默认目标）/ 314（`--target native`），全绿。
 
 ## 0.1.9-fix 新特性
@@ -306,7 +306,7 @@ moonviz/
 │   ├── policy.mbt     双路线策略（人类软/Agent 硬）
 │   ├── patch.mbt      事务式补丁
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
-│   ├── component.mbt  组件系统（65 组件×117 变体）
+│   ├── component.mbt  组件系统（65 组件×118 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
 │   ├── agent_api.mbt  Agent 工具 API（58 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
