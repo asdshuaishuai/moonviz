@@ -82,7 +82,7 @@ and breathing room, and a complete animation + interaction system.**
   SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
   platform-package version alignment).
 - **Docs & site full sync** — every count re-anchored to live engine output
-  (57 tools / 27 ops / 77 wasm exports / 10-dimension critique / 52 core
+  (58 tools / 27 ops / 77 wasm exports / 10-dimension critique / 52 core
   modules), version examples moved to `<ver>` placeholders.
 - Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
 
@@ -176,7 +176,7 @@ and breathing room, and a complete animation + interaction system.**
 │  discover components → create artboard → place → lint →      │
 │  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (57 tools, JSON in/out)
+               │ Agent Tools API (58 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -243,16 +243,19 @@ Two modes, one engine — both fully retained:
   materializes the report's missing elements; `batch_apply` packs a
   refinement pass into one call.
 - **Tool mode (fallback, fully retained)** — the complete per-node
-  vocabulary (all 57 tools / 27 ops) stays unchanged: freeform artboards,
+  vocabulary (all 58 tools / 27 ops) stays unchanged: freeform artboards,
   layouts no template matches, surgical edits, probes. The ladder ranks
   channels by cost, not by permission — falling through to tools is correct
   behavior whenever no recipe expresses your intent.
 
-## Built-in Page Templates (14 complete pages)
+## Built-in Page Templates (17 complete pages)
 
 | Template | Contents |
 |:---|:---|
 | `login` | Logo + title + email + password + sign-in button + sign-up link |
+| `list` | App bar + search bar + category chips + item list (row dividers) + bottom nav |
+| `detail` | Back bar + hero image + title + specs + description + primary CTA |
+| `checkout` | Back bar + order summary + form fields + fee breakdown (row dividers) + submit |
 | `signup` | Title + name + email + password × 2 + sign-up button |
 | `dashboard` | App bar + stat cards 2×2 + chart + activity list |
 | `profile` | Avatar + name + bio + stats + actions + content list |
@@ -369,7 +372,7 @@ moonviz/
 │   ├── tokens.mbt     Design tokens (Material 3 style)
 │   ├── component.mbt  Component system (65 components × 118 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
-│   ├── agent_api.mbt  Agent tool API (57 tools + list-ops op dictionary)
+│   ├── agent_api.mbt  Agent tool API (58 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
 │   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
 │   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)
@@ -398,8 +401,8 @@ moonviz/
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
 ├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
-├── mcp/               MCP Server (stdio JSON-RPC; 57 tools mirroring the CLI)
-├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 28 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
+├── mcp/               MCP Server (stdio JSON-RPC; 58 tools mirroring the CLI)
+├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 77 exports each (gc/classic lists identical): 31 stateful session_* APIs (i32 handles, incl. session_history undo/redo) + 22 session_*_in slot variants + 24 stateless APIs & slot helpers (classic exports 78 incl. memory)
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)

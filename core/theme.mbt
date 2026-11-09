@@ -137,6 +137,12 @@ pub fn Theme::dark() -> Theme {
   t.colors.set("success_container", "#1C4526")
   t.colors.set("warning_container", "#4A2B00")
   t.colors.set("info_container", "#0E3550")
+  // 反相层（宽屏侧栏 chrome）显式亮色：暗画布上的侧栏必须亮，否则
+  // fill=inverse_surface 与暗底融成一片（层级边界消失）
+  t.colors.set("inverse_surface", "#F2F3F5")
+  t.colors.set("inverse_surface_variant", "#E4E6E9")
+  t.colors.set("inverse_text", "#1A1C1E")
+  t.colors.set("inverse_muted", "#4A5058")
   { name: "dark", display_name: "深色", tokens: t, is_dark: true, }
 }
 
@@ -222,6 +228,18 @@ pub fn Theme::nord() -> Theme {
   // text_hint 加亮一档：#7B88A1 压 surface_variant 仅 2.42，#B4BFD4 达 4.66
   t.colors.set("text_hint", "#B4BFD4")
   t.colors.set("error_container", "#53343A")
+  // 容器角色显式补齐（此前回退 default 浅色值，text_primary 亮字压浅底
+  // 对比度仅 1.01–1.03，list 模板四色 chip 行文字不可见）：nord 冷调暗
+  // tint（背景 78% + 语义色 22% 推导，与 apply_spec_tokens 同一派生式）
+  t.colors.set("info", "#88C0D0")
+  t.colors.set("success_container", "#485251")
+  t.colors.set("warning_container", "#585551")
+  t.colors.set("info_container", "#404C5C")
+  // 反相层显式亮侧栏（snow storm 亮面），暗画布上拉开层级
+  t.colors.set("inverse_surface", "#ECEFF4")
+  t.colors.set("inverse_surface_variant", "#D8DEE9")
+  t.colors.set("inverse_text", "#2E3440")
+  t.colors.set("inverse_muted", "#4C566A")
   { name: "nord", display_name: "Nord 极地", tokens: t, is_dark: true, }
 }
 
@@ -255,6 +273,12 @@ pub fn Theme::sunset() -> Theme {
   t.colors.set("on_secondary_container", "#4E2A18")
   t.colors.set("outline_variant", "#F2DCC0")
   t.colors.set("text_on_primary", "#FFFFFF")
+  // info + 容器角色暖调补齐（此前回退 default 冷蓝 tint #DCEEFB 一族，
+  // 落在暖橙调色板里色相不连贯）：容器 = 背景 78% + 语义色 22% 派生
+  t.colors.set("info", "#5B6B8C")
+  t.colors.set("success_container", "#D1D9BA")
+  t.colors.set("warning_container", "#EED1AF")
+  t.colors.set("info_container", "#DBD5CE")
   { name: "sunset", display_name: "落日暖", tokens: t, is_dark: false, }
 }
 
@@ -334,6 +358,11 @@ pub fn Theme::apple_dark() -> Theme {
   t.colors.set("success_container", "#0E3D22")
   t.colors.set("warning_container", "#4A2B00")
   t.colors.set("info_container", "#0E3550")
+  // 反相层显式亮侧栏（iOS 亮灰阶），暗画布上拉开层级
+  t.colors.set("inverse_surface", "#F5F5F7")
+  t.colors.set("inverse_surface_variant", "#E8E8ED")
+  t.colors.set("inverse_text", "#1C1C1E")
+  t.colors.set("inverse_muted", "#6E6E73")
   {
     name: "apple_dark",
     display_name: "Apple HIG 暗色",
@@ -400,6 +429,11 @@ pub fn Theme::harmony_dark() -> Theme {
   t.colors.set("success_container", "#123817")
   t.colors.set("warning_container", "#4A2600")
   t.colors.set("info_container", "#0E2F4D")
+  // 反相层显式亮侧栏（鸿蒙亮灰阶），暗画布上拉开层级
+  t.colors.set("inverse_surface", "#E6E8EB")
+  t.colors.set("inverse_surface_variant", "#D5D8DC")
+  t.colors.set("inverse_text", "#1C1E21")
+  t.colors.set("inverse_muted", "#565D66")
   {
     name: "harmony_dark",
     display_name: "HarmonyOS 暗色",

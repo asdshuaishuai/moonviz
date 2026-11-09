@@ -475,6 +475,26 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           }
       }
     }
+    "spec_extract" => {
+      // 提取不生成：宿主可在 generate_from_doc 前验证/预演文档
+      //（与 CLI spec-extract 命令同一输出形状）
+      let doc = extract_arg_string(request_line, "doc")
+      if doc == "" {
+        return err_json("missing doc (design document markdown)")
+      }
+      let ex = @core.design_doc_extract(doc)
+      let parts_e : Array[String] = []
+      for x in ex.extracted.iter() {
+        parts_e.push("\"" + @core.json_escape(x) + "\"")
+      }
+      let parts_g : Array[String] = []
+      for g in ex.gaps.iter() {
+        parts_g.push("\"" + @core.json_escape(g) + "\"")
+      }
+      "{\"ok\":true,\"spec\":" + ex.spec_json +
+      ",\"extracted\":[" + parts_e.join(",") +
+      "],\"gaps\":[" + parts_g.join(",") + "]}"
+    }
     "design_compliance" => {
       if artboard == "" {
         return err_json("missing artboard")
@@ -553,9 +573,13 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
     }
     "export_html" => {
+      // preview 必须过 json_escape：H5 导出的 DOCTYPE/头部位含真实换行，
+      // 裸插会让信封 JSON 字符串带控制字符——宿主解析 content.text 即炸
+      //（H5 契约：MCP 通道导出信封必须是合法 JSON，CLI 通道同败面）
       let html = p.export_html()
       let len = html.length().to_string()
-      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{html.substring(start=0, end=120)}...\"}"
+      let preview = @core.json_escape(html.substring(start=0, end=120))
+      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{preview}...\"}"
     }
     "export_svg" => {
       if artboard == "" {
@@ -563,8 +587,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       match p.export_svg(artboard~) {
         Ok(svg) => {
+          // 同 export_html：SVG 多行文本裸插 = 非法 JSON 信封
           let len = svg.length().to_string()
-          "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{svg.substring(start=0, end=100)}...\"}"
+          let preview = @core.json_escape(svg.substring(start=0, end=100))
+          "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{preview}...\"}"
         }
         Err(e) => err_json(e)
       }

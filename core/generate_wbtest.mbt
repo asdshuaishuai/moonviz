@@ -110,12 +110,13 @@ test "ops_batch：一次提交与断点即停" {
 }
 
 ///|
-/// 工具字典：生成式两工具在单一事实源（MCP tools/list 同源自动可见）
+/// 工具字典：生成式工具族在单一事实源（MCP tools/list 同源自动可见）
 test "agent_api：generate/batch_apply 注册" {
-  assert_true(list_tools().length() == 57)
+  assert_true(list_tools().length() == 58)
   let json = list_tools_json()
   assert_true(json.contains("\"name\":\"generate\""))
   assert_true(json.contains("\"name\":\"batch_apply\""))
+  assert_true(json.contains("\"name\":\"spec_extract\""))
 }
 
 ///|
@@ -572,4 +573,51 @@ test "mock 数据规则化：报缺口不内置，Agent 填充后清零" {
     Ok(report) => assert_true(report.contains("\"mock_missing\":["), msg=report)
     Err(e) => fail("autofill 失败：\{e}")
   }
+}
+
+///|
+/// 信封数组形状（红线：空集合一律 []）：json_string_array 已带方括号，
+/// 信封模板不得再包一层——单板 mock_missing/spec_violations 与多板
+/// mock_missing 此前是双层嵌套 [[...]]，同信封内两键形状还不一致。
+test "generate：信封数组单层形状（mock_missing/spec_violations 恒 []）" {
+  // 多板组合：空缺省时两键都必须是空数组 []（不是 [[]]）
+  let p = Project::new()
+  let multi = match p.generate(spec=SPEC, intent_text="登录+仪表盘") {
+    Ok(j) => j
+    Err(e) => {
+      fail("组合生成失败：\{e}")
+      abort("")
+    }
+  }
+  assert_true(multi.contains("\"mock_missing\":[]"), msg=multi)
+  assert_true(multi.contains("\"spec_violations\":[]"), msg=multi)
+  assert_false(multi.contains("\"mock_missing\":[["), msg=multi)
+  assert_false(multi.contains("\"spec_violations\":[["), msg=multi)
+  // 单板：同形状
+  let p2 = Project::new()
+  let single = match p2.generate(spec=SPEC, intent_text="设置页") {
+    Ok(j) => j
+    Err(e) => {
+      fail("单板生成失败：\{e}")
+      abort("")
+    }
+  }
+  assert_true(single.contains("\"mock_missing\":[]"), msg=single)
+  assert_true(single.contains("\"spec_violations\":[]"), msg=single)
+  assert_false(single.contains("\"mock_missing\":[["), msg=single)
+}
+
+///|
+/// login_v2 模板意图可达：「登录页 v2」「v2登录」「login_v2」直接落
+/// login_v2（此前 candidates 表无该条目，全部静默落 login）。
+test "generate：login_v2 意图路由" {
+  let i1 = parse_generate_intent("登录页 v2")
+  assert_eq(i1.template_id, "login_v2")
+  let i2 = parse_generate_intent("v2登录")
+  assert_eq(i2.template_id, "login_v2")
+  let i3 = parse_generate_intent("login_v2")
+  assert_eq(i3.template_id, "login_v2")
+  // 裸「登录页」仍落 login（词边界不误伤）
+  let i4 = parse_generate_intent("登录页")
+  assert_eq(i4.template_id, "login")
 }

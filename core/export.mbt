@@ -140,6 +140,51 @@ fn dom_id_in(m : Map[String, String]?, id : String) -> String {
 }
 
 ///|
+/// HTML 属性值转义：双引号内联属性安全面（& < > "）。画板 id/名称是
+/// Agent 可控文本（duplicate 的 new_name 可含 <b>/引号），裸插进
+/// id="tab-..." 会生成真实子元素并截断标签文本；浏览器解析回原文后
+/// 与 onclick 的 js_string_escape 串一致，getElementById 两侧匹配。
+fn html_attr_escape(s : String) -> String {
+  let sb = StringBuilder::new()
+  for c in s.iter() {
+    match c {
+      '&' => sb.write_string("&amp;")
+      '<' => sb.write_string("&lt;")
+      '>' => sb.write_string("&gt;")
+      '"' => sb.write_string("&quot;")
+      _ => sb.write_char(c)
+    }
+  }
+  sb.to_string()
+}
+
+///|
+/// CSS 标识符转义（与导出 JS 侧 cssEsc 的 fallback 同语义）：非
+/// [A-Za-z0-9_-] 且 < U+00A0 的字符写成 `\` + 小写 hex + 尾空格。
+/// 转义只作用于「选择器字面」，DOM 类名/元素 id 原文不变，与 JS 侧
+/// classList.add('st-'+原文)/getElementById(原文) 天然一致。状态名与
+/// DOM id 是 Agent 可控文本，裸插 `<` 会截断 <style> 块（</style> 提前
+/// 闭合整页样式）并破坏选择器语法。
+fn css_ident_escape(s : String) -> String {
+  let sb = StringBuilder::new()
+  for c in s.iter() {
+    let code = c.to_int()
+    let safe = (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) ||
+      (code >= 48 && code <= 57) ||
+      code == 45 ||
+      code == 95 ||
+      code >= 160
+    if safe {
+      sb.write_char(c)
+    } else {
+      sb.write_string("\\" + int_to_hex(code) + " ")
+    }
+  }
+  sb.to_string()
+}
+
+///|
 /// html lang 白名单清洗（只留 ASCII 字母与 '-'，空则 zh）：lang 是可选
 /// 入参，必须防止属性注入。
 fn sanitize_lang(lang : String) -> String {
@@ -360,9 +405,11 @@ pub fn Project::export_html(
           match ab.doc.nodes.get(nid) {
             Some(n) =>
               if n.style.motion != "" {
+                // DOM id 是 Agent 可控文本，选择器面过 CSS 标识符转义
+                //（DOM id 原文由 render_svg 的 id 属性保持，两侧匹配）
                 sb.write_string(
                   node_motion_rule_css(
-                    dom_id_in(dom_ids.get(ab_id), nid),
+                    css_ident_escape(dom_id_in(dom_ids.get(ab_id), nid)),
                     n.style.motion,
                     indent="  ",
                   ),
@@ -401,12 +448,15 @@ pub fn Project::export_html(
           }
           if rules.length() > 0 {
             let decl = rules.join(";")
-            // 状态变体选择器跟随节点 DOM id（重复板后缀）
+            // 状态变体选择器跟随节点 DOM id（重复板后缀）；dom 与状态名
+            // 都过 CSS 标识符转义——类名字面（JS classList.add）保持原文，
+            // 转义只在选择器面，两侧匹配
             let dom = match self.find_node_artboard(node_id) {
               Some(aid) => dom_id_in(dom_ids.get(aid), node_id)
               None => node_id
             }
-            let sel = "g#n_" + dom + ".st-" + state_name
+            let sel =
+              "g#n_" + css_ident_escape(dom) + ".st-" + css_ident_escape(state_name)
             sb.write_string("  \{sel} rect,\{sel} text{\{decl}}\n")
           }
         }
@@ -420,11 +470,16 @@ pub fn Project::export_html(
   for id in self.artboards.keys() {
     match self.artboards.get(id) {
       Some(ab) => {
-        // onclick 的 id 落在单引号 JS 字符串里，必须转义；DOM id 属性保持
-        // 原样——getElementById('tab-'+id) 按 JS 解析后的串查 DOM，两侧一致
+        // onclick 的 id 落在单引号 JS 字符串里，走 js_string_escape；
+        // DOM id 属性与标签文本走 html_attr_escape/xml_escape——id/名称
+        // 是 Agent 可控文本，裸插会让 <b> 变成真实元素并截断标签文本。
+        // 浏览器把转义实体解析回原文后与 JS 侧的串一致，getElementById
+        // ('tab-'+id) 两侧匹配。aria-selected 初始 false，show() 切换时
+        // 同步（读屏器可感知选中板，WAI-ARIA tabs 模式）。
         let js_id = js_string_escape(id)
+        let esc_id = html_attr_escape(id)
         sb.write_string(
-          "  <div class=\"tab\" role=\"tab\" tabindex=\"0\" onclick=\"show('\{js_id}',true,0)\" onkeydown=\"if(event.key==='Enter'||event.key===' '){event.preventDefault();show('\{js_id}',true,0)}\" id=\"tab-\{id}\">\{ab.name}</div>\n",
+          "  <div class=\"tab\" role=\"tab\" tabindex=\"0\" aria-selected=\"false\" aria-controls=\"board-\{esc_id}\" onclick=\"show('\{js_id}',true,0)\" onkeydown=\"if(event.key==='Enter'||event.key===' '){event.preventDefault();show('\{js_id}',true,0)}\" id=\"tab-\{esc_id}\">\{xml_escape(ab.name)}</div>\n",
         )
       }
       None => ()
@@ -447,7 +502,7 @@ pub fn Project::export_html(
           node_ids=dom_ids.get(id),
         )
         sb.write_string(
-          "<div class=\"board\" id=\"board-\{id}\" style=\"width:\{ab.width.to_int()}px\">\n",
+          "<div class=\"board\" role=\"tabpanel\" id=\"board-\{html_attr_escape(id)}\" style=\"width:\{ab.width.to_int()}px\">\n",
         )
         sb.write_string(svg)
         sb.write_string("\n</div>\n")
@@ -518,10 +573,10 @@ pub fn Project::export_html(
                         acts.push(
                           "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"haptic\",\"\"]",
                         )
-                      Some(PlaySound(name)) =>
-                        acts.push(
-                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"play_sound\",\"{js_string_escape(name)}\"]",
-                        )
+      Some(PlaySound(name)) =>
+        acts.push(
+          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"play_sound\",\"\{js_string_escape(name)}\"]",
+        )
                       Some(SetState(id2, st)) =>
                         acts.push(
                           "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"set_state\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), id2))}:\{js_string_escape(st)}\"]",
@@ -590,10 +645,13 @@ pub fn Project::export_html(
   for node_id in self.node_states.keys() {
     match self.node_states.get(node_id) {
       Some(def) => {
+        // 状态名逐个过 js_string_escape（MV_STATES 内嵌 <script>，含
+        // </script> 的合法状态名会提前闭合脚本、整页 JS 解析失败）；
+        // 逗号不转义——JS 侧 split(',') 按逗号拆状态清单，语义不变
         let names : Array[String] = []
         for st in def.states.keys() {
           if st != "default" {
-            names.push(st)
+            names.push(js_string_escape(st))
           }
         }
         if names.length() > 0 {
@@ -651,7 +709,7 @@ pub fn Project::export_html(
   // show 先确认目标板存在再改导航栈/active：ghost 目标不回滚时会把
   // 当前板摘掉导致白屏（此前先 push、后查 b）。
   sb.write_string(
-    "function show(id,push=true,dir=1,tr=''){const b=document.getElementById('board-'+id);if(!b){toast('页面不存在: '+id);return}if(push&&cur()!==id)MV_STACK.push(id);b.style.setProperty('--mv-dir',dir);['push','pop','modal_present','modal_dismiss','sheet_present','fade','none'].forEach(t=>b.classList.remove('mv-tr-'+t));if(tr)b.classList.add('mv-tr-'+tr);void b.offsetWidth;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id)?.classList.add('active');b.classList.add('active');window.scrollTo({top:0,behavior:RM?'auto':'smooth'})}\n",
+    "function show(id,push=true,dir=1,tr=''){const b=document.getElementById('board-'+id);if(!b){toast('页面不存在: '+id);return}if(push&&cur()!==id)MV_STACK.push(id);b.style.setProperty('--mv-dir',dir);['push','pop','modal_present','modal_dismiss','sheet_present','fade','none'].forEach(t=>b.classList.remove('mv-tr-'+t));if(tr)b.classList.add('mv-tr-'+tr);void b.offsetWidth;document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('active');t.setAttribute('aria-selected','false')});document.querySelectorAll('.board').forEach(x=>x.classList.remove('active'));const tb=document.getElementById('tab-'+id);if(tb){tb.classList.add('active');tb.setAttribute('aria-selected','true')}b.classList.add('active');window.scrollTo({top:0,behavior:RM?'auto':'smooth'})}\n",
   )
   sb.write_string(
     "function back(){if(MV_STACK.length>1){MV_STACK.pop();show(MV_STACK[MV_STACK.length-1],false,-1)}}\n",

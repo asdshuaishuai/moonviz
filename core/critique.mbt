@@ -603,9 +603,9 @@ fn is_token_color3(tokens : DesignTokens, hex : String) -> Bool {
 fn extract_scores(json : String) -> Array[Int] {
   let scores : Array[Int] = []
   let parts = json.split(",\"score\":")
-  // 首段是信封头（{"principles":9,"results":[…"principle":"…"）而非评分，
-  // 跳过——否则 extract_leading_int 会抓到头部的 9，均值变成 (9+Σ九项)/10，
-  // 档位边界虚高一级
+  // 首段是信封头（{"principles":10,"results":[…"principle":"…"）而非评分，
+  // 跳过——否则 extract_leading_int 会抓到头部的 10，均值被 10 冲淡，
+  // 档位边界虚高
   let mut first = true
   for p0 in parts.iter() {
     if first {

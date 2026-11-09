@@ -248,13 +248,21 @@ fn ds_apply_radius(doc : Document, spec : String) -> Unit {
       None => ()
       Some(n) => {
         let r = n.style.corner_radius
-        let nr = if r > 7.5 && r < 8.5 {
+        // 模板全量圆角档吸附到 spec 三档（目标档缺席时保留原值）：
+        // - 直角 0 豁免（comply 同款口径）；胶囊/正圆写法 100、999 归一
+        //   到 999 豁免档——视觉等价（渲染半径上限即半宽/半高）
+        // - 小控件 2/4/6/8/10 → sm；中面 12/14 → md；大容器 16/18/20/24 → lg
+        //   此前只重映射 8/10/12/16，模板的 6/14/18/20/24 生成即违规、
+        //   自家 comply 过不了
+        let nr : Double? = if r > -0.5 && r < 0.5 {
+          None
+        } else if r > 99.5 {
+          Some(999.0)
+        } else if r > 1.5 && r < 10.5 {
           sm
-        } else if r > 9.5 && r < 10.5 {
-          sm
-        } else if r > 11.5 && r < 12.5 {
+        } else if r > 11.5 && r < 14.5 {
           md
-        } else if r > 15.5 && r < 16.5 {
+        } else if r > 15.5 && r < 24.5 {
           lg
         } else {
           None
@@ -275,14 +283,17 @@ fn ds_apply_radius(doc : Document, spec : String) -> Unit {
 
 ///|
 /// spec.style 值 → 可注册主题名（仅美学体系有效；"" = 不换主题）。
-/// 未知值返回 ""（不报错——spec 是数据契约，非法 style 由 palette/组件
-/// 白名单通道各自兜底，不在这里静默改道）。
+/// 暗色美学预设（apple_dark/harmony_dark）是已注册名，同样直通——Agent
+/// 点名暗色预设不得被静默吃掉。未知值返回 ""（不报错——spec 是数据契约，
+/// 非法 style 由 palette/组件白名单通道各自兜底，不在这里静默改道）。
 pub fn ds_style_theme(spec : String) -> String {
   match ds_string_value(spec, "style") {
     Some(v) => {
       let a = theme_alias(v)
       if a == "apple" ||
+        a == "apple_dark" ||
         a == "harmony" ||
+        a == "harmony_dark" ||
         a == "vivid" ||
         a == "editorial" ||
         a == "playful" {

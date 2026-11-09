@@ -113,7 +113,7 @@ pub fn list_tools() -> Array[AgentTool] {
   )
   add(
     "list_themes",
-    "List builtin theme names (light/dark/high_contrast/sepia/nord/sunset).",
+    "List builtin theme names (light/dark/high_contrast/sepia/nord/sunset/apple/apple_dark/harmony/harmony_dark/vivid/editorial/playful).",
     [],
   )
   add(
@@ -278,6 +278,13 @@ pub fn list_tools() -> Array[AgentTool] {
       s("intent", "one-sentence page intent (same grammar as generate)"),
       s("doc", "design document markdown text (sections: 配色/字号/圆角/间距/动效/交互 or English equivalents)"),
       so("name", "artboard name (default = template id)"),
+    ],
+  )
+  add(
+    "spec_extract",
+    "Extract a design spec from a DESIGN DOCUMENT (markdown: palette/typography/radius/motion/touch sections) WITHOUT generating — deterministic keyword+number scan; missing key items are listed in gaps (the engine never guesses). Use it to validate or dry-run a document before generate_from_doc, or to produce a spec the agent can persist and pass to generate. Same output shape as the CLI spec-extract command: {ok, spec, extracted[], gaps[]}.",
+    [
+      s("doc", "design document markdown text (sections: 配色/字号/圆角/间距/动效/交互 or English equivalents)"),
     ],
   )
   add(
