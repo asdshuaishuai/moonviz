@@ -113,6 +113,12 @@ test "design_doc：复合角色/多色对位/加粗条目/散装字号/全档字
   assert_true(ex5.spec_json.contains("\"warning\":\"#b45309\""))
   assert_true(ex5.spec_json.contains("\"error\":\"#c2410c\""))
   assert_true(ex5.spec_json.contains("\"success\":\"#15803d\""))
+  // 跨序写法按行内关键词首现位置对位（表序对位会把两值互换）：
+  // 行「成功…警告…」中 success=第一个 hex、warning=第二个 hex
+  let ex5b = design_doc_extract("- 成功 #15803D，警告 #B45309\n")
+  assert_true(ex5b.spec_json.contains("\"success\":\"#15803d\""))
+  assert_true(ex5b.spec_json.contains("\"warning\":\"#b45309\""))
+  assert_false(ex5b.spec_json.contains("\"warning\":\"#15803d\""))
   // markdown 加粗条目不再整行跳过
   let ex6 = design_doc_extract("**主色**: #0F766E\n")
   assert_true(ex6.spec_json.contains("\"primary\":\"#0f766e\""))

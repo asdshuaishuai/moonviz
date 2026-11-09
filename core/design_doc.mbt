@@ -246,19 +246,41 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     if hexes.length() > 0 {
       // 该行命中的角色按 role_kws 序收集后与 hex 逐个对位：同一行多个
       // hex（「警告 #B45309，错误 #C2410C，成功 #15803D」）此前全部被
-      // 同一首个角色词截走，只落第一对
-      let roles : Array[String] = []
+      // 同一首个角色词截走，只落第一对。对位次序取**关键词在行内的
+      // 首现位置**——「成功 #A，警告 #B」这类跨序写法按行序归位，
+      // 不再受表序影响；同位置平手保持 role_kws 表序（冒泡稳定排序）。
+      let lower = line.to_lower()
+      let roles : Array[(String, Int)] = []
       for pair in role_kws.iter() {
         let (role, kws) = pair
-        if dd_has(line, kws) {
-          roles.push(role)
+        let mut best = -1
+        for k in kws.iter() {
+          match lower.find(k) {
+            Some(pos) => if best < 0 || pos < best {
+              best = pos
+            }
+            None => ()
+          }
+        }
+        if best >= 0 {
+          roles.push((role, best))
+        }
+      }
+      let n_roles = roles.length()
+      for a in 0..<n_roles {
+        for b in 0..<(n_roles - 1 - a) {
+          if roles[b].1 > roles[b + 1].1 {
+            let tmp = roles[b]
+            roles[b] = roles[b + 1]
+            roles[b + 1] = tmp
+          }
         }
       }
       for idx in 0..<hexes.length() {
         let h = hexes[idx]
         let mut assigned = false
-        if idx < roles.length() {
-          let role = roles[idx]
+        if idx < n_roles {
+          let role = roles[idx].0
           if !palette.contains(role) {
             palette.set(role, h)
             extracted.push("color:\{role}=\{h}")
