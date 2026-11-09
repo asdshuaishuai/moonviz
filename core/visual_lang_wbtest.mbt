@@ -510,6 +510,30 @@ test "visual：风格画像预设逐档达标且 style 分发" {
       assert_true(cr("text_primary", cont) >= 4.5)
     }
   }
+  // 全 13 预设：info + 三容器 + inverse 角色一律显式在场（审计回归锚：
+  // nord 曾缺容器导致 chip 亮字压浅底 1.01，暗预设曾缺 inverse 致侧栏融底）
+  for th in builtin_themes().iter() {
+    let t = th.tokens
+    for role in [
+      "info", "success_container", "warning_container", "info_container",
+      "inverse_surface", "inverse_surface_variant", "inverse_text", "inverse_muted",
+    ].iter() {
+      let v = t.resolve_color(role)
+      assert_true(v != "" && v != role)
+    }
+    if th.is_dark {
+      // 暗主题反相层取亮面板：inverse_surface 与画布分离度 ≥3
+      let sep = norm_contrast_ratio(
+        norm_luminance(t.resolve_color("inverse_surface")),
+        norm_luminance(t.resolve_color("background")),
+      )
+      assert_true(sep >= 3.0)
+      assert_true(norm_contrast_ratio(
+        norm_luminance(t.resolve_color("inverse_text")),
+        norm_luminance(t.resolve_color("inverse_surface")),
+      ) >= 4.5)
+    }
+  }
   // style 分发：vivid/editorial/playful 各自落到同名主题
   let p = Project::new()
   let spec = "{\"v\":1,\"style\":\"vivid\",\"palette\":{\"primary\":\"#312E81\"}}"
