@@ -40,9 +40,11 @@ fn dd_has(s : String, kws : Array[String]) -> Bool {
 }
 
 ///|
-/// 扫描行内全部 #RRGGBB（hex 归一为小写 #rrggbb）。
-fn dd_hexes(line : String) -> Array[String] {
-  let out : Array[String] = []
+/// 扫描行内全部 #RRGGBB（hex 归一为小写 #rrggbb），带 '#' 的行内位置——
+/// 对位算法需要：关键词必须落在本 hex 与上一个 hex 之间才算本 hex 的
+/// 配对候选（夹杂无关角色词不再抢走后面的对位）。
+fn dd_hexes_at(line : String) -> Array[(String, Int)] {
+  let out : Array[(String, Int)] = []
   let chars = line.to_array()
   let mut i = 0
   while i + 7 <= chars.length() {
@@ -65,7 +67,7 @@ fn dd_hexes(line : String) -> Array[String] {
         j = j + 1
       }
       if ok {
-        out.push(sb.to_string().to_lower())
+        out.push((sb.to_string().to_lower(), i))
         i = i + 7
         continue
       }
@@ -242,28 +244,42 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     }
     let line = clean
     // 1) 颜色归类
-    let hexes = dd_hexes(line)
+    let hexes = dd_hexes_at(line)
     if hexes.length() > 0 {
-      // 该行命中的角色按 role_kws 序收集后与 hex 逐个对位：同一行多个
-      // hex（「警告 #B45309，错误 #C2410C，成功 #15803D」）此前全部被
-      // 同一首个角色词截走，只落第一对。对位次序取**关键词在行内的
-      // 首现位置**——「成功 #A，警告 #B」这类跨序写法按行序归位，
-      // 不再受表序影响；同位置平手保持 role_kws 表序（冒泡稳定排序）。
+      // 命中角色收集（表序 = 具体词优先）：每角色取其关键词在行内的
+      // 最早位置；与已选角色关键词区间重叠者淘汰（「次要文字」行中
+      // 宽泛词「文字」不再单独占位）。对位规则：每个 hex 与「上一个
+      // hex 之后、本 hex 之前」区间内位置最近的关键词配对——跨序写法
+      //（「成功 #A，警告 #B」）按行序归位；行内夹杂无关角色词
+      //（「主色 #A（卡片强调），背景 #B」）不再抢走后面的对位；
+      // hex 前无候选时落 primary 兜底。
       let lower = line.to_lower()
-      let roles : Array[(String, Int)] = []
+      let roles : Array[(String, Int, Int)] = []
+      let spans : Array[(Int, Int)] = []
       for pair in role_kws.iter() {
         let (role, kws) = pair
         let mut best = -1
+        let mut best_len = 0
         for k in kws.iter() {
           match lower.find(k) {
             Some(pos) => if best < 0 || pos < best {
               best = pos
+              best_len = k.length()
             }
             None => ()
           }
         }
         if best >= 0 {
-          roles.push((role, best))
+          let mut overlapped = false
+          for sp in spans.iter() {
+            if best < sp.1 && sp.0 < best + best_len {
+              overlapped = true
+            }
+          }
+          if !overlapped {
+            roles.push((role, best, best_len))
+            spans.push((best, best + best_len))
+          }
         }
       }
       let n_roles = roles.length()
@@ -276,11 +292,22 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
           }
         }
       }
+      let mut prev_hex = -1
       for idx in 0..<hexes.length() {
-        let h = hexes[idx]
+        let pair_h = hexes[idx]
+        let h = pair_h.0
+        let hpos = pair_h.1
+        let mut pick = -1
+        for ri in 0..<n_roles {
+          let p = roles[ri].1
+          if p > prev_hex && p < hpos {
+            // roles 已按位置升序：最后命中者即最近关键词
+            pick = ri
+          }
+        }
         let mut assigned = false
-        if idx < n_roles {
-          let role = roles[idx].0
+        if pick >= 0 {
+          let role = roles[pick].0
           if !palette.contains(role) {
             palette.set(role, h)
             extracted.push("color:\{role}=\{h}")
@@ -291,6 +318,7 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
           palette.set("primary", h)
           extracted.push("color:primary=\{h}")
         }
+        prev_hex = hpos
       }
     }
     // 2) 字号。散装键值与章节条目同等生效：颜色/圆角/动效/触控都能裸行

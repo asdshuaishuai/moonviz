@@ -202,3 +202,43 @@ test "design_doc：style 暗色预设直通" {
     Err(_) => assert_true(false)
   }
 }
+
+///|
+/// 夹杂回归（7996019 行内位置对位的副作用）：无关角色词「卡片」夹在
+/// 两色之间，会把第二个 hex 抢给 surface、background 丢失 → 完整文档
+/// generate-doc 被 background gap 拒绝。对位规则改为「每个 hex 与其
+/// 前方最近、且在上一 hex 之后出现的关键词配对」后：夹杂词不再影响
+/// 归属，跨序/正序/单角色行为保持。
+test "design_doc：夹杂角色词不抢对位（generate-doc 不再被拒）" {
+  let ex = design_doc_extract("主色 #123456（卡片强调），背景 #FFFFFF\n")
+  assert_true(ex.spec_json.contains("\"primary\":\"#123456\""))
+  assert_true(ex.spec_json.contains("\"background\":\"#ffffff\""))
+  // 单行 variant：无关词不改变归属
+  let ex2 = design_doc_extract("卡片背景 #FFFFFF\n")
+  assert_true(ex2.spec_json.contains("\"background\":\"#ffffff\""))
+  // 端到端：含夹杂词的完整文档不再被 background gap 拒绝
+  let p = Project::new()
+  let doc = "主色 #123456（卡片强调），背景 #FFFFFF\n正文色 #111111\n正文 15\n圆角 8 12 16\n"
+  match p.generate_from_doc(intent_text="登录页", doc=doc) {
+    Ok(j) => {
+      assert_true(j.contains("\"spec_source\":\"design_doc\""))
+      assert_eq(p.tokens.resolve_color("background"), "#ffffff")
+    }
+    Err(e) => {
+      println("ERR=" + e)
+      assert_true(false, msg="夹杂词不应触发 design_doc_spec_gaps")
+    }
+  }
+  // 跨序/正序保持（7996019 语义不回退）
+  let ex3 = design_doc_extract("- 成功 #15803D，警告 #B45309\n")
+  assert_true(ex3.spec_json.contains("\"success\":\"#15803d\""))
+  assert_true(ex3.spec_json.contains("\"warning\":\"#b45309\""))
+  let ex4 = design_doc_extract("- 警告 #B45309，错误 #C2410C，成功 #15803D\n")
+  assert_true(ex4.spec_json.contains("\"warning\":\"#b45309\""))
+  assert_true(ex4.spec_json.contains("\"error\":\"#c2410c\""))
+  assert_true(ex4.spec_json.contains("\"success\":\"#15803d\""))
+  // 宽泛词被具体词覆盖淘汰：次要文字行不落 text_primary
+  let ex5 = design_doc_extract("- 次要文字 #8E8E93\n")
+  assert_true(ex5.spec_json.contains("\"text_secondary\":\"#8e8e93\""))
+  assert_false(ex5.spec_json.contains("\"text_primary\":\"#8e8e93\""))
+}
