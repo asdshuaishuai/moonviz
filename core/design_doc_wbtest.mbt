@@ -242,3 +242,57 @@ test "design_doc：夹杂角色词不抢对位（generate-doc 不再被拒）" {
   assert_true(ex5.spec_json.contains("\"text_secondary\":\"#8e8e93\""))
   assert_false(ex5.spec_json.contains("\"text_primary\":\"#8e8e93\""))
 }
+
+///|
+/// 三类回归（797202c 对位算法的副作用，对照父版本行为修复）：
+/// ① 色值在前的行与 markdown 表（| #X | 背景 |）→ 关键词在 hex 之后，
+///    后向配对区间生效，不再落 primary 兜底；
+/// ② 「次级背景 #A，背景 #B」/「次要文字 #A，正文 #B」：宽泛词首次出现
+///    被覆盖淘汰的是**那一次出现**而非整个角色，其后单独出现的宽泛词
+///    保留 → 第二色各归其位；
+/// ③ emoji 紧贴（位置单位统一 code point）→ 关键词不再被错位排除。
+/// 既有形态（跨序/正序/夹杂/具体词单行/**加粗**）保持不回退。
+test "design_doc：色值在前/覆盖淘汰按次/emoji 紧贴三类回归" {
+  // ① 色值在前：后向配对
+  let ex1 = design_doc_extract("- #FFFFFF 背景\n")
+  assert_true(ex1.spec_json.contains("\"background\":\"#ffffff\""))
+  let ex2 = design_doc_extract("| #FFFFFF | 背景 |\n")
+  assert_true(ex2.spec_json.contains("\"background\":\"#ffffff\""))
+  // ② 覆盖淘汰按次：宽泛词的后续出现保留
+  let ex3 = design_doc_extract("- 次级背景 #EEEEEE，背景 #FFFFFF\n")
+  assert_true(ex3.spec_json.contains("\"surface_variant\":\"#eeeeee\""))
+  assert_true(ex3.spec_json.contains("\"background\":\"#ffffff\""))
+  let ex4 = design_doc_extract("- 次要文字 #8E8E93，正文 #111111\n")
+  assert_true(ex4.spec_json.contains("\"text_secondary\":\"#8e8e93\""))
+  assert_true(ex4.spec_json.contains("\"text_primary\":\"#111111\""))
+  // ③ emoji 紧贴：位置单位统一后关键词可配对
+  let ex5 = design_doc_extract("🎨🎨背景#FFFFFF\n")
+  assert_true(ex5.spec_json.contains("\"background\":\"#ffffff\""))
+  // 既有形态保持
+  let ex6 = design_doc_extract("- 成功 #15803D，警告 #B45309\n")
+  assert_true(ex6.spec_json.contains("\"success\":\"#15803d\""))
+  assert_true(ex6.spec_json.contains("\"warning\":\"#b45309\""))
+  let ex7 = design_doc_extract("- 警告 #B45309，错误 #C2410C，成功 #15803D\n")
+  assert_true(ex7.spec_json.contains("\"error\":\"#c2410c\""))
+  let ex8 = design_doc_extract("主色 #123456（卡片强调），背景 #FFFFFF\n")
+  assert_true(ex8.spec_json.contains("\"background\":\"#ffffff\""))
+  let ex9 = design_doc_extract("**主色**: #0F766E\n")
+  assert_true(ex9.spec_json.contains("\"primary\":\"#0f766e\""))
+  let ex10 = design_doc_extract("- 次要文字 #8E8E93\n")
+  assert_true(ex10.spec_json.contains("\"text_secondary\":\"#8e8e93\""))
+  assert_false(ex10.spec_json.contains("\"text_primary\":\"#8e8e93\""))
+  // 端到端：色值在前的 markdown 表文档不再被 generate-doc 拒绝
+  let p = Project::new()
+  let doc = "| 角色 | 色值 |\n| #123456 | 主色 |\n| #FFFFFF | 背景 |\n正文色 #111111\n正文 15\n圆角 8 12 16\n"
+  match p.generate_from_doc(intent_text="登录页", doc=doc) {
+    Ok(j) => {
+      assert_true(j.contains("\"spec_source\":\"design_doc\""))
+      assert_eq(p.tokens.resolve_color("primary"), "#123456")
+      assert_eq(p.tokens.resolve_color("background"), "#ffffff")
+    }
+    Err(e) => {
+      println("ERR=" + e)
+      assert_true(false, msg="色值在前的表文档不应被 design_doc_spec_gaps 拒绝")
+    }
+  }
+}

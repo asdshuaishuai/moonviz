@@ -78,6 +78,37 @@ fn dd_hexes_at(line : String) -> Array[(String, Int)] {
 }
 
 ///|
+/// 在 code point 数组中从 from 起找子串 needle 的下标（找不到 -1）。
+/// dd 的位置统一用 code point 下标：String::find 的偏移与 to_array 的
+/// 字符下标在非 BMP 字符（emoji 等 surrogate pair，如「🎨🎨背景」）上
+/// 不一致，会把紧贴 hex 的关键词排除出候选区间。
+fn dd_index_of(chars : Array[Char], needle : String, from : Int) -> Int {
+  let n = chars.length()
+  let pat = needle.to_array()
+  let m = pat.length()
+  if m == 0 {
+    return from
+  }
+  let mut i = from
+  while i + m <= n {
+    let mut ok = true
+    let mut j = 0
+    while j < m {
+      if chars[i + j] != pat[j] {
+        ok = false
+        break
+      }
+      j = j + 1
+    }
+    if ok {
+      return i
+    }
+    i = i + 1
+  }
+  -1
+}
+
+///|
 /// 把行内 #RRGGBB 替换成空格：字号/圆角/动效的数值扫描不能把色值里的
 /// 数字（#0B2A26 → 0/2/26）当档位——散装键值触发词（正文/标题…）与
 /// 颜色行同行的场景下，伪数字会顶掉真实档位（正文 15 被 #0B2A26 的
@@ -246,68 +277,114 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     // 1) 颜色归类
     let hexes = dd_hexes_at(line)
     if hexes.length() > 0 {
-      // 命中角色收集（表序 = 具体词优先）：每角色取其关键词在行内的
-      // 最早位置；与已选角色关键词区间重叠者淘汰（「次要文字」行中
-      // 宽泛词「文字」不再单独占位）。对位规则：每个 hex 与「上一个
-      // hex 之后、本 hex 之前」区间内位置最近的关键词配对——跨序写法
-      //（「成功 #A，警告 #B」）按行序归位；行内夹杂无关角色词
-      //（「主色 #A（卡片强调），背景 #B」）不再抢走后面的对位；
-      // hex 前无候选时落 primary 兜底。
-      let lower = line.to_lower()
-      let roles : Array[(String, Int, Int)] = []
-      let spans : Array[(Int, Int)] = []
+      // 候选逐次收集（位置统一 code point 下标）：每个关键词的**每次**
+      // 出现都是候选，被更长关键词完全覆盖的那一次淘汰——「次级背景
+      // #A，背景 #B」中首个「背景」淘汰（被「次级背景」包住）、其后
+      // 单独出现的「背景」保留，角色不再被整体淘汰。长度降序稳定排序
+      // 后贪心接受与 role_kws「具体词先于宽泛词」的表序语义一致。
+      // 配对：每个 hex 先配「上一 hex 之后、本 hex 之前」最近的候选
+      //（跨序「成功 #A，警告 #B」按行序归位；夹杂「主色 #A（卡片强调），
+      // 背景 #B」不抢对位）；无则再配「本 hex 之后、下一 hex 之前」
+      // 最近的候选（色值在前的行与 markdown 表「| #X | 背景 |」）；
+      // 仍无 → primary 兜底。
+      let lower_chars = line.to_lower().to_array()
+      let cands : Array[(String, Int, Int)] = []
       for pair in role_kws.iter() {
         let (role, kws) = pair
-        let mut best = -1
-        let mut best_len = 0
         for k in kws.iter() {
-          match lower.find(k) {
-            Some(pos) => if best < 0 || pos < best {
-              best = pos
-              best_len = k.length()
+          let mut from = 0
+          let mut go = true
+          while go {
+            let pos = dd_index_of(lower_chars, k, from)
+            if pos < 0 {
+              go = false
+            } else {
+              cands.push((role, pos, k.length()))
+              from = pos + k.length()
             }
-            None => ()
-          }
-        }
-        if best >= 0 {
-          let mut overlapped = false
-          for sp in spans.iter() {
-            if best < sp.1 && sp.0 < best + best_len {
-              overlapped = true
-            }
-          }
-          if !overlapped {
-            roles.push((role, best, best_len))
-            spans.push((best, best + best_len))
           }
         }
       }
-      let n_roles = roles.length()
-      for a in 0..<n_roles {
-        for b in 0..<(n_roles - 1 - a) {
-          if roles[b].1 > roles[b + 1].1 {
-            let tmp = roles[b]
-            roles[b] = roles[b + 1]
-            roles[b + 1] = tmp
+      // 长度降序稳定排序（同长保持表序/出现序）
+      let n_c = cands.length()
+      for a in 0..<n_c {
+        for b in 0..<(n_c - 1 - a) {
+          if cands[b].2 < cands[b + 1].2 {
+            let tmp = cands[b]
+            cands[b] = cands[b + 1]
+            cands[b + 1] = tmp
           }
         }
       }
+      // 贪心接受：与已接受区间重叠的那一次淘汰
+      let accepted : Array[(String, Int, Int)] = []
+      let spans : Array[(Int, Int)] = []
+      for c in cands.iter() {
+        let p = c.1
+        let l = c.2
+        let mut overlapped = false
+        for sp in spans.iter() {
+          if p < sp.1 && sp.0 < p + l {
+            overlapped = true
+          }
+        }
+        if !overlapped {
+          accepted.push(c)
+          spans.push((p, p + l))
+        }
+      }
+      // 存活候选按位置升序（稳定冒泡，平手保持表序）
+      let n_r = accepted.length()
+      for a in 0..<n_r {
+        for b in 0..<(n_r - 1 - a) {
+          if accepted[b].1 > accepted[b + 1].1 {
+            let tmp = accepted[b]
+            accepted[b] = accepted[b + 1]
+            accepted[b + 1] = tmp
+          }
+        }
+      }
+      let n_h = hexes.length()
+      let picks : Array[Int] = []
+      for _ in 0..<n_h {
+        picks.push(-1)
+      }
+      // 前向轮：区间 (上一 hex, 本 hex) 内最近的候选（升序末个满足者）
       let mut prev_hex = -1
-      for idx in 0..<hexes.length() {
-        let pair_h = hexes[idx]
-        let h = pair_h.0
-        let hpos = pair_h.1
-        let mut pick = -1
-        for ri in 0..<n_roles {
-          let p = roles[ri].1
+      for idx in 0..<n_h {
+        let hpos = hexes[idx].1
+        for ri in 0..<n_r {
+          let p = accepted[ri].1
           if p > prev_hex && p < hpos {
-            // roles 已按位置升序：最后命中者即最近关键词
-            pick = ri
+            picks[idx] = ri
           }
         }
+        prev_hex = hpos
+      }
+      // 后向轮（色值在前）：区间 (本 hex, 下一 hex) 内最近的候选
+      //（升序首个满足者）
+      let mut next_hex = 2147483647
+      let mut bi = n_h - 1
+      while bi >= 0 {
+        let hpos = hexes[bi].1
+        if picks[bi] < 0 {
+          for ri in 0..<n_r {
+            let p = accepted[ri].1
+            if p > hpos && p < next_hex {
+              picks[bi] = ri
+              break
+            }
+          }
+        }
+        next_hex = hpos
+        bi = bi - 1
+      }
+      for idx in 0..<n_h {
+        let h = hexes[idx].0
+        let pick = picks[idx]
         let mut assigned = false
         if pick >= 0 {
-          let role = roles[pick].0
+          let role = accepted[pick].0
           if !palette.contains(role) {
             palette.set(role, h)
             extracted.push("color:\{role}=\{h}")
@@ -318,7 +395,6 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
           palette.set("primary", h)
           extracted.push("color:primary=\{h}")
         }
-        prev_hex = hpos
       }
     }
     // 2) 字号。散装键值与章节条目同等生效：颜色/圆角/动效/触控都能裸行
