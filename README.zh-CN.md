@@ -1,4 +1,31 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.2.0 新特性
+
+**0.2 是一次大范围升级：设计规范第一权威 + 精致化美学与呼吸感 + 完整的动画系统与交互系统。**
+
+- **视觉语言（Apple HIG / 鸿蒙 / 风格画像一等预设）**——13 套预设：apple/
+  apple_dark/harmony/harmony_dark 为官方色板的 WCAG 校准翻译，vivid/
+  editorial/playful 三套风格画像（多彩紫玫 / 杂志纸感 / 青橙互补）同权；
+  组件 elevation 三档、按钮居中、inverse chrome 从 spec 色相派生。
+- **设计规范第一权威（强制遵从）**——palette 基础 7 键 + 扩展键
+  （secondary/info/warning/surfaceVariant/*Container），容器色缺席时从
+  spec 语义色对背景推导 tint；spec 令牌先于模板实例化；调色板外字面色随
+  `spec_violations` 上报；17 模板 vivid spec 遵从零违规入测。
+- **动画系统**——动效单一来源：`motion` 令牌进 spec/theme（fast/base/slow/
+  tick/stagger/stagger_max），导出不再手写时长/贝塞尔；入场级联饱和到第 8
+  级、按压/悬停/聚焦三态、`Spring(k)` 过冲随刚度调制（k=1 兼容旧导出）、
+  关键帧 transform 合并与 SVG `fill` 语义修正；分板过渡
+  （push/modal/fade 等 7 型）由 `FlowEdge.transition` 声明并进导出。
+- **交互系统**——Action 词表闭环（SubmitForm 可往返、可导出执行）、长按/
+  滑动/焦点/键盘事件进 runtime 与 wasm `session_event`、手势 trigger 归一、
+  内置返回兜底与 ghost 导航守卫、导出 CSS.escape/DOM id 唯一/无障碍
+  （tablist、焦点环、live region、aria-label、reduced-motion 全覆盖）+
+  语法门回归测试（导出脚本括号平衡）。
+- **精致化与呼吸感**——17 模板 × 5 面板审计 + 6 轮修复包：文字角色/主题
+  往返/结构式模板令牌化清零；8pt 栅格/内容线/行尾控件/底部动作栏/两级
+  字阶/分组留白系统化；组件目录 65×118。
+- **Playground**——五套需求 spec 预设 + 同意图双规范并排对比（独立会话）。
+
 ## 0.1.11 新特性
 
 - **规范驱动生成（issue #24）**——`generate` 必带 design spec（JSON：调色板/

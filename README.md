@@ -1,5 +1,39 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.2.0
+
+**0.2 is a broad upgrade: design spec as the first authority, refined aesthetics
+and breathing room, and a complete animation + interaction system.**
+
+- **Visual language (Apple HIG / HarmonyOS / style profiles as first-class)** —
+  13 presets: apple/apple_dark/harmony/harmony_dark are WCAG-calibrated
+  translations of the official palettes; vivid/editorial/playful style profiles
+  carry equal weight; three-tier elevation, centered buttons, inverse chrome
+  derived from the spec's hues.
+- **Design spec is the first authority (enforced)** — base 7 palette keys plus
+  extended keys (secondary/info/warning/surfaceVariant/*Container); container
+  tints derived from the spec's semantic colors; spec tokens applied before
+  template instantiation; off-palette literals surface in `spec_violations`;
+  all 17 templates locked at zero violations under a vivid spec.
+- **Animation system** — single source: `motion` tokens live in spec/theme
+  (fast/base/slow/tick/stagger/stagger_max) and the export no longer hard-codes
+  durations or beziers; entrance cascade saturates at step 8, press/hover/focus
+  states, `Spring(k)` overshoot scales with stiffness (k=1 keeps legacy
+  output), keyframe transform merging and SVG `fill` semantics fixed; per-board
+  transitions (7 types) declared via `FlowEdge.transition` and exported.
+- **Interaction system** — Action vocabulary closed (SubmitForm round-trips and
+  executes in exports), long-press/swipe/focus/keyboard events into runtime and
+  wasm `session_event`, gesture trigger normalization, builtin back fallback and
+  ghost-navigation guard, export CSS.escape / unique DOM ids / a11y (tablist,
+  focus ring, live region, aria-label, full reduced-motion) plus a syntax-gate
+  regression test for the exported script.
+- **Refinement & breathing room** — 17 templates × 5 panels audited with six
+  fix rounds: text roles, theme round-trips and structural-template tokenization
+  to zero; 8pt grid / content lines / trailing controls / bottom action bars /
+  two-tier type scale / grouped spacing systematized; catalog 65x118.
+- **Playground** — five requirement-spec presets plus side-by-side comparison of
+  one intent under two specs (independent sessions).
+
 ## What's New in 0.1.11
 
 - **Spec-driven generation (issue #24)** — `generate` now requires a design
