@@ -18,7 +18,7 @@ owns page structure, component choice, spacing norms, and visual consistency.
   The default path for anything a page recipe can express.
 - **tool mode（兜底 / fallback, 以前的不抛弃）** — the full per-node
   vocabulary (`create` / `place` / `update` / `move` / `align` / `group` /
-  `flip` / `reorder` …, 55 tools / 27 ops) is retained unchanged and is the
+  `flip` / `reorder` …, 57 tools / 27 ops) is retained unchanged and is the
   legitimate channel for everything genUI does not cover: freeform
   artboards, layouts no template matches, surgical single-node edits, and
   exploratory probing.
@@ -133,6 +133,13 @@ checkout|diff`（设计版本控制）· `anim-css <node> <preset>` / `anim-list
 Navigation / theme / tokens / debt:
 `flow <from_ab> <to_ab> <node>` (tap navigation edge) ·
 `unflow <from_ab> <to_ab> <node>` (remove one navigation edge) ·
+`generate-doc <intent> doc=<base64(设计文档)> [as <name>]` — **0.2 enforced
+spec workflow**: the design spec is extracted from a DESIGN DOCUMENT
+(markdown sections 配色/字号/圆角/间距/动效/交互), never improvised. Missing
+key items → `design_doc_spec_gaps` (nothing generated, engine does not
+guess); success carries `spec_source:"design_doc"` + `spec_extracted:N`.
+`spec-extract doc=<base64>` previews extraction; `comply <ab>` verifies
+UI+interaction obedience (color/type/radius/motion) ·
 `theme <name>` (`light dark high_contrast sepia nord sunset apple apple_dark harmony harmony_dark vivid editorial playful`;
 aliases `ios`/`苹果` → apple, `鸿蒙`/`harmonyos` → harmony, plus a dark word → dark preset) ·
 `token <name> <value>` (COLOR tokens ONLY — `primary`, `on_primary`,

@@ -272,6 +272,20 @@ pub fn list_tools() -> Array[AgentTool] {
     ],
   )
   add(
+    "generate_from_doc",
+    "Enforced spec workflow (0.2): extract the design spec from a DESIGN DOCUMENT (markdown: palette/typography/radius/motion/touch sections), then generate. The engine never guesses: missing key items (primary/background/text/body/radius) return design_doc_spec_gaps and nothing is generated. On success the envelope carries spec_source:\"design_doc\" + spec_extracted count; UI and interaction must then fully obey that spec (verify with design_compliance). Three words of design doc beat ten words of improvisation: the document is the provenance of the palette, type scale, radius tiers and motion beat.",
+    [
+      s("intent", "one-sentence page intent (same grammar as generate)"),
+      s("doc", "design document markdown text (sections: 配色/字号/圆角/间距/动效/交互 or English equivalents)"),
+      so("name", "artboard name (default = template id)"),
+    ],
+  )
+  add(
+    "design_compliance",
+    "Design-spec compliance check (0.2): four machine checks — color (every fill/text must trace to the spec palette/roles), type (font sizes on the spec scale), radius (corners on the spec tiers), motion (engine motion tokens equal spec.motion, so interaction beats follow the document). Use after any generation/edit to prove the UI fully obeys the design spec.",
+    [s("artboard", "artboard id")],
+  )
+  add(
     "batch_apply",
     "Generative execution tier 2: apply multiple session ops in ONE call (newline-separated ops, base64 of the block). Executes in order, aborts at the first error and returns its index. Prefer over N single calls for deterministic refinements.",
     [s("operations_b64", "base64 of newline-separated ops (e.g. update home title text=... lines), max 64")],

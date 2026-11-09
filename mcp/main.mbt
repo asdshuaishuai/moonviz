@@ -449,6 +449,38 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           }
       }
     }
+    "generate_from_doc" => {
+      // 强制规范流程：设计文档 → spec → 生成（缺关键项拒绝）
+      if intent == "" {
+        return err_json("missing intent")
+      }
+      let doc = extract_arg_string(request_line, "doc")
+      if doc == "" {
+        return err_json("missing doc (design document markdown)")
+      }
+      match p.generate_from_doc(intent_text=intent, doc=doc, name=name) {
+        Ok(json) => json
+        Err(e) =>
+          if e.has_prefix("design_doc_spec_gaps:") {
+            let ex = @core.design_doc_extract(doc)
+            let parts_g : Array[String] = []
+            for g in ex.gaps.iter() {
+              parts_g.push("\"" + @core.json_escape(g) + "\"")
+            }
+            "{\"ok\":false,\"error\":\"design_doc_spec_gaps\",\"gaps\":[" +
+            parts_g.join(",") +
+            "],\"spec_draft\":" + ex.spec_json + "}"
+          } else {
+            err_json(e)
+          }
+      }
+    }
+    "design_compliance" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      p.design_spec_compliance(artboard~)
+    }
     "batch_apply" => {
       // 执行策略第二级：多条确定精修一次提交（base64(换行分隔 ops)）。
       // 严格解码（decode_b64_text 与 CLI decode_mbt_b64 同构：非法

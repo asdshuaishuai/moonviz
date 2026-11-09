@@ -96,6 +96,11 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
   新色彩角色 info/success_container/warning_container/info_container 进全部
   预设（text_primary 压每只 ≥4.5）；list 分类 chips 容器色四色轮换（角色用色）；
   norms visual 容器可辨性扩到 tinted 全族（对比 < 1.10 且无阴影无描边）。
+- ✅ 强制规范流程：`generate_from_doc` 从设计文档确定性提取 spec（缺关键项
+  `design_doc_spec_gaps` 拒绝生成，来源 `spec_source:"design_doc"`）；
+  `design_compliance` 四检（color/type/radius/motion）证明 UI 与交互完全遵从。
+- ✅ 主题系统第三批：vivid/editorial/playful 风格画像为一等预设（13 套），
+  spec `style` 三通道同权；动画 `Spring(k)` 过冲随刚度调制（k=1 兼容旧导出）。
 - ✅ H5/CSS/JS：导出 chrome 全部令牌化为 CSS 变量（明暗随主题、theme-color、
   安全区呼吸边距、窄屏等比缩放）、Vibrancy 磨砂吸顶胶囊 tab、设备感画板（分层
   柔阴影 + hairline）、Hover Lift 仅给可交互节点、键盘 Enter/Space 可达、
@@ -119,7 +124,7 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
 | 维度 | 现状 |
 |---|---|
 | 引擎内核 | 100% MoonBit，52 个核心模块、300+ 公开函数；不崩谓词 5 项 + 双门禁 |
-| 工具面 | CLI 63 命令（cli_help 文档化口径）· MCP 55 工具（含 inputSchema 字典）· WASM 双产物 75/75 导出（session 51）· Node SDK |
+| 工具面 | CLI 63 命令（cli_help 文档化口径）· MCP 57 工具（含 inputSchema 字典）· WASM 双产物 77/77 导出· Node SDK |
 | 组件与模板 | 65 组件 × 118 变体 · 14 个整页模板（移动 + Web/桌面） |
 | 分发 | npm 7 包 + GitHub Releases 全产物 10 项（4 平台 tarball + 双 wasm + npm 全家族） |
 | 人类体验 | Playground 设计工作台（设计/预览双模式）+ deepDesign Studio 画布 |
@@ -153,7 +158,7 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
   「显式声明 A 压 B」需要节点级 layer 声明或 reorder 感知豁免；
   设计约束：声明走双门、序列化/decl 往返保持、不复活视觉债遮蔽。
 
-**4. deepDesign Studio 全面接入新引擎。** 引擎能力面（55 工具/27 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
+**4. deepDesign Studio 全面接入新引擎。** 引擎能力面（57 工具/27 op/组件库/交互面板/主题令牌）与 Studio 画布对齐：画布撤销/重做（引擎 revision + journal 已就绪）、组件库拖放、交互面板、源码视图直读 `.mbt.md`。
 
 **5. Playground 能力补全。** 动画系统接入（`animation.mbt` → 预览模式实时动效）；用户组件编译入口（MCP `component_compile` 已有，Playground 缺 UI）；原型测试面板（`protest.mbt` 断言可视化运行）。
 
