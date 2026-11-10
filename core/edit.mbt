@@ -172,7 +172,8 @@ fn is_edit_key(k : String) -> Bool {
     | "opacity" | "font_size" | "weight" | "shadow" | "rotate" | "blur"
     | "blend" | "line" | "tracking" | "constraint" | "name" | "stroke_width"
     | "align" | "italic" | "dash" | "visible" | "width_mode" | "height_mode"
-    | "x_mode" | "y_mode" | "layout" | "gap" | "justify" | "padding" => true
+    | "x_mode" | "y_mode" | "layout" | "gap" | "justify" | "padding"
+    | "motion" => true
     _ => false
   }
 }
@@ -198,6 +199,15 @@ pub fn Project::edit_node(
         let (k, _) = kv
         if !is_edit_key(k) {
           return Err("mbt_operation_unknown_key:" + k)
+        }
+        // motion 前置白名单校验（update 闭包返回 Node 不能报错——
+        // 非法预设必须在进入闭包前拒绝）
+        if k == "motion" {
+          let (_, v) = kv
+          match validate_node_motion(v) {
+            Ok(_) => ()
+            Err(e) => return Err(e)
+          }
         }
       }
       let applied : Array[String] = []
@@ -323,6 +333,8 @@ pub fn Project::edit_node(
               cur = { ..cur, style: { ..cur.style, font_style: f, }, }
               applied.push("italic")
             }
+            // 节点级开场动效：与 canonical motion= 同一写面（白名单校验在 core）
+            "motion" => cur = { ..cur, style: { ..cur.style, motion: v }, }
             "dash" => {
               let ds = if v == "dashed" || v == "dotted" { v } else { "solid" }
               cur = { ..cur, style: { ..cur.style, stroke_dash: ds, }, }

@@ -334,6 +334,28 @@ pub fn Project::place_component(
                 variant~,
                 tokens=self.tokens,
               )
+              // issue #29：内置组件的 k=v 槽此前静默丢弃（text/fill/motion
+              // 全无效且返回 ok:true）。这里在插入前以 edit 词表落到节点：
+              // 未知键显式拒绝（返回 place_unknown_key:<k>），motion 走
+              // 白名单校验；用户组件参数槽不受影响（上方分支）
+              let kv_patch : Array[(String, String)] = []
+              for k in args.keys() {
+                match args.get(k) {
+                  Some(v) => kv_patch.push((k, v))
+                  None => ()
+                }
+              }
+              for pair in kv_patch.iter() {
+                let (k, v) = pair
+                if k == "motion" {
+                  match validate_node_motion(v) {
+                    Err(e) => return Err(e)
+                    Ok(_) => ()
+                  }
+                } else if !is_edit_key(k) {
+                  return Err("place_unknown_key:" + k + "（place k=v 仅接受 edit 词表键：text/fill/stroke/text_color/radius/opacity/motion/…）")
+                }
+              }
               // 统一边界策略：负坐标夹回 0；右上不夹紧——按默认尺寸夹紧会在
               // 先 place 后 resize 的流程里留下被夹坏的坐标（模板 2×2 网格因此
               // 重叠）。越界由 contained_in_parent 谓词显式报告为视觉债。
@@ -350,6 +372,9 @@ pub fn Project::place_component(
                   let _ = ab.doc.insert_node(placed, "root")
                   apply_place_size(ab.doc, instance_id, w, h)
                   self.revision = self.revision + 1
+                  for pair in kv_patch.iter() {
+                    self.apply_place_kv(ab.doc, instance_id, [pair])
+                  }
                   Ok(
                     "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"artboard\":\"\{artboard}\"}",
                   )
@@ -358,6 +383,9 @@ pub fn Project::place_component(
                   match ab.doc.insert_node(placed, pid) {
                     true => {
                       apply_place_size(ab.doc, instance_id, w, h)
+                      for pair in kv_patch.iter() {
+                        self.apply_place_kv(ab.doc, instance_id, [pair])
+                      }
                       self.revision = self.revision + 1
                       Ok(
                         "{\"ok\":true,\"op\":\"place\",\"node\":\"\{instance_id}\",\"x\":\{safe_x},\"y\":\{safe_y},\"parent\":\"\{pid}\"}",
@@ -623,6 +651,7 @@ fn query_node_json(id : String, n : Node, r : Rect, parent : String) -> String {
   out.write_string("\"font_size\":" + n.style.font_size.to_string() + ",")
   out.write_string("\"weight\":\"" + n.style.font_weight + "\",")
   out.write_string("\"shadow\":\"" + n.style.shadow + "\",")
+  out.write_string("\"motion\":\"" + n.style.motion + "\",")
   out.write_string("\"rotate\":" + n.style.rotate.to_string() + ",")
   out.write_string("\"blur\":" + n.style.blur.to_string() + ",")
   out.write_string("\"blend\":\"" + n.style.blend + "\",")
@@ -1008,4 +1037,45 @@ fn sanitize_id(name : String) -> String {
     }
   }
   sb.to_string()
+}
+
+///|
+/// place k=v 的单键落点（与 edit 词表同语义）：键合法性已由
+/// place_component 预检（unknown 拒绝 / motion 白名单），这里只赋值。
+fn Project::apply_place_kv(
+  self : Project,
+  doc : Document,
+  node_id : String,
+  kvs : Array[(String, String)],
+) -> Unit {
+  let _ = doc.update_node(node_id, n => {
+    let mut cur = n
+    for pair in kvs.iter() {
+      let (k, v) = pair
+      let d = parse_double(v)
+      match k {
+        "text" => cur = { ..cur, text: v, }
+        "fill" =>
+          cur = { ..cur, style: { ..cur.style, fill: self.tokens.resolve_color(v), }, }
+        "stroke" =>
+          cur = { ..cur, style: { ..cur.style, stroke: self.tokens.resolve_color(v), }, }
+        "text_color" =>
+          cur = { ..cur, style: { ..cur.style, text_color: self.tokens.resolve_color(v), }, }
+        "radius" =>
+          cur = { ..cur, style: { ..cur.style, corner_radius: d, }, }
+        "opacity" =>
+          cur = { ..cur, style: { ..cur.style, opacity: d, }, }
+        "font_size" =>
+          cur = { ..cur, style: { ..cur.style, font_size: d, }, }
+        "weight" =>
+          cur = { ..cur, style: { ..cur.style, font_weight: v, }, }
+        "shadow" =>
+          cur = { ..cur, style: { ..cur.style, shadow: v, }, }
+        "motion" =>
+          cur = { ..cur, style: { ..cur.style, motion: v, }, }
+        _ => ()
+      }
+    }
+    cur
+  })
 }

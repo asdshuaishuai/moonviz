@@ -27,7 +27,23 @@ pub fn validate_mbt(mbt : String) -> String {
     Ok(model) => {
       let entry = @core.json_escape(model.entry)
       let block_kinds = model.document.block_kind_counts()
-      "{\"ok\":true,\"entry\":\"\{entry}\",\"revision\":\{model.project.revision},\"blockKinds\":\{block_kinds}}"
+      // issue #31：宿主以 validate 为闸——补画板/节点计数，让「validate ok
+      // 但板空」一眼可辨，而不是渲染时才看到整板消失
+      let mut board_dump = ""
+      let mut board_first = true
+      for ab_id in model.project.artboards.keys() {
+        match model.project.artboards.get(ab_id) {
+          Some(meta) => {
+            if !board_first {
+              board_dump += ","
+            }
+            board_first = false
+            board_dump += "{\"id\":\"" + @core.json_escape(ab_id) + "\",\"nodes\":" + meta.doc.nodes.keys().length().to_string() + "}"
+          }
+          None => ()
+        }
+      }
+      "{\"ok\":true,\"entry\":\"\{entry}\",\"revision\":\{model.project.revision},\"blockKinds\":\{block_kinds},\"artboards\":[\{board_dump}]}"
     }
   }
 }
