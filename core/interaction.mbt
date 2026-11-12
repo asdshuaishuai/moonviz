@@ -383,11 +383,11 @@ pub fn extract_interaction_marker(name : String) -> String {
   match name.find("⚡") {
     None => ""
     Some(i) => {
-      let tail = name.substring(start=i, end=name.length())
+      let tail = name[i:name.length()].to_owned()
       // 交互标记到下一个状态标记为止
       match tail.find("[state:") {
-        None => tail.trim().to_string()
-        Some(j) => tail.substring(start=0, end=j).trim().to_string()
+        None => tail.trim().to_owned()
+        Some(j) => tail[0:j].to_owned().trim().to_owned()
       }
     }
   }
@@ -431,12 +431,12 @@ pub fn strip_all_markers(name : String) -> String {
     Some(i) => if i < cut { cut = i }
     None => ()
   }
-  let head = name.substring(start=0, end=cut)
+  let head = name[0:cut].to_owned()
   let mut end = head.length()
-  while end > 0 && head.substring(start=end - 1, end~) == " " {
+  while end > 0 && head[end - 1:end].to_owned() == " " {
     end = end - 1
   }
-  head.substring(start=0, end~)
+  head[0:end].to_owned()
 }
 
 ///|
@@ -464,10 +464,10 @@ pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit 
             // 前面 state spec 的 text 值里可有 \[cur: 形态的转义文本）
             match find_unescaped_seq(n.name, 0, "[cur:") {
               Some(ci) => {
-                let rest_name = n.name.substring(start=ci + 5)
+                let rest_name = n.name[ci + 5:].to_owned()
                 match rest_name.find("]") {
                   Some(e) => {
-                    let cname = rest_name.substring(start=0, end=e)
+                    let cname = rest_name[0:e].to_owned()
                     if cname != "" && def.states.contains(cname) {
                       def.current = cname
                     }
@@ -497,22 +497,22 @@ pub fn parse_state_markers(name : String) -> Array[(String, NodePatch)]? {
     match find_unescaped_seq(rest, 0, "[state:") {
       None => break
       Some(i) => {
-        let tail = rest.substring(start=i + 7, end=rest.length())
+        let tail = rest[i + 7:rest.length()].to_owned()
         match find_unescaped_seq(tail, 0, "]") {
           None => break
           Some(j) => {
-            let body = tail.substring(start=0, end=j)
+            let body = tail[0:j].to_owned()
             match body.find(":") {
               None => ()
               Some(k) => {
-                let sname = body.substring(start=0, end=k)
-                let spec = body.substring(start=k + 1, end=body.length())
+                let sname = body[0:k].to_owned()
+                let spec = body[k + 1:body.length()].to_owned()
                 if sname != "" {
                   out.push((sname, spec_to_patch(spec)))
                 }
               }
             }
-            rest = tail.substring(start=j + 1, end=tail.length())
+            rest = tail[j + 1:tail.length()].to_owned()
           }
         }
       }
@@ -539,9 +539,9 @@ fn spec_to_patch(spec : String) -> NodePatch {
     match kv.find("=") {
       None => ()
       Some(eq) => {
-        let k = kv.substring(start=0, end=eq)
+        let k = kv[0:eq].to_owned()
         // 值反转义（text 经 spec_escape 写入；其余值不含转义字符，原样通过）
-        let v = spec_unescape(kv.substring(start=eq + 1, end=kv.length()))
+        let v = spec_unescape(kv[eq + 1:kv.length()].to_owned())
         match k {
           "fill" => fill = Some(v)
           "text_color" => text_color = Some(v)
@@ -617,7 +617,7 @@ fn find_unescaped_seq(s : String, start : Int32, seq : String) -> Int32? {
           esc = true
         } else if c == first &&
           i + m <= n &&
-          s.substring(start=i, end=i + m) == seq {
+          s[i:i + m].to_owned() == seq {
           return Some(i)
         }
       None => esc = false
@@ -896,8 +896,8 @@ pub fn parse_interaction_marker(name : String) -> (String, String)? {
   // 不截断会把 "[state:...]" 当成 action 的一部分。
   let raw_after = after.to_string()
   let a = match raw_after.find("[state:") {
-    Some(i) => raw_after.substring(start=0, end=i).trim().to_string()
-    None => raw_after.trim().to_string()
+    Some(i) => raw_after[0:i].to_owned().trim().to_owned()
+    None => raw_after.trim().to_owned()
   }
   if t == "" || a == "" {
     return None
@@ -926,8 +926,8 @@ pub fn trigger_from_spec(spec : String) -> Trigger? {
       match spec.find(":") {
         None => None
         Some(i) => {
-          let head = spec.substring(start=0, end=i)
-          let rest = spec.substring(start=i + 1, end=spec.length())
+          let head = spec[0:i].to_owned()
+          let rest = spec[i + 1:spec.length()].to_owned()
           if head == "long_press" && rest != "" {
             let sec = parse_double(rest)
             if sec > 0.0 {
@@ -952,12 +952,12 @@ pub fn trigger_from_spec(spec : String) -> Trigger? {
 /// - `focus:<node>` / `blur:<node>` 保留节点后缀；
 /// - 带冒号但头不在已知触发族 → Err(unknown_trigger: …)。
 pub fn normalize_flow_trigger(spec : String) -> Result[String, String] {
-  let raw = spec.trim().to_string()
+  let raw = spec.trim().to_owned()
   if raw == "" {
     return Err("unknown_trigger: ")
   }
   if raw.has_prefix("tap:") {
-    let node = raw.substring(start=4)
+    let node = raw[4:].to_owned()
     if node == "" {
       return Err("unknown_trigger: " + raw)
     }
@@ -973,8 +973,8 @@ pub fn normalize_flow_trigger(spec : String) -> Result[String, String] {
   }
   match raw.find(":") {
     Some(i) => {
-      let head = raw.substring(start=0, end=i)
-      let node = raw.substring(start=i + 1, end=raw.length())
+      let head = raw[0:i].to_owned()
+      let node = raw[i + 1:raw.length()].to_owned()
       if node == "" {
         return Err("unknown_trigger: " + raw)
       }
@@ -1001,8 +1001,8 @@ pub fn action_from_spec(spec : String) -> Action? {
       match spec.find(":") {
         None => None
         Some(i) => {
-          let head = spec.substring(start=0, end=i)
-          let rest = spec.substring(start=i + 1, end=spec.length())
+          let head = spec[0:i].to_owned()
+          let rest = spec[i + 1:spec.length()].to_owned()
           match head {
             "navigate_to" =>
               if rest == "" {
@@ -1031,7 +1031,7 @@ pub fn action_from_spec(spec : String) -> Action? {
                 // 字段 id 列表（逗号分隔；空项忽略）。无字段 = 非法 spec。
                 let ids : Array[String] = []
                 for seg in rest.split(",") {
-                  let id = seg.to_string().trim().to_string()
+                  let id = seg.to_owned().trim().to_owned()
                   if id != "" {
                     ids.push(id)
                   }
@@ -1052,8 +1052,8 @@ pub fn action_from_spec(spec : String) -> Action? {
               match rest.find(":") {
                 None => None
                 Some(j) => {
-                  let id = rest.substring(start=0, end=j)
-                  let txt = rest.substring(start=j + 1, end=rest.length())
+                  let id = rest[0:j].to_owned()
+                  let txt = rest[j + 1:rest.length()].to_owned()
                   if id == "" {
                     None
                   } else {
@@ -1065,8 +1065,8 @@ pub fn action_from_spec(spec : String) -> Action? {
               match rest.find(":") {
                 None => None
                 Some(j) => {
-                  let id = rest.substring(start=0, end=j)
-                  let st = rest.substring(start=j + 1, end=rest.length())
+                  let id = rest[0:j].to_owned()
+                  let st = rest[j + 1:rest.length()].to_owned()
                   if id == "" {
                     None
                   } else {
@@ -1085,9 +1085,9 @@ pub fn action_from_spec(spec : String) -> Action? {
 /// 去掉规格值两端的双引号（show_toast:"msg" / set_text:n:"txt"）。
 fn unquote_spec(s : String) -> String {
   if s.length() >= 2 &&
-    s.substring(start=0, end=1) == "\"" &&
-    s.substring(start=s.length() - 1, end=s.length()) == "\"" {
-    s.substring(start=1, end=s.length() - 1)
+    s[0:1].to_owned() == "\"" &&
+    s[s.length() - 1:s.length()].to_owned() == "\"" {
+    s[1:s.length() - 1].to_owned()
   } else {
     s
   }
@@ -1219,13 +1219,13 @@ pub fn strip_markers(name : String) -> String {
   match idx {
     None => name
     Some(i) => {
-      let head = name.substring(start=0, end=i)
+      let head = name[0:i].to_owned()
       // 修剪标记前遗留的尾随空格
       let mut end = head.length()
-      while end > 0 && head.substring(start=end - 1, end~) == " " {
+      while end > 0 && head[end - 1:end].to_owned() == " " {
         end = end - 1
       }
-      head.substring(start=0, end~)
+      head[0:end].to_owned()
     }
   }
 }

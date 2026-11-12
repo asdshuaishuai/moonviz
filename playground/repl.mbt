@@ -36,13 +36,13 @@ fn repaint(st : ReplState) -> String {
 
 ///|
 fn tokenize(line : String) -> Array[String] {
-  let out : Array[String] = Array::new()
-  let mut buf = StringBuilder::new()
+  let out : Array[String] = []
+  let mut buf = StringBuilder()
   for c in line.iter() {
     if c == ' ' || c == '\t' {
       if buf.to_string().length() > 0 {
         out.push(buf.to_string())
-        buf = StringBuilder::new()
+        buf = StringBuilder()
       }
     } else {
       buf.write_char(c)
@@ -76,7 +76,7 @@ pub fn apply_command(st : ReplState, line : String) -> String {
         Ok(page) => {
           let doc = page.build()
           let layout = @core.solve(doc)
-          let sb = StringBuilder::new()
+          let sb = StringBuilder()
           for id in doc.nodes.keys() {
             match layout.rect_of(id) {
               Some(r) =>
@@ -263,7 +263,7 @@ fn agent_target(toks : Array[String]) -> String? {
 
 ///|
 fn join_from_idx(toks : Array[String], from : Int32) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in from..<toks.length() {
     if i > from {
       sb.write_char(' ')

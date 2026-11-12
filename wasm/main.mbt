@@ -41,7 +41,7 @@ pub fn validate_mbt(mbt : String) -> String {
             board_dump += "{\"id\":\"" +
               @core.json_escape(ab_id) +
               "\",\"nodes\":" +
-              meta.doc.nodes.keys().length().to_string() +
+              meta.doc.nodes.keys().count().to_string() +
               "}"
           }
           None => ()
@@ -231,7 +231,7 @@ fn prune_session_histories(cur : WasmSession) -> WasmSession {
 ///|
 /// 会话 history 的 revision 解析（对齐 cli parse_rev：非负十进制）。
 fn history_rev(text : String) -> Int32? {
-  let t = text.trim().to_string()
+  let t = text.trim().to_owned()
   if t.length() == 0 {
     return None
   }
@@ -239,7 +239,7 @@ fn history_rev(text : String) -> Int32? {
   let digits = "0123456789"
   let mut i = 0
   while i < t.length() {
-    let c = t.substring(start=i, end=i + 1)
+    let c = t[i:i + 1].to_owned()
     match digits.find(c) {
       None => return None
       Some(x) => v = v * 10 + x
@@ -546,7 +546,7 @@ pub fn session_history(handle : Int32, line : String) -> String {
   }
   let parts : Array[String] = []
   for seg in line.split(" ") {
-    let t = seg.to_string()
+    let t = seg.to_owned()
     if t != "" {
       parts.push(t)
     }
@@ -822,8 +822,8 @@ fn sess_mut_ok(handle : Int32, p : @core.Project, inner : String) -> String {
   let mbt_frag = session_canonical_mbt(p)
   if inner.contains("\"ok\":") &&
     inner.length() > 0 &&
-    inner.substring(start=inner.length() - 1) == "}" {
-    inner.substring(start=0, end=inner.length() - 1) + mbt_frag + "}"
+    inner[inner.length() - 1:].to_owned() == "}" {
+    inner[0:inner.length() - 1].to_owned() + mbt_frag + "}"
   } else if inner.contains("\"ok\":") {
     "{\"ok\":true,\"moves\":\"\{@core.json_escape(inner)}\"" + mbt_frag + "}"
   } else {
@@ -1003,7 +1003,7 @@ pub fn session_constrain(
       Ok(op_env) =>
         Ok(
           "{\"ok\":true," +
-          op_env.substring(start=1, end=op_env.length() - 1) +
+          op_env[1:op_env.length() - 1].to_owned() +
           session_canonical_mbt(p) +
           "}",
         )
@@ -1259,7 +1259,7 @@ pub fn session_event(
 fn parse_viz_event(spec : String) -> @core.VizEvent? {
   let parts : Array[String] = []
   for seg in spec.split(":") {
-    parts.push(seg.to_string().trim().to_string())
+    parts.push(seg.to_owned().trim().to_owned())
   }
   if parts.length() == 0 {
     return None

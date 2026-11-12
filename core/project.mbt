@@ -924,7 +924,7 @@ fn relative_luminance(hex : String) -> Double {
 ///|
 fn hex_val(hex : String, offset : Int32) -> Double {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
-    hex.substring(start=1)
+    hex[1:].to_owned()
   } else {
     hex
   }
@@ -1039,7 +1039,7 @@ fn sanitize_id(name : String) -> String {
     if (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 95 {
       sb.write_char(c)
     } else if code >= 65 && code <= 90 {
-      sb.write_char(Char::from_int(code + 32))
+      sb.write_char((code + 32).unsafe_to_char())
     } else {
       sb.write_char('_')
     }

@@ -189,7 +189,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if user_items.length() == 0 {
         builtin
       } else {
-        let inner = builtin.substring(start=1, end=builtin.length() - 1)
+        let inner = builtin[1:builtin.length() - 1].to_owned()
         let sep = if inner == "" { "" } else { "," }
         "[\{inner}\{sep}\{mcp_join(user_items)}]"
       }
@@ -314,7 +314,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let mut ok_count = 0
       let mut first_error = ""
       for part_view in source_b64s.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
@@ -373,15 +373,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let raw_args = extract_arg_string(request_line, "args")
       if raw_args != "" {
         for part_view in raw_args.split(" ") {
-          let part = part_view.to_string()
+          let part = part_view.to_owned()
           if part == "" {
             continue
           }
           match part.find("=") {
             None => return err_json("place_invalid_arg:" + part)
             Some(pos) => {
-              let k = part.substring(start=0, end=pos)
-              let v = @decl.unescape_value(part.substring(start=pos + 1))
+              let k = part[0:pos].to_owned()
+              let v = @decl.unescape_value(part[pos + 1:].to_owned())
               if k != "" {
                 kv.set(k, v)
               }
@@ -522,7 +522,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let lines : Array[String] = []
       for line in block.split("\n").iter() {
-        let trimmed = line.trim().to_string()
+        let trimmed = line.trim().to_owned()
         if trimmed != "" {
           lines.push(trimmed)
         }
@@ -584,7 +584,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       //（H5 契约：MCP 通道导出信封必须是合法 JSON，CLI 通道同败面）
       let html = p.export_html()
       let len = html.length().to_string()
-      let preview = @core.json_escape(html.substring(start=0, end=120))
+      let preview = @core.json_escape(html[0:120].to_owned())
       "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{preview}...\"}"
     }
     "export_svg" => {
@@ -595,7 +595,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         Ok(svg) => {
           // 同 export_html：SVG 多行文本裸插 = 非法 JSON 信封
           let len = svg.length().to_string()
-          let preview = @core.json_escape(svg.substring(start=0, end=100))
+          let preview = @core.json_escape(svg[0:100].to_owned())
           "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{preview}...\"}"
         }
         Err(e) => err_json(e)
@@ -845,15 +845,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let kvs : Array[(String, String)] = []
       for part_view in raw.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
         match part.find("=") {
           None => return err_json("update_invalid_arg:" + part)
           Some(pos) => {
-            let k = part.substring(start=0, end=pos)
-            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let k = part[0:pos].to_owned()
+            let v = @decl.unescape_value(part[pos + 1:].to_owned())
             if k != "" {
               kvs.push((k, v))
             }
@@ -888,7 +888,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let ids : Array[String] = []
       for v in nodes_arg.split(",") {
-        let t = v.to_string().trim().to_string()
+        let t = v.to_owned().trim().to_owned()
         if t != "" {
           ids.push(t)
         }
@@ -916,7 +916,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let ids : Array[String] = []
       for v in nodes_arg.split(",") {
-        let t = v.to_string().trim().to_string()
+        let t = v.to_owned().trim().to_owned()
         if t != "" {
           ids.push(t)
         }
@@ -950,15 +950,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let raw = extract_arg_string(request_line, "args")
       let kvs : Array[(String, String)] = []
       for part_view in raw.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
         match part.find("=") {
           None => return err_json("restyle_invalid_arg:" + part)
           Some(pos) => {
-            let k = part.substring(start=0, end=pos)
-            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let k = part[0:pos].to_owned()
+            let v = @decl.unescape_value(part[pos + 1:].to_owned())
             if k != "" {
               kvs.push((k, v))
             }
@@ -1014,15 +1014,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let mut radius : Double? = None
       let mut font_size : Double? = None
       for part_view in raw.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
         match part.find("=") {
           None => ()
           Some(pos) => {
-            let k = part.substring(start=0, end=pos)
-            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let k = part[0:pos].to_owned()
+            let v = @decl.unescape_value(part[pos + 1:].to_owned())
             let d = @core.parse_double(v)
             match k {
               "fill" => fill = Some(v)
@@ -1121,7 +1121,7 @@ fn extract_arg_string(line : String, key : String) -> String {
     Some(i) => i
     None => return ""
   }
-  let args_body = line.substring(start=args_idx)
+  let args_body = line[args_idx:].to_owned()
   // 在 arguments 对象内查找 key（同样容忍 "key": "value" 的空格写法）
   let pattern = "\"" + key + "\":"
   match args_body.find(pattern) {
@@ -1134,7 +1134,7 @@ fn extract_arg_string(line : String, key : String) -> String {
         return ""
       }
       // 扫描到第一个未转义的闭引号，途中还原 \X 转义序列
-      let rest = args_body.substring(start=start + 1)
+      let rest = args_body[start + 1:].to_owned()
       let sb = StringBuilder()
       let mut i = 0
       let n = rest.length()
@@ -1224,7 +1224,7 @@ fn decode_unicode_escape(rest : String, i : Int32, n : Int32) -> (Char, Int32)? 
         Some(low) =>
           if low >= 0xDC00 && low <= 0xDFFF {
             let cp = 0x10000 + (code - 0xD800) * 0x400 + (low - 0xDC00)
-            return Some((Char::from_int(cp), i + 12))
+            return Some(((cp).unsafe_to_char(), i + 12))
           }
         None => ()
       }
@@ -1235,7 +1235,7 @@ fn decode_unicode_escape(rest : String, i : Int32, n : Int32) -> (Char, Int32)? 
     // 孤立低代理项：非法序列
     return None
   }
-  Some((Char::from_int(code), i + 6))
+  Some(((code).unsafe_to_char(), i + 6))
 }
 
 ///|
@@ -1284,7 +1284,7 @@ fn extract_arg_num(line : String, key : String) -> Double? {
     Some(i) => i
     None => return None
   }
-  let args_body = line.substring(start=args_idx)
+  let args_body = line[args_idx:].to_owned()
   let pattern = "\"" + key + "\":"
   match args_body.find(pattern) {
     Some(idx) => {
@@ -1293,7 +1293,7 @@ fn extract_arg_num(line : String, key : String) -> Double? {
       while start < args_body.length() && args_body.get_char(start) == Some(' ') {
         start = start + 1
       }
-      let rest = args_body.substring(start~)
+      let rest = args_body[start:].to_owned()
       let mut result = 0.0
       let mut frac = 0.1
       let mut has_dot = false
@@ -1337,9 +1337,9 @@ fn extract_json_string(json : String, key : String) -> String {
       if json.get_char(start) != Some('"') {
         return ""
       }
-      let rest = json.substring(start=start + 1)
+      let rest = json[start + 1:].to_owned()
       match rest.find("\"") {
-        Some(end) => rest.substring(start=0, end~)
+        Some(end) => rest[0:end].to_owned()
         None => ""
       }
     }
@@ -1365,14 +1365,14 @@ fn extract_json_id(json : String) -> String? {
       match json.get_char(start) {
         Some('"') => {
           // 字符串 id：扫描到闭引号，保留引号形态回显
-          let rest = json.substring(start=start + 1)
+          let rest = json[start + 1:].to_owned()
           match rest.find("\"") {
-            Some(end) => Some("\"" + rest.substring(start=0, end~) + "\"")
+            Some(end) => Some("\"" + rest[0:end].to_owned() + "\"")
             None => None // 截断请求：无合法 id，按通知静默
           }
         }
         Some(_) => {
-          let rest = json.substring(start~)
+          let rest = json[start:].to_owned()
           let mut result = ""
           for c in rest.iter() {
             let code = c.to_int()
@@ -1436,14 +1436,14 @@ fn decode_b64_text(payload : String) -> Result[String, String] {
 
 ///|
 fn mcp_parse_rev(text : String) -> Int32? {
-  let t = text.trim().to_string()
+  let t = text.trim().to_owned()
   if t.length() == 0 {
     return None
   }
   let mut v = 0
   let mut i = 0
   while i < t.length() {
-    let c = t.substring(start=i, end=i + 1)
+    let c = t[i:i + 1].to_owned()
     let d = "0123456789".find(c)
     match d {
       None => return None

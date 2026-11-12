@@ -36,7 +36,7 @@ pub(all) struct MbtDocument {
 ///|
 fn mbt_has_prefix(s : String, prefix : String) -> Bool {
   s.length() >= prefix.length() &&
-  s.substring(start=0, end=prefix.length()) == prefix
+  s[0:prefix.length()].to_owned() == prefix
 }
 
 ///|
@@ -55,7 +55,7 @@ fn mbt_trim(s : String) -> String {
       _ => break
     }
   }
-  s.substring(start=a, end=b)
+  s[a:b].to_owned()
 }
 
 ///|
@@ -108,7 +108,7 @@ fn mbt_fence_kind(line : String) -> String? {
   if mbt_fence_length(t) != 3 {
     return None
   }
-  let body = mbt_trim(t.substring(start=3))
+  let body = mbt_trim(t[3:].to_owned())
   if body == "mbt" ||
     body == "mbt check" ||
     body == "mbt nocheck" ||
@@ -127,8 +127,8 @@ fn mbt_marker_id(line : String) -> String? {
   let suffix = " -->"
   if mbt_has_prefix(t, prefix) && t.length() > prefix.length() + suffix.length() {
     let end = t.length() - suffix.length()
-    if t.substring(start=end, end=t.length()) == suffix {
-      let id = mbt_trim(t.substring(start=prefix.length(), end~))
+    if t[end:t.length()].to_owned() == suffix {
+      let id = mbt_trim(t[prefix.length():end].to_owned())
       if id != "" {
         return Some(id)
       }
@@ -144,7 +144,7 @@ fn mbt_field(front : String, key : String) -> String {
   for line in lines.iter() {
     let t = mbt_trim(line)
     if mbt_has_prefix(t, prefix) {
-      return mbt_trim(t.substring(start=prefix.length()))
+      return mbt_trim(t[prefix.length():].to_owned())
     }
   }
   ""
@@ -244,7 +244,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
           while k < lines.length() && !(anchor is Some(_)) {
             let l = mbt_trim(lines[k])
             if mbt_has_prefix(l, "## ") {
-              anchor = Some(mbt_trim(l.substring(start=3)))
+              anchor = Some(mbt_trim(l[3:].to_owned()))
               break
             }
             k = k + 1
@@ -264,7 +264,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
     while j < lines.length() {
       let candidate = mbt_trim(lines[j])
       if mbt_fence_length(candidate) >= opening_length {
-        let rest = mbt_trim(candidate.substring(start=opening_length))
+        let rest = mbt_trim(candidate[opening_length:].to_owned())
         if rest == "" {
           close = j
           break
@@ -486,13 +486,13 @@ fn mbt_parse_token_overrides(front : String) -> Map[String, String] {
     let colon = line.find(":")
     match colon {
       Some(idx) => {
-        let key = mbt_trim(line.substring(start=0, end=idx))
-        let mut value = mbt_trim(line.substring(start=idx + 1))
+        let key = mbt_trim(line[0:idx].to_owned())
+        let mut value = mbt_trim(line[idx + 1:].to_owned())
         if value.length() >= 2 {
-          let q = value.substring(start=0, end=1)
+          let q = value[0:1].to_owned()
           if (q == "\"" || q == "'") &&
-            value.substring(start=value.length() - 1) == q {
-            value = value.substring(start=1, end=value.length() - 1)
+            value[value.length() - 1:].to_owned() == q {
+            value = value[1:value.length() - 1].to_owned()
           }
         }
         if key != "" && value != "" && !key.contains(" ") {
@@ -540,16 +540,16 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
           },
         })
       }
-      from = mbt_trim(line.substring(start=7))
+      from = mbt_trim(line[7:].to_owned())
       to = ""
       trigger = ""
       transition = ""
     } else if mbt_has_prefix(line, "to:") {
-      to = mbt_trim(line.substring(start=3))
+      to = mbt_trim(line[3:].to_owned())
     } else if mbt_has_prefix(line, "trigger:") {
-      trigger = mbt_trim(line.substring(start=8))
+      trigger = mbt_trim(line[8:].to_owned())
     } else if mbt_has_prefix(line, "transition:") {
-      transition = mbt_trim(line.substring(start=11))
+      transition = mbt_trim(line[11:].to_owned())
     } else if line != "" &&
       !mbt_has_prefix(line, "-") &&
       !mbt_has_prefix(line, " ") {
@@ -593,11 +593,11 @@ pub fn mbt_validate_flows(project : @core.Project) -> Result[Unit, String] {
         }
         // 节点级触发（tap:/focus:/blur:）必须指向存在的节点
         let node = if trigger.has_prefix("tap:") {
-          Some(trigger.substring(start=4))
+          Some(trigger[4:].to_owned())
         } else if trigger.has_prefix("focus:") {
-          Some(trigger.substring(start=6))
+          Some(trigger[6:].to_owned())
         } else if trigger.has_prefix("blur:") {
-          Some(trigger.substring(start=5))
+          Some(trigger[5:].to_owned())
         } else {
           None
         }
@@ -886,7 +886,7 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         match ov.get(role) {
           Some(v) => {
             let is_default = if role.has_prefix("motion.") {
-              let key = role.substring(start=7)
+              let key = role[7:].to_owned()
               match default_tokens.motion.get(key) {
                 Some(dv) => @core.parse_double(v) == dv
                 None => false
@@ -1059,7 +1059,7 @@ pub fn MbtProject::commit_and_render(
             "{\"ok\":true,\"debt\":" +
             debt.to_string() +
             "," +
-            rendered.substring(start=11),
+            rendered[11:].to_owned(),
           )
         }
       }

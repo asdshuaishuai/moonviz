@@ -33,7 +33,7 @@ fn audit_score(json : String, principle : String) -> Int32 {
   match json.find(pat) {
     None => -1
     Some(pos) => {
-      let rest = json.substring(start=pos + pat.length())
+      let rest = json[pos + pat.length():].to_owned()
       let mut n = 0
       let mut i = 0
       while i < rest.length() {
@@ -438,7 +438,7 @@ test "模板审计：adaptive 全宽度 flow 目标都存在" {
     }
     for f in p.flows.iter() {
       if f.from == ab && f.trigger.has_prefix("tap:") {
-        let nid = f.trigger.substring(start=4)
+        let nid = f.trigger[4:].to_owned()
         assert_true(
           doc.has(nid),
           msg="宽 \{w}：flow tap:\{nid} 指向不存在的节点",

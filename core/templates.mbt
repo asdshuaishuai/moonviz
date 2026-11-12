@@ -1298,7 +1298,7 @@ fn Project::template_list_detail(self : Project, name : String) -> String {
       y=y + 12.0,
     )
     self.resize_node(ab, "chat_av\{ci}", 40.0, 40.0, 999.0)
-    self.set_text(ab, "chat_av\{ci}", who.substring(start=0, end=1))
+    self.set_text(ab, "chat_av\{ci}", who[0:1].to_owned())
     // 姓名 + 预览
     self.place_required(
       ab,

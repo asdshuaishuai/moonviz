@@ -34,8 +34,8 @@ fn write_c0_u_escape(sb : StringBuilder, code : Int32) -> Unit {
   let hi = (code >> 4) & 15
   let lo = code & 15
   sb.write_string("\\u00")
-  sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
-  sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+  sb.write_char((if hi < 10 { hi + 48 } else { hi + 87 }).unsafe_to_char())
+  sb.write_char((if lo < 10 { lo + 48 } else { lo + 87 }).unsafe_to_char())
 }
 
 ///|

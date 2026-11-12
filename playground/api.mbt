@@ -91,8 +91,8 @@ fn split_first_line(request : String) -> FirstLine {
   match idx {
     Some(i) =>
       {
-        op: trim_line(request.substring(start=0, end=i)),
-        rest: request.substring(start=i + 1),
+        op: trim_line(request[0:i].to_owned()),
+        rest: request[i + 1:].to_owned(),
       }
     None => { op: trim_line(request), rest: "", }
   }
@@ -109,12 +109,12 @@ struct MovePayload {
 ///|
 /// human_move 载荷：第 1..3 行 = id / x / y，其余行 = 当前声明文本
 fn move_payload(rest : String) -> Result[MovePayload, String] {
-  let lines : Array[String] = Array::new()
-  let mut buf = StringBuilder::new()
+  let lines : Array[String] = []
+  let mut buf = StringBuilder()
   for c in rest.iter() {
     if c == '\n' {
       lines.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(c)
     }
@@ -136,7 +136,7 @@ fn move_payload(rest : String) -> Result[MovePayload, String] {
 
 ///|
 fn join_from(lines : Array[String], from : Int32) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in from..<lines.length() {
     if i > from {
       sb.write_char('\n')
@@ -166,7 +166,7 @@ fn trim_line(s : String) -> String {
           None => running = false
         }
       }
-      s.substring(start=a, end=end + 1)
+      s[a:end + 1].to_owned()
     }
   }
 }
@@ -179,14 +179,14 @@ fn parse_num(s : String) -> Double? {
     return None
   }
   let is_neg : Bool = t.get_char(0) == Some('-')
-  let body : String = if is_neg { t.substring(start=1) } else { t }
+  let body : String = if is_neg { t[1:].to_owned() } else { t }
   let dot : Int32? = body.find(".")
   let intp : String = match dot {
-    Some(i) => body.substring(start=0, end=i)
+    Some(i) => body[0:i].to_owned()
     None => body
   }
   let fracp : String = match dot {
-    Some(i) => body.substring(start=i + 1)
+    Some(i) => body[i + 1:].to_owned()
     None => "0"
   }
   if intp.length() == 0 && body.find(".") != Some(0) {
@@ -220,7 +220,7 @@ fn parse_num(s : String) -> Double? {
 
 ///|
 fn join_comma(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")
@@ -237,7 +237,7 @@ fn ok_response(
   debt : Int32,
   violations : Array[@core.Violation],
 ) -> String {
-  let parts : Array[String] = Array::new()
+  let parts : Array[String] = []
   for v in violations.iter() {
     parts.push(v.to_json())
   }
@@ -256,7 +256,7 @@ fn error_payload(kind : String, detail : String) -> String {
 
 ///|
 fn block_response(kind : String, blocking : Array[@core.Violation]) -> String {
-  let parts : Array[String] = Array::new()
+  let parts : Array[String] = []
   for v in blocking.iter() {
     parts.push(v.to_json())
   }

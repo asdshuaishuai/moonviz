@@ -301,7 +301,7 @@ fn MoonVizRT::run_long_press_flow(
     let t = e.trigger
     let mut matched = t == "long_press"
     if !matched && t.has_prefix("long_press:") && t.length() > 11 {
-      let sec = parse_double(t.substring(start=11, end=t.length()))
+      let sec = parse_double(t[11:t.length()].to_owned())
       if sec > 0.0 && duration >= sec {
         matched = true
       }

@@ -142,7 +142,7 @@ fn count_occurrences(s : String, sub : String) -> Int32 {
   let mut pos = 0
   let sub_len = sub.length()
   while pos < s.length() {
-    match s.substring(start=pos).find(sub) {
+    match s[pos:].to_owned().find(sub) {
       Some(idx) => {
         count = count + 1
         pos = pos + idx + sub_len

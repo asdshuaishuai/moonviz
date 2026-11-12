@@ -632,7 +632,7 @@ fn extract_scores(json : String) -> Array[Int32] {
       first = false
       continue
     }
-    let num = extract_leading_int(p0.to_string())
+    let num = extract_leading_int(p0.to_owned())
     if num >= 0 {
       scores.push(num)
     }

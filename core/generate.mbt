@@ -50,7 +50,7 @@ fn contains_latin_word(haystack : String, word : String) -> Bool {
   let w = word.length()
   let mut i = 0
   while i + w <= n {
-    if haystack.substring(start=i, end=i + w) == word {
+    if haystack[i:i + w].to_owned() == word {
       let before_ok = i == 0 ||
         (match haystack.get_char(i - 1) {
           Some(c) => !is_ascii_alnum(c)
@@ -441,8 +441,8 @@ fn mbt_seg_trim(s : String) -> String {
 /// 出口节点语义关键词：目标画板 hint 去尾 "页"（注册页→注册）。
 fn egress_keyword(target_hint : String) -> String {
   if target_hint.length() >= 3 &&
-    target_hint.substring(start=target_hint.length() - 3) == "页" {
-    target_hint.substring(start=0, end=target_hint.length() - 3)
+    target_hint[target_hint.length() - 3:].to_owned() == "页" {
+    target_hint[0:target_hint.length() - 3].to_owned()
   } else {
     target_hint
   }
@@ -592,7 +592,7 @@ fn json_int_field(json : String, key : String, fallback : Int32) -> Int32 {
   match json.find(pat) {
     None => fallback
     Some(pos) => {
-      let rest = json.substring(start=pos + pat.length())
+      let rest = json[pos + pat.length():].to_owned()
       let mut j = 0
       let mut v = 0
       while j < rest.length() {
@@ -708,7 +708,7 @@ pub fn Project::generate_multi(
           "{\"skipped\":[" +
           parts.join(",") +
           "],\"ok\":true" +
-          json.substring(start=10),
+          json[10:].to_owned(),
         )
       }
     }

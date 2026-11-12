@@ -448,7 +448,7 @@ test "visual：list chips 四色轮换 + spec 令牌先行" {
         }
       }
       // 四只 chips 至少三种不同容器色（轮换）
-      assert_true(fills.keys().length() >= 3)
+      assert_true(fills.keys().count() >= 3)
       // 全部为容器角色色（spec 推导），不存在未上色 chip
       assert_true(
         fills.get(p.tokens.resolve_color("primary_container")) is Some(_),

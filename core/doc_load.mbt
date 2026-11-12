@@ -13,7 +13,7 @@ pub fn Document::from_json(text : String) -> Result[Document, String] {
     Some(i) => i + marker.length()
     None => return Err("json_missing_nodes")
   }
-  let body = text.substring(start=idx)
+  let body = text[idx:].to_owned()
   let store : JsonNodeStore = { nodes: Map([]), }
   match parse_node_obj(body, 0, store) {
     ParseFail(msg) => Err(msg)
@@ -163,7 +163,7 @@ fn parse_node_obj(
       // style 子对象：递归解析全部视觉字段
       if char_at2(s, pos) == "{" {
         let send = skip_object(s, pos)
-        let sp = parse_style_obj(s.substring(start=pos, end=send))
+        let sp = parse_style_obj(s[pos:send].to_owned())
         if sp.fill != "" {
           fill = sp.fill
         }
@@ -441,7 +441,7 @@ fn parse_value(s : String, start : Int32) -> (ScalarOrSpec, Int32) {
     let (kind_s, p1) = parse_string_after_key(s, start, "kind")
     let end = skip_object(s, start)
     let kind = unescape_json(kind_s)
-    let value = load_number(s.substring(start~, end~), "value")
+    let value = load_number(s[start:end].to_owned(), "value")
     let r : ScalarOrSpec = match kind {
       "fixed" => { num: value, str: "", spec: Fixed(value), pos: Fixed(value), }
       "fill" => { num: 0.0, str: "", spec: Fill, pos: Fixed(0.0), }
@@ -516,13 +516,13 @@ fn parse_string_after_key(
   key : String,
 ) -> (String, Int32) {
   let pattern = "\"" + key + "\":\""
-  let sub = s.substring(start~)
+  let sub = s[start:].to_owned()
   match sub.find(pattern) {
     Some(i) => {
       let vs = i + pattern.length()
-      let rest = sub.substring(start=vs)
+      let rest = sub[vs:].to_owned()
       match rest.find("\"") {
-        Some(e) => (rest.substring(start=0, end=e), start + vs + e)
+        Some(e) => (rest[0:e].to_owned(), start + vs + e)
         None => ("", start)
       }
     }
@@ -568,7 +568,7 @@ fn load_number(s : String, key : String) -> Double {
   let pattern = "\"" + key + "\":"
   match s.find(pattern) {
     Some(i) => {
-      let rest = s.substring(start=i + pattern.length())
+      let rest = s[i + pattern.length():].to_owned()
       let mut num = 0.0
       let mut frac = 0.1
       let mut dot = false
@@ -637,7 +637,7 @@ fn skip_ws2(s : String, pos : Int32) -> Int32 {
 ///|
 fn char_at2(s : String, i : Int32) -> String {
   if i < s.length() {
-    s.substring(start=i, end=i + 1)
+    s[i:i + 1].to_owned()
   } else {
     ""
   }
@@ -687,9 +687,9 @@ struct StyleParse {
 /// 位置 pos 处是否是 true/false 字面量（visible 等布尔字段解析用）
 fn match_bool_at(s : String, pos : Int32) -> Bool? {
   let n = s.length()
-  if pos + 4 <= n && s.substring(start=pos, end=pos + 4) == "true" {
+  if pos + 4 <= n && s[pos:pos + 4].to_owned() == "true" {
     Some(true)
-  } else if pos + 5 <= n && s.substring(start=pos, end=pos + 5) == "false" {
+  } else if pos + 5 <= n && s[pos:pos + 5].to_owned() == "false" {
     Some(false)
   } else {
     None
@@ -766,7 +766,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
       }
     } else {
       let end = value_end(obj, pos)
-      let num = parse_num_str(obj.substring(start=pos, end~))
+      let num = parse_num_str(obj[pos:end].to_owned())
       match key_t {
         "stroke_width" => stroke_width = num
         "corner_radius" => radius = num

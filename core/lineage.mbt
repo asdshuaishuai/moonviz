@@ -282,7 +282,7 @@ fn nearest_token2(tokens : DesignTokens, hex : String) -> (String, String)? {
 ///|
 fn parse_hex_rgb2(hex : String) -> (Double, Double, Double) {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
-    hex.substring(start=1)
+    hex[1:].to_owned()
   } else {
     hex
   }

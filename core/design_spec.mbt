@@ -55,22 +55,22 @@ fn ds_string_value(json : String, key : String) -> String? {
     None => return None
     Some(p) => p
   }
-  let rest = json.substring(start=pos + pat.length())
+  let rest = json[pos + pat.length():].to_owned()
   let colon = match rest.find(":") {
     None => return None
     Some(c) => c
   }
-  let after = rest.substring(start=colon + 1)
+  let after = rest[colon + 1:].to_owned()
   let q1 = match after.find("\"") {
     None => return None
     Some(q) => q
   }
-  let tail = after.substring(start=q1 + 1)
+  let tail = after[q1 + 1:].to_owned()
   let q2 = match tail.find("\"") {
     None => return None
     Some(q) => q
   }
-  Some(tail.substring(start=0, end=q2))
+  Some(tail[0:q2].to_owned())
 }
 
 ///|
@@ -81,12 +81,12 @@ fn ds_number_value(json : String, key : String) -> Double? {
     None => return None
     Some(p) => p
   }
-  let rest = json.substring(start=pos + pat.length())
+  let rest = json[pos + pat.length():].to_owned()
   let colon = match rest.find(":") {
     None => return None
     Some(c) => c
   }
-  let after = rest.substring(start=colon + 1)
+  let after = rest[colon + 1:].to_owned()
   let mut digits = ""
   let mut seen = false
   let mut dot_seen = false
@@ -138,22 +138,22 @@ fn ds_object_body(json : String, key : String) -> String? {
     None => return None
     Some(p) => p
   }
-  let rest = json.substring(start=pos + pat.length())
+  let rest = json[pos + pat.length():].to_owned()
   let colon = match rest.find(":") {
     None => return None
     Some(c) => c
   }
-  let after = rest.substring(start=colon + 1)
+  let after = rest[colon + 1:].to_owned()
   let open = match after.find("{") {
     None => return None
     Some(o) => o
   }
-  let body = after.substring(start=open + 1)
+  let body = after[open + 1:].to_owned()
   let close = match body.find("}") {
     None => return None
     Some(c) => c
   }
-  Some(body.substring(start=0, end=close))
+  Some(body[0:close].to_owned())
 }
 
 ///|
@@ -568,10 +568,10 @@ fn ds_tokens_in_brackets(s : String) -> Array[String] {
     None => return out
     Some(o) => o
   }
-  let body = s.substring(start=open + 1)
+  let body = s[open + 1:].to_owned()
   let close = match body.find("]") {
     None => body
-    Some(c) => body.substring(start=0, end=c)
+    Some(c) => body[0:c].to_owned()
   }
   let mut cur = ""
   let mut in_q = false
@@ -600,17 +600,17 @@ fn ds_quoted_list(spec : String, key : String) -> Array[String] {
     None => return out
     Some(p) => p
   }
-  let rest = spec.substring(start=pos + pat.length())
+  let rest = spec[pos + pat.length():].to_owned()
   let open = match rest.find("[") {
     None => return out
     Some(o) => o
   }
-  let body = rest.substring(start=open + 1)
+  let body = rest[open + 1:].to_owned()
   let close = match body.find("]") {
     None => return out
     Some(c) => c
   }
-  let span = body.substring(start=0, end=close)
+  let span = body[0:close].to_owned()
   let mut cur = ""
   let mut in_q = false
   for c in span.iter() {
@@ -642,12 +642,12 @@ pub fn ds_components_policy(spec : String) -> (Array[String], Array[String]) {
     None => return (allow, deny)
     Some(p) => p
   }
-  let rest = spec.substring(start=pos + pat.length())
+  let rest = spec[pos + pat.length():].to_owned()
   let colon = match rest.find(":") {
     None => return (allow, deny)
     Some(c) => c
   }
-  let after = rest.substring(start=colon + 1).trim().to_string()
+  let after = rest[colon + 1:].to_owned().trim().to_owned()
   if after.has_prefix("[") {
     // 数组形态 = 白名单：直接抽取方括号内的引号 token
     for v in ds_tokens_in_brackets(after).iter() {
@@ -731,7 +731,7 @@ fn ds_number_after_marker(text : String, marker : String) -> Double? {
     None => return None
     Some(p) => p
   }
-  let rest = text.substring(start=pos + marker.length())
+  let rest = text[pos + marker.length():].to_owned()
   let mut digits = ""
   let mut started = false
   for c in rest.iter() {

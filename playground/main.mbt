@@ -27,13 +27,13 @@ fn replace_first(s : String, old : String, new : String) -> String {
   match s.find(old) {
     None => s
     Some(i) =>
-      s.substring(start=0, end=i) + new + s.substring(start=i + old.length())
+      s[0:i].to_owned() + new + s[i + old.length():].to_owned()
   }
 }
 
 ///|
 pub fn scenario_report() -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("== MoonViz 原型工作台 \{version()} ==\n")
   sb.write_string(
     "纯 MoonBit：布局、不崩谓词、SVG、声明往返全部在 moonviz 引擎内计算。\n\n",

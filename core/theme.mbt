@@ -526,7 +526,7 @@ fn invert_luminance(hex : String) -> String {
 ///|
 fn parse_rgb5(hex : String) -> (Int32, Int32, Int32) {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
-    hex.substring(start=1)
+    hex[1:].to_owned()
   } else {
     hex
   }
@@ -578,8 +578,8 @@ fn int_to_hex(v : Int32) -> String {
   let hi = v / 16
   let lo = v % 16
   let sb = StringBuilder()
-  sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
-  sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
+  sb.write_char((if hi < 10 { hi + 48 } else { hi + 87 }).unsafe_to_char())
+  sb.write_char((if lo < 10 { lo + 48 } else { lo + 87 }).unsafe_to_char())
   sb.to_string()
 }
 
@@ -721,7 +721,7 @@ pub fn Project::apply_theme(
             match ov.get(role) {
               Some(v) =>
                 if role.has_prefix("motion.") {
-                  let key = role.substring(start=7)
+                  let key = role[7:].to_owned()
                   let ms = parse_double(v)
                   if ms > 0.0 {
                     self.tokens.motion.set(key, ms)
@@ -848,13 +848,13 @@ fn role_rank_for_fill(role : String) -> Int32 {
 ///|
 fn role_has_prefix(s : String, prefix : String) -> Bool {
   s.length() >= prefix.length() &&
-  s.substring(start=0, end=prefix.length()) == prefix
+  s[0:prefix.length()].to_owned() == prefix
 }
 
 ///|
 fn role_has_suffix(s : String, suffix : String) -> Bool {
   s.length() >= suffix.length() &&
-  s.substring(start=s.length() - suffix.length()) == suffix
+  s[s.length() - suffix.length():].to_owned() == suffix
 }
 
 ///|
@@ -1143,7 +1143,7 @@ pub fn Project::set_token(
   // 通道，frontmatter 里写作 `motion.base: 320`（数字不带引号）；未知
   // key / 非正值直接 Err 且不落值——不许静默写入无效节拍。
   if token_name.has_prefix("motion.") {
-    let key = token_name.substring(start=7)
+    let key = token_name[7:].to_owned()
     let ms = parse_double(value)
     if value.trim() == "" || ms <= 0.0 {
       return Err("invalid_token_value: " + value)
@@ -1197,7 +1197,7 @@ pub fn Project::get_token(
   token_name : String,
 ) -> Result[String, String] {
   if token_name.has_prefix("motion.") {
-    let key = token_name.substring(start=7)
+    let key = token_name[7:].to_owned()
     match self.tokens.motion.get(key) {
       Some(v) => return Ok(v.to_string())
       None => return Err("unknown_token: " + token_name)
