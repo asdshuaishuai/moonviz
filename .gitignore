@@ -12,3 +12,5 @@ LLM/
 .workbuddy/
 scripts-gen-bgm.py
 release-media/
+# moonc 0.10.20 生成的包接口快照（构建产物）
+pkg.generated.mbti
