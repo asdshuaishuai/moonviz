@@ -86,14 +86,14 @@ pub fn DesignOp::field(self : DesignOp) -> String {
 ///|
 pub(all) struct AgentSession {
   agent_id : String
-  base_revision : Int
+  base_revision : Int32
   ops : Array[DesignOp]
 }
 
 ///|
 pub fn AgentSession::new(
   agent_id : String,
-  base_revision : Int,
+  base_revision : Int32,
 ) -> AgentSession {
   { agent_id, base_revision, ops: [], }
 }
@@ -106,7 +106,7 @@ pub fn AgentSession::add_op(self : AgentSession, op : DesignOp) -> Unit {
 ///|
 /// 会话摘要
 pub fn AgentSession::summary(self : AgentSession) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("Agent \{self.agent_id} (base: rev\{self.base_revision})\n")
   for op in self.ops.iter() {
     sb.write_string("  \{op.describe()}\n")
@@ -136,10 +136,10 @@ pub(all) struct Conflict {
 pub(all) struct MergeResult {
   clean : Bool // 无冲突
   conflicts : Array[Conflict] // 冲突列表
-  auto_resolved : Int // 自动解决数
-  total_ops_ours : Int
-  total_ops_theirs : Int
-  applied_ops : Int // 实际应用的操作数
+  auto_resolved : Int32 // 自动解决数
+  total_ops_ours : Int32
+  total_ops_theirs : Int32
+  applied_ops : Int32 // 实际应用的操作数
 }
 
 ///|
@@ -238,7 +238,7 @@ fn ops_same_effect(a : DesignOp, b : DesignOp) -> Bool {
 ///|
 /// MergeResult JSON（Agent 审阅用）
 pub fn MergeResult::to_json(self : MergeResult) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let clean_str = if self.clean { "true" } else { "false" }
   sb.write_string("{\"clean\":\{clean_str}")
   sb.write_string(",\"conflicts\":\{self.conflicts.length()}")
@@ -267,7 +267,7 @@ pub fn MergeResult::to_json(self : MergeResult) -> String {
 /// 冲突解决策略：自动选择
 pub fn MergeResult::auto_resolve(
   self : MergeResult,
-  strategy? : String = "ours",
+  strategy~ : String = "ours",
 ) -> MergeResult {
   let resolved : MergeResult = {
     clean: true,
@@ -288,11 +288,11 @@ pub fn MergeResult::auto_resolve(
 ///|
 /// 当两个 Agent 同时插入节点到同一父容器时，调整索引避免覆盖
 pub fn transform_insert_index(
-  our_index : Int,
-  their_index : Int,
+  our_index : Int32,
+  their_index : Int32,
   our_timestamp : Double,
   their_timestamp : Double,
-) -> Int {
+) -> Int32 {
   if our_index < their_index {
     our_index // 我们在前，不受影响
   } else if our_index > their_index {
@@ -312,12 +312,12 @@ pub fn transform_insert_index(
 ///|
 pub(all) struct CollabManager {
   sessions : Map[String, AgentSession] // agent_id → session
-  mut base_revision : Int
+  mut base_revision : Int32
 }
 
 ///|
-pub fn CollabManager::new(base_revision : Int) -> CollabManager {
-  { sessions: Map::new(), base_revision, }
+pub fn CollabManager::new(base_revision : Int32) -> CollabManager {
+  { sessions: Map([]), base_revision, }
 }
 
 ///|
@@ -351,7 +351,7 @@ pub fn CollabManager::merge_all(self : CollabManager) -> Array[MergeResult] {
 
 ///|
 /// 总冲突数
-pub fn CollabManager::total_conflicts(self : CollabManager) -> Int {
+pub fn CollabManager::total_conflicts(self : CollabManager) -> Int32 {
   let mut total = 0
   for r in self.merge_all().iter() {
     total = total + r.conflicts.length()
@@ -362,9 +362,9 @@ pub fn CollabManager::total_conflicts(self : CollabManager) -> Int {
 ///|
 /// 协作状态摘要
 pub fn CollabManager::status(self : CollabManager) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("Collab (base: rev\{self.base_revision})\n")
-  sb.write_string("Agents: \{self.sessions.size()}\n")
+  sb.write_string("Agents: \{self.sessions.length()}\n")
   for id in self.sessions.keys() {
     match self.sessions.get(id) {
       Some(s) => sb.write_string("  \{s.agent_id}: \{s.ops.length()} ops\n")
@@ -586,7 +586,7 @@ pub fn merge_sessions_from_spec(spec : String) -> String {
 
 ///|
 /// 十进制整数解析（纯 core，无外部依赖）；None 表示非法。
-fn parse_int_opt(text : String) -> Int? {
+fn parse_int_opt(text : String) -> Int32? {
   let t = text.trim().to_string()
   if t.length() == 0 {
     return None

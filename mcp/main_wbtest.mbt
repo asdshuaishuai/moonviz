@@ -6,7 +6,9 @@
 /// 统一返回各自的 missing/error 信封，唯独漏臂落 _ => unknown_tool。
 test "MCP：list_tools 注册表与 execute_tool 分支对齐" {
   for t in @core.list_tools().iter() {
-    let line = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"" + t.name + "\",\"arguments\":{}}}"
+    let line = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"" +
+      t.name +
+      "\",\"arguments\":{}}}"
     let resp = execute_tool(line, t.name)
     assert_true(
       !resp.contains("unknown_tool"),
@@ -33,7 +35,10 @@ test "MCP：export_html/export_svg 信封为合法 JSON（preview 过转义）" 
     "export_html",
   )
   assert_true(resp_h.contains("\"ok\":true,\"html_length\":"))
-  assert_false(resp_h.contains("\n"), msg="html 信封含裸换行（非法 JSON）")
+  assert_false(
+    resp_h.contains("\n"),
+    msg="html 信封含裸换行（非法 JSON）",
+  )
   assert_true(resp_h.contains("\\n"), msg="preview 换行应为转义形态")
   let resp_s = execute_tool(
     "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"export_svg\",\"arguments\":{\"artboard\":\"h5a\"}}}",
@@ -42,5 +47,8 @@ test "MCP：export_html/export_svg 信封为合法 JSON（preview 过转义）" 
   assert_true(resp_s.contains("\"ok\":true,\"svg_length\":"))
   // svg preview 前 100 字符可能恰好无换行，核心契约是信封内无裸换行
   //（转义形态在场已由 html 侧断言守卫）
-  assert_false(resp_s.contains("\n"), msg="svg 信封含裸换行（非法 JSON）")
+  assert_false(
+    resp_s.contains("\n"),
+    msg="svg 信封含裸换行（非法 JSON）",
+  )
 }

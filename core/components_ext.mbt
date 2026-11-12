@@ -8,7 +8,7 @@ pub fn extended_components(
   m : Map[String, ComponentDef],
 ) -> Map[String, ComponentDef] {
   // ---------------- feedback ----------------
-  let av : Map[String, NodePatch] = Map::new()
+  let av : Map[String, NodePatch] = Map([])
   av.set("info", patch3("primary", "on_primary", 10.0))
   av.set("success", patch3("success", "on_primary", 10.0))
   av.set("error", patch3("error", "on_primary", 10.0))
@@ -24,7 +24,7 @@ pub fn extended_components(
     category: "feedback",
   })
 
-  let tv : Map[String, NodePatch] = Map::new()
+  let tv : Map[String, NodePatch] = Map([])
   tv.set("default", patch3("text_primary", "text_on_primary", 8.0))
   m.set("toast", {
     id: "toast",
@@ -37,7 +37,7 @@ pub fn extended_components(
     category: "feedback",
   })
 
-  let snv : Map[String, NodePatch] = Map::new()
+  let snv : Map[String, NodePatch] = Map([])
   snv.set("default", patch3("surface", "text_primary", 8.0))
   m.set("snackbar", {
     id: "snackbar",
@@ -50,7 +50,7 @@ pub fn extended_components(
     category: "feedback",
   })
 
-  let skv : Map[String, NodePatch] = Map::new()
+  let skv : Map[String, NodePatch] = Map([])
   skv.set("text", patch2("surface_variant", 4.0))
   skv.set("circle", patch2("surface_variant", 999.0))
   skv.set("block", patch2("surface_variant", 8.0))
@@ -65,7 +65,7 @@ pub fn extended_components(
     category: "feedback",
   })
 
-  let spv : Map[String, NodePatch] = Map::new()
+  let spv : Map[String, NodePatch] = Map([])
   spv.set("default", patch2("primary", 999.0))
   m.set("spinner", {
     id: "spinner",
@@ -78,7 +78,7 @@ pub fn extended_components(
     category: "feedback",
   })
 
-  let mtv : Map[String, NodePatch] = Map::new()
+  let mtv : Map[String, NodePatch] = Map([])
   mtv.set("default", patch2("surface_variant", 6.0))
   mtv.set("success", patch2("success", 6.0))
   m.set("meter", {
@@ -93,7 +93,7 @@ pub fn extended_components(
   })
 
   // ---------------- overlay ----------------
-  let dv : Map[String, NodePatch] = Map::new()
+  let dv : Map[String, NodePatch] = Map([])
   dv.set("default", patch3("surface", "text_primary", 14.0))
   dv.set("modal", patch3("surface", "text_primary", 16.0))
   m.set("dialog", {
@@ -107,7 +107,7 @@ pub fn extended_components(
     category: "overlay",
   })
 
-  let dwv : Map[String, NodePatch] = Map::new()
+  let dwv : Map[String, NodePatch] = Map([])
   dwv.set("left", patch3("surface", "text_primary", 0.0))
   dwv.set("right", patch3("surface", "text_primary", 0.0))
   m.set("drawer", {
@@ -121,7 +121,7 @@ pub fn extended_components(
     category: "overlay",
   })
 
-  let ppv : Map[String, NodePatch] = Map::new()
+  let ppv : Map[String, NodePatch] = Map([])
   ppv.set("default", patch3("surface", "text_primary", 10.0))
   m.set("popover", {
     id: "popover",
@@ -134,7 +134,7 @@ pub fn extended_components(
     category: "overlay",
   })
 
-  let ttv : Map[String, NodePatch] = Map::new()
+  let ttv : Map[String, NodePatch] = Map([])
   ttv.set("dark", patch3("text_primary", "surface", 6.0))
   m.set("tooltip", {
     id: "tooltip",
@@ -147,7 +147,7 @@ pub fn extended_components(
     category: "overlay",
   })
 
-  let dmv : Map[String, NodePatch] = Map::new()
+  let dmv : Map[String, NodePatch] = Map([])
   dmv.set("default", patch3("surface", "text_primary", 10.0))
   m.set("menu", {
     id: "menu",
@@ -161,7 +161,7 @@ pub fn extended_components(
   })
 
   // ---------------- navigation ----------------
-  let bcv : Map[String, NodePatch] = Map::new()
+  let bcv : Map[String, NodePatch] = Map([])
   bcv.set("default", patch3("surface", "text_secondary", 6.0))
   m.set("breadcrumb", {
     id: "breadcrumb",
@@ -174,7 +174,7 @@ pub fn extended_components(
     category: "navigation",
   })
 
-  let pgv2 : Map[String, NodePatch] = Map::new()
+  let pgv2 : Map[String, NodePatch] = Map([])
   pgv2.set("default", patch2("surface", 8.0))
   pgv2.set("active", patch2("primary", 8.0))
   m.set("pagination", {
@@ -188,7 +188,7 @@ pub fn extended_components(
     category: "navigation",
   })
 
-  let stv : Map[String, NodePatch] = Map::new()
+  let stv : Map[String, NodePatch] = Map([])
   stv.set("default", patch3("surface", "text_secondary", 999.0))
   stv.set("active", patch3("primary", "on_primary", 999.0))
   m.set("stepper", {
@@ -202,7 +202,7 @@ pub fn extended_components(
     category: "navigation",
   })
 
-  let nbv : Map[String, NodePatch] = Map::new()
+  let nbv : Map[String, NodePatch] = Map([])
   nbv.set("default", patch3("surface", "text_primary", 0.0))
   nbv.set("primary", patch3("primary", "on_primary", 0.0))
   m.set("navbar", {
@@ -216,7 +216,7 @@ pub fn extended_components(
     category: "navigation",
   })
 
-  let bnv : Map[String, NodePatch] = Map::new()
+  let bnv : Map[String, NodePatch] = Map([])
   bnv.set("default", patch3("surface", "text_primary", 0.0))
   m.set("bottom_nav", {
     id: "bottom_nav",
@@ -230,7 +230,7 @@ pub fn extended_components(
   })
 
   // ---------------- forms / inputs ----------------
-  let tav : Map[String, NodePatch] = Map::new()
+  let tav : Map[String, NodePatch] = Map([])
   tav.set("default", patch3("surface", "text_hint", 10.0))
   tav.set("filled", patch3("surface_variant", "text_hint", 10.0))
   m.set("textarea", {
@@ -244,7 +244,7 @@ pub fn extended_components(
     category: "inputs",
   })
 
-  let sev : Map[String, NodePatch] = Map::new()
+  let sev : Map[String, NodePatch] = Map([])
   sev.set("default", patch3("surface", "text_hint", 10.0))
   m.set("select", {
     id: "select",
@@ -257,7 +257,7 @@ pub fn extended_components(
     category: "inputs",
   })
 
-  let cbv2 : Map[String, NodePatch] = Map::new()
+  let cbv2 : Map[String, NodePatch] = Map([])
   cbv2.set("default", patch3("surface", "text_hint", 10.0))
   m.set("combobox", {
     id: "combobox",
@@ -270,7 +270,7 @@ pub fn extended_components(
     category: "inputs",
   })
 
-  let dpv : Map[String, NodePatch] = Map::new()
+  let dpv : Map[String, NodePatch] = Map([])
   dpv.set("default", patch3("surface", "text_hint", 10.0))
   m.set("datepicker", {
     id: "datepicker",
@@ -283,7 +283,7 @@ pub fn extended_components(
     category: "inputs",
   })
 
-  let fuv : Map[String, NodePatch] = Map::new()
+  let fuv : Map[String, NodePatch] = Map([])
   fuv.set("default", patch3("surface_variant", "text_hint", 12.0))
   fuv.set("dashed", patch3("surface", "text_hint", 12.0))
   m.set("file_upload", {
@@ -298,7 +298,7 @@ pub fn extended_components(
   })
 
   // ---------------- display ----------------
-  let rgv : Map[String, NodePatch] = Map::new()
+  let rgv : Map[String, NodePatch] = Map([])
   rgv.set("off", patch2("surface_variant", 4.0))
   rgv.set("on", patch2("warning", 4.0))
   m.set("rating", {
@@ -312,7 +312,7 @@ pub fn extended_components(
     category: "display",
   })
 
-  let tgv : Map[String, NodePatch] = Map::new()
+  let tgv : Map[String, NodePatch] = Map([])
   tgv.set(
     "default",
     patch3("secondary_container", "on_secondary_container", 6.0),
@@ -329,7 +329,7 @@ pub fn extended_components(
     category: "display",
   })
 
-  let stv2 : Map[String, NodePatch] = Map::new()
+  let stv2 : Map[String, NodePatch] = Map([])
   stv2.set("default", patch3("surface", "text_primary", 12.0))
   m.set("stat", {
     id: "stat",
@@ -342,7 +342,7 @@ pub fn extended_components(
     category: "display",
   })
 
-  let kbdv : Map[String, NodePatch] = Map::new()
+  let kbdv : Map[String, NodePatch] = Map([])
   kbdv.set("default", patch3("surface_variant", "text_primary", 5.0))
   m.set("kbd", {
     id: "kbd",
@@ -355,7 +355,7 @@ pub fn extended_components(
     category: "display",
   })
 
-  let tbv2 : Map[String, NodePatch] = Map::new()
+  let tbv2 : Map[String, NodePatch] = Map([])
   tbv2.set("default", patch3("surface", "text_primary", 8.0))
   tbv2.set("striped", patch3("surface_variant", "text_primary", 8.0))
   m.set("table", {
@@ -370,7 +370,7 @@ pub fn extended_components(
   })
 
   // ---------------- layout ----------------
-  let acv : Map[String, NodePatch] = Map::new()
+  let acv : Map[String, NodePatch] = Map([])
   acv.set("default", patch3("surface", "text_primary", 10.0))
   acv.set("expanded", patch3("surface_variant", "text_primary", 10.0))
   m.set("accordion", {
@@ -384,7 +384,7 @@ pub fn extended_components(
     category: "layout",
   })
 
-  let cav : Map[String, NodePatch] = Map::new()
+  let cav : Map[String, NodePatch] = Map([])
   cav.set("default", patch2("surface_variant", 12.0))
   cav.set("wide", patch2("surface_variant", 12.0))
   m.set("carousel", {
@@ -398,7 +398,7 @@ pub fn extended_components(
     category: "layout",
   })
 
-  let tlv : Map[String, NodePatch] = Map::new()
+  let tlv : Map[String, NodePatch] = Map([])
   tlv.set("default", patch2("primary", 999.0))
   m.set("timeline", {
     id: "timeline",
@@ -411,7 +411,7 @@ pub fn extended_components(
     category: "layout",
   })
 
-  let bgv : Map[String, NodePatch] = Map::new()
+  let bgv : Map[String, NodePatch] = Map([])
   bgv.set("default", patch3("surface_variant", "text_primary", 8.0))
   bgv.set("attached", patch3("surface_variant", "text_primary", 0.0))
   m.set("button_group", {
@@ -425,7 +425,7 @@ pub fn extended_components(
     category: "actions",
   })
 
-  let lkv : Map[String, NodePatch] = Map::new()
+  let lkv : Map[String, NodePatch] = Map([])
   lkv.set("default", patch2("primary", 0.0))
   m.set("link", {
     id: "link",
@@ -452,7 +452,7 @@ pub fn extended_components_v5(
   m : Map[String, ComponentDef],
 ) -> Map[String, ComponentDef] {
   // ---------------- selection ----------------
-  let mg : Map[String, NodePatch] = Map::new()
+  let mg : Map[String, NodePatch] = Map([])
   mg.set("multi", patch3("primary_container", "text_primary", 8.0))
   mg.set("single", patch3("surface_variant", "text_primary", 8.0))
   m.set("multi_select", {
@@ -466,7 +466,7 @@ pub fn extended_components_v5(
     category: "inputs",
   })
 
-  let tg : Map[String, NodePatch] = Map::new()
+  let tg : Map[String, NodePatch] = Map([])
   tg.set("single", patch3("surface_variant", "text_primary", 8.0))
   tg.set("segmented", patch3("primary", "on_primary", 8.0))
   m.set("toggle_group", {
@@ -480,7 +480,7 @@ pub fn extended_components_v5(
     category: "selection",
   })
 
-  let st : Map[String, NodePatch] = Map::new()
+  let st : Map[String, NodePatch] = Map([])
   st.set("active", patch3("primary", "on_primary", 999.0))
   st.set("inactive", patch3("surface_variant", "text_secondary", 999.0))
   m.set("steps", {
@@ -495,7 +495,7 @@ pub fn extended_components_v5(
   })
 
   // ---------------- status / indicator ----------------
-  let sd : Map[String, NodePatch] = Map::new()
+  let sd : Map[String, NodePatch] = Map([])
   sd.set("online", patch3("success", "on_primary", 999.0))
   sd.set("away", patch3("warning", "on_primary", 999.0))
   sd.set("offline", patch3("outline", "on_primary", 999.0))
@@ -511,7 +511,7 @@ pub fn extended_components_v5(
   })
 
   // ---------------- overlay ----------------
-  let sc : Map[String, NodePatch] = Map::new()
+  let sc : Map[String, NodePatch] = Map([])
   sc.set("default", patch2("text_primary", 0.0))
   m.set("scrim", {
     id: "scrim",
@@ -524,7 +524,7 @@ pub fn extended_components_v5(
     category: "overlay",
   })
 
-  let hc : Map[String, NodePatch] = Map::new()
+  let hc : Map[String, NodePatch] = Map([])
   hc.set("default", patch3("surface", "text_primary", 12.0))
   m.set("hover_card", {
     id: "hover_card",
@@ -537,7 +537,7 @@ pub fn extended_components_v5(
     category: "overlay",
   })
 
-  let lb : Map[String, NodePatch] = Map::new()
+  let lb : Map[String, NodePatch] = Map([])
   lb.set("default", patch2("text_primary", 0.0))
   m.set("lightbox", {
     id: "lightbox",
@@ -550,7 +550,7 @@ pub fn extended_components_v5(
     category: "overlay",
   })
 
-  let cp : Map[String, NodePatch] = Map::new()
+  let cp : Map[String, NodePatch] = Map([])
   cp.set("default", patch3("surface", "text_primary", 12.0))
   m.set("command_palette", {
     id: "command_palette",
@@ -564,7 +564,7 @@ pub fn extended_components_v5(
   })
 
   // ---------------- content / layout ----------------
-  let cb : Map[String, NodePatch] = Map::new()
+  let cb : Map[String, NodePatch] = Map([])
   cb.set("mine", patch3("primary", "on_primary", 16.0))
   cb.set("theirs", patch3("surface_variant", "text_primary", 16.0))
   m.set("chat_bubble", {
@@ -578,7 +578,7 @@ pub fn extended_components_v5(
     category: "display",
   })
 
-  let mq : Map[String, NodePatch] = Map::new()
+  let mq : Map[String, NodePatch] = Map([])
   mq.set("default", patch3("surface_variant", "text_primary", 0.0))
   m.set("marquee", {
     id: "marquee",
@@ -591,7 +591,7 @@ pub fn extended_components_v5(
     category: "display",
   })
 
-  let ms : Map[String, NodePatch] = Map::new()
+  let ms : Map[String, NodePatch] = Map([])
   ms.set("default", patch3("surface_variant", "text_primary", 12.0))
   ms.set("dense", patch3("surface_variant", "text_primary", 8.0))
   m.set("masonry", {
@@ -605,7 +605,7 @@ pub fn extended_components_v5(
     category: "layout",
   })
 
-  let bg : Map[String, NodePatch] = Map::new()
+  let bg : Map[String, NodePatch] = Map([])
   bg.set("default", patch3("surface_variant", "text_primary", 16.0))
   bg.set("compact", patch3("surface_variant", "text_primary", 8.0))
   m.set("bento_grid", {
@@ -619,7 +619,7 @@ pub fn extended_components_v5(
     category: "layout",
   })
 
-  let rh : Map[String, NodePatch] = Map::new()
+  let rh : Map[String, NodePatch] = Map([])
   rh.set("vertical", patch3("outline", "on_primary", 2.0))
   rh.set("horizontal", patch3("outline", "on_primary", 2.0))
   m.set("resize_handle", {

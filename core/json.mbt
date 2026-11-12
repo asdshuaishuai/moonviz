@@ -5,7 +5,7 @@
 /// JSON 字符串转义（含引号、反斜杠与全部 C0 控制符——\b \f 等按 RFC 8259
 /// 统一输出 \u00xx，裸控制字符合法 JSON 不允许；playground 协议层复用）。
 pub fn json_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '"' => sb.write_string("\\\"")
@@ -30,7 +30,7 @@ pub fn json_escape(s : String) -> String {
 /// C0 控制符（0x00–0x1F）→ \u00xx（小写十六进制）。json_escape 与
 /// export.mbt 的 js_string_escape 共用的机械编码尾段——两处转义策略
 /// 各自独立（JSON 协议语义 / JS 字符串语义），仅这一段逐字相同。
-fn write_c0_u_escape(sb : StringBuilder, code : Int) -> Unit {
+fn write_c0_u_escape(sb : StringBuilder, code : Int32) -> Unit {
   let hi = (code >> 4) & 15
   let lo = code & 15
   sb.write_string("\\u00")
@@ -42,7 +42,7 @@ fn write_c0_u_escape(sb : StringBuilder, code : Int) -> Unit {
 /// 文档的规范代码表示：嵌套 children 的 JSON 树。
 /// Agent 读取这份 JSON 来理解当前设计，然后提交补丁。
 pub fn Document::to_json(self : Document) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string(
     "{\"revision\":\{self.revision},\"root_id\":\"\{json_escape(self.root_id)}\",\"nodes\":",
   )
@@ -126,7 +126,7 @@ pub fn PatchError::to_json(self : PatchError) -> String {
 
 ///|
 fn block_json(kind : String, vs : Array[Violation]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\"error\":\"\{kind}\",\"violations\":[")
   for i in 0..<vs.length() {
     if i > 0 {

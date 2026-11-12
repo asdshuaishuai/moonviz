@@ -11,10 +11,10 @@
 /// surface（如 nord 的 #2E3440）；默认浅色 #F6F7F9 保持既有文档兼容。
 pub fn render_svg(
   doc : Document,
-  surface? : String = "#F6F7F9",
-  frame? : String = "#C9CFDA",
-  filter_ns? : String = "",
-  node_ids? : Map[String, String]? = None,
+  surface~ : String = "#F6F7F9",
+  frame~ : String = "#C9CFDA",
+  filter_ns~ : String = "",
+  node_ids~ : Map[String, String]? = None,
 ) -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
@@ -26,12 +26,8 @@ pub fn render_svg(
   // 单板 SVG 导出保持空 ns（e1/e2/e3），兼容既有产物。
   // 可逆编码（svg_ns_tag）而非 svg_id_tag 的有损清洗：a-b 与 a_b 必须
   // 映射到不同命名空间，否则同页 filter id 会重复（验收④的对抗性 id）
-  let ns = if filter_ns == "" {
-    ""
-  } else {
-    "_" + svg_ns_tag(filter_ns)
-  }
-  let sb = StringBuilder::new()
+  let ns = if filter_ns == "" { "" } else { "_" + svg_ns_tag(filter_ns) }
+  let sb = StringBuilder()
   sb.write_string(
     "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" viewBox=\"0 0 \{root_rect.width} \{root_rect.height}\">",
   )
@@ -95,7 +91,11 @@ fn render_node(
           // 产出极端椭圆（420×40 搜索框 rx=210/ry=20）。
           let rr = if n.style.corner_radius > r.width / 2.0 ||
             n.style.corner_radius > r.height / 2.0 {
-            if r.width < r.height { r.width / 2.0 } else { r.height / 2.0 }
+            if r.width < r.height {
+              r.width / 2.0
+            } else {
+              r.height / 2.0
+            }
           } else {
             n.style.corner_radius
           }
@@ -181,7 +181,9 @@ fn render_node(
               } else if n.style.shadow != "none" {
                 sb.write_string(" filter=\"url(#\{n.style.shadow}\{ns})\"")
               } else if n.style.blur > 0.0 {
-                sb.write_string(" filter=\"url(#blur_\{svg_id_tag(n.id)}\{ns})\"")
+                sb.write_string(
+                  " filter=\"url(#blur_\{svg_id_tag(n.id)}\{ns})\"",
+                )
               }
               // 单一 transform 属性：变换列表从右向左作用，
               // flip 矩阵写在左侧即左乘 rotate（先转后翻）
@@ -315,7 +317,7 @@ fn shadow_token_params(tok : String) -> (Double, Double, Double, Double) {
 /// 按 \n 拆行（无换行返回单元素数组）
 fn split_lines(s : String) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for c in s.iter() {
     if c == '\n' {
       out.push(cur.to_string())
@@ -380,7 +382,7 @@ fn has_url_prefix(s : String) -> Bool {
 
 ///|
 fn svg_id_tag(id : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in id.iter() {
     let code = c.to_int()
     if (code >= 48 && code <= 57) ||
@@ -399,7 +401,7 @@ fn svg_id_tag(id : String) -> String {
 /// 与有损的 svg_id_tag（任何非字母数字→'_'）不同，不同输入不会碰撞，
 /// 用于多板同页的 filter id 命名空间（a-b → a_2d_b / a_b → a_5f_b）。
 fn svg_ns_tag(id : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in id.iter() {
     let code = c.to_int()
     if (code >= 48 && code <= 57) ||
@@ -410,22 +412,20 @@ fn svg_ns_tag(id : String) -> String {
       sb.write_string("__")
     } else {
       // 小写十六进制，两侧下划线作定界符（编码可逆）
-      let hex = StringBuilder::new()
+      let hex = StringBuilder()
       let mut v = code
       if v == 0 {
         hex.write_char('0')
       } else {
         while v > 0 {
           let d = v % 16
-          hex.write_char(
-            Char::from_int(if d < 10 { d + 48 } else { d + 87 }),
-          )
+          hex.write_char(Char::from_int(if d < 10 { d + 48 } else { d + 87 }))
           v = v / 16
         }
       }
       // 反转十六进制串
       let digits = hex.to_string()
-      let rev = StringBuilder::new()
+      let rev = StringBuilder()
       let mut i = digits.length()
       while i > 0 {
         rev.write_char(
@@ -445,7 +445,7 @@ fn svg_ns_tag(id : String) -> String {
 ///|
 /// 遍历文档收集全部渐变，生成 <defs> 段
 fn collect_gradients(doc : Document, ns : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for id in doc.nodes.keys() {
     match doc.get(id) {
       None => ()
@@ -541,7 +541,7 @@ fn parse_two_colors_angle(body : String) -> (String, String, Double) {
 
 ///|
 /// 找 @ 首次出现位置，未找到 -1
-fn index_of_at(s : String) -> Int {
+fn index_of_at(s : String) -> Int32 {
   let mut i = 0
   for c in s.iter() {
     if c == '@' {
@@ -567,7 +567,7 @@ fn parse_deg(s : String) -> Double {
 ///|
 fn split_char(s : String, sep : Char) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for c in s.iter() {
     if c == sep {
       out.push(cur.to_string())
@@ -611,7 +611,7 @@ fn wrap_angle(r : Double) -> Double {
 
 ///|
 fn xml_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '&' => sb.write_string("&amp;")

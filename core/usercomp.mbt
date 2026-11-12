@@ -42,7 +42,7 @@ fn resolve_args(
   variant : String,
   overrides : Map[String, String],
 ) -> Result[Map[String, String], String] {
-  let out : Map[String, String] = Map::new()
+  let out : Map[String, String] = Map([])
   for p in def.params.iter() {
     out.set(p.name, p.default_value)
   }
@@ -86,7 +86,7 @@ fn resolve_args(
 
 ///|
 /// 逐字符比较 s[at..at+name.length()] 是否等于 name（避免 failable 切片）
-fn str_eq_at(s : String, at : Int, name : String) -> Bool {
+fn str_eq_at(s : String, at : Int32, name : String) -> Bool {
   if at < 0 || at + name.length() > s.length() {
     return false
   }
@@ -112,7 +112,7 @@ fn subst_str(text : String, args : Map[String, String]) -> String {
   }
   // 长名优先，避免前缀名吞掉长名（cart 与 cart_icon 并存时）
   names.sort_by(fn(a, b) { b.length() - a.length() })
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let n = text.length()
   let mut i = 0
   let mut matched = true
@@ -195,10 +195,10 @@ pub fn place_user_component(
   target : Document,
   def : UserComponentDef,
   instance_id : String,
-  variant? : String = "",
-  args? : Map[String, String] = Map::new(),
-  dx? : Double = 0.0,
-  dy? : Double = 0.0,
+  variant~ : String = "",
+  args~ : Map[String, String] = Map([]),
+  dx~ : Double = 0.0,
+  dy~ : Double = 0.0,
 ) -> Result[String, String] {
   if target.has(instance_id) {
     return Err("duplicate_node:" + instance_id)
@@ -287,7 +287,7 @@ pub fn place_user_component(
 /// 单遍扫描（每轮 rest 严格前进），无轮数上限。
 pub fn collect_param_refs(def : UserComponentDef) -> Array[String] raise {
   let refs : Array[String] = []
-  let known : Map[String, Bool] = Map::new()
+  let known : Map[String, Bool] = Map([])
   for id in def.doc.nodes.keys() {
     match def.doc.nodes.get(id) {
       None => ()

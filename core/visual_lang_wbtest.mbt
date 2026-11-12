@@ -184,25 +184,28 @@ fn vl_node(
     x: AlignStart(0.0),
     y: AlignStart(0.0),
     component,
-    style: { ..n.style, fill, corner_radius: radius },
+    style: { ..n.style, fill, corner_radius: radius, },
   }
 }
 
 ///|
 test "visual：第 10 维检测——文字阴影 / 卡片融底 / 同心圆角" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   // 画布底 #FFFFFF 的容器
   let page = vl_node("page", Frame, "", "#FFFFFF", 0.0, 400.0)
   let _ = doc.insert_node(page, "root")
   // 1) 文字带阴影
   let t = vl_node("title", Text, "heading", "none", 0.0, 24.0)
-  let _ = doc.insert_node({ ..t, style: { ..t.style, shadow: "e2" } }, "page")
+  let _ = doc.insert_node({ ..t, style: { ..t.style, shadow: "e2", }, }, "page")
   // 2) 卡片与画布同色、无阴影无描边
   let c = vl_node("flat_card", Frame, "card", "#FFFFFF", 12.0, 120.0)
   let _ = doc.insert_node(c, "page")
   // 3) 同心圆角违例：子 20 > 父 12
   let outer = vl_node("outer", Frame, "card", "#F2F2F7", 12.0, 200.0)
-  let _ = doc.insert_node({ ..outer, style: { ..outer.style, shadow: "e1" } }, "page")
+  let _ = doc.insert_node(
+    { ..outer, style: { ..outer.style, shadow: "e1", }, },
+    "page",
+  )
   let inner = vl_node("inner", Rect, "image", "#DDDDDD", 20.0, 120.0)
   let _ = doc.insert_node(inner, "outer")
   // 胶囊豁免：高 40 圆角 20（= 高/2）不算违例
@@ -222,14 +225,17 @@ test "visual：第 10 维检测——文字阴影 / 卡片融底 / 同心圆角"
 
 ///|
 test "visual：有阴影或描边的卡片不报融底" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   let page = vl_node("page", Frame, "", "#FFFFFF", 0.0, 400.0)
   let _ = doc.insert_node(page, "root")
   let c1 = vl_node("lifted", Frame, "card", "#FFFFFF", 12.0, 120.0)
-  let _ = doc.insert_node({ ..c1, style: { ..c1.style, shadow: "e1" } }, "page")
+  let _ = doc.insert_node(
+    { ..c1, style: { ..c1.style, shadow: "e1", }, },
+    "page",
+  )
   let c2 = vl_node("outlined", Frame, "card", "#FFFFFF", 12.0, 120.0)
   let _ = doc.insert_node(
-    { ..c2, style: { ..c2.style, stroke: "#E5E5EA", stroke_width: 1.0 } },
+    { ..c2, style: { ..c2.style, stroke: "#E5E5EA", stroke_width: 1.0, }, },
     "page",
   )
   assert_eq(norm_visual_issues(doc).length(), 0)
@@ -263,7 +269,9 @@ test "visual：export_html 主题化 chrome 与 Hover Lift" {
   assert_true(html.contains("viewport-fit=cover"))
   assert_true(html.contains("env(safe-area-inset-top)"))
   assert_true(html.contains("backdrop-filter:saturate(180%) blur(20px)"))
-  assert_true(html.contains(".board>svg{display:block;max-width:100%;height:auto}"))
+  assert_true(
+    html.contains(".board>svg{display:block;max-width:100%;height:auto}"),
+  )
   assert_true(html.contains("@media (hover:hover){g.mv-live:hover"))
   assert_true(html.contains("el.classList.add('mv-live')"))
   assert_true(html.contains("el.setAttribute('role','button')"))
@@ -305,7 +313,10 @@ test "visual：容器色角色全预设逐档达可读性标准" {
         norm_luminance(t.resolve_color(bg)),
       )
     }
-    for cont in ["primary_container", "success_container", "warning_container", "info_container"].iter() {
+    for
+      cont in [
+        "primary_container", "success_container", "warning_container", "info_container",
+      ].iter() {
       assert_true(cr("text_primary", cont) >= 4.5)
     }
     // info 语义档是实底（badge 底），on_primary 白字/深字 ≥4.5
@@ -329,7 +340,10 @@ test "visual：暗色预设反相层亮侧栏且文字可读" {
     let t = th.tokens
     let inv = t.resolve_color("inverse_surface")
     let lum = norm_luminance(inv)
-    assert_true(lum > 0.5, msg="\{th.name} inverse_surface 应为亮侧栏: \{inv}")
+    assert_true(
+      lum > 0.5,
+      msg="\{th.name} inverse_surface 应为亮侧栏: \{inv}",
+    )
     let cr = fn(fg : String) -> Double {
       norm_contrast_ratio(
         norm_luminance(t.resolve_color(fg)),
@@ -358,8 +372,14 @@ test "visual：spec 容器色从需求调色板推导而非引擎默认" {
   let cont = p.tokens.resolve_color("primary_container")
   assert_false(cont.to_lower() == "#dee5ff") // 引擎默认（未推导时）值
   // 派生关系：容器离背景比离主色更近（tint 的定义）
-  let cr_to_bg = norm_contrast_ratio(norm_luminance(cont), norm_luminance("#FFFFFF"))
-  let cr_to_primary = norm_contrast_ratio(norm_luminance(cont), norm_luminance("#E07A00"))
+  let cr_to_bg = norm_contrast_ratio(
+    norm_luminance(cont),
+    norm_luminance("#FFFFFF"),
+  )
+  let cr_to_primary = norm_contrast_ratio(
+    norm_luminance(cont),
+    norm_luminance("#E07A00"),
+  )
   assert_true(cr_to_bg < cr_to_primary)
   // 推导容器上深字可读（构造保证 tint 接近背景亮度）
   assert_true(
@@ -404,23 +424,25 @@ test "visual：list chips 四色轮换 + spec 令牌先行" {
   let p = Project::new()
   let spec = "{\"v\":1,\"style\":\"apple\",\"palette\":{\"primary\":\"#E07A00\",\"background\":\"#F2F2F7\",\"surface\":\"#FFFFFF\",\"text\":\"#1A1C1E\",\"muted\":\"#66666B\",\"danger\":\"#D70015\",\"success\":\"#248A3D\"},\"typography\":{\"body\":14},\"radius\":{\"sm\":8,\"md\":12,\"lg\":16},\"rules\":[\"按钮不卡文案\"]}"
   match p.generate(spec~, intent_text="暗色 商品列表") {
-    Ok(j) => {
+    Ok(j) =>
       // spec 令牌先行：暗色意图不再产生 #111111 文字（历史顺序依赖回归锚）
       assert_false(j.contains("\"#111111"))
-    }
     Err(_) => assert_true(false)
   }
   match p.artboards.get("list") {
     Some(ab) => {
-      let fills : Map[String, Int] = Map::new()
+      let fills : Map[String, Int32] = Map([])
       for ci in 0..<4 {
         match ab.doc.get("cat_\{ci}") {
           Some(n) => {
             let k = n.style.fill
-            fills.set(k, match fills.get(k) {
-              Some(n) => n + 1
-              None => 1
-            })
+            fills.set(
+              k,
+              match fills.get(k) {
+                Some(n) => n + 1
+                None => 1
+              },
+            )
           }
           None => assert_true(false)
         }
@@ -428,8 +450,12 @@ test "visual：list chips 四色轮换 + spec 令牌先行" {
       // 四只 chips 至少三种不同容器色（轮换）
       assert_true(fills.keys().length() >= 3)
       // 全部为容器角色色（spec 推导），不存在未上色 chip
-      assert_true(fills.get(p.tokens.resolve_color("primary_container")) is Some(_))
-      assert_true(fills.get(p.tokens.resolve_color("info_container")) is Some(_))
+      assert_true(
+        fills.get(p.tokens.resolve_color("primary_container")) is Some(_),
+      )
+      assert_true(
+        fills.get(p.tokens.resolve_color("info_container")) is Some(_),
+      )
     }
     None => assert_true(false)
   }
@@ -451,7 +477,7 @@ test "visual：全 17 模板 spec 遵从零违规" {
         continue
       }
     }
-    let _ = p.apply_design_spec(artboard=ab, spec=spec)
+    let _ = p.apply_design_spec(artboard=ab, spec~)
     let v = p.design_spec_color_violations(artboard=ab)
     assert_true(v.length() == 0)
   }
@@ -461,25 +487,22 @@ test "visual：全 17 模板 spec 遵从零违规" {
   let _ = d.apply_spec_tokens(spec)
   let _ = d.apply_template(template_id="dashboard")
   match d.artboards.get("dashboard") {
-    Some(m) => {
+    Some(m) =>
       match m.doc.get("bar_0") {
         Some(n) => assert_eq(n.style.fill, "#C026D3")
         None => assert_true(false)
       }
-    }
     None => assert_true(false)
   }
   let l = Project::new()
   let _ = l.apply_spec_tokens(spec)
   let _ = l.apply_template(template_id="list")
   match l.artboards.get("list") {
-    Some(m) => {
+    Some(m) =>
       match m.doc.get("cat_0") {
-        Some(n) =>
-          assert_false(n.style.fill.to_lower() == "#dee5ff") // 引擎预设
+        Some(n) => assert_false(n.style.fill.to_lower() == "#dee5ff") // 引擎预设
         None => assert_true(false)
       }
-    }
     None => assert_true(false)
   }
 }
@@ -503,10 +526,11 @@ test "visual：风格画像预设逐档达标且 style 分发" {
         assert_true(cr(fg, bg) >= 4.5)
       }
     }
-    for cont in [
-      "primary_container", "secondary_container", "success_container",
-      "warning_container", "info_container",
-    ].iter() {
+    for
+      cont in [
+        "primary_container", "secondary_container", "success_container", "warning_container",
+        "info_container",
+      ].iter() {
       assert_true(cr("text_primary", cont) >= 4.5)
     }
   }
@@ -514,10 +538,11 @@ test "visual：风格画像预设逐档达标且 style 分发" {
   // nord 曾缺容器导致 chip 亮字压浅底 1.01，暗预设曾缺 inverse 致侧栏融底）
   for th in builtin_themes().iter() {
     let t = th.tokens
-    for role in [
-      "info", "success_container", "warning_container", "info_container",
-      "inverse_surface", "inverse_surface_variant", "inverse_text", "inverse_muted",
-    ].iter() {
+    for
+      role in [
+        "info", "success_container", "warning_container", "info_container", "inverse_surface",
+        "inverse_surface_variant", "inverse_text", "inverse_muted",
+      ].iter() {
       let v = t.resolve_color(role)
       assert_true(v != "" && v != role)
     }
@@ -528,10 +553,13 @@ test "visual：风格画像预设逐档达标且 style 分发" {
         norm_luminance(t.resolve_color("background")),
       )
       assert_true(sep >= 3.0)
-      assert_true(norm_contrast_ratio(
-        norm_luminance(t.resolve_color("inverse_text")),
-        norm_luminance(t.resolve_color("inverse_surface")),
-      ) >= 4.5)
+      assert_true(
+        norm_contrast_ratio(
+          norm_luminance(t.resolve_color("inverse_text")),
+          norm_luminance(t.resolve_color("inverse_surface")),
+        ) >=
+        4.5,
+      )
     }
   }
   // style 分发：vivid/editorial/playful 各自落到同名主题

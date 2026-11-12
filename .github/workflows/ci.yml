@@ -20,12 +20,12 @@ jobs:
       - name: Install MoonBit toolchain (latest)
         run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
 
-      - name: moonc version gate (>= 0.10.14)
+      - name: moonc version gate (>= 0.10.20)
         run: |
           export PATH="$HOME/.moon/bin:$PATH"
           V="$($HOME/.moon/bin/moonc -v | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
           echo "moonc $V"
-          MIN="0.10.14"
+          MIN="0.10.20"
           LOWEST="$(printf '%s\n%s\n' "$MIN" "$V" | sort -V | head -1)"
           if [ "$LOWEST" != "$MIN" ]; then
             echo "moonc $V < required $MIN" >&2

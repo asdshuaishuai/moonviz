@@ -80,7 +80,7 @@ struct FirstLine {
 
 ///|
 fn split_first_line(request : String) -> FirstLine {
-  let mut idx : Int? = None
+  let mut idx : Int32? = None
   let mut pos = 0
   for c in request.iter() {
     match idx {
@@ -135,7 +135,7 @@ fn move_payload(rest : String) -> Result[MovePayload, String] {
 }
 
 ///|
-fn join_from(lines : Array[String], from : Int) -> String {
+fn join_from(lines : Array[String], from : Int32) -> String {
   let sb = StringBuilder::new()
   for i in from..<lines.length() {
     if i > from {
@@ -180,7 +180,7 @@ fn parse_num(s : String) -> Double? {
   }
   let is_neg : Bool = t.get_char(0) == Some('-')
   let body : String = if is_neg { t.substring(start=1) } else { t }
-  let dot : Int? = body.find(".")
+  let dot : Int32? = body.find(".")
   let intp : String = match dot {
     Some(i) => body.substring(start=0, end=i)
     None => body
@@ -234,7 +234,7 @@ fn join_comma(parts : Array[String]) -> String {
 fn ok_response(
   svg : String,
   decl : String,
-  debt : Int,
+  debt : Int32,
   violations : Array[@core.Violation],
 ) -> String {
   let parts : Array[String] = Array::new()

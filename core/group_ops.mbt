@@ -370,7 +370,7 @@ fn clone_recursive(
 }
 
 ///|
-fn count_subtree(doc : Document, id : String) -> Int {
+fn count_subtree(doc : Document, id : String) -> Int32 {
   match doc.get(id) {
     None => 0
     Some(n) => {

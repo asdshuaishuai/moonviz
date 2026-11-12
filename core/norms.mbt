@@ -65,12 +65,15 @@ pub fn component_norm(id : String) -> String? {
         "宽 ≥ 文案宽+24（左右各留 12），高 36~48，圆角 8；别让框刚好卡住文字",
       )
     "fab" => Some("56×56，圆角 16；单屏只放一个主操作")
-    "chip" => Some("高 28~32，左右留白 ≥10，圆角取 高/2（胶囊）或 8")
+    "chip" =>
+      Some("高 28~32，左右留白 ≥10，圆角取 高/2（胶囊）或 8")
     "tag" => Some("高 22~26，左右留白 ≥8，圆角 4~6")
     "select" => Some("高 40~44，圆角 8，右侧留 24 放箭头")
     "search_bar" => Some("高 36~44，圆角取 高/2（胶囊）或 10")
     "list_item" =>
-      Some("高 56~76；全宽直角（radius 0）；成排堆叠时行间要有 1px divider 或按功能分组")
+      Some(
+        "高 56~76；全宽直角（radius 0）；成排堆叠时行间要有 1px divider 或按功能分组",
+      )
     "app_bar" => Some("全宽顶边条：高 44~56，圆角 0")
     "tab_bar" => Some("全宽底边条：高 56~64，圆角 0")
     "avatar" => Some("正圆：radius 999，常用 40/48/56")
@@ -118,8 +121,8 @@ fn norm_need_h(
 pub fn norm_issues(
   doc : Document,
   layout : SolvedLayout,
-  radius_base? : Double = NORM_RADIUS_BASE,
-  canvas_bg? : String = "#FFFFFF",
+  radius_base~ : Double = NORM_RADIUS_BASE,
+  canvas_bg~ : String = "#FFFFFF",
 ) -> Array[String] {
   let issues : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
@@ -153,14 +156,15 @@ pub fn norm_issues(
             //    品牌色正常设计（微信绿白字 ≈2.4）不误伤。优先级最高——
             //    不可读比一切样式问题都严重。
             if n.text.length() > 0 {
-              match norm_text_collision(
-                doc,
-                id,
-                n.style.fill,
-                n.style.text_color,
-                n.text,
-                canvas_bg~,
-              ) {
+              match
+                norm_text_collision(
+                  doc,
+                  id,
+                  n.style.fill,
+                  n.style.text_color,
+                  n.text,
+                  canvas_bg~,
+                ) {
                 Some(cr) => {
                   let bg = norm_effective_bg(doc, id, n.style.fill, canvas_bg~)
                   issues.push(
@@ -186,7 +190,12 @@ pub fn norm_issues(
                 line_height=n.style.line_height,
               )
               let need_w = ts.width + NORM_TEXT_PAD_X * 2.0
-              let need_h = norm_need_h(n.component, n.text, n.style.font_size, ts)
+              let need_h = norm_need_h(
+                n.component,
+                n.text,
+                n.style.font_size,
+                ts,
+              )
               if r.width < need_w - 0.5 || r.height < need_h - 0.5 {
                 // 问题串会进 critique 的 JSON——id/文案过 json_escape（引号、
                 // 反斜杠与控制符），结构靠「」与转义共同保证
@@ -237,8 +246,8 @@ pub fn norm_issues(
 pub fn norm_fix_pass(
   doc : Document,
   layout : SolvedLayout,
-  radius_base? : Double = NORM_RADIUS_BASE,
-  canvas_bg? : String = "#FFFFFF",
+  radius_base~ : Double = NORM_RADIUS_BASE,
+  canvas_bg~ : String = "#FFFFFF",
 ) -> Array[String] {
   let fixes : Array[String] = []
   let root_w = match layout.rect_of(doc.root_id) {
@@ -276,7 +285,9 @@ pub fn norm_fix_pass(
             // 0.5) 横平竖直：rotate 必须是 90° 的倍数，其余归零
             if n.style.rotate % 90.0 != 0.0 {
               new_rot = 0.0
-              if why == "" { why = "rotate 归零（横平竖直）" }
+              if why == "" {
+                why = "rotate 归零（横平竖直）"
+              }
             }
             // 1) 操作组件放大到文案 + 留白（Fill 宽不动——它由父容器决定）
             if norm_is_action_component(n.component) && n.text.length() > 0 {
@@ -286,7 +297,12 @@ pub fn norm_fix_pass(
                 line_height=n.style.line_height,
               )
               let need_w = ts.width + NORM_TEXT_PAD_X * 2.0
-              let need_h = norm_need_h(n.component, n.text, n.style.font_size, ts)
+              let need_h = norm_need_h(
+                n.component,
+                n.text,
+                n.style.font_size,
+                ts,
+              )
               let w_fixed = match n.width {
                 Fixed(_) => true
                 _ => false
@@ -307,10 +323,14 @@ pub fn norm_fix_pass(
               let r_now = n.style.corner_radius
               if r_now < radius_base - 0.5 && radius_base <= r_cap {
                 new_r = radius_base
-                if why == "" { why = "圆角归档 \{radius_base.to_int()}" }
+                if why == "" {
+                  why = "圆角归档 \{radius_base.to_int()}"
+                }
               } else if r_now > r_cap + 0.5 {
                 new_r = r_cap
-                if why == "" { why = "圆角收敛到 高/2" }
+                if why == "" {
+                  why = "圆角收敛到 高/2"
+                }
               }
             }
             // 3) 全宽条去圆角
@@ -351,7 +371,11 @@ pub fn norm_fix_pass(
                     } else {
                       x.style.text_color
                     },
-                    rotate: if new_rot != x.style.rotate { new_rot } else { x.style.rotate },
+                    rotate: if new_rot != x.style.rotate {
+                      new_rot
+                    } else {
+                      x.style.rotate
+                    },
                   },
                 }
               })
@@ -405,15 +429,13 @@ fn norms_sort_by_y(ids : Array[String], layout : SolvedLayout) -> Array[String] 
 
 ///|
 /// 两行是否齐缝相连（纵向贴住或近贴，宽高一致）
-fn norms_flush(
-  a : String,
-  b : String,
-  layout : SolvedLayout,
-) -> Bool {
+fn norms_flush(a : String, b : String, layout : SolvedLayout) -> Bool {
   match (layout.rect_of(a), layout.rect_of(b)) {
     (Some(ra), Some(rb)) => {
       let gap = rb.y - (ra.y + ra.height)
-      gap <= 6.0 && gap >= -1.0 && (rb.width - ra.width).abs() <= 2.0 &&
+      gap <= 6.0 &&
+      gap >= -1.0 &&
+      (rb.width - ra.width).abs() <= 2.0 &&
       (rb.height - ra.height).abs() <= 4.0
     }
     _ => false
@@ -422,10 +444,7 @@ fn norms_flush(
 
 ///|
 /// 行内是否已带 divider 子节点（norm_fix 修复后的形态）
-fn norms_row_has_divider_child(
-  doc : Document,
-  row_id : String,
-) -> Bool {
+fn norms_row_has_divider_child(doc : Document, row_id : String) -> Bool {
   match doc.nodes.get(row_id) {
     Some(r) =>
       for cid in r.children.iter() {
@@ -459,7 +478,9 @@ fn norms_boundary_has_divider(
               if p == parent_id {
                 match layout.rect_of(id) {
                   Some(r) =>
-                    if r.y >= top - 2.0 && r.y <= bottom + 2.0 && r.width >= min_w * 0.5 {
+                    if r.y >= top - 2.0 &&
+                      r.y <= bottom + 2.0 &&
+                      r.width >= min_w * 0.5 {
                       return true
                     }
                   None => ()
@@ -481,8 +502,8 @@ fn norms_run_has_separators(
   layout : SolvedLayout,
   parent_id : String,
   rows : Array[String],
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> Bool {
   for k in start..<end {
     let cur = rows[k]
@@ -493,13 +514,13 @@ fn norms_run_has_separators(
     match (layout.rect_of(cur), layout.rect_of(nxt)) {
       (Some(rc), Some(rn)) =>
         if norms_boundary_has_divider(
-          doc,
-          layout,
-          parent_id,
-          rc.bottom(),
-          rn.y,
-          rc.width,
-        ) {
+            doc,
+            layout,
+            parent_id,
+            rc.bottom(),
+            rn.y,
+            rc.width,
+          ) {
           return true
         }
       _ => ()
@@ -516,7 +537,7 @@ pub fn norms_list_runs(
   layout : SolvedLayout,
 ) -> Array[NormListRun] {
   let runs : Array[NormListRun] = []
-  let by_parent : Map[String, Array[String]] = Map::new()
+  let by_parent : Map[String, Array[String]] = Map([])
   for id in doc.nodes.keys() {
     match doc.nodes.get(id) {
       None => ()
@@ -542,16 +563,17 @@ pub fn norms_list_runs(
         let mut i = 0
         while i < rows.length() {
           let mut j = i
-          while j + 1 < rows.length() && norms_flush(rows[j], rows[j + 1], layout) {
+          while j + 1 < rows.length() &&
+                norms_flush(rows[j], rows[j + 1], layout) {
             j = j + 1
           }
           if j - i + 1 >= 3 &&
             !norms_run_has_separators(doc, layout, pid, rows, i, j) {
             let run_ids : Array[String] = []
-            for k in i..=j {
+            for k in i..<=j {
               run_ids.push(rows[k])
             }
-            runs.push({ parent_id: pid, row_ids: run_ids })
+            runs.push({ parent_id: pid, row_ids: run_ids, })
           }
           i = j + 1
         }
@@ -560,7 +582,6 @@ pub fn norms_list_runs(
   }
   runs
 }
-
 
 ///|
 /// 颜色搭配标准（用户决策 2026-10-11：严禁高保真背景色和文字同色系）：
@@ -584,7 +605,9 @@ fn norm_is_hex6(color : String) -> Bool {
     match color.get_char(i) {
       Some(ch) => {
         let code = ch.to_int()
-        let ok = (code >= 48 && code <= 57) || (code >= 97 && code <= 102) || (code >= 65 && code <= 70)
+        let ok = (code >= 48 && code <= 57) ||
+          (code >= 97 && code <= 102) ||
+          (code >= 65 && code <= 70)
         if not(ok) {
           return false
         }
@@ -602,7 +625,7 @@ fn norm_srgb_lin(c : Double) -> Double {
   if v <= 0.03928 {
     v / 12.92
   } else {
-    Double::pow((v + 0.055) / 1.055, 2.4)
+    @math.pow((v + 0.055) / 1.055, 2.4)
   }
 }
 
@@ -610,7 +633,9 @@ fn norm_srgb_lin(c : Double) -> Double {
 /// WCAG 相对亮度（仅接受 #RRGGBB；调用方先用 norm_is_hex6 把关）
 fn norm_luminance(color : String) -> Double {
   let (r, g, b) = parse_hex_rgb(color)
-  0.2126 * norm_srgb_lin(r) + 0.7152 * norm_srgb_lin(g) + 0.0722 * norm_srgb_lin(b)
+  0.2126 * norm_srgb_lin(r) +
+  0.7152 * norm_srgb_lin(g) +
+  0.0722 * norm_srgb_lin(b)
 }
 
 ///|
@@ -630,7 +655,7 @@ fn norm_effective_bg(
   doc : Document,
   node_id : String,
   own_fill : String,
-  canvas_bg? : String = "#FFFFFF",
+  canvas_bg~ : String = "#FFFFFF",
 ) -> String {
   if own_fill != "none" && norm_is_hex6(own_fill) {
     return own_fill
@@ -665,7 +690,7 @@ fn norm_text_collision(
   fill : String,
   text_color : String,
   text : String,
-  canvas_bg? : String = "#FFFFFF",
+  canvas_bg~ : String = "#FFFFFF",
 ) -> Double? {
   if text.length() == 0 {
     return None
@@ -738,7 +763,7 @@ fn has_word(s_lower : String, word : String) -> Bool {
   if w == 0 || n < w {
     return false
   }
-  for i in 0..=(n - w) {
+  for i in 0..<=(n - w) {
     if s_lower.substring(start=i, end=i + w) == word {
       let b_ok = if i == 0 {
         true
@@ -771,13 +796,16 @@ fn has_word(s_lower : String, word : String) -> Bool {
 /// 豁免条件与实现一致：有出边 flow 的画板、单画板项目。引擎不记录入口
 /// 画板（runtime initial_artboard 是会话参数，不入 Project）——未连线的
 /// 首页同样按本规则判，需给出边或返回类节点，不做入口特判。
-pub fn norm_back_issues(self : Project, artboard~ : String) -> Array[String] {
+pub fn Project::norm_back_issues(
+  self : Project,
+  artboard~ : String,
+) -> Array[String] {
   let issues : Array[String] = []
   match self.artboards.get(artboard) {
     None => ()
     Some(ab) => {
       // 单画板项目豁免：没有「上一层」，返回无意义
-      if self.artboards.size() <= 1 {
+      if self.artboards.length() <= 1 {
         return issues
       }
       let mut has_out = false
@@ -809,16 +837,26 @@ pub fn norm_back_issues(self : Project, artboard~ : String) -> Array[String] {
 // Open Design agent 设计知识）：触控目标 / 间距网格 / 字号层级 / 节点密度
 // ---------------------------------------------------------------------------
 
+///|
 const NORM_TOUCH_MIN : Double = 44.0
 
+///|
 const NORM_GRID_UNIT : Double = 4.0
 
-const NORM_TYPE_SCALE_MAX : Int = 5
+///|
+const NORM_TYPE_SCALE_MAX : Int32 = 5
 
-const NORM_NODE_BUDGET : Int = 80
+///|
+const NORM_NODE_BUDGET : Int32 = 80
 
+///|
 fn norm_is_interactive(component : String) -> Bool {
-  norm_is_action_component(component) || component == "tab_bar" || component == "search_bar" || component == "slider" || component == "switch" || component == "checkbox"
+  norm_is_action_component(component) ||
+  component == "tab_bar" ||
+  component == "search_bar" ||
+  component == "slider" ||
+  component == "switch" ||
+  component == "checkbox"
 }
 
 ///|
@@ -841,18 +879,23 @@ fn norm_touch_min_h(component : String, touch_min : Double) -> Double {
   }
 }
 
+///|
 pub fn norm_touch_issues(
   doc : Document,
   layout : SolvedLayout,
-  touch_min? : Double = NORM_TOUCH_MIN,
+  touch_min~ : Double = NORM_TOUCH_MIN,
 ) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
-    if issues.length() >= 4 { break }
+    if issues.length() >= 4 {
+      break
+    }
     match doc.nodes.get(id) {
       None => continue
       Some(n) => {
-        if !norm_is_interactive(n.component) { continue }
+        if !norm_is_interactive(n.component) {
+          continue
+        }
         let banded = norm_touch_is_banded(n.component)
         let min_h = norm_touch_min_h(n.component, touch_min)
         match layout.rect_of(id) {
@@ -866,7 +909,17 @@ pub fn norm_touch_issues(
               } else {
                 "min 44x44"
               }
-              issues.push(json_escape(id) + "(" + n.component + ") " + r.width.to_int().to_string() + "x" + r.height.to_int().to_string() + " below touch " + min_desc)
+              issues.push(
+                json_escape(id) +
+                "(" +
+                n.component +
+                ") " +
+                r.width.to_int().to_string() +
+                "x" +
+                r.height.to_int().to_string() +
+                " below touch " +
+                min_desc,
+              )
             }
           }
         }
@@ -884,14 +937,16 @@ pub fn norm_touch_issues(
 pub fn norm_touch_fix_pass(
   doc : Document,
   layout : SolvedLayout,
-  touch_min? : Double = NORM_TOUCH_MIN,
+  touch_min~ : Double = NORM_TOUCH_MIN,
 ) -> Array[String] {
   let fixes : Array[String] = []
   for id in doc.nodes.keys() {
     match doc.nodes.get(id) {
       None => ()
       Some(n) => {
-        if !norm_is_interactive(n.component) { continue }
+        if !norm_is_interactive(n.component) {
+          continue
+        }
         let banded = norm_touch_is_banded(n.component)
         let min_h = norm_touch_min_h(n.component, touch_min)
         match layout.rect_of(id) {
@@ -899,7 +954,9 @@ pub fn norm_touch_fix_pass(
           Some(r) => {
             let w_short = !banded && r.width < touch_min - 0.5
             let h_short = r.height < min_h - 0.5
-            if !w_short && !h_short { continue }
+            if !w_short && !h_short {
+              continue
+            }
             let w_fixed = match n.width {
               Fixed(_) => true
               _ => false
@@ -912,15 +969,25 @@ pub fn norm_touch_fix_pass(
             let new_h = if h_short && h_fixed { min_h } else { r.height }
             if new_w != r.width || new_h != r.height {
               let why = if banded {
-                "触控目标 高≥" + min_h.to_int().to_string() + "（chip/tag 档位）"
+                "触控目标 高≥" +
+                min_h.to_int().to_string() +
+                "（chip/tag 档位）"
               } else {
                 "触控目标 44×44"
               }
               let _ = doc.update_node(id, fn(x) {
                 {
                   ..x,
-                  width: if new_w != r.width { Fixed(new_w) } else { x.width },
-                  height: if new_h != r.height { Fixed(new_h) } else { x.height },
+                  width: if new_w != r.width {
+                    Fixed(new_w)
+                  } else {
+                    x.width
+                  },
+                  height: if new_h != r.height {
+                    Fixed(new_h)
+                  } else {
+                    x.height
+                  },
                 }
               })
               fixes.push(
@@ -935,61 +1002,87 @@ pub fn norm_touch_fix_pass(
   fixes
 }
 
+///|
 pub fn norm_grid_issues(doc : Document) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
-    if issues.length() >= 4 { break }
+    if issues.length() >= 4 {
+      break
+    }
     match doc.nodes.get(id) {
       None => continue
-      Some(n) => {
+      Some(n) =>
         match n.layout {
           None => continue
-          Some(l) => {
+          Some(l) =>
             if l.gap > 0.5 && l.gap % NORM_GRID_UNIT != 0.0 {
-              issues.push(json_escape(id) + " gap " + l.gap.to_string() + " not on 4pt grid")
+              issues.push(
+                json_escape(id) +
+                " gap " +
+                l.gap.to_string() +
+                " not on 4pt grid",
+              )
             }
-          }
         }
-      }
     }
   }
   issues
 }
 
+///|
 pub fn norm_type_issues(doc : Document) -> Array[String] {
-  let sizes : Map[Int, Int] = Map::new()
+  let sizes : Map[Int32, Int32] = Map([])
   for id in doc.nodes.keys() {
     match doc.nodes.get(id) {
       None => continue
       Some(n) => {
-        if n.text.length() == 0 { continue }
+        if n.text.length() == 0 {
+          continue
+        }
         let fs = n.style.font_size.to_int()
         sizes.set(fs, sizes.get(fs).unwrap_or(0) + 1)
       }
     }
   }
   let issues : Array[String] = []
-  if sizes.size() > NORM_TYPE_SCALE_MAX {
-    let detail = StringBuilder::new()
+  if sizes.length() > NORM_TYPE_SCALE_MAX {
+    let detail = StringBuilder()
     let mut first = true
     for fs in sizes.keys() {
-      if !first { detail.write_string(" ") }
+      if !first {
+        detail.write_string(" ")
+      }
       first = false
-      detail.write_string(fs.to_string() + "px x" + sizes.get(fs).unwrap_or(0).to_string())
+      detail.write_string(
+        fs.to_string() + "px x" + sizes.get(fs).unwrap_or(0).to_string(),
+      )
     }
-    issues.push("type scale " + sizes.size().to_string() + " > " + NORM_TYPE_SCALE_MAX.to_string() + " (" + detail.to_string() + ")")
+    issues.push(
+      "type scale " +
+      sizes.length().to_string() +
+      " > " +
+      NORM_TYPE_SCALE_MAX.to_string() +
+      " (" +
+      detail.to_string() +
+      ")",
+    )
   }
   issues
 }
 
+///|
 pub fn norm_density_issues(doc : Document) -> Array[String] {
   let issues : Array[String] = []
-  if doc.nodes.size() > NORM_NODE_BUDGET {
-    issues.push("node count " + doc.nodes.size().to_string() + " > " + NORM_NODE_BUDGET.to_string())
+  if doc.nodes.length() > NORM_NODE_BUDGET {
+    issues.push(
+      "node count " +
+      doc.nodes.length().to_string() +
+      " > " +
+      NORM_NODE_BUDGET.to_string(),
+    )
   }
   issues
 }
-
 
 ///|
 /// Norms v2：v1 五规则 + v2 四规则（触控/字号/密度/间距网格）
@@ -1001,39 +1094,21 @@ pub fn norm_density_issues(doc : Document) -> Array[String] {
 ///|
 /// 正文文字最小对比度（WCAG AA 正文 4.5）。
 pub const NORM_TEXT_CONTRAST_MIN : Double = 4.5
+
 ///|
 /// 大字号（>=24px）放宽到 WCAG AA 大文本 3.0。
 pub const NORM_TEXT_CONTRAST_LARGE_MIN : Double = 3.0
+
 ///|
 /// 纯黑/近黑灰背景禁令：灰度（通道差 < 8）且相对亮度 < 0.01
 /// （覆盖 #000000–#151515 一类硬填黑，暗色主题的蓝调深底不受影响）。
 pub const NORM_PURE_DARK_LUMA_MAX : Double = 0.01
 
 ///|
-fn norm_rgb_spread(hex : String) -> Int {
+fn norm_rgb_spread(hex : String) -> Int32 {
   let (r, g, b) = parse_hex_rgb(hex)
-  let mx = if r > g {
-    if r > b {
-      r
-    } else {
-      b
-    }
-  } else if g > b {
-    g
-  } else {
-    b
-  }
-  let mn = if r < g {
-    if r < b {
-      r
-    } else {
-      b
-    }
-  } else if g < b {
-    g
-  } else {
-    b
-  }
+  let mx = if r > g { if r > b { r } else { b } } else if g > b { g } else { b }
+  let mn = if r < g { if r < b { r } else { b } } else if g < b { g } else { b }
   (mx - mn).to_int()
 }
 
@@ -1044,12 +1119,14 @@ pub fn norm_is_pure_dark(hex : String) -> Bool {
   norm_luminance(hex) < NORM_PURE_DARK_LUMA_MAX
 }
 
-
 ///|
 /// issue #23 检测项（Project 级）：组件状态可辨识。
 /// 选中态（selected/checked/active）补丁必须改变至少一个视觉字段，
 /// 否则「选中」在演示时不可辨识；选中色同样受纯黑禁令约束。
-pub fn norm_selected_state_issues(self : Project, artboard~ : String) -> Array[String] {
+pub fn Project::norm_selected_state_issues(
+  self : Project,
+  artboard~ : String,
+) -> Array[String] {
   let issues : Array[String] = []
   match self.artboards.get(artboard) {
     None => ()
@@ -1099,8 +1176,8 @@ pub fn norm_selected_state_issues(self : Project, artboard~ : String) -> Array[S
 pub fn norm_readability_issues(
   doc : Document,
   layout : SolvedLayout,
-  contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
-  canvas_bg? : String = "#FFFFFF",
+  contrast_min~ : Double = NORM_TEXT_CONTRAST_MIN,
+  canvas_bg~ : String = "#FFFFFF",
 ) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
@@ -1152,8 +1229,14 @@ pub fn norm_readability_issues(
               None => ()
               Some(r) =>
                 if r.width > 1.0 {
-                  let lines = wrap_text_lines(n.text, n.style.font_size, r.width)
-                  let block_h = lines.length().to_double() * n.style.font_size * n.style.line_height
+                  let lines = wrap_text_lines(
+                    n.text,
+                    n.style.font_size,
+                    r.width,
+                  )
+                  let block_h = lines.length().to_double() *
+                    n.style.font_size *
+                    n.style.line_height
                   if block_h > r.height + n.style.font_size * 0.5 {
                     issues.push(
                       "\{json_escape(id)}（\{n.component}「\{json_escape(n.text)}」）文字折 \{lines.length()} 行高 \{block_h.to_int()} 超盒高 \{r.height.to_int()}（norms 检测项）",
@@ -1179,7 +1262,8 @@ pub fn norm_readability_issues(
           }
         }
         // 背景角色 = 有子节点的容器或 Frame 类（card/frame 容器）
-        if (n.children.length() > 0 || is_frame) && norm_is_pure_dark(n.style.fill) {
+        if (n.children.length() > 0 || is_frame) &&
+          norm_is_pure_dark(n.style.fill) {
           issues.push(
             "\{json_escape(id)}（\{n.component}）纯黑/近黑灰背景 \{n.style.fill} → 深色底改用主题令牌（暗色主题画布色），不要硬填 #000/#111",
           )
@@ -1190,30 +1274,42 @@ pub fn norm_readability_issues(
   issues
 }
 
+///|
 pub fn norm_issues_v2(
   doc : Document,
   layout : SolvedLayout,
-  radius_base? : Double = NORM_RADIUS_BASE,
-  contrast_min? : Double = NORM_TEXT_CONTRAST_MIN,
-  touch_min? : Double = NORM_TOUCH_MIN,
-  canvas_bg? : String = "#FFFFFF",
+  radius_base~ : Double = NORM_RADIUS_BASE,
+  contrast_min~ : Double = NORM_TEXT_CONTRAST_MIN,
+  touch_min~ : Double = NORM_TOUCH_MIN,
+  canvas_bg~ : String = "#FFFFFF",
 ) -> Array[String] {
   let issues = norm_issues(doc, layout, radius_base~, canvas_bg~)
   for issue in norm_touch_issues(doc, layout, touch_min~).iter() {
-    if issues.length() < 8 { issues.push(issue) }
+    if issues.length() < 8 {
+      issues.push(issue)
+    }
   }
   for issue in norm_type_issues(doc).iter() {
-    if issues.length() < 8 { issues.push(issue) }
+    if issues.length() < 8 {
+      issues.push(issue)
+    }
   }
   for issue in norm_density_issues(doc).iter() {
-    if issues.length() < 8 { issues.push(issue) }
+    if issues.length() < 8 {
+      issues.push(issue)
+    }
   }
   for issue in norm_grid_issues(doc).iter() {
-    if issues.length() < 8 { issues.push(issue) }
+    if issues.length() < 8 {
+      issues.push(issue)
+    }
   }
   // issue #23：可读性硬标准（对比度 / 不可见 / 纯黑底），检测项
-  for issue in norm_readability_issues(doc, layout, contrast_min~, canvas_bg~).iter() {
-    if issues.length() < 8 { issues.push(issue) }
+  for
+    issue in norm_readability_issues(doc, layout, contrast_min~, canvas_bg~).iter() {
+    if issues.length() < 8 {
+      issues.push(issue)
+    }
   }
   issues
 }
@@ -1234,7 +1330,7 @@ pub fn norm_issues_v2(
 ///|
 pub fn norm_visual_issues(
   doc : Document,
-  canvas_bg? : String = "#FFFFFF",
+  canvas_bg~ : String = "#FFFFFF",
 ) -> Array[String] {
   let issues : Array[String] = []
   for id in doc.nodes.keys() {
@@ -1270,10 +1366,17 @@ pub fn norm_visual_issues(
           n.component == "button" ||
           n.component == "text_input"
         let no_edge = n.style.stroke == "none" || n.style.stroke_width <= 0.0
-        if tinted && n.style.shadow == "none" && no_edge && norm_is_hex6(n.style.fill) {
+        if tinted &&
+          n.style.shadow == "none" &&
+          no_edge &&
+          norm_is_hex6(n.style.fill) {
           let pbg = norm_effective_bg(doc, id, "none", canvas_bg~)
           if norm_is_hex6(pbg) &&
-            norm_contrast_ratio(norm_luminance(n.style.fill), norm_luminance(pbg)) < 1.10 {
+            norm_contrast_ratio(
+              norm_luminance(n.style.fill),
+              norm_luminance(pbg),
+            ) <
+            1.10 {
             issues.push(
               "\{json_escape(id)}（\{n.component}）容器层次不可辨：填充 \{n.style.fill} 与背景 \{pbg} 对比 < 1.10 且无阴影无描边（视觉语言）",
             )

@@ -58,9 +58,9 @@ fn patch_font(size : Double, tc : String) -> NodePatch {
 ///|
 /// 内置组件库（Agent 的调色板）
 pub fn builtin_components() -> Map[String, ComponentDef] {
-  let m : Map[String, ComponentDef] = Map::new()
+  let m : Map[String, ComponentDef] = Map([])
 
-  let bv : Map[String, NodePatch] = Map::new()
+  let bv : Map[String, NodePatch] = Map([])
   bv.set("primary", patch3("primary", "on_primary", 8.0))
   // secondary 容器底配 on_secondary_container（Material/HIG 的 tonal 按钮口径，
   // 与 chip 同语义）：文字角色随容器底翻转，recolor 反查也单一化
@@ -80,7 +80,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "actions",
   })
 
-  let iv : Map[String, NodePatch] = Map::new()
+  let iv : Map[String, NodePatch] = Map([])
   // 输入底用中性 surface_variant（输入层不是品牌 tint 层——HIG/
   // 鸿蒙的 filled field 都是中性灰阶，品牌色留给主操作）；占位文字
   // 绑 text_hint：占位是提示不是已填值，且暗色下出厂黑字会撞色（审计 R1）；
@@ -98,7 +98,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "inputs",
   })
 
-  let cv : Map[String, NodePatch] = Map::new()
+  let cv : Map[String, NodePatch] = Map([])
   // card 文字绑 text_primary：模板常直接把文案写在卡上，暗色主题下
   // 出厂 #111111 压 surface 深底只有 1.35:1（审计 R1/dashboard/profile）
   cv.set("elevated", patch3("surface", "text_primary", 12.0))
@@ -118,7 +118,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "layout",
   })
 
-  let av : Map[String, NodePatch] = Map::new()
+  let av : Map[String, NodePatch] = Map([])
   // app_bar 标题随底色取对文字角色：surface→text_primary、primary→on_primary
   // （出厂 #111111 压主色蓝底 3.4~3.6:1 不达标，审计 dashboard:top_bar）
   av.set("surface", patch3("surface", "text_primary", 0.0))
@@ -134,7 +134,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "layout",
   })
 
-  let dv : Map[String, NodePatch] = Map::new()
+  let dv : Map[String, NodePatch] = Map([])
   dv.set("default", patch1("outline_variant"))
   m.set("divider", {
     id: "divider",
@@ -147,7 +147,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "layout",
   })
 
-  let hv : Map[String, NodePatch] = Map::new()
+  let hv : Map[String, NodePatch] = Map([])
   hv.set("h1", patch_font(32.0, "text_primary"))
   hv.set("h2", patch_font(24.0, "text_primary"))
   hv.set("h3", patch_font(20.0, "text_primary"))
@@ -163,7 +163,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let tv : Map[String, NodePatch] = Map::new()
+  let tv : Map[String, NodePatch] = Map([])
   tv.set("body", patch_font(14.0, "text_secondary"))
   tv.set("caption", patch_font(12.0, "text_hint"))
   m.set("body_text", {
@@ -177,7 +177,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let gv : Map[String, NodePatch] = Map::new()
+  let gv : Map[String, NodePatch] = Map([])
   gv.set("primary", patch3("primary", "on_primary", 12.0))
   gv.set("success", patch3("success", "on_primary", 12.0))
   // warning/error 语义档：web_landing 特性卡按 primary/success/warning 取
@@ -197,7 +197,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let rv : Map[String, NodePatch] = Map::new()
+  let rv : Map[String, NodePatch] = Map([])
   rv.set("default", patch2("surface_variant", 0.0))
   rv.set("outline", patch2("surface", 0.0))
   m.set("rect", {
@@ -215,7 +215,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
   // 扩展组件库（v3）：选择控件 / 导航 / 内容展示
   // ------------------------------------------------------------------
 
-  let cbv : Map[String, NodePatch] = Map::new()
+  let cbv : Map[String, NodePatch] = Map([])
   cbv.set("unchecked", patch3("surface", "text_secondary", 4.0))
   cbv.set("checked", patch3("primary", "on_primary", 4.0))
   m.set("checkbox", {
@@ -229,7 +229,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "selection",
   })
 
-  let sv : Map[String, NodePatch] = Map::new()
+  let sv : Map[String, NodePatch] = Map([])
   sv.set("off", patch3("surface_variant", "text_secondary", 999.0))
   sv.set("on", patch3("primary", "on_primary", 999.0))
   m.set("switch", {
@@ -243,7 +243,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "selection",
   })
 
-  let rdv : Map[String, NodePatch] = Map::new()
+  let rdv : Map[String, NodePatch] = Map([])
   rdv.set("unchecked", patch2("surface", 999.0))
   rdv.set("checked", patch2("primary", 999.0))
   m.set("radio", {
@@ -257,7 +257,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "selection",
   })
 
-  let avv : Map[String, NodePatch] = Map::new()
+  let avv : Map[String, NodePatch] = Map([])
   // avatar 常放首字母 text，文字角色随容器底（on_secondary_container）
   avv.set(
     "circle",
@@ -278,7 +278,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let sbv : Map[String, NodePatch] = Map::new()
+  let sbv : Map[String, NodePatch] = Map([])
   sbv.set("default", patch4("surface_variant", "text_hint", 999.0, "outline"))
   sbv.set("filled", patch4("surface", "text_hint", 10.0, "outline"))
   m.set("search_bar", {
@@ -292,7 +292,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "inputs",
   })
 
-  let pgv : Map[String, NodePatch] = Map::new()
+  let pgv : Map[String, NodePatch] = Map([])
   pgv.set("default", patch2("primary", 999.0))
   pgv.set("secondary", patch2("secondary_container", 999.0))
   m.set("progress", {
@@ -306,7 +306,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let chv : Map[String, NodePatch] = Map::new()
+  let chv : Map[String, NodePatch] = Map([])
   chv.set(
     "default",
     patch4("secondary_container", "on_secondary_container", 999.0, "outline"),
@@ -323,7 +323,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let fbv : Map[String, NodePatch] = Map::new()
+  let fbv : Map[String, NodePatch] = Map([])
   fbv.set("primary", patch3("primary", "on_primary", 999.0))
   fbv.set("error", patch3("error", "on_primary", 999.0))
   m.set("fab", {
@@ -337,7 +337,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "actions",
   })
 
-  let liv : Map[String, NodePatch] = Map::new()
+  let liv : Map[String, NodePatch] = Map([])
   liv.set("default", patch3("surface", "text_primary", 10.0))
   liv.set(
     "highlighted",
@@ -354,7 +354,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "layout",
   })
 
-  let tbv : Map[String, NodePatch] = Map::new()
+  let tbv : Map[String, NodePatch] = Map([])
   // tab_bar 是全宽底边条：圆角 0（norms.mbt:75 与 norm_is_full_bleed_component
   // 同一判据，出厂圆角 10 会在 critique 自报偏差）；文字绑 text_secondary，
   // active 变体主色底配 on_primary
@@ -371,7 +371,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "navigation",
   })
 
-  let imv : Map[String, NodePatch] = Map::new()
+  let imv : Map[String, NodePatch] = Map([])
   imv.set("default", patch2("surface_variant", 12.0))
   imv.set("rounded", patch2("surface_variant", 16.0))
   m.set("image", {
@@ -385,7 +385,7 @@ pub fn builtin_components() -> Map[String, ComponentDef] {
     category: "display",
   })
 
-  let slv : Map[String, NodePatch] = Map::new()
+  let slv : Map[String, NodePatch] = Map([])
   slv.set("default", patch2("surface_variant", 999.0))
   slv.set("active", patch2("primary", 999.0))
   m.set("slider", {
@@ -417,8 +417,13 @@ pub fn component_default_shadow(comp_id : String, variant : String) -> String {
   match comp_id {
     "card" => if variant == "elevated" || variant == "" { "e1" } else { "none" }
     "stat" => "e1"
-    "fab" | "popover" | "menu" | "tooltip" | "toast" | "snackbar" | "hover_card" =>
-      "e2"
+    "fab"
+    | "popover"
+    | "menu"
+    | "tooltip"
+    | "toast"
+    | "snackbar"
+    | "hover_card" => "e2"
     "dialog" | "drawer" | "command_palette" => "e3"
     _ => "none"
   }
@@ -444,8 +449,8 @@ fn component_centers_text(comp_id : String) -> Bool {
 pub fn instantiate_component(
   def : ComponentDef,
   id : String,
-  variant? : String = "",
-  tokens? : DesignTokens = DesignTokens::default(),
+  variant~ : String = "",
+  tokens~ : DesignTokens = DesignTokens::default(),
 ) -> Node {
   let v = if variant == "" { def.default_variant } else { variant }
   let kind : NodeKind = match def.kind {
@@ -467,7 +472,11 @@ pub fn instantiate_component(
     style: {
       ..made.style,
       shadow: component_default_shadow(def.id, v),
-      text_align: if centered { "center" } else { made.style.text_align },
+      text_align: if centered {
+        "center"
+      } else {
+        made.style.text_align
+      },
     },
   }
   match def.variants.get(v) {
@@ -506,7 +515,7 @@ pub fn instantiate_component(
       // sw<=0 画成 1px hairline（svg.mbt 同款兜底），数据却停留在 0，
       // norms 的「无描边」判定与导出面读到的是 0：视觉与数据必须一致
       if n.style.stroke != "none" && n.style.stroke_width <= 0.0 {
-        n = { ..n, style: { ..n.style, stroke_width: 1.0 }, }
+        n = { ..n, style: { ..n.style, stroke_width: 1.0, }, }
       }
       n
     }
@@ -545,7 +554,7 @@ pub fn list_components_json(defs : Map[String, ComponentDef]) -> String {
 
 ///|
 fn jstr(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

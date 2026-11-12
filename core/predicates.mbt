@@ -44,7 +44,7 @@ pub(all) struct Violation {
 ///|
 /// 全量校验：结构 + 尺寸 + 视觉 + 可解性
 pub fn validate(doc : Document) -> Array[Violation] {
-  let out : Array[Violation] = Array::new()
+  let out : Array[Violation] = Array()
   append_violations(out, check_tree_valid(doc))
   let layout = solve(doc)
   append_violations(out, check_size_valid(layout))
@@ -63,7 +63,7 @@ fn append_violations(target : Array[Violation], src : Array[Violation]) -> Unit 
 ///|
 /// P0：从根 DFS，检查引用完整、无重复引用（成环/多父）、无不可达节点
 fn check_tree_valid(doc : Document) -> Array[Violation] {
-  let out : Array[Violation] = Array::new()
+  let out : Array[Violation] = Array()
   if !doc.has(doc.root_id) {
     out.push({
       predicate: TreeValid,
@@ -72,7 +72,7 @@ fn check_tree_valid(doc : Document) -> Array[Violation] {
     })
     return out
   }
-  let visited : Map[String, Bool] = Map::new()
+  let visited : Map[String, Bool] = Map([])
   visited.set(doc.root_id, true)
   let stack : Array[String] = [doc.root_id]
   while stack.length() > 0 {
@@ -117,7 +117,7 @@ fn check_tree_valid(doc : Document) -> Array[Violation] {
 ///|
 /// P1：所有求解矩形非负、有限（NaN/Inf 天然不通过比较）
 fn check_size_valid(layout : SolvedLayout) -> Array[Violation] {
-  let out : Array[Violation] = Array::new()
+  let out : Array[Violation] = Array()
   for id in layout.rects.keys() {
     match layout.rects.get(id) {
       Some(r) =>
@@ -141,8 +141,8 @@ fn check_visual_frames(
   doc : Document,
   layout : SolvedLayout,
 ) -> Array[Violation] {
-  let out : Array[Violation] = Array::new()
-  let visited : Map[String, Bool] = Map::new()
+  let out : Array[Violation] = Array()
+  let visited : Map[String, Bool] = Map([])
   visited.set(doc.root_id, true)
   let stack : Array[String] = [doc.root_id]
   while stack.length() > 0 {
@@ -241,7 +241,7 @@ fn push_overlap_violations(
 ///|
 /// P4：求解失败 = 约束系统无解
 fn check_solvable(doc : Document, layout : SolvedLayout) -> Array[Violation] {
-  let out : Array[Violation] = Array::new()
+  let out : Array[Violation] = Array()
   for f in layout.failures.iter() {
     match f {
       MissingRoot =>

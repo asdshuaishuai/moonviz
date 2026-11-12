@@ -70,33 +70,34 @@ pub fn Easing::css_value(self : Easing) -> String {
 ///|
 /// 动效时长刻度（ms）。导出 HTML 与一切宿主共用同一套节拍：
 /// 即时反馈 120 / 微反馈 180 / 标准转场 240 / 强调慢速 360。
-pub const MOTION_FAST : Int = 120
+pub const MOTION_FAST : Int32 = 120
 
 ///|
-pub const MOTION_BASE : Int = 240
+pub const MOTION_BASE : Int32 = 240
 
 ///|
-pub const MOTION_SLOW : Int = 360
+pub const MOTION_SLOW : Int32 = 360
 
 ///|
 /// 微反馈时长（ms）：文字更新 tick 一类"被看见但不打断"的反馈，
 /// 落在即时与标准转场之间。
-pub const MOTION_TICK : Int = 180
+pub const MOTION_TICK : Int32 = 180
 
 ///|
 /// 入场阶梯步进（ms）：画板顶层节点依次浮现的节拍。
-pub const MOTION_STAGGER : Int = 24
+pub const MOTION_STAGGER : Int32 = 24
 
 ///|
 /// 阶梯递增级数：第 2 个到第 MOTION_STAGGER_STEPS 个节点逐级递增，
 /// 之后饱和（不递增、也不复位）。
-pub const MOTION_STAGGER_STEPS : Int = 8
+pub const MOTION_STAGGER_STEPS : Int32 = 8
 
 ///|
 /// 阶梯饱和延迟（ms）= (级数-1) × 步进：第 8 个起恒为 168ms。
 /// 此前导出层只写到 nth-of-type(8)，第 9 个起 delay 复位 0——长列表
 /// 后段节点抢跑，入场节拍整体断阶。
-pub const MOTION_STAGGER_MAX : Int = (MOTION_STAGGER_STEPS - 1) * MOTION_STAGGER
+pub const MOTION_STAGGER_MAX : Int32 = (MOTION_STAGGER_STEPS - 1) *
+  MOTION_STAGGER
 
 ///|
 /// 动效令牌 CSS（:root 变量）：时长刻度 + 阶梯节拍 + 引擎缓动曲线
@@ -130,7 +131,7 @@ pub fn Project::motion_tokens_css(self : Project) -> String {
 
 ///|
 /// 令牌表中的毫秒刻度；缺项/非正值回退内置常量（0 时长会让动画瞬跳）。
-fn motion_ms(tokens : DesignTokens, key : String, fallback : Int) -> Int {
+fn motion_ms(tokens : DesignTokens, key : String, fallback : Int32) -> Int32 {
   match tokens.resolve_motion(key) {
     Some(v) => if v > 0.0 { v.to_int() } else { fallback }
     None => fallback
@@ -145,8 +146,8 @@ fn motion_ms(tokens : DesignTokens, key : String, fallback : Int) -> Int {
 /// 用 CSS 变量 + calc 而不是把毫秒写死：节拍与饱和上限只有
 /// motion_tokens_css 一个来源，改刻度不必回来同步导出层。
 /// base 为节点选择器前缀，indent 为每条规则行首缩进（导出 CSS 排版）。
-pub fn motion_stagger_css(base : String, indent? : String = "") -> String {
-  let sb = StringBuilder::new()
+pub fn motion_stagger_css(base : String, indent~ : String = "") -> String {
+  let sb = StringBuilder()
   let mut i = 2
   while i < MOTION_STAGGER_STEPS {
     let k = (i - 1).to_string()
@@ -343,7 +344,7 @@ fn write_clip_keyframes(
   sb : StringBuilder,
   anim_name : String,
   clip : AnimationClip,
-  indent? : String = "",
+  indent~ : String = "",
 ) -> Unit {
   sb.write_string(indent + "@keyframes " + anim_name + " {\n")
   for kf in clip.keyframes.iter() {
@@ -402,7 +403,7 @@ fn write_clip_keyframes(
 /// 此前输出 `#<id>`，落到导出原型上永远匹配不到节点，anim-css 生成的
 /// CSS 是死代码。
 pub fn Timeline::to_css(self : Timeline) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<self.clips.length() {
     let clip = self.clips[i]
     let anim_name = "anim_" + clip.node_id + "_" + i.to_string()
@@ -453,9 +454,8 @@ pub fn validate_node_motion(preset : String) -> Result[String, String] {
       return Ok(preset)
     }
   }
-  for p in [
-    "press", "fade_in", "slide_in_right", "modal_present", "shake", "pop",
-  ].iter() {
+  for
+    p in ["press", "fade_in", "slide_in_right", "modal_present", "shake", "pop"].iter() {
     if p == preset {
       return Err("motion_preset_not_node_safe: " + preset)
     }
@@ -482,12 +482,12 @@ fn motion_clip_for(preset : String) -> AnimationClip? {
 /// 时长/曲线不写进 keyframes：节点规则用 var(--mv-dur) 取令牌。
 pub fn node_motion_keyframes_css(
   preset : String,
-  indent? : String = "",
+  indent~ : String = "",
 ) -> String {
   match motion_clip_for(preset) {
     None => ""
     Some(clip) => {
-      let sb = StringBuilder::new()
+      let sb = StringBuilder()
       write_clip_keyframes(sb, "mv-p-" + preset, clip, indent~)
       sb.to_string()
     }
@@ -513,7 +513,7 @@ fn easing_css_ref(easing : Easing) -> String {
 pub fn node_motion_rule_css(
   node_id : String,
   preset : String,
-  indent? : String = "",
+  indent~ : String = "",
 ) -> String {
   match motion_clip_for(preset) {
     None => ""
@@ -549,7 +549,7 @@ pub fn press_animation(node_id : String) -> AnimationClip {
 /// 淡入效果
 pub fn fade_in_animation(
   node_id : String,
-  duration? : Double = 0.3,
+  duration~ : Double = 0.3,
 ) -> AnimationClip {
   let clip = AnimationClip::new(node_id)
   clip.easing = EaseOut

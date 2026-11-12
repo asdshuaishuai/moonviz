@@ -51,7 +51,7 @@ test "标注：Spec JSON（机器可读）" {
     None => assert_true(false)
     Some(ab) => {
       let _ = ab.doc.update_node("btn1", fn(n) {
-        { ..n, text: "他说\"hi\"" }
+        { ..n, text: "他说\"hi\"", }
       })
       match p.spec_json(artboard="spec_test") {
         Ok(json) => assert_true(json.contains("他说\\\"hi\\\""))

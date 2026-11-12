@@ -81,7 +81,11 @@ test "norms：auto_fix 一键修复组件规范" {
   match p.auto_fix(artboard="norms_test") {
     Ok(json) => {
       assert_true(json.contains("component_norm"))
-      assert_true(json.contains("文案留白") || json.contains("圆角") || json.contains("全宽条"))
+      assert_true(
+        json.contains("文案留白") ||
+        json.contains("圆角") ||
+        json.contains("全宽条"),
+      )
     }
     Err(_) => assert_true(false)
   }
@@ -123,7 +127,7 @@ test "norms：critique 第 9 维 norms 在场且计分" {
   let p = norms_make_dirty_project()
   match p.critique(artboard="norms_test") {
     Ok(json) => {
-            assert_true(json.contains("\"principle\":\"norms\""))
+      assert_true(json.contains("\"principle\":\"norms\""))
       // 脏画板的 norms 维度必须给出偏差数
       assert_true(json.contains(" 处规范偏差"))
     }
@@ -133,10 +137,9 @@ test "norms：critique 第 9 维 norms 在场且计分" {
   // v2 是比 v1 更严的规范，auto_fix 只修 v1 可修项）
   let _ = p.auto_fix(artboard="norms_test")
   match p.critique(artboard="norms_test") {
-    Ok(json) => {
+    Ok(json) =>
       // v2 新增规则可能仍报（auto_fix 只修 v1 可修项），norms 维度应存在
       assert_true(json.contains("norms"), msg="norms 维度应存在")
-    }
     Err(_) => assert_true(false)
   }
 }
@@ -290,11 +293,19 @@ test "norms：chip/tag 档内高度不误报（对齐 component_norm 档位）" 
           let layout2 = solve(ab2.doc)
           match layout2.rect_of("band_chip") {
             None => assert_true(false)
-            Some(r) => assert_true(r.height <= 32.0, msg="chip 高度应留在 28~32 档内")
+            Some(r) =>
+              assert_true(
+                r.height <= 32.0,
+                msg="chip 高度应留在 28~32 档内",
+              )
           }
           match layout2.rect_of("band_tag") {
             None => assert_true(false)
-            Some(r) => assert_true(r.height <= 32.0, msg="tag 高度应留在 22~26 档内")
+            Some(r) =>
+              assert_true(
+                r.height <= 32.0,
+                msg="tag 高度应留在 22~26 档内",
+              )
           }
           assert_eq(norm_touch_issues(ab2.doc, layout2).length(), 0)
         }
@@ -319,7 +330,9 @@ test "norms：多行文案按行数要高度" {
     h=36.0,
   )
   // op 层把 \n 还原为真实换行（split_cmd 保留原文，unescape_value 统一还原）
-  let _ = apply_operation(p, "update norms_multi multi_btn text=确认提交\\n并返回")
+  let _ = apply_operation(
+    p, "update norms_multi multi_btn text=确认提交\\n并返回",
+  )
   match p.artboards.get("norms_multi") {
     None => assert_true(false)
     Some(ab) => {
@@ -355,13 +368,15 @@ test "norms：问题串与 critique JSON 对 id/文案转义" {
     h=40.0,
   )
   // op 层 \\ → 单个反斜杠：文案 = C:\Users\note（\\n 不会变成换行）
-  let _ = apply_operation(p, "update norms_esc esc_btn text=C:\\\\Users\\\\note")
+  let _ = apply_operation(
+    p, "update norms_esc esc_btn text=C:\\\\Users\\\\note",
+  )
   match p.artboards.get("norms_esc") {
     None => assert_true(false)
     Some(ab) => {
       // 直改文档补引号（op 解析器会剥引号）：文案 = 他说"hi"C:\Users\note
       let _ = ab.doc.update_node("esc_btn", fn(n) {
-        { ..n, text: "他说\"hi\"C:\\Users\\note" }
+        { ..n, text: "他说\"hi\"C:\\Users\\note", }
       })
       let layout = solve(ab.doc)
       let issues = norm_issues(ab.doc, layout)
@@ -369,10 +384,9 @@ test "norms：问题串与 critique JSON 对 id/文案转义" {
       // 问题串内引号必须是转义形状 \"（裸引号会破坏下游 JSON 拼接）
       assert_true(issues[0].contains("\\\""))
       match p.critique(artboard="norms_esc") {
-        Ok(json) => {
+        Ok(json) =>
           // 转义后形状：\" 与 \\
           assert_true(json.contains("他说\\\"hi\\\"C:\\\\Users\\\\note"))
-        }
         Err(_) => assert_true(false)
       }
       // 引擎自己的 JSON 消费端（extract_scores）也必须能吃下
@@ -386,7 +400,7 @@ test "norms：问题串与 critique JSON 对 id/文案转义" {
 
 ///|
 /// 构造齐缝菜单列表（无分割线）：app_bar + n×56 list_item 齐缝堆叠 + tab_bar
-fn norms_make_menu_project(row_count : Int) -> Project {
+fn norms_make_menu_project(row_count : Int32) -> Project {
   let p = Project::new()
   let _ = p.create_artboard(name="norms_menu", width=390.0, height=844.0)
   let _ = p.place_component(
@@ -407,7 +421,10 @@ fn norms_make_menu_project(row_count : Int) -> Project {
     )
     let _ = apply_operation(
       p,
-      "update norms_menu row_" + i.to_string() + " text=菜单项" + i.to_string(),
+      "update norms_menu row_" +
+      i.to_string() +
+      " text=菜单项" +
+      i.to_string(),
     )
   }
   let _ = p.place_component(
@@ -570,9 +587,13 @@ fn norms_make_color_project() -> Project {
     w=120.0,
     h=40.0,
   )
-  let _ = apply_operation(p, "update norms_color white_bubble text=好啊几点")
+  let _ = apply_operation(
+    p, "update norms_color white_bubble text=好啊几点",
+  )
   let _ = apply_operation(p, "update norms_color white_bubble fill=#FFFFFF")
-  let _ = apply_operation(p, "update norms_color white_bubble text_color=#FFFFFF")
+  let _ = apply_operation(
+    p, "update norms_color white_bubble text_color=#FFFFFF",
+  )
   // 斜置组件
   let _ = p.place_component(
     artboard="norms_color",
@@ -778,10 +799,9 @@ test "back：校验——出边 flow 豁免 / 返回类节点豁免" {
   assert_eq(p2.norm_back_issues(artboard="leaf").length(), 0)
 }
 
-
 ///|
 test "norm_issues_v2：smoke——可调用且返回数组" {
-  let doc = Document::new({ width: 400.0, height: 900.0 })
+  let doc = Document::new({ width: 400.0, height: 900.0, })
   let layout = solve(doc)
   let issues = norm_issues_v2(doc, layout)
   assert_true(issues.length() >= 0)
@@ -931,9 +951,9 @@ test "back：词边界判别——backdrop/dashboard 不误判" {
   assert_true(is_back_like_node(Node::make("prev_page", Frame)))
   assert_true(is_back_like_node(Node::make("return", Frame)))
   // 文本判定：返回类文案命中，普通文案不命中
-  assert_true(is_back_like_node({ ..Node::make("t1", Text), text: "返回" }))
-  assert_true(is_back_like_node({ ..Node::make("t2", Text), text: "←" }))
-  assert_false(is_back_like_node({ ..Node::make("t3", Text), text: "确认" }))
+  assert_true(is_back_like_node({ ..Node::make("t1", Text), text: "返回", }))
+  assert_true(is_back_like_node({ ..Node::make("t2", Text), text: "←", }))
+  assert_false(is_back_like_node({ ..Node::make("t3", Text), text: "确认", }))
 }
 
 ///|
@@ -942,25 +962,45 @@ test "norms：可读性硬标准——低对比正文/大字号豁免/不可见/
   let _ = p.create_artboard(name="read", width=390.0, height=600.0)
   // 低对比正文：白底 #777777 ≈ 4.48 < 4.5（14px 正文）
   let _ = p.place_component(
-    artboard="read", component_id="body_text", instance_id="low_text", x=20.0, y=40.0,
+    artboard="read",
+    component_id="body_text",
+    instance_id="low_text",
+    x=20.0,
+    y=40.0,
   )
   let _ = apply_operation(p, "update read low_text text=低对比正文")
   let _ = apply_operation(p, "update read low_text text_color=#777777")
   // 同样式大字号：>=24px 走 3.0 阈值，不报
   let _ = p.place_component(
-    artboard="read", component_id="heading", instance_id="big_text", x=20.0, y=100.0,
+    artboard="read",
+    component_id="heading",
+    instance_id="big_text",
+    x=20.0,
+    y=100.0,
   )
   let _ = apply_operation(p, "update read big_text text=大标题")
   let _ = apply_operation(p, "update read big_text text_color=#777777")
   let _ = apply_operation(p, "update read big_text font_size=28")
   // 不可见叶子：白填白底、无描边无文本
   let _ = p.place_component(
-    artboard="read", component_id="rect", instance_id="ghost_rect", x=20.0, y=200.0, w=100.0, h=40.0,
+    artboard="read",
+    component_id="rect",
+    instance_id="ghost_rect",
+    x=20.0,
+    y=200.0,
+    w=100.0,
+    h=40.0,
   )
   let _ = apply_operation(p, "update read ghost_rect fill=#FFFFFF")
   // 纯黑底容器（frame 类）
   let _ = p.place_component(
-    artboard="read", component_id="card", instance_id="dark_card", x=20.0, y=260.0, w=200.0, h=100.0,
+    artboard="read",
+    component_id="card",
+    instance_id="dark_card",
+    x=20.0,
+    y=260.0,
+    w=200.0,
+    h=100.0,
   )
   let _ = apply_operation(p, "update read dark_card fill=#000000")
   match p.artboards.get("read") {
@@ -971,10 +1011,22 @@ test "norms：可读性硬标准——低对比正文/大字号豁免/不可见/
       for s in issues.iter() {
         joined = joined + s + "\n"
       }
-      assert_true(joined.contains("low_text"), msg="低对比正文必须被报：\{joined}")
-      assert_true(!joined.contains("big_text"), msg="大字号 >=24px 走 3.0 阈值不应报：\{joined}")
-      assert_true(joined.contains("ghost_rect"), msg="不可见组件必须被报：\{joined}")
-      assert_true(joined.contains("dark_card"), msg="纯黑背景必须被报：\{joined}")
+      assert_true(
+        joined.contains("low_text"),
+        msg="低对比正文必须被报：\{joined}",
+      )
+      assert_true(
+        !joined.contains("big_text"),
+        msg="大字号 >=24px 走 3.0 阈值不应报：\{joined}",
+      )
+      assert_true(
+        joined.contains("ghost_rect"),
+        msg="不可见组件必须被报：\{joined}",
+      )
+      assert_true(
+        joined.contains("dark_card"),
+        msg="纯黑背景必须被报：\{joined}",
+      )
     }
   }
 }
@@ -984,40 +1036,64 @@ test "norms：选中态可辨识与选中色禁令（issue #23）" {
   let p = Project::new()
   let _ = p.create_artboard(name="sel", width=390.0, height=300.0)
   let _ = p.place_component(
-    artboard="sel", component_id="chip", instance_id="chip_a", x=20.0, y=40.0,
+    artboard="sel",
+    component_id="chip",
+    instance_id="chip_a",
+    x=20.0,
+    y=40.0,
   )
   // 选中态无任何视觉字段 → 不可辨识
-  let states : Map[String, NodePatch] = Map::new()
+  let states : Map[String, NodePatch] = Map([])
   states.set("default", NodePatch::empty())
   states.set("selected", NodePatch::empty())
-  p.node_states.set("chip_a", { node_id: "chip_a", states, current: "default" })
+  p.node_states.set("chip_a", { node_id: "chip_a", states, current: "default", })
   let issues = p.norm_selected_state_issues(artboard="sel")
   let mut joined = ""
   for s in issues.iter() {
     joined = joined + s + "\n"
   }
-  assert_true(joined.contains("无差异"), msg="空选中态必须被报：\{joined}")
+  assert_true(
+    joined.contains("无差异"),
+    msg="空选中态必须被报：\{joined}",
+  )
   // 有视觉差异 → 不再报「无差异」
-  let states2 : Map[String, NodePatch] = Map::new()
+  let states2 : Map[String, NodePatch] = Map([])
   states2.set("default", NodePatch::empty())
-  states2.set("selected", { ..NodePatch::empty(), fill: Some("#4B6BFB") })
-  p.node_states.set("chip_a", { node_id: "chip_a", states: states2, current: "default" })
+  states2.set("selected", { ..NodePatch::empty(), fill: Some("#4B6BFB"), })
+  p.node_states.set("chip_a", {
+    node_id: "chip_a",
+    states: states2,
+    current: "default",
+  })
   let issues2 = p.norm_selected_state_issues(artboard="sel")
   let mut joined2 = ""
   for s in issues2.iter() {
     joined2 = joined2 + s + "\n"
   }
-  assert_true(!joined2.contains("无差异"), msg="有视觉差异不应报无差异：\{joined2}")
-  assert_true(!joined2.contains("纯黑"), msg="品牌色选中不应报纯黑：\{joined2}")
+  assert_true(
+    !joined2.contains("无差异"),
+    msg="有视觉差异不应报无差异：\{joined2}",
+  )
+  assert_true(
+    !joined2.contains("纯黑"),
+    msg="品牌色选中不应报纯黑：\{joined2}",
+  )
   // 纯黑选中色 → 报
-  let states3 : Map[String, NodePatch] = Map::new()
+  let states3 : Map[String, NodePatch] = Map([])
   states3.set("default", NodePatch::empty())
-  states3.set("selected", { ..NodePatch::empty(), fill: Some("#111111") })
-  p.node_states.set("chip_a", { node_id: "chip_a", states: states3, current: "default" })
+  states3.set("selected", { ..NodePatch::empty(), fill: Some("#111111"), })
+  p.node_states.set("chip_a", {
+    node_id: "chip_a",
+    states: states3,
+    current: "default",
+  })
   let issues3 = p.norm_selected_state_issues(artboard="sel")
   let mut joined3 = ""
   for s in issues3.iter() {
     joined3 = joined3 + s + "\n"
   }
-  assert_true(joined3.contains("纯黑"), msg="纯黑选中色必须被报：\{joined3}")
+  assert_true(
+    joined3.contains("纯黑"),
+    msg="纯黑选中色必须被报：\{joined3}",
+  )
 }

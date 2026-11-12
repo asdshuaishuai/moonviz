@@ -15,10 +15,10 @@ fn repl_state_new(initial : String) -> ReplState {
 }
 
 ///|
-const CANVAS_COLS : Int = 64
+const CANVAS_COLS : Int32 = 64
 
 ///|
-const CANVAS_ROWS : Int = 26
+const CANVAS_ROWS : Int32 = 26
 
 ///|
 fn repaint(st : ReplState) -> String {
@@ -262,7 +262,7 @@ fn agent_target(toks : Array[String]) -> String? {
 }
 
 ///|
-fn join_from_idx(toks : Array[String], from : Int) -> String {
+fn join_from_idx(toks : Array[String], from : Int32) -> String {
   let sb = StringBuilder::new()
   for i in from..<toks.length() {
     if i > from {

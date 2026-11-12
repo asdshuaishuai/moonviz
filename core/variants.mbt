@@ -9,11 +9,11 @@
 /// → Agent 据此选出最优方案并合并
 pub(all) struct VariantScore {
   artboard : String
-  violations : Int // 不崩谓词违规数
-  lint_issues : Int // 设计 lint 问题数
-  alignment_hints : Int // 对齐建议数
-  node_count : Int
-  score : Int // 综合评分（越高越好）
+  violations : Int32 // 不崩谓词违规数
+  lint_issues : Int32 // 设计 lint 问题数
+  alignment_hints : Int32 // 对齐建议数
+  node_count : Int32
+  score : Int32 // 综合评分（越高越好）
 }
 
 ///|
@@ -84,7 +84,7 @@ pub fn Project::score_variants(self : Project) -> String {
           Ok(json) => count_occurrences(json, "\"type\"")
           Err(_) => 0
         }
-        let nodes = ab.doc.nodes.size() - 1 // 减 root
+        let nodes = ab.doc.nodes.length() - 1 // 减 root
         // 评分：节点多（丰富）+ 违规少 + lint 少 = 高分
         let score = nodes * 10 -
           violations * 50 -
@@ -111,7 +111,7 @@ pub fn Project::merge_variant(
   match (self.artboards.get(source), self.artboards.get(target)) {
     (Some(src), Some(tgt)) => {
       // 清空目标
-      tgt.doc.nodes = Map::new()
+      tgt.doc.nodes = Map([])
       tgt.doc.root_id = "root"
       // 复制源
       let root_node = match src.doc.nodes.get(src.doc.root_id) {
@@ -137,7 +137,7 @@ pub fn Project::merge_variant(
 }
 
 ///|
-fn count_occurrences(s : String, sub : String) -> Int {
+fn count_occurrences(s : String, sub : String) -> Int32 {
   let mut count = 0
   let mut pos = 0
   let sub_len = sub.length()
@@ -155,7 +155,7 @@ fn count_occurrences(s : String, sub : String) -> Int {
 
 ///|
 fn jstr11(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

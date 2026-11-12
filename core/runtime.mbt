@@ -60,7 +60,7 @@ pub fn StateChange::describe(self : StateChange) -> String {
     NavigationPushed(ab) => "nav_push:\{ab}"
     NavigationPopped(ab) => "nav_pop:\{ab}"
     ToastShown(msg) => "toast:\"\{msg}\""
-    FormSubmitted(data) => "form_submitted(\{data.size()} fields)"
+    FormSubmitted(data) => "form_submitted(\{data.length()} fields)"
   }
 }
 
@@ -102,7 +102,7 @@ pub(all) struct MoonVizRT {
 /// 创建运行时实例
 pub fn MoonVizRT::create(
   project : Project,
-  initial_artboard? : String = "",
+  initial_artboard~ : String = "",
 ) -> Result[MoonVizRT, String] {
   let first : String = if initial_artboard == "" {
     // 取第一个画板
@@ -126,7 +126,7 @@ pub fn MoonVizRT::create(
     project,
     nav: NavigationState::new(first),
     overlay_toast: None,
-    input_values: Map::new(),
+    input_values: Map([]),
     listeners: [],
   })
 }
@@ -496,7 +496,7 @@ fn MoonVizRT::run_marker(
           // 收集字段当前输入值（未填字段记空串）→ FormSubmitted 携完整
           // 键值——此前 FormSubmitted 只定义未构造，submit_form 标记在
           // 运行时落到 `_ => false`，点提交毫无反馈
-          let data : Map[String, String] = Map::new()
+          let data : Map[String, String] = Map([])
           for id in ids.iter() {
             data.set(id, self.get_input(id))
           }
@@ -636,7 +636,7 @@ pub fn MoonVizRT::hot_reload_doc(
   ab.doc.root_id = doc.root_id
   ab.doc.revision = ab.doc.revision + 1
   // 输入值只保留仍然存在的节点，避免残留指向已删除控件的值
-  let kept : Map[String, String] = Map::new()
+  let kept : Map[String, String] = Map([])
   for k in self.input_values.keys() {
     match self.input_values.get(k) {
       Some(v) => if ab.doc.nodes.contains(k) { kept.set(k, v) }

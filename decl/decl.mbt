@@ -10,9 +10,9 @@
 pub fn text(
   id~ : String,
   content~ : String,
-  size? : Double = 14.0,
-  weight? : String = "normal",
-  color? : String = "#111111",
+  size~ : Double = 14.0,
+  weight~ : String = "normal",
+  color~ : String = "#111111",
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Text),
@@ -37,7 +37,7 @@ pub fn text_input(
   id~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
-  placeholder? : String = "",
+  placeholder~ : String = "",
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Rect),
@@ -64,7 +64,7 @@ pub fn button(
   id~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
-  label? : String = "按钮",
+  label~ : String = "按钮",
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Rect),
@@ -92,8 +92,8 @@ pub fn rect(
   id~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
-  fill? : String = "#EEEEEE",
-  radius? : Double = 0.0,
+  fill~ : String = "#EEEEEE",
+  radius~ : Double = 0.0,
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Rect),
@@ -113,32 +113,32 @@ pub fn generic_node(
   component~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
-  kind? : String = "frame",
-  x? : Double = 0.0,
-  y? : Double = 0.0,
-  text? : String = "",
-  layout? : @core.StackLayout? = None,
-  fill? : String = "none",
-  stroke? : String = "none",
-  stroke_width? : Double = 0.0,
-  radius? : Double = 0.0,
-  opacity? : Double = 1.0,
-  font_size? : Double = 14.0,
-  text_color? : String = "#111111",
-  font_weight? : String = "normal",
-  shadow? : String = "none",
-  rotate? : Double = 0.0,
-  blur? : Double = 0.0,
-  blend? : String = "normal",
-  line_height? : Double = 1.5,
-  tracking? : Double = 0.0,
-  flip? : String = "none",
-  constraint? : String = "lt",
-  text_align? : String = "left",
-  font_style? : String = "normal",
-  stroke_dash? : String = "solid",
-  visible? : Bool = true,
-  name? : String = "",
+  kind~ : String = "frame",
+  x~ : Double = 0.0,
+  y~ : Double = 0.0,
+  text~ : String = "",
+  layout~ : @core.StackLayout? = None,
+  fill~ : String = "none",
+  stroke~ : String = "none",
+  stroke_width~ : Double = 0.0,
+  radius~ : Double = 0.0,
+  opacity~ : Double = 1.0,
+  font_size~ : Double = 14.0,
+  text_color~ : String = "#111111",
+  font_weight~ : String = "normal",
+  shadow~ : String = "none",
+  rotate~ : Double = 0.0,
+  blur~ : Double = 0.0,
+  blend~ : String = "normal",
+  line_height~ : Double = 1.5,
+  tracking~ : Double = 0.0,
+  flip~ : String = "none",
+  constraint~ : String = "lt",
+  text_align~ : String = "left",
+  font_style~ : String = "normal",
+  stroke_dash~ : String = "solid",
+  visible~ : Bool = true,
+  name~ : String = "",
 ) -> @core.Node {
   let node_kind = match kind {
     "text" => @core.Text
@@ -193,8 +193,8 @@ pub fn frame(
   id~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
-  layout? : @core.StackLayout? = None,
-  fill? : String = "none",
+  layout~ : @core.StackLayout? = None,
+  fill~ : String = "none",
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Frame),
@@ -227,7 +227,7 @@ pub fn image(
   id~ : String,
   width~ : @core.SizeSpec,
   height~ : @core.SizeSpec,
-  src? : String = "",
+  src~ : String = "",
 ) -> @core.Node {
   {
     ..@core.Node::make(id, @core.Image),
@@ -244,9 +244,9 @@ pub fn image(
 /// 栈布局描述：flex(direction=Vertical, gap=16, padding=24)
 pub fn flex(
   direction~ : @core.StackDir,
-  gap? : Double = 0.0,
-  padding? : Double = 0.0,
-  justify? : @core.Justify = @core.Start,
+  gap~ : Double = 0.0,
+  padding~ : Double = 0.0,
+  justify~ : @core.Justify = @core.Start,
 ) -> @core.StackLayout {
   { dir: direction, gap, justify, padding: @core.Padding::uniform(padding), }
 }
@@ -290,8 +290,8 @@ pub struct Prototype {
 /// 创建原型：视口尺寸即根 Frame 尺寸
 pub fn prototype(
   name~ : String,
-  width? : Double = 390.0,
-  height? : Double = 844.0,
+  width~ : Double = 390.0,
+  height~ : Double = 844.0,
 ) -> Prototype {
   let root = {
     ..@core.Node::make("root", @core.Frame),
@@ -301,7 +301,7 @@ pub fn prototype(
     x: @core.Fixed(0.0),
     y: @core.Fixed(0.0),
   }
-  let index : Map[String, @core.Node] = Map::new()
+  let index : Map[String, @core.Node] = Map([])
   index.set("root", root)
   { name, root, index, }
 }
@@ -357,7 +357,7 @@ pub fn Prototype::build(self : Prototype) -> @core.Document {
     _ => 844.0
   }
   let doc = @core.Document::new({ width: w, height: h, })
-  let nodes : Map[String, @core.Node] = Map::new()
+  let nodes : Map[String, @core.Node] = Map([])
   for id in self.index.keys() {
     match self.index.get(id) {
       Some(n) => nodes.set(id, { ..n, children: n.children.copy(), })

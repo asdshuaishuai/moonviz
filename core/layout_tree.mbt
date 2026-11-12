@@ -17,10 +17,10 @@ pub(all) struct LT {
 /// 垂直栈（默认占满父容器，子项沿主轴堆叠）
 pub fn lt_v(
   id~ : String,
-  gap? : Double = 0.0,
-  pad? : Double = 0.0,
-  justify? : Justify = Start,
-  kids? : Array[LT] = [],
+  gap~ : Double = 0.0,
+  pad~ : Double = 0.0,
+  justify~ : Justify = Start,
+  kids~ : Array[LT] = [],
 ) -> LT {
   {
     node: {
@@ -42,9 +42,9 @@ pub fn lt_v(
 /// 水平栈（默认占满父容器）
 pub fn lt_h(
   id~ : String,
-  gap? : Double = 0.0,
-  pad? : Double = 0.0,
-  kids? : Array[LT] = [],
+  gap~ : Double = 0.0,
+  pad~ : Double = 0.0,
+  kids~ : Array[LT] = [],
 ) -> LT {
   {
     node: {
@@ -71,8 +71,8 @@ pub fn lt_text(
   id~ : String,
   role~ : String,
   s~ : String,
-  width? : SizeSpec = Fill,
-  tokens? : DesignTokens = DesignTokens::default(),
+  width~ : SizeSpec = Fill,
+  tokens~ : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
   let size = match t.resolve_font(role) {
@@ -124,10 +124,10 @@ pub fn lt_box(
   fill~ : String,
   w~ : Double,
   h~ : Double,
-  radius? : Double = 12.0,
-  shadow? : String = "none",
-  stroke? : String = "none",
-  tokens? : DesignTokens = DesignTokens::default(),
+  radius~ : Double = 12.0,
+  shadow~ : String = "none",
+  stroke~ : String = "none",
+  tokens~ : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
   {
@@ -151,7 +151,7 @@ pub fn lt_box(
 /// 弹性盒：吃满剩余空间（用作分隔/自适应留白）。
 /// component 标记为 spacer：留白是刻意的空白，不是待填的幽灵组件
 /// （渲染层不再给空容器描虚线，结构式布局容器/留白不再像线框稿）。
-pub fn lt_flex(id~ : String, fill? : String = "none") -> LT {
+pub fn lt_flex(id~ : String, fill~ : String = "none") -> LT {
   {
     node: {
       ..Node::make(id, Rect),
@@ -170,8 +170,8 @@ pub fn lt_flex(id~ : String, fill? : String = "none") -> LT {
 pub fn lt_btn(
   id~ : String,
   label~ : String,
-  variant? : String = "primary",
-  tokens? : DesignTokens = DesignTokens::default(),
+  variant~ : String = "primary",
+  tokens~ : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
   let (fill, tc, stroke) : (String, String, String) = if variant == "primary" {
@@ -212,7 +212,7 @@ pub fn lt_btn(
 pub fn lt_input(
   id~ : String,
   ph~ : String,
-  tokens? : DesignTokens = DesignTokens::default(),
+  tokens~ : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
   {
@@ -240,9 +240,9 @@ pub fn lt_input(
 pub fn lt_dot(
   id~ : String,
   fill~ : String,
-  d? : Double = 36.0,
-  tokens? : DesignTokens = DesignTokens::default(),
-  label? : String = "",
+  d~ : Double = 36.0,
+  tokens~ : DesignTokens = DesignTokens::default(),
+  label~ : String = "",
 ) -> LT {
   // label 非空时圆点带首字母字形（形状标签渲染居中）：纯空圆读作图片
   // 未加载（审计 login_v2 logo 空圆残留；web_login brand_logo 同类已加 M）
@@ -257,10 +257,20 @@ pub fn lt_dot(
       text_align: "center",
     }
   } else {
-    { ..NodeStyle::default(), fill: tokens.resolve_color(fill), corner_radius: 999.0, }
+    {
+      ..NodeStyle::default(),
+      fill: tokens.resolve_color(fill),
+      corner_radius: 999.0,
+    }
   }
   {
-    node: { ..Node::make(id, Rect), text: label, width: Fixed(d), height: Fixed(d), style: st, },
+    node: {
+      ..Node::make(id, Rect),
+      text: label,
+      width: Fixed(d),
+      height: Fixed(d),
+      style: st,
+    },
     kids: [],
   }
 }
@@ -270,11 +280,11 @@ pub fn lt_dot(
 /// kids 传入子树（回归锚：64bb71d 曾把 kids 误改为 []，登录卡内容整树丢失）。
 pub fn lt_card(
   id~ : String,
-  gap? : Double = 8.0,
-  pad? : Double = 20.0,
-  justify? : Justify = Start,
-  kids? : Array[LT] = [],
-  tokens? : DesignTokens = DesignTokens::default(),
+  gap~ : Double = 8.0,
+  pad~ : Double = 20.0,
+  justify~ : Justify = Start,
+  kids~ : Array[LT] = [],
+  tokens~ : DesignTokens = DesignTokens::default(),
 ) -> LT {
   let t = tokens
   {

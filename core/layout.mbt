@@ -37,8 +37,8 @@ pub fn SolvedLayout::rect_of(self : SolvedLayout, id : String) -> Rect? {
 ///|
 /// 求解入口：输入文档，输出每个节点的画布绝对矩形 + 求解失败列表
 pub fn solve(doc : Document) -> SolvedLayout {
-  let rects : Map[String, Rect] = Map::new()
-  let failures : Array[SolveFailure] = Array::new()
+  let rects : Map[String, Rect] = Map([])
+  let failures : Array[SolveFailure] = Array()
   match doc.nodes.get(doc.root_id) {
     None => failures.push(MissingRoot)
     Some(root) => {
@@ -140,9 +140,9 @@ fn solve_stack(
     l.padding.left,
   )
   let n = node.children.length()
-  let main_sizes : Array[Double] = Array::new()
-  let cross_sizes : Array[Double] = Array::new()
-  let fill_idx : Array[Int] = Array::new()
+  let main_sizes : Array[Double] = Array()
+  let cross_sizes : Array[Double] = Array()
+  let fill_idx : Array[Int32] = Array()
   let mut fixed_total = 0.0
   for cid in node.children.iter() {
     match doc.nodes.get(cid) {

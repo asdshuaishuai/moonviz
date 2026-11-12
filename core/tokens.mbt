@@ -18,11 +18,11 @@ pub(all) struct DesignTokens {
 ///|
 pub fn DesignTokens::default() -> DesignTokens {
   let t : DesignTokens = {
-    colors: Map::new(),
-    spacing: Map::new(),
-    radii: Map::new(),
-    typography: Map::new(),
-    motion: Map::new(),
+    colors: Map([]),
+    spacing: Map([]),
+    radii: Map([]),
+    typography: Map([]),
+    motion: Map([]),
   }
   // 颜色（Material 3 风格）
   // primary/hint 为 WCAG 校准值：#4B6BFB 白字仅 4.38（可读性硬标准 ≥4.5）
@@ -228,7 +228,7 @@ pub fn DesignTokens::to_json(self : DesignTokens) -> String {
 
 ///|
 fn jstr5(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

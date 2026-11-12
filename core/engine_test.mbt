@@ -8,7 +8,7 @@ test "模板：登录页生成完整画板" {
       // 验证画板有节点
       match p.artboards.get(ab_id) {
         Some(ab) => {
-          let count = ab.doc.nodes.size()
+          let count = ab.doc.nodes.length()
           assert_true(count >= 8) // root + logo + title + email + password + button + divider + signup
         }
         None => assert_true(false)
@@ -27,7 +27,7 @@ test "模板：仪表盘生成" {
   match p.apply_template(template_id="dashboard") {
     Ok(ab) =>
       match p.artboards.get(ab) {
-        Some(a) => assert_true(a.doc.nodes.size() >= 10) // bar + 4 stats + chart + title + 4 activities + divider
+        Some(a) => assert_true(a.doc.nodes.length() >= 10) // bar + 4 stats + chart + title + 4 activities + divider
         None => assert_true(false)
       }
     Err(_) => assert_true(false)
@@ -40,7 +40,7 @@ test "模板：设置页生成" {
   match p.apply_template(template_id="settings") {
     Ok(ab) =>
       match p.artboards.get(ab) {
-        Some(a) => assert_true(a.doc.nodes.size() >= 15) // bar + 4 sections + 12 items + logout
+        Some(a) => assert_true(a.doc.nodes.length() >= 15) // bar + 4 sections + 12 items + logout
         None => assert_true(false)
       }
     Err(_) => assert_true(false)

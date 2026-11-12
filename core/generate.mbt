@@ -52,19 +52,15 @@ fn contains_latin_word(haystack : String, word : String) -> Bool {
   while i + w <= n {
     if haystack.substring(start=i, end=i + w) == word {
       let before_ok = i == 0 ||
-        {
-          match haystack.get_char(i - 1) {
-            Some(c) => !is_ascii_alnum(c)
-            None => true
-          }
-        }
+        (match haystack.get_char(i - 1) {
+          Some(c) => !is_ascii_alnum(c)
+          None => true
+        })
       let after_ok = i + w == n ||
-        {
-          match haystack.get_char(i + w) {
-            Some(c) => !is_ascii_alnum(c)
-            None => true
-          }
-        }
+        (match haystack.get_char(i + w) {
+          Some(c) => !is_ascii_alnum(c)
+          None => true
+        })
       if before_ok && after_ok {
         return true
       }
@@ -98,9 +94,7 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
     contains_latin_word(lower, "harmonyos") ||
     lower.contains("鸿蒙") ||
     lower.contains("华为")
-  let theme = if contains_any(lower, [
-    "dark", "暗色", "深色", "夜间",
-  ]) {
+  let theme = if contains_any(lower, ["dark", "暗色", "深色", "夜间"]) {
     if is_aesthetic_apple {
       "apple_dark"
     } else if is_aesthetic_harmony {
@@ -132,7 +126,11 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
       ["signup", "sign up", "注册", "register", "创建账号"],
     ),
     ("onboarding", "引导页", ["onboarding", "引导", "欢迎页", "首次"]),
-    ("empty_state", "空状态页", ["empty", "空状态", "占位", "暂无内容"]),
+    (
+      "empty_state",
+      "空状态页",
+      ["empty", "空状态", "占位", "暂无内容"],
+    ),
     ("settings", "设置页", ["settings", "设置", "偏好", "preferences"]),
     (
       "dashboard",
@@ -155,7 +153,9 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
     (
       "detail",
       "详情页",
-      ["详情", "商品详情", "内容详情", "detail", "详细", "订单详情"],
+      [
+        "详情", "商品详情", "内容详情", "detail", "详细", "订单详情",
+      ],
     ),
     (
       "list",
@@ -166,8 +166,8 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
       "checkout",
       "确认订单",
       [
-        "确认订单", "订单确认", "结算", "checkout", "购物车", "下单", "提交订单",
-        "cart", "place order", "payment", "支付",
+        "确认订单", "订单确认", "结算", "checkout", "购物车", "下单",
+        "提交订单", "cart", "place order", "payment", "支付",
       ],
     ),
     // login_v2 必须排在 login 之前：「登录页 v2」同时命中两族各 1 分，
@@ -183,12 +183,18 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
     (
       "login",
       "登录页",
-      ["login", "登录", "登陆", "sign in", "signin", "验证码", "手机号"],
+      [
+        "login", "登录", "登陆", "sign in", "signin", "验证码", "手机号",
+      ],
     ),
     ("adaptive_landing", "响应式落地页", ["响应式", "adaptive"]),
-    ("web_landing", "落地页", ["landing", "落地页", "官网", "marketing"]),
+    (
+      "web_landing",
+      "落地页",
+      ["landing", "落地页", "官网", "marketing"],
+    ),
   ]
-  let score_of = fn(keywords : Array[String]) -> Int {
+  let score_of = fn(keywords : Array[String]) -> Int32 {
     let mut score = 0
     for kw in keywords.iter() {
       if lower.contains(kw) {
@@ -275,8 +281,8 @@ pub fn parse_generate_intent(text : String) -> GenIntent {
 pub fn Project::generate(
   self : Project,
   intent_text~ : String,
-  name? : String = "",
-  spec? : String = "",
+  name~ : String = "",
+  spec~ : String = "",
 ) -> Result[String, String] {
   // issue #24：spec 在场 = 第一权威；缺失 = 显式要求，不静默用引擎内置
   // 规范生成。宿主拿到 design_spec_required 后按 design_spec_draft 落盘重试。
@@ -290,7 +296,7 @@ pub fn Project::generate(
     if segs.length() > GENERATE_MULTI_MAX {
       return Err("generate_multi_too_many:\{GENERATE_MULTI_MAX}")
     }
-    return self.generate_multi(segs, name=name, spec=spec)
+    return self.generate_multi(segs, name~, spec~)
   }
   let intent = parse_generate_intent(intent_text)
   let ab_name = if name == "" { intent.template_id } else { name }
@@ -319,7 +325,7 @@ pub fn Project::generate(
     Ok(id) => id
   }
   // issue #24：spec 应用到新板（调色板重着色 + 字号阶/圆角档规范化）
-  match self.apply_design_spec(artboard=ab, spec=spec) {
+  match self.apply_design_spec(artboard=ab, spec~) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
@@ -351,7 +357,15 @@ pub fn Project::generate(
     Ok(json) => json
     Err(_) => "{}"
   }
-  let summary = "生成" + intent.page_hint + "（" + json_int_field(score_json, "total", 0).to_string() + "分，自愈" + json_int_field(autofix_json, "fixes", 0).to_string() + "处，缺" + json_int_field(missing_json, "missing_count", 0).to_string() + "项）"
+  let summary = "生成" +
+    intent.page_hint +
+    "（" +
+    json_int_field(score_json, "total", 0).to_string() +
+    "分，自愈" +
+    json_int_field(autofix_json, "fixes", 0).to_string() +
+    "处，缺" +
+    json_int_field(missing_json, "missing_count", 0).to_string() +
+    "项）"
   let alts : Array[String] = []
   for a in intent.alternatives.iter() {
     alts.push("\"" + a + "\"")
@@ -365,14 +379,14 @@ pub fn Project::generate(
 ///|
 /// 组合意图上限：一句话最多展开 4 块画板（防滥用；真实原型一屏意图
 /// 极少超过 4 页）。
-pub const GENERATE_MULTI_MAX : Int = 4
+pub const GENERATE_MULTI_MAX : Int32 = 4
 
 ///|
 /// 意图分段：按 "+" / "＋" 切分（保守分隔符——空格是单意图内的正常
 /// 组成部分，"登录页 dark" 不受影响），去空白、丢空段。
 pub fn split_intent_segments(text : String) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for c in text.iter() {
     if c == '+' || c == '＋' {
       let seg = mbt_seg_trim(cur.to_string())
@@ -416,7 +430,7 @@ fn mbt_seg_trim(s : String) -> String {
       break
     }
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in start..<end {
     sb.write_char(chars[i])
   }
@@ -523,9 +537,7 @@ fn Project::find_or_make_egress(
       continue
     }
     match layout.rect_of(id) {
-      Some(r) => if r.y + r.height > bottom {
-        bottom = r.y + r.height
-      }
+      Some(r) => if r.y + r.height > bottom { bottom = r.y + r.height }
       None => ()
     }
   }
@@ -542,9 +554,7 @@ fn Project::find_or_make_egress(
           continue
         }
         match layout.rect_of(id) {
-          Some(r) => if cand.intersects(r) {
-            taken = true
-          }
+          Some(r) => if cand.intersects(r) { taken = true }
           None => ()
         }
       }
@@ -568,18 +578,16 @@ fn Project::find_or_make_egress(
     w=node_w,
     h=node_h,
   )
-  let _ = self.edit_node(
-    artboard=from_ab,
-    node_id=node_id,
-    kvs=[("text", "前往" + kw)],
-  )
+  let _ = self.edit_node(artboard=from_ab, node_id~, kvs=[
+    ("text", "前往" + kw),
+  ])
   node_id
 }
 
 ///|
 /// 从 JSON 串取 `"key":` 之后的非负整数；键缺失或后随非数字时返回 fallback。
 /// 仅供 multi 信封摘要解析（autofix fixes/remaining、missing_count、score）。
-fn json_int_field(json : String, key : String, fallback : Int) -> Int {
+fn json_int_field(json : String, key : String, fallback : Int32) -> Int32 {
   let pat = "\"" + key + "\":"
   match json.find(pat) {
     None => fallback
@@ -613,7 +621,7 @@ fn json_int_field(json : String, key : String, fallback : Int) -> Int {
 /// （project.mbt 越界不可改），模板条件流又随画板 upsert 重建再次追加
 /// ——generate_multi 幂等重跑的线性膨胀（实测 2→5→8）在此一次性收口。
 fn Project::dedup_flows(self : Project) -> Unit {
-  let seen : Map[String, Bool] = Map::new()
+  let seen : Map[String, Bool] = Map([])
   let out : Array[FlowEdge] = []
   for f in self.flows.iter() {
     let key = "\{f.from}>\{f.to}@\{f.trigger}"
@@ -635,8 +643,8 @@ fn Project::dedup_flows(self : Project) -> Unit {
 pub fn Project::generate_multi(
   self : Project,
   segments : Array[String],
-  name? : String = "",
-  spec? : String = "",
+  name~ : String = "",
+  spec~ : String = "",
 ) -> Result[String, String] {
   // issue #24：直调者也必须带 spec（不静默兜底）
   if ds_is_blank(spec) {
@@ -683,7 +691,7 @@ pub fn Project::generate_multi(
     // 单通道信封不含 skipped——有丢段时在结果头部注入，保持可见性。
     let only = page_segs[0]
     let with_theme = if theme != "" { "\{only} \{theme}" } else { only }
-    let r = self.generate(intent_text=with_theme, name=name, spec=spec)
+    let r = self.generate(intent_text=with_theme, name~, spec~)
     if skipped.length() == 0 {
       return r
     }
@@ -697,7 +705,10 @@ pub fn Project::generate_multi(
         // 前缀手术：单通道信封恒以 {"ok":true 开头（10 个 ASCII 码元），
         // 跳过重建为 {"skipped":[...],"ok":true…（substring 惯用法同 variants.mbt）
         return Ok(
-          "{\"skipped\":[" + parts.join(",") + "],\"ok\":true" + json.substring(start=10),
+          "{\"skipped\":[" +
+          parts.join(",") +
+          "],\"ok\":true" +
+          json.substring(start=10),
         )
       }
     }
@@ -720,7 +731,7 @@ pub fn Project::generate_multi(
   let ids : Array[String] = []
   let hints : Array[String] = []
   let replaced_flags : Array[Bool] = []
-  let used_ids : Map[String, Bool] = Map::new()
+  let used_ids : Map[String, Bool] = Map([])
   let mut first = true
   for gi in boards.iter() {
     let mut ab_name = if first && name != "" { name } else { gi.template_id }
@@ -746,7 +757,7 @@ pub fn Project::generate_multi(
       Ok(id) => id
     }
     // issue #24：spec 应用到本板（与单板通道同一判据）
-    match self.apply_design_spec(artboard=ab, spec=spec) {
+    match self.apply_design_spec(artboard=ab, spec~) {
       Err(error) => return Err(error)
       Ok(_) => ()
     }
@@ -829,7 +840,10 @@ pub fn Project::generate_multi(
     k = k + 1
   }
   let arts_j = arts.join(",")
-  let ms = "组合生成 " + ids.length().to_string() + " 板：" + ids.join(" → ")
+  let ms = "组合生成 " +
+    ids.length().to_string() +
+    " 板：" +
+    ids.join(" → ")
   let flows_j = flows_json.join(",")
   // 丢段可见性：未知段在信封显式列出（Agent 可向用户复述或换说法重试），
   // 全部段都有语义时字段为空数组（形状恒定，消费者免判空缺）

@@ -159,11 +159,11 @@ fn ds_object_body(json : String, key : String) -> String? {
 ///|
 fn ds_token_copy(src : DesignTokens) -> DesignTokens {
   let t : DesignTokens = {
-    colors: Map::new(),
-    spacing: Map::new(),
-    radii: Map::new(),
-    typography: Map::new(),
-    motion: Map::new(),
+    colors: Map([]),
+    spacing: Map([]),
+    radii: Map([]),
+    typography: Map([]),
+    motion: Map([]),
   }
   for k in src.colors.keys() {
     match src.colors.get(k) {
@@ -228,7 +228,7 @@ fn ds_apply_font_scale(doc : Document, spec : String) -> Unit {
           let (old, nv) = pair
           if fs > old - 0.5 && fs < old + 0.5 {
             let _ = doc.update_node(id, fn(x) {
-              { ..x, style: { ..x.style, font_size: nv, } }
+              { ..x, style: { ..x.style, font_size: nv, }, }
             })
             break
           }
@@ -271,7 +271,7 @@ fn ds_apply_radius(doc : Document, spec : String) -> Unit {
           Some(v) =>
             if v != r {
               let _ = doc.update_node(id, fn(x) {
-                { ..x, style: { ..x.style, corner_radius: v, } }
+                { ..x, style: { ..x.style, corner_radius: v, }, }
               })
             }
           None => ()
@@ -339,7 +339,10 @@ pub fn Project::apply_design_spec(
   //    （apple + dark 意图 → apple_dark）。palette 随后覆盖同名角色（微调优先）。
   let style_theme = ds_style_theme(spec)
   if style_theme != "" {
-    let resolved = resolve_aesthetic_theme(style_theme, self.active_theme_is_dark())
+    let resolved = resolve_aesthetic_theme(
+      style_theme,
+      self.active_theme_is_dark(),
+    )
     match self.apply_theme(resolved) {
       Ok(_) => ()
       Err(_) => ()
@@ -375,7 +378,7 @@ pub fn Project::apply_design_spec(
 ///
 /// 独立于 apply_design_spec：generate 在**模板实例化之前**调用本函数，
 /// 组件补丁即以 spec 令牌取色，消除 theme→template 顺序依赖。
-pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
+pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int32 {
   // 显式键：spec key → 令牌角色
   let keys : Array[(String, String)] = [
     ("primary", "primary"),
@@ -397,7 +400,7 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
     ("warningContainer", "warning_container"),
     ("infoContainer", "info_container"),
   ]
-  let present : Map[String, String] = Map::new() // 令牌角色 → hex
+  let present : Map[String, String] = Map([]) // 令牌角色 → hex
   let mut applied = 0
   for pair in keys.iter() {
     let (spec_key, token_role) = pair
@@ -420,7 +423,10 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
   match present.get("text_primary") {
     Some(tx) => {
       let _ = self.set_token("inverse_surface", tx)
-      let _ = self.set_token("inverse_surface_variant", hex_mix(tx, "#000000", 0.30))
+      let _ = self.set_token(
+        "inverse_surface_variant",
+        hex_mix(tx, "#000000", 0.30),
+      )
     }
     None => ()
   }
@@ -467,10 +473,9 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
   // motion：spec.motion 对象（毫秒）→ 动效令牌——与 palette 同级权威。
   // 导出面/wasm 快照从令牌表取值，因此 spec 的节拍不需要在导出层再写一遍。
   match ds_object_body(spec, "motion") {
-    Some(body) => {
-      for key in [
-        "fast", "base", "slow", "tick", "stagger", "stagger_max",
-      ].iter() {
+    Some(body) =>
+      for
+        key in ["fast", "base", "slow", "tick", "stagger", "stagger_max"].iter() {
         match ds_number_value(body, key) {
           Some(v) =>
             if v > 0.0 {
@@ -482,7 +487,6 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
           None => ()
         }
       }
-    }
     None => ()
   }
   applied
@@ -493,14 +497,17 @@ pub fn Project::apply_spec_tokens(self : Project, spec : String) -> Int {
 /// hex 且不等于任何当前令牌值（即不是从 spec/主题角色解析出来的颜色）时
 /// 计入违规——模板/Agent 的一切用色都必须能追溯到 spec 调色板或语义角色。
 /// 渐变（含 ':'）与 "none" 不判；上限 8 条与 norms 各检测一致。
-pub fn Project::design_spec_color_violations(self : Project, artboard~ : String) -> Array[String] {
+pub fn Project::design_spec_color_violations(
+  self : Project,
+  artboard~ : String,
+) -> Array[String] {
   let out : Array[String] = []
   let ab = match self.artboards.get(artboard) {
     Some(a) => a
     None => return out
   }
   // 当前令牌值全集（spec 应用后的生效调色板）
-  let allowed : Map[String, Bool] = Map::new()
+  let allowed : Map[String, Bool] = Map([])
   for role in self.tokens.colors.keys() {
     match self.tokens.colors.get(role) {
       Some(v) => allowed.set(v.to_lower(), true)
@@ -692,7 +699,9 @@ pub fn Project::design_spec_component_violations(
               }
             }
             if banned {
-              out.push("\{json_escape(id)} 组件「\{n.component}」命中 spec 禁用项")
+              out.push(
+                "\{json_escape(id)} 组件「\{n.component}」命中 spec 禁用项",
+              )
               continue
             }
             if allow.length() > 0 {
@@ -703,7 +712,9 @@ pub fn Project::design_spec_component_violations(
                 }
               }
               if !ok {
-                out.push("\{json_escape(id)} 组件「\{n.component}」不在 spec 白名单")
+                out.push(
+                  "\{json_escape(id)} 组件「\{n.component}」不在 spec 白名单",
+                )
               }
             }
           }
@@ -731,7 +742,12 @@ fn ds_number_after_marker(text : String, marker : String) -> Double? {
       digits = digits + "."
     } else if started {
       break
-    } else if c == '>' || c == '=' || c == '≥' || c == ' ' || c == ':' || c == '：' {
+    } else if c == '>' ||
+      c == '=' ||
+      c == '≥' ||
+      c == ' ' ||
+      c == ':' ||
+      c == '：' {
       continue
     } else {
       continue
@@ -763,7 +779,8 @@ pub fn Project::norms_profile(self : Project) -> NormsProfile {
     None => NORM_RADIUS_BASE
   }
   // 角色标记优先：正文对比度 → 泛化对比度 → 内置
-  let contrast_min = match ds_number_after_marker(self.design_spec, "正文对比度") {
+  let contrast_min = match
+    ds_number_after_marker(self.design_spec, "正文对比度") {
     Some(v) => v
     None =>
       match ds_number_after_marker(self.design_spec, "对比度") {
@@ -793,7 +810,8 @@ pub fn Project::design_spec_text_contrast(self : Project) -> Double {
   // 角色标记优先（"正文对比度 4.5" 先于泛化 "对比度 3.0"）——rules 多条
   // 阈值并存时首标记不再覆盖正文档
   match ds_number_after_marker(self.design_spec, "正文对比度") {
-    Some(v) => return if v >= 1.0 && v <= 21.0 { v } else { NORM_TEXT_CONTRAST_MIN }
+    Some(v) =>
+      return if v >= 1.0 && v <= 21.0 { v } else { NORM_TEXT_CONTRAST_MIN }
     None => ()
   }
   match ds_number_after_marker(self.design_spec, "对比度") {

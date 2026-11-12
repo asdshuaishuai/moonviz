@@ -42,7 +42,7 @@ pub fn qa_is_mock_container(c : String) -> Bool {
 
 ///|
 /// 组件必须来自组件库（builtin 或用户组件注册表）。
-pub fn qa_component_known(self : Project, c : String) -> Bool {
+pub fn Project::qa_component_known(self : Project, c : String) -> Bool {
   // 结构组件（画布 frame / 弹性留白 spacer）与空名不算「非组件库组件」
   // ——泛型容器合法。
   if c == "frame" || c == "spacer" || c == "" {
@@ -57,7 +57,11 @@ pub fn qa_component_known(self : Project, c : String) -> Bool {
 ///|
 /// 交互去向判定（issue #25-A1）：flow tap:<id> / 名字里的交互标记（⚡ 或
 /// [state:）/ 返回类节点（内置返回兜底）都算有去向。
-pub fn qa_is_bound(self : Project, artboard : String, n : Node) -> Bool {
+pub fn Project::qa_is_bound(
+  self : Project,
+  artboard : String,
+  n : Node,
+) -> Bool {
   if is_back_like_node(n) {
     return true
   }
@@ -78,7 +82,7 @@ pub fn qa_is_bound(self : Project, artboard : String, n : Node) -> Bool {
 /// 2) 占位符残留文本
 /// 3) 空壳 list/table/card（无示例条目）
 /// 4) 非组件库组件（generic_node 当组件用）
-pub fn qa_issues(self : Project, artboard~ : String) -> Array[String] {
+pub fn Project::qa_issues(self : Project, artboard~ : String) -> Array[String] {
   let issues : Array[String] = []
   // issue #24 要求 2：spec 组件白名单/禁用项的整篇检视并入 QA
   for v in self.design_spec_component_violations(artboard~).iter() {
@@ -143,14 +147,16 @@ pub fn qa_issues(self : Project, artboard~ : String) -> Array[String] {
 /// 1) 同一节点多条 tap flow → interaction_conflict
 /// 2) 两个可点热区（被 tap flow 绑定的容器）包围盒相交且无父子包含 → hotzone_overlap
 /// 任一命中即 Err("mbt_gate_block:<板>:<类>:<定位>")，由门路径拒绝。
-pub fn qa_agent_conflicts(self : Project) -> Result[Unit, String] {
+pub fn Project::qa_agent_conflicts(self : Project) -> Result[Unit, String] {
   for artboard_id in self.artboards.keys() {
     match self.artboards.get(artboard_id) {
       None => ()
       Some(ab) => {
-        let tap_counts : Map[String, Int] = Map::new()
+        let tap_counts : Map[String, Int32] = Map([])
         for f in self.flows.iter() {
-          if f.from == artboard_id && f.trigger.length() > 4 && f.trigger.has_prefix("tap:") {
+          if f.from == artboard_id &&
+            f.trigger.length() > 4 &&
+            f.trigger.has_prefix("tap:") {
             let nid = f.trigger.substring(start=4)
             let c = match tap_counts.get(nid) {
               Some(v) => v
@@ -188,7 +194,7 @@ pub fn qa_agent_conflicts(self : Project) -> Result[Unit, String] {
                 // 父子包含豁免（is_descendant 双向）+ 包含关系矩形豁免；
                 // 两个可点区正相交即冲突（几何谓词复用 geom.mbt）
                 if !(is_descendant(ab.doc, targets[i], targets[j]) ||
-                is_descendant(ab.doc, targets[j], targets[i])) &&
+                  is_descendant(ab.doc, targets[j], targets[i])) &&
                   !a.contains_rect(b) &&
                   !b.contains_rect(a) &&
                   a.intersects(b) {
@@ -229,7 +235,7 @@ pub fn Project::mock_data_gaps(
         }
         match ab.doc.nodes.get(id) {
           None => ()
-          Some(n) => {
+          Some(n) =>
             if qa_is_placeholder_text(n.text) {
               gaps.push(id)
             } else if qa_is_mock_container(n.component) &&
@@ -237,7 +243,6 @@ pub fn Project::mock_data_gaps(
               n.text.length() == 0 {
               gaps.push(id)
             }
-          }
         }
       }
   }

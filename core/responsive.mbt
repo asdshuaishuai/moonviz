@@ -9,7 +9,7 @@ pub(all) struct Breakpoint {
   name : String
   width : Double
   height : Double
-  columns : Int
+  columns : Int32
   description : String
 }
 
@@ -393,7 +393,7 @@ pub fn Project::list_breakpoint_variants(
     match self.artboards.get(id) {
       Some(ab) => {
         let w = ab.width.to_int().to_string()
-        let n = (ab.doc.nodes.size() - 1).to_string()
+        let n = (ab.doc.nodes.length() - 1).to_string()
         variants.push(
           "{\"breakpoint\":\"\{bp.name}\",\"width\":\{w},\"nodes\":\{n}}",
         )
@@ -407,7 +407,7 @@ pub fn Project::list_breakpoint_variants(
 
 ///|
 fn jstr17(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

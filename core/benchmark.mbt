@@ -16,27 +16,27 @@
 
 pub(all) struct ArtboardBenchmark {
   artboard : String
-  node_count : Int
-  max_depth : Int
+  node_count : Int32
+  max_depth : Int32
   avg_children : Double
-  stack_layout_count : Int
-  fill_node_count : Int
-  hug_node_count : Int
-  text_node_count : Int
-  total_text_length : Int
-  svg_output_length : Int
-  layout_complexity : Int // 相对复杂度（操作计数）
-  render_complexity : Int // 渲染复杂度（字节量）
-  memory_estimate_bytes : Int // 内存估算
+  stack_layout_count : Int32
+  fill_node_count : Int32
+  hug_node_count : Int32
+  text_node_count : Int32
+  total_text_length : Int32
+  svg_output_length : Int32
+  layout_complexity : Int32 // 相对复杂度（操作计数）
+  render_complexity : Int32 // 渲染复杂度（字节量）
+  memory_estimate_bytes : Int32 // 内存估算
   antipatterns : Array[String]
-  score : Int // 0-100（越高越好）
+  score : Int32 // 0-100（越高越好）
 }
 
 ///|
 pub(all) struct ProjectBenchmark {
   artboards : Array[ArtboardBenchmark]
-  total_nodes : Int
-  total_memory : Int
+  total_nodes : Int32
+  total_memory : Int32
   avg_score : Double
   grade : String // "A" | "B" | "C" | "D"
 }
@@ -58,7 +58,7 @@ pub fn Project::benchmark_artboard(
       let svg = render_svg(doc)
 
       // 统计节点
-      let node_count = doc.nodes.size() - 1 // 减 root
+      let node_count = doc.nodes.length() - 1 // 减 root
       let mut max_depth = 0
       let mut total_children = 0
       let mut parent_count = 0
@@ -254,7 +254,7 @@ pub fn Project::benchmark(self : Project) -> ProjectBenchmark {
 
 ///|
 pub fn ArtboardBenchmark::to_json(self : ArtboardBenchmark) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\"artboard\":\"\{self.artboard}\"")
   sb.write_string(",\"nodes\":\{self.node_count}")
   sb.write_string(",\"depth\":\{self.max_depth}")
@@ -274,7 +274,7 @@ pub fn ArtboardBenchmark::to_json(self : ArtboardBenchmark) -> String {
 
 ///|
 pub fn ProjectBenchmark::to_json(self : ProjectBenchmark) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\"total_nodes\":\{self.total_nodes}")
   sb.write_string(",\"total_memory\":\{self.total_memory}")
   let avg = self.avg_score.to_string()
@@ -294,7 +294,7 @@ pub fn ProjectBenchmark::to_json(self : ProjectBenchmark) -> String {
 ///|
 /// 人类可读报告
 pub fn ProjectBenchmark::report(self : ProjectBenchmark) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("Performance Benchmark Report\n")
   sb.write_string("============================\n\n")
   let tn = self.total_nodes.to_string()
@@ -350,7 +350,9 @@ pub fn Project::suggest_optimizations(
       }
       if suggestions.length() == 0 {
         // 空集合键恒输出 []（AGENTS.md 红线，与 infer_missing/prototest 对齐）
-        Ok("{\"optimizations\":0,\"detail\":[],\"message\":\"性能良好，无需优化\"}")
+        Ok(
+          "{\"optimizations\":0,\"detail\":[],\"message\":\"性能良好，无需优化\"}",
+        )
       } else {
         let j = jstr23(suggestions)
         Ok("{\"optimizations\":\{suggestions.length()},\"detail\":\{j}}")
@@ -364,7 +366,7 @@ pub fn Project::suggest_optimizations(
 // ---------------------------------------------------------------------------
 
 ///|
-fn compute_depth(doc : Document, id : String) -> Int {
+fn compute_depth(doc : Document, id : String) -> Int32 {
   let mut depth = 0
   let mut cur : String? = Some(id)
   let mut running = true
@@ -388,7 +390,7 @@ fn compute_depth(doc : Document, id : String) -> Int {
 
 ///|
 fn jstr23(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

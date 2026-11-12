@@ -290,7 +290,7 @@ fn parse_hex_rgb2(hex : String) -> (Double, Double, Double) {
 }
 
 ///|
-fn hex_part2(s : String, offset : Int) -> Double {
+fn hex_part2(s : String, offset : Int32) -> Double {
   if s.length() < offset + 2 {
     return 0.0
   }
@@ -300,7 +300,7 @@ fn hex_part2(s : String, offset : Int) -> Double {
 }
 
 ///|
-fn hdv2(c : Char?) -> Int {
+fn hdv2(c : Char?) -> Int32 {
   match c {
     Some(ch) => {
       let code = ch.to_int()
@@ -345,7 +345,7 @@ fn nearest_in_list(list : Array[Double], target : Double) -> Double {
 
 ///|
 fn jstr15(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

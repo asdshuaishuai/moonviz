@@ -169,7 +169,7 @@ pub fn Project::apply_intent(
   self : Project,
   intent : LayoutIntent,
   artboard~ : String,
-  parent_id? : String = "root",
+  parent_id~ : String = "root",
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard")
@@ -296,7 +296,7 @@ pub fn Project::apply_constraint(
   self : Project,
   text : String,
   artboard~ : String,
-  parent_id? : String = "root",
+  parent_id~ : String = "root",
 ) -> Result[String, String] {
   let intent = parse_layout_intent(text)
   match intent {
@@ -323,7 +323,7 @@ fn find_first_child(doc : Document, parent_id : String) -> String {
 }
 
 ///|
-fn equalize_width(doc : Document, parent_id : String) -> Int {
+fn equalize_width(doc : Document, parent_id : String) -> Int32 {
   let mut count = 0
   match doc.nodes.get(parent_id) {
     Some(parent) =>
@@ -337,7 +337,7 @@ fn equalize_width(doc : Document, parent_id : String) -> Int {
 }
 
 ///|
-fn equalize_height(doc : Document, parent_id : String) -> Int {
+fn equalize_height(doc : Document, parent_id : String) -> Int32 {
   let mut count = 0
   match doc.nodes.get(parent_id) {
     Some(parent) =>
@@ -360,7 +360,7 @@ fn move_to_edge(
   parent_id : String,
   layout : SolvedLayout,
   top : Bool,
-) -> Int {
+) -> Int32 {
   let mut count = 0
   match (doc.nodes.get(parent_id), layout.rect_of(parent_id)) {
     (Some(parent), Some(pr)) => {
@@ -381,7 +381,11 @@ fn move_to_edge(
         0.0
       } else {
         let start = pr.height - total_with_gap
-        if start > 0.0 { start } else { 0.0 }
+        if start > 0.0 {
+          start
+        } else {
+          0.0
+        }
       }
       for cid in parent.children.iter() {
         let _ = doc.update_node(cid, fn(c) { { ..c, y: AlignStart(y), } })
@@ -398,7 +402,11 @@ fn move_to_edge(
 }
 
 ///|
-fn center_all(doc : Document, parent_id : String, layout : SolvedLayout) -> Int {
+fn center_all(
+  doc : Document,
+  parent_id : String,
+  layout : SolvedLayout,
+) -> Int32 {
   let mut count = 0
   match (doc.nodes.get(parent_id), layout.rect_of(parent_id)) {
     (Some(parent), Some(pr)) => {
@@ -430,7 +438,7 @@ fn center_all(doc : Document, parent_id : String, layout : SolvedLayout) -> Int 
 }
 
 ///|
-fn scale_all(doc : Document, factor : Double) -> Int {
+fn scale_all(doc : Document, factor : Double) -> Int32 {
   let mut count = 0
   for id in doc.nodes.keys() {
     if id != "root" {

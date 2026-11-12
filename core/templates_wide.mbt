@@ -61,11 +61,10 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   // 顶部导航栏
   self.place_required(ab, "rect", "nav_bar", x=0.0, y=0.0)
   self.resize_node(ab, "nav_bar", WIDE_W, 64.0, 0.0)
-  self.w_style(
-    ab,
-    "nav_bar",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
+  self.w_style(ab, "nav_bar", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
   self.place_required(
     ab,
     "badge",
@@ -106,11 +105,9 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   )
   self.set_text(ab, "hero_title", "Prototype at the speed of thought")
   self.resize_node(ab, "hero_title", 560.0, 56.0, 0.0)
-  let _ = self.edit_node(
-    artboard=ab,
-    node_id="hero_title",
-    kvs=[("weight", "700")],
-  )
+  let _ = self.edit_node(artboard=ab, node_id="hero_title", kvs=[
+    ("weight", "700"),
+  ])
   self.place_required(ab, "body_text", "hero_sub", x=96.0, y=253.0)
   self.set_text(
     ab, "hero_sub", "Design, critique and iterate — human drags, agent commands.",
@@ -198,11 +195,7 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
       h=20.0,
     )
     self.set_text(ab, bid, descs[i])
-    let _ = self.edit_node(
-      artboard=ab,
-      node_id=cid,
-      kvs=[("justify", "center")],
-    )
+    let _ = self.edit_node(artboard=ab, node_id=cid, kvs=[("justify", "center")])
     // 200 而非 240：收编进卡片后由栈布局接管排布，240 会溢出卡片内容盒
     // （issue #14：web_landing feat_bodyN contained_in_parent）
   }
@@ -221,11 +214,9 @@ fn Project::template_web_landing(self : Project, name : String) -> String {
   // 盒右缘 980+268=1248 = nav_cta 右缘，右对齐——左锚曾让墨迹止于 ~1143
   self.resize_node(ab, "footer_links", 268.0, 20.0, 0.0)
   self.w_style(ab, "footer_links", [("text_color", c("text_secondary"))])
-  let _ = self.edit_node(
-    artboard=ab,
-    node_id="footer_links",
-    kvs=[("align", "right")],
-  )
+  let _ = self.edit_node(artboard=ab, node_id="footer_links", kvs=[
+    ("align", "right"),
+  ])
 
   ab
 }
@@ -251,15 +242,11 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   // on_primary，字形用 primary（品牌色字压白盘）——沿 badge 变体默认的
   // on_primary 字色会同色相撞
   self.set_text(ab, "brand_logo", "M")
-  let _ = self.edit_node(
-    artboard=ab,
-    node_id="brand_logo",
-    kvs=[
-      ("font_size", "26"),
-      ("weight", "600"),
-      ("text_color", c("primary")),
-    ],
-  )
+  let _ = self.edit_node(artboard=ab, node_id="brand_logo", kvs=[
+    ("font_size", "26"),
+    ("weight", "600"),
+    ("text_color", c("primary")),
+  ])
   self.place_required(
     ab,
     "heading",
@@ -271,11 +258,9 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   self.set_text(ab, "brand_title", "Design together\nwith your agent")
   self.resize_node(ab, "brand_title", 400.0, 112.0, 0.0)
   self.w_style(ab, "brand_title", [("text_color", c("on_primary"))])
-  let _ = self.edit_node(
-    artboard=ab,
-    node_id="brand_title",
-    kvs=[("weight", "700")],
-  )
+  let _ = self.edit_node(artboard=ab, node_id="brand_title", kvs=[
+    ("weight", "700"),
+  ])
   self.place_required(ab, "body_text", "brand_sub", x=96.0, y=452.0)
   self.set_text(
     ab, "brand_sub", "One plain-text source of truth for humans and AI.",
@@ -288,22 +273,16 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   // 内容整体下移 12px 平衡上下留白（原顶 45 / 底 68）
   self.place_required(ab, "rect", "form_card", x=700.0, y=180.0)
   self.resize_node(ab, "form_card", 440.0, 440.0, 16.0)
-  self.w_style(
-    ab,
-    "form_card",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
-  self.place_required(
-    ab,
-    "heading",
-    "wl_title",
-    variant="h3",
-    x=736.0,
-    y=232.0,
-  )
+  self.w_style(ab, "form_card", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
+  self.place_required(ab, "heading", "wl_title", variant="h3", x=736.0, y=232.0)
   self.set_text(ab, "wl_title", "Welcome back")
   self.resize_node(ab, "wl_title", 300.0, 30.0, 0.0)
-  let _ = self.edit_node(artboard=ab, node_id="wl_title", kvs=[("weight", "700")])
+  let _ = self.edit_node(artboard=ab, node_id="wl_title", kvs=[
+    ("weight", "700"),
+  ])
   self.place_required(ab, "body_text", "wl_sub", x=736.0, y=266.0)
   self.set_text(ab, "wl_sub", "Sign in to continue")
   self.resize_node(ab, "wl_sub", 300.0, 20.0, 0.0)
@@ -340,7 +319,9 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   self.set_text(ab, "wl_forgot", "Forgot password?")
   self.resize_node(ab, "wl_forgot", 368.0, 18.0, 0.0)
   self.w_style(ab, "wl_forgot", [("text_color", c("primary"))])
-  let _ = self.edit_node(artboard=ab, node_id="wl_forgot", kvs=[("align", "right")])
+  let _ = self.edit_node(artboard=ab, node_id="wl_forgot", kvs=[
+    ("align", "right"),
+  ])
   self.place_required(
     ab,
     "button",
@@ -366,7 +347,9 @@ fn Project::template_web_login(self : Project, name : String) -> String {
   // 整行链接色（forgot 已是 primary）——拆节点会破坏居中，注册入口
   // 整行可点是常见 UI 惯例
   self.w_style(ab, "wl_signup", [("text_color", c("primary"))])
-  let _ = self.edit_node(artboard=ab, node_id="wl_signup", kvs=[("align", "center")])
+  let _ = self.edit_node(artboard=ab, node_id="wl_signup", kvs=[
+    ("align", "center"),
+  ])
 
   ab
 }
@@ -385,23 +368,9 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   self.place_required(ab, "rect", "sb", x=0.0, y=0.0)
   self.resize_node(ab, "sb", 224.0, WIDE_H, 0.0)
   self.w_style(ab, "sb", [("fill", c("inverse_surface"))])
-  self.place_required(
-    ab,
-    "badge",
-    "sb_logo",
-    variant="primary",
-    x=24.0,
-    y=24.0,
-  )
+  self.place_required(ab, "badge", "sb_logo", variant="primary", x=24.0, y=24.0)
   self.resize_node(ab, "sb_logo", 36.0, 36.0, 999.0)
-  self.place_required(
-    ab,
-    "heading",
-    "sb_name",
-    variant="h4",
-    x=72.0,
-    y=32.0,
-  )
+  self.place_required(ab, "heading", "sb_name", variant="h4", x=72.0, y=32.0)
   self.set_text(ab, "sb_name", "MoonViz")
   self.resize_node(ab, "sb_name", 120.0, 22.0, 0.0)
   self.w_style(ab, "sb_name", [("text_color", c("inverse_text"))])
@@ -437,19 +406,11 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   // 顶栏
   self.place_required(ab, "rect", "topbar", x=224.0, y=0.0)
   self.resize_node(ab, "topbar", WIDE_W - 224.0, 64.0, 0.0)
-  self.w_style(
-    ab,
-    "topbar",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
-  self.place_required(
-    ab,
-    "heading",
-    "tb_title",
-    variant="h4",
-    x=252.0,
-    y=22.0,
-  )
+  self.w_style(ab, "topbar", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
+  self.place_required(ab, "heading", "tb_title", variant="h4", x=252.0, y=22.0)
   self.set_text(ab, "tb_title", "Overview")
   self.resize_node(ab, "tb_title", 200.0, 22.0, 0.0)
   self.place_required(ab, "badge", "tb_avatar", x=1188.0, y=14.0)
@@ -464,14 +425,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   let sx = [252.0, 508.0, 764.0, 1020.0]
   for i in 0..<4 {
     let cid = "wd_stat" + i.to_string()
-    self.place_required(
-      ab,
-      "card",
-      cid,
-      variant="elevated",
-      x=sx[i],
-      y=88.0,
-    )
+    self.place_required(ab, "card", cid, variant="elevated", x=sx[i], y=88.0)
     // 116 而非 100：栈内容 16+18+8+30+8+16=96 + 底 pad 16 = 112 才装得下
     // 三行（issue #14：wd_sdN contained_in_parent）
     self.resize_node(ab, cid, 236.0, 116.0, 12.0)
@@ -519,19 +473,11 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   // 图表区 + 侧面板
   self.place_required(ab, "rect", "wd_chart", x=252.0, y=212.0)
   self.resize_node(ab, "wd_chart", 580.0, 360.0, 12.0)
-  self.w_style(
-    ab,
-    "wd_chart",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
-  self.place_required(
-    ab,
-    "heading",
-    "wd_ct",
-    variant="h4",
-    x=276.0,
-    y=236.0,
-  )
+  self.w_style(ab, "wd_chart", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
+  self.place_required(ab, "heading", "wd_ct", variant="h4", x=276.0, y=236.0)
   self.set_text(ab, "wd_ct", "Weekly traffic")
   self.resize_node(ab, "wd_ct", 200.0, 22.0, 0.0)
   // 简易柱状图：7 根柱
@@ -550,19 +496,11 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   }
   self.place_required(ab, "rect", "wd_side", x=848.0, y=212.0)
   self.resize_node(ab, "wd_side", 408.0, 360.0, 12.0)
-  self.w_style(
-    ab,
-    "wd_side",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
-  self.place_required(
-    ab,
-    "heading",
-    "wd_st",
-    variant="h4",
-    x=872.0,
-    y=236.0,
-  )
+  self.w_style(ab, "wd_side", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
+  self.place_required(ab, "heading", "wd_st", variant="h4", x=872.0, y=236.0)
   self.set_text(ab, "wd_st", "Recent activity")
   self.resize_node(ab, "wd_st", 200.0, 22.0, 0.0)
   let acts = [
@@ -570,13 +508,7 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   ]
   for i in 0..<3 {
     let id = "wd_act" + i.to_string()
-    self.place_required(
-      ab,
-      "rect",
-      id,
-      x=872.0,
-      y=276.0 + i.to_double() * 64.0,
-    )
+    self.place_required(ab, "rect", id, x=872.0, y=276.0 + i.to_double() * 64.0)
     self.resize_node(ab, id, 360.0, 52.0, 8.0)
     self.w_style(ab, id, [("fill", c("surface_variant"))])
     let tid = "wd_at" + i.to_string()
@@ -594,11 +526,10 @@ fn Project::template_web_dashboard(self : Project, name : String) -> String {
   // 底部表格区
   self.place_required(ab, "rect", "wd_table", x=252.0, y=596.0)
   self.resize_node(ab, "wd_table", 1004.0, 180.0, 12.0)
-  self.w_style(
-    ab,
-    "wd_table",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
+  self.w_style(ab, "wd_table", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
   let heads = ["User", "Action", "Time"]
   let hx = [276.0, 700.0, 1050.0]
   for i in 0..<3 {
@@ -655,13 +586,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   let dots = [c("error"), c("warning"), c("success")]
   for i in 0..<3 {
     let id = "tl_dot" + i.to_string()
-    self.place_required(
-      ab,
-      "badge",
-      id,
-      x=20.0 + i.to_double() * 24.0,
-      y=12.0,
-    )
+    self.place_required(ab, "badge", id, x=20.0 + i.to_double() * 24.0, y=12.0)
     self.resize_node(ab, id, 12.0, 12.0, 999.0)
     self.w_style(ab, id, [("fill", dots[i])])
   }
@@ -669,11 +594,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   self.place_required(ab, "body_text", "tl_title", x=272.0, y=9.0)
   self.set_text(ab, "tl_title", "MoonViz Studio — login.mbt.md")
   self.resize_node(ab, "tl_title", 300.0, 18.0, 0.0)
-  self.w_style(
-    ab,
-    "tl_title",
-    [("text_color", c("inverse_muted"))],
-  )
+  self.w_style(ab, "tl_title", [("text_color", c("inverse_muted"))])
 
   // 侧边栏：反色 chrome
   self.place_required(ab, "rect", "pc_sb", x=0.0, y=36.0)
@@ -703,14 +624,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
       },
     )
   }
-  self.place_required(
-    ab,
-    "heading",
-    "pc_sbh",
-    variant="h4",
-    x=24.0,
-    y=232.0,
-  )
+  self.place_required(ab, "heading", "pc_sbh", variant="h4", x=24.0, y=232.0)
   self.set_text(ab, "pc_sbh", "Pages")
   self.resize_node(ab, "pc_sbh", 120.0, 20.0, 0.0)
   self.w_style(ab, "pc_sbh", [("text_color", c("inverse_muted"))])
@@ -733,11 +647,10 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   // （高 36 / 圆角 8——32 高的密集工具栏档会吃 norms 偏差）
   self.place_required(ab, "rect", "pc_tb", x=240.0, y=36.0)
   self.resize_node(ab, "pc_tb", WIDE_W - 240.0, 52.0, 0.0)
-  self.w_style(
-    ab,
-    "pc_tb",
-    [("fill", c("surface")), ("stroke", c("outline_variant"))],
-  )
+  self.w_style(ab, "pc_tb", [
+    ("fill", c("surface")),
+    ("stroke", c("outline_variant")),
+  ])
   let tbtns = ["Select", "Move", "Text"]
   for i in 0..<3 {
     let id = "pc_tbn" + i.to_string()
@@ -767,14 +680,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   self.place_required(ab, "rect", "pc_layers", x=240.0, y=88.0)
   self.resize_node(ab, "pc_layers", 280.0, 684.0, 0.0)
   self.w_style(ab, "pc_layers", [("fill", c("surface_variant"))])
-  self.place_required(
-    ab,
-    "heading",
-    "pc_lh",
-    variant="h4",
-    x=260.0,
-    y=108.0,
-  )
+  self.place_required(ab, "heading", "pc_lh", variant="h4", x=260.0, y=108.0)
   self.set_text(ab, "pc_lh", "Layers")
   self.resize_node(ab, "pc_lh", 120.0, 20.0, 0.0)
   let layers = ["root", "hero_title", "hero_btn1", "feat_card0"]
@@ -799,11 +705,10 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   // 缩略图在画布内居中：x=520+(560-180)/2=710，y=88+(684-380)/2=240
   self.place_required(ab, "rect", "pc_phone", x=710.0, y=240.0)
   self.resize_node(ab, "pc_phone", 180.0, 380.0, 16.0)
-  self.w_style(
-    ab,
-    "pc_phone",
-    [("fill", c("primary_container")), ("stroke", c("primary"))],
-  )
+  self.w_style(ab, "pc_phone", [
+    ("fill", c("primary_container")),
+    ("stroke", c("primary")),
+  ])
   self.place_required(ab, "rect", "pc_phone_hdr", x=726.0, y=264.0)
   self.resize_node(ab, "pc_phone_hdr", 148.0, 28.0, 6.0)
   self.w_style(ab, "pc_phone_hdr", [("fill", c("primary"))])
@@ -813,14 +718,7 @@ fn Project::template_pc_app(self : Project, name : String) -> String {
   self.place_required(ab, "rect", "pc_props", x=1080.0, y=88.0)
   self.resize_node(ab, "pc_props", 200.0, 684.0, 0.0)
   self.w_style(ab, "pc_props", [("fill", c("surface_variant"))])
-  self.place_required(
-    ab,
-    "heading",
-    "pc_ph",
-    variant="h4",
-    x=1096.0,
-    y=108.0,
-  )
+  self.place_required(ab, "heading", "pc_ph", variant="h4", x=1096.0, y=108.0)
   self.set_text(ab, "pc_ph", "Properties")
   self.resize_node(ab, "pc_ph", 150.0, 20.0, 0.0)
   // 属性值对齐画布内唯一选中对象（手机缩略图 x=640/y=150/w=180，

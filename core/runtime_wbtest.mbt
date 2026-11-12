@@ -112,7 +112,7 @@ test "嵌入式运行时：输入值管理 + 热重载" {
       assert_eq(rt.get_input("email"), "alice@test.com")
       // 获取所有输入
       let all = rt.get_all_inputs()
-      assert_eq(all.size(), 1)
+      assert_eq(all.length(), 1)
       // 热重载：真实替换文档内容（旧实现仅校验非空即返回成功）
       let layout_before = solve(
         match rt.project.artboards.get("form") {
@@ -231,7 +231,7 @@ test "完整 Agent 嵌入式工作流：创建→交互→运行→导出 artifa
       rt.set_input("email_input", "user@test.com")
       rt.set_input("password_input", "secret123")
       let inputs = rt.get_all_inputs()
-      assert_eq(inputs.size(), 2)
+      assert_eq(inputs.length(), 2)
     }
     Err(_) => assert_true(false)
   }
@@ -587,12 +587,10 @@ test "组件状态：text 含逗号/方括号经名字标记往返保真" {
   )
   let tricky = "第1, 2项 [草稿]\\n换行"
   match
-    p.define_component_state(
-      artboard=ab,
-      node_id="cta",
-      state_name="pressed",
-      patch={ ..NodePatch::empty(), text: Some(tricky) },
-    ) {
+    p.define_component_state(artboard=ab, node_id="cta", state_name="pressed", patch={
+      ..NodePatch::empty(),
+      text: Some(tricky),
+    }) {
     Ok(_) => ()
     Err(e) => assert_true(false, msg=e)
   }
@@ -615,7 +613,10 @@ test "组件状态：text 含逗号/方括号经名字标记往返保真" {
                   }
                 }
               }
-              assert_true(found, msg="pressed 状态标记应可从名字解析")
+              assert_true(
+                found,
+                msg="pressed 状态标记应可从名字解析",
+              )
             }
           }
         None => assert_true(false)
@@ -689,7 +690,10 @@ test "交互词表：Action describe→parse 全量往返" {
     SubmitForm(["email", "pwd"]).params_json(),
     "{\"fields\":[\"email\",\"pwd\"]}",
   )
-  assert_eq(SetState("cta", "pressed").params_json(), "{\"node\":\"cta\",\"state\":\"pressed\"}")
+  assert_eq(
+    SetState("cta", "pressed").params_json(),
+    "{\"node\":\"cta\",\"state\":\"pressed\"}",
+  )
 }
 
 ///|
@@ -846,7 +850,7 @@ test "运行时：submit_form 收集输入值并构造 FormSubmitted" {
   match found {
     None => assert_true(false)
     Some(data) => {
-      assert_eq(data.size(), 2)
+      assert_eq(data.length(), 2)
       match data.get("email") {
         Some(v) => assert_eq(v, "a@b.c")
         None => assert_true(false)
@@ -906,9 +910,11 @@ test "interactions v2：字段契约与 builtin 返回热区" {
       assert_true(j.contains("\"name\":\""))
       assert_true(j.contains("\"artboard\":\"v2_ab\""))
       assert_true(j.contains("\"trigger\":\"tap\""))
-      assert_true(j.contains(
-        "\"action\":{\"kind\":\"submit_form\",\"params\":{\"fields\":[\"email\",\"pwd\"]}}",
-      ))
+      assert_true(
+        j.contains(
+          "\"action\":{\"kind\":\"submit_form\",\"params\":{\"fields\":[\"email\",\"pwd\"]}}",
+        ),
+      )
       assert_true(j.contains("\"transition\":\"\""))
       assert_true(j.contains("\"source\":\"marker\""))
       assert_true(j.contains("\"supported\":true"))
@@ -978,7 +984,7 @@ fn gesture_setup() -> Project {
     artboard=ab,
     node_id="fo",
     state_name="pressed",
-    patch={ ..NodePatch::empty(), fill: Some("#123456") },
+    patch={ ..NodePatch::empty(), fill: Some("#123456"), },
   )
   let _ = p.attach_interaction(
     artboard=ab,
@@ -1034,9 +1040,7 @@ fn changes_have_nav(changes : Array[StateChange]) -> Bool {
 fn changes_have_node(changes : Array[StateChange], id : String) -> Bool {
   for c in changes.iter() {
     match c {
-      NodeUpdated(nid) => if nid == id {
-        return true
-      }
+      NodeUpdated(nid) => if nid == id { return true }
       _ => ()
     }
   }
@@ -1076,7 +1080,10 @@ test "手势事件矩阵：long_press/focus/blur/scroll_end/keyboard_enter 驱�
     }
   }
   let ch2 = rt2.handle_event(FocusEvent("fo"))
-  assert_true(changes_have_node(ch2, "fo"), msg="focus 标记应触发 set_state")
+  assert_true(
+    changes_have_node(ch2, "fo"),
+    msg="focus 标记应触发 set_state",
+  )
   match p.node_states.get("fo") {
     Some(def) => assert_eq(def.current, "pressed")
     None => assert_true(false)
@@ -1152,8 +1159,15 @@ test "手势：Trigger spec 往返保留长按时长" {
     None => ()
   }
   let triggers : Array[Trigger] = [
-    Tap, SwipeLeft, SwipeRight, SwipeUp, SwipeDown, ScrollEnd, KeyboardEnter,
-    Focus, Blur,
+    Tap,
+    SwipeLeft,
+    SwipeRight,
+    SwipeUp,
+    SwipeDown,
+    ScrollEnd,
+    KeyboardEnter,
+    Focus,
+    Blur,
   ]
   for t in triggers.iter() {
     match trigger_from_spec(t.spec()) {

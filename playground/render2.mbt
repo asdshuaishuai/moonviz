@@ -9,14 +9,14 @@
 // ---------------------------------------------------------------------------
 
 struct HiResBuf {
-  width : Int // 最终输出宽
-  height : Int
-  ss : Int // 超采样倍率（当前固定 2）
-  pixels : FixedArray[Int] // ARGB，尺寸 = (width*ss) * (height*ss)
+  width : Int32 // 最终输出宽
+  height : Int32
+  ss : Int32 // 超采样倍率（当前固定 2）
+  pixels : FixedArray[Int32] // ARGB，尺寸 = (width*ss) * (height*ss)
 }
 
 ///|
-fn hires_new(width : Int, height : Int) -> HiResBuf {
+fn hires_new(width : Int32, height : Int32) -> HiResBuf {
   let ss = 2
   {
     width,
@@ -27,7 +27,7 @@ fn hires_new(width : Int, height : Int) -> HiResBuf {
 }
 
 ///|
-fn hires_set(buf : HiResBuf, x : Int, y : Int, argb : Int) -> Unit {
+fn hires_set(buf : HiResBuf, x : Int32, y : Int32, argb : Int32) -> Unit {
   let w = buf.width * buf.ss
   if x >= 0 && x < w && y >= 0 && y < buf.height * buf.ss {
     buf.pixels[y * w + x] = argb
@@ -35,7 +35,7 @@ fn hires_set(buf : HiResBuf, x : Int, y : Int, argb : Int) -> Unit {
 }
 
 ///|
-fn hires_get(buf : HiResBuf, x : Int, y : Int) -> Int {
+fn hires_get(buf : HiResBuf, x : Int32, y : Int32) -> Int32 {
   let w = buf.width * buf.ss
   if x >= 0 && x < w && y >= 0 && y < buf.height * buf.ss {
     buf.pixels[y * w + x]
@@ -65,7 +65,7 @@ fn downsample(buf : HiResBuf) -> RgbaBuf {
 }
 
 ///|
-fn avg4(a : Int, b : Int, c : Int, d : Int) -> Int {
+fn avg4(a : Int32, b : Int32, c : Int32, d : Int32) -> Int32 {
   let r = (
       ((a >> 16) & 0xFF) +
       ((b >> 16) & 0xFF) +
@@ -96,7 +96,7 @@ fn fill_rounded_rect(
   w : Double,
   h : Double,
   radius : Double,
-  argb : Int,
+  argb : Int32,
 ) -> Unit {
   let ss = buf.ss.to_double()
   let x0 = (x * ss).to_int()
@@ -114,7 +114,13 @@ fn fill_rounded_rect(
 }
 
 ///|
-fn in_rounded_rect(px : Int, py : Int, w : Int, h : Int, r : Int) -> Bool {
+fn in_rounded_rect(
+  px : Int32,
+  py : Int32,
+  w : Int32,
+  h : Int32,
+  r : Int32,
+) -> Bool {
   if r <= 0 {
     return true
   }
@@ -135,7 +141,7 @@ fn stroke_rounded_rect(
   w : Double,
   h : Double,
   radius : Double,
-  argb : Int,
+  argb : Int32,
 ) -> Unit {
   let ss = buf.ss.to_double()
   let x0 = (x * ss).to_int()
@@ -176,188 +182,188 @@ fn stroke_rounded_rect(
 // ---------------------------------------------------------------------------
 
 ///|
-fn font_a() -> FixedArray[Int] {
+fn font_a() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11] // A
 }
 
 ///|
-fn font_b() -> FixedArray[Int] {
+fn font_b() -> FixedArray[Int32] {
   [0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E] // B
 }
 
 ///|
-fn font_c() -> FixedArray[Int] {
+fn font_c() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E] // C
 }
 
 ///|
-fn font_d() -> FixedArray[Int] {
+fn font_d() -> FixedArray[Int32] {
   [0x1C, 0x12, 0x11, 0x11, 0x11, 0x12, 0x1C] // D
 }
 
 ///|
-fn font_e() -> FixedArray[Int] {
+fn font_e() -> FixedArray[Int32] {
   [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F] // E
 }
 
 ///|
-fn font_f() -> FixedArray[Int] {
+fn font_f() -> FixedArray[Int32] {
   [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10] // F
 }
 
 ///|
-fn font_g() -> FixedArray[Int] {
+fn font_g() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0E] // G
 }
 
 ///|
-fn font_h() -> FixedArray[Int] {
+fn font_h() -> FixedArray[Int32] {
   [0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11] // H
 }
 
 ///|
-fn font_i() -> FixedArray[Int] {
+fn font_i() -> FixedArray[Int32] {
   [0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E] // I
 }
 
 ///|
-fn font_j() -> FixedArray[Int] {
+fn font_j() -> FixedArray[Int32] {
   [0x01, 0x01, 0x01, 0x01, 0x01, 0x11, 0x0E] // J
 }
 
 ///|
-fn font_k() -> FixedArray[Int] {
+fn font_k() -> FixedArray[Int32] {
   [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11] // K
 }
 
 ///|
-fn font_l() -> FixedArray[Int] {
+fn font_l() -> FixedArray[Int32] {
   [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F] // L
 }
 
 ///|
-fn font_m() -> FixedArray[Int] {
+fn font_m() -> FixedArray[Int32] {
   [0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11] // M
 }
 
 ///|
-fn font_n() -> FixedArray[Int] {
+fn font_n() -> FixedArray[Int32] {
   [0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11] // N
 }
 
 ///|
-fn font_o() -> FixedArray[Int] {
+fn font_o() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E] // O
 }
 
 ///|
-fn font_p() -> FixedArray[Int] {
+fn font_p() -> FixedArray[Int32] {
   [0x1E, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10] // P
 }
 
 ///|
-fn font_q() -> FixedArray[Int] {
+fn font_q() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D] // Q
 }
 
 ///|
-fn font_r() -> FixedArray[Int] {
+fn font_r() -> FixedArray[Int32] {
   [0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11] // R
 }
 
 ///|
-fn font_s() -> FixedArray[Int] {
+fn font_s() -> FixedArray[Int32] {
   [0x0F, 0x10, 0x10, 0x0E, 0x01, 0x01, 0x1E] // S
 }
 
 ///|
-fn font_t() -> FixedArray[Int] {
+fn font_t() -> FixedArray[Int32] {
   [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04] // T
 }
 
 ///|
-fn font_u() -> FixedArray[Int] {
+fn font_u() -> FixedArray[Int32] {
   [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E] // U
 }
 
 ///|
-fn font_v() -> FixedArray[Int] {
+fn font_v() -> FixedArray[Int32] {
   [0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04] // V
 }
 
 ///|
-fn font_w() -> FixedArray[Int] {
+fn font_w() -> FixedArray[Int32] {
   [0x11, 0x11, 0x11, 0x15, 0x15, 0x1B, 0x11] // W
 }
 
 ///|
-fn font_x() -> FixedArray[Int] {
+fn font_x() -> FixedArray[Int32] {
   [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11] // X
 }
 
 ///|
-fn font_y() -> FixedArray[Int] {
+fn font_y() -> FixedArray[Int32] {
   [0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04] // Y
 }
 
 ///|
-fn font_z() -> FixedArray[Int] {
+fn font_z() -> FixedArray[Int32] {
   [0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F] // Z
 }
 
 ///|
-fn font_0() -> FixedArray[Int] {
+fn font_0() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E] // 0
 }
 
 ///|
-fn font_1() -> FixedArray[Int] {
+fn font_1() -> FixedArray[Int32] {
   [0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E] // 1
 }
 
 ///|
-fn font_2() -> FixedArray[Int] {
+fn font_2() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F] // 2
 }
 
 ///|
-fn font_3() -> FixedArray[Int] {
+fn font_3() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x01, 0x06, 0x01, 0x11, 0x0E] // 3
 }
 
 ///|
-fn font_4() -> FixedArray[Int] {
+fn font_4() -> FixedArray[Int32] {
   [0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02] // 4
 }
 
 ///|
-fn font_5() -> FixedArray[Int] {
+fn font_5() -> FixedArray[Int32] {
   [0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E] // 5
 }
 
 ///|
-fn font_6() -> FixedArray[Int] {
+fn font_6() -> FixedArray[Int32] {
   [0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E] // 6
 }
 
 ///|
-fn font_7() -> FixedArray[Int] {
+fn font_7() -> FixedArray[Int32] {
   [0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08] // 7
 }
 
 ///|
-fn font_8() -> FixedArray[Int] {
+fn font_8() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E] // 8
 }
 
 ///|
-fn font_9() -> FixedArray[Int] {
+fn font_9() -> FixedArray[Int32] {
   [0x0E, 0x11, 0x11, 0x0F, 0x01, 0x02, 0x0C] // 9
 }
 
 ///|
 /// ASCII → 5 位行编码（7 行）
-fn glyph_of(c : Char) -> FixedArray[Int]? {
+fn glyph_of(c : Char) -> FixedArray[Int32]? {
   match c {
     'A' => Some(font_a())
     'B' => Some(font_b())
@@ -406,7 +412,7 @@ fn draw_text_hires(
   text : String,
   x : Double,
   y : Double,
-  argb : Int,
+  argb : Int32,
 ) -> Unit {
   let ss = buf.ss.to_double()
   let bx = (x * ss).to_int()
@@ -448,8 +454,8 @@ fn draw_text_hires(
 ///|
 pub fn render_png_hires(
   doc : @core.Document,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Array[Byte] {
   let layout = @core.solve(doc)
   let buf = hires_new(width, height)
@@ -505,7 +511,7 @@ fn render_node_hires(
             )
           }
           // 边框
-          let border_c : Int = if n.style.stroke != "none" {
+          let border_c : Int32 = if n.style.stroke != "none" {
             color_from_hex(n.style.stroke)
           } else {
             color_from_hex("#C8CDD6")
@@ -528,7 +534,7 @@ fn render_node_hires(
           if label != "" {
             let tx = r.x + 8.0
             let ty = r.y + 4.0
-            let tc : Int = if fill_hex != "" && is_dark_hex(fill_hex) {
+            let tc : Int32 = if fill_hex != "" && is_dark_hex(fill_hex) {
               color_from_hex("#FFFFFF")
             } else {
               color_from_hex("#333333")

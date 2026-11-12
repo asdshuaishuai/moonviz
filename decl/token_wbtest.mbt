@@ -72,9 +72,7 @@ test "动效令牌：set_token → frontmatter → load 全链往返" {
     }
   }
   assert_true(back.project.motion_tokens_css().contains("--mv-dur:320ms"))
-  assert_true(
-    back.project.motion_tokens_css().contains("--mv-dur-tick:200ms"),
-  )
+  assert_true(back.project.motion_tokens_css().contains("--mv-dur-tick:200ms"))
   assert_true(back.to_mbt().contains("motion.base: 320"))
   // 未知 motion.foo：Err 且不落值
   match back.project.set_token("motion.foo", "10") {

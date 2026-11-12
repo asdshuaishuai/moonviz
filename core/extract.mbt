@@ -18,28 +18,28 @@
 pub(all) struct ExtractedToken {
   name : String // "primary" / "surface" / "accent_1"
   value : String // "#4361EE"
-  usage_count : Int // 被多少节点使用
+  usage_count : Int32 // 被多少节点使用
   confidence : Double // 0-1（推断置信度）
 }
 
 ///|
 pub(all) struct ExtractedSpacing {
   value : Double // 8.0
-  usage_count : Int
+  usage_count : Int32
   suggested_name : String // "md"
 }
 
 ///|
 pub(all) struct ExtractedFontSize {
   value : Double // 24.0
-  usage_count : Int
+  usage_count : Int32
   suggested_name : String // "h2"
 }
 
 ///|
 pub(all) struct ExtractedComponent {
   inferred_name : String // "button" / "card" / "input"
-  instance_count : Int
+  instance_count : Int32
   common_fill : String
   common_radius : Double
   common_height : Double
@@ -52,9 +52,9 @@ pub(all) struct ExtractedDesignSystem {
   spacing_tokens : Array[ExtractedSpacing]
   font_tokens : Array[ExtractedFontSize]
   components : Array[ExtractedComponent]
-  total_nodes : Int
-  total_colors : Int
-  total_sizes : Int
+  total_nodes : Int32
+  total_colors : Int32
+  total_sizes : Int32
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ pub fn Project::extract_design_system(
       let doc = ab.doc
 
       // ── 1. 颜色提取 ──
-      let color_usage : Map[String, Int] = Map::new()
+      let color_usage : Map[String, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) => {
@@ -101,7 +101,7 @@ pub fn Project::extract_design_system(
       let color_tokens = infer_color_tokens(color_usage)
 
       // ── 2. 间距提取 ──
-      let spacing_usage : Map[Double, Int] = Map::new()
+      let spacing_usage : Map[Double, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) =>
@@ -137,7 +137,7 @@ pub fn Project::extract_design_system(
       let spacing_tokens = infer_spacing_tokens(spacing_usage)
 
       // ── 3. 字号提取 ──
-      let font_usage : Map[Double, Int] = Map::new()
+      let font_usage : Map[Double, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) => {
@@ -162,9 +162,9 @@ pub fn Project::extract_design_system(
         spacing_tokens,
         font_tokens,
         components,
-        total_nodes: doc.nodes.size() - 1,
-        total_colors: color_usage.size(),
-        total_sizes: font_usage.size(),
+        total_nodes: doc.nodes.length() - 1,
+        total_colors: color_usage.length(),
+        total_sizes: font_usage.length(),
       })
     }
   }
@@ -175,10 +175,10 @@ pub fn Project::extract_design_system(
 // ---------------------------------------------------------------------------
 
 ///|
-fn infer_color_tokens(usage : Map[String, Int]) -> Array[ExtractedToken] {
+fn infer_color_tokens(usage : Map[String, Int32]) -> Array[ExtractedToken] {
   let tokens : Array[ExtractedToken] = []
   // 按使用频率排序
-  let sorted : Array[(String, Int)] = []
+  let sorted : Array[(String, Int32)] = []
   for hex in usage.keys() {
     match usage.get(hex) {
       Some(cnt) => sorted.push((hex, cnt))
@@ -256,7 +256,7 @@ fn infer_color_tokens(usage : Map[String, Int]) -> Array[ExtractedToken] {
 }
 
 ///|
-fn parse_rgb(hex : String) -> (Int, Int, Int) {
+fn parse_rgb(hex : String) -> (Int32, Int32, Int32) {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
     hex.substring(start=1)
   } else {
@@ -269,7 +269,7 @@ fn parse_rgb(hex : String) -> (Int, Int, Int) {
 }
 
 ///|
-fn hex_val4(s : String, offset : Int) -> Int {
+fn hex_val4(s : String, offset : Int32) -> Int32 {
   if s.length() < offset + 2 {
     return 0
   }
@@ -279,7 +279,7 @@ fn hex_val4(s : String, offset : Int) -> Int {
 }
 
 ///|
-fn hex_digit4(c : Char?) -> Int {
+fn hex_digit4(c : Char?) -> Int32 {
   match c {
     Some(ch) => {
       let code = ch.to_int()
@@ -298,7 +298,7 @@ fn hex_digit4(c : Char?) -> Int {
 }
 
 ///|
-fn color_saturation(r : Int, g : Int, b : Int) -> Double {
+fn color_saturation(r : Int32, g : Int32, b : Int32) -> Double {
   let max_v = max3(r, g, b).to_double()
   let min_v = min3(r, g, b).to_double()
   if max_v == 0.0 {
@@ -308,7 +308,7 @@ fn color_saturation(r : Int, g : Int, b : Int) -> Double {
 }
 
 ///|
-fn max3(a : Int, b : Int, c : Int) -> Int {
+fn max3(a : Int32, b : Int32, c : Int32) -> Int32 {
   let m = if a > b { a } else { b }
   if m > c {
     m
@@ -318,7 +318,7 @@ fn max3(a : Int, b : Int, c : Int) -> Int {
 }
 
 ///|
-fn min3(a : Int, b : Int, c : Int) -> Int {
+fn min3(a : Int32, b : Int32, c : Int32) -> Int32 {
   let m = if a < b { a } else { b }
   if m < c {
     m
@@ -332,7 +332,7 @@ fn min3(a : Int, b : Int, c : Int) -> Int {
 // ---------------------------------------------------------------------------
 
 ///|
-fn infer_spacing_tokens(usage : Map[Double, Int]) -> Array[ExtractedSpacing] {
+fn infer_spacing_tokens(usage : Map[Double, Int32]) -> Array[ExtractedSpacing] {
   let tokens : Array[ExtractedSpacing] = []
   // 标准间距名映射
   let name_map : Array[(Double, String)] = [
@@ -369,7 +369,7 @@ fn infer_spacing_tokens(usage : Map[Double, Int]) -> Array[ExtractedSpacing] {
 // ---------------------------------------------------------------------------
 
 ///|
-fn infer_font_tokens(usage : Map[Double, Int]) -> Array[ExtractedFontSize] {
+fn infer_font_tokens(usage : Map[Double, Int32]) -> Array[ExtractedFontSize] {
   let tokens : Array[ExtractedFontSize] = []
   // 标准字号映射
   let name_map : Array[(Double, String)] = [
@@ -408,8 +408,8 @@ fn infer_font_tokens(usage : Map[Double, Int]) -> Array[ExtractedFontSize] {
 fn detect_component_patterns(doc : Document) -> Array[ExtractedComponent] {
   let components : Array[ExtractedComponent] = []
   // 按 (kind, component, fill, radius) 分组
-  let groups : Map[String, Array[String]] = Map::new()
-  let styles : Map[String, (String, Double, Double)] = Map::new() // group_key → (fill, radius, height)
+  let groups : Map[String, Array[String]] = Map([])
+  let styles : Map[String, (String, Double, Double)] = Map([]) // group_key → (fill, radius, height)
 
   for id in doc.nodes.keys() {
     match doc.nodes.get(id) {
@@ -478,7 +478,7 @@ fn detect_component_patterns(doc : Document) -> Array[ExtractedComponent] {
 
 ///|
 pub fn ExtractedDesignSystem::to_json(self : ExtractedDesignSystem) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\n")
   // 概要
   sb.write_string("  \"summary\": {\n")
@@ -537,7 +537,7 @@ pub fn ExtractedDesignSystem::to_json(self : ExtractedDesignSystem) -> String {
 ///|
 /// 人类可读摘要
 pub fn ExtractedDesignSystem::summary(self : ExtractedDesignSystem) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("Extracted Design System:\n")
   sb.write_string(
     "  Colors: " + self.color_tokens.length().to_string() + " tokens\n",
@@ -599,7 +599,7 @@ fn kind_str(n : Node) -> String {
 /// 令牌名 → CSS 自定义属性片（小写；非字母数字归一为 -，首尾/连续 dash 压缩）
 fn design_slug(name : String) -> String {
   let lower = name.to_lower()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut prev_dash = true
   for c in lower.iter() {
     if is_ascii_alnum(c) {
@@ -618,7 +618,7 @@ fn design_slug(name : String) -> String {
       _ => break
     }
   }
-  s.substring(start=0, end=end)
+  s.substring(start=0, end~)
 }
 
 ///|
@@ -632,7 +632,7 @@ pub fn Project::export_design_system(
   match self.extract_design_system(artboard~) {
     Err(e) => Err(e)
     Ok(ds) => {
-      let sb = StringBuilder::new()
+      let sb = StringBuilder()
       sb.write_string(
         "/* MoonViz design tokens — extracted from \{artboard} */\n:root {\n",
       )
@@ -641,8 +641,14 @@ pub fn Project::export_design_system(
       // 去重键带组前缀：CSS 变量名自带 --ds-{group}- 前缀，跨组同 slug
       // 本不冲突（18px 同为间距与字号时各自叫 --ds-spacing-*/--ds-font-*），
       // 只在组内去重——跨组合表会把无冲突的令牌强行改名成 -2。
-      let used : Map[String, Bool] = Map::new()
-      fn emit_var(sb : StringBuilder, used : Map[String, Bool], group : String, raw : String, value : String) -> Unit {
+      let used : Map[String, Bool] = Map([])
+      fn emit_var(
+        sb : StringBuilder,
+        used : Map[String, Bool],
+        group : String,
+        raw : String,
+        value : String,
+      ) -> Unit {
         let base = design_slug(raw)
         let mut slug = base
         let mut n = 2

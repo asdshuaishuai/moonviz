@@ -337,7 +337,7 @@ test "非方形节点 radius=999 钳制为 min(w,h)/2（issue #22 回归锚）" 
     ..base,
     width: Fixed(420.0),
     height: Fixed(40.0),
-    style: { ..base.style, corner_radius: 999.0 },
+    style: { ..base.style, corner_radius: 999.0, },
   }
   let _ = doc.insert_node(n, "root")
   let svg = render_svg(doc)

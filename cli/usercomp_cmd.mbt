@@ -114,7 +114,7 @@ fn cmd_component_describe(p : @core.Project, parts : Array[String]) -> String {
       for param in def.params.iter() {
         kvs.push("\{param.name}=<\{param.kind}>")
       }
-      let kv_sb = StringBuilder::new()
+      let kv_sb = StringBuilder()
       let mut first_kv = true
       for kv in kvs.iter() {
         if first_kv == false {
