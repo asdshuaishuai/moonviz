@@ -1,0 +1,1306 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "asdshuaishuai/moonviz/core"
+
+// Values
+pub const ASCII_ADVANCE_RATIO : Double = 0.48
+
+pub const CJK_CODEPOINT_MIN : Int32 = 0x2E80
+
+pub const ENGINE_VERSION : String = "0.1.11"
+
+pub const FREE_LAYER_ID : String = "__free__"
+
+pub const GENERATE_MULTI_MAX : Int32 = 4
+
+pub const MOTION_BASE : Int32 = 240
+
+pub const MOTION_FAST : Int32 = 120
+
+pub const MOTION_SLOW : Int32 = 360
+
+pub const MOTION_STAGGER : Int32 = 24
+
+pub const MOTION_STAGGER_MAX : Int32 = 168
+
+pub const MOTION_STAGGER_STEPS : Int32 = 8
+
+pub const MOTION_TICK : Int32 = 180
+
+pub const NORM_CONTRAST_MIN : Double = 2.0
+
+pub const NORM_PURE_DARK_LUMA_MAX : Double = 0.01
+
+pub const NORM_RADIUS_BASE : Double = 8.0
+
+pub const NORM_TEXT_CONTRAST_LARGE_MIN : Double = 3.0
+
+pub const NORM_TEXT_CONTRAST_MIN : Double = 4.5
+
+pub const NORM_TEXT_PAD_X : Double = 12.0
+
+pub const NORM_TEXT_PAD_Y : Double = 10.0
+
+pub const OPS_BATCH_LIMIT : Int32 = 64
+
+pub const SIZE_SANITY_LIMIT : Double = 1000000.0
+
+pub const TEXT_LINE_HEIGHT_RATIO : Double = 1.5
+
+pub fn action_from_spec(String) -> Action?
+
+pub fn animation_css(String, String) -> String
+
+pub fn animation_presets_json() -> String
+
+pub fn apply_agent_patch(Document, Patch) -> Result[Array[Violation], PatchError]
+
+pub fn apply_human_op(Document, Patch) -> Result[Array[Violation], PatchError]
+
+pub fn apply_operation(Project, String) -> Result[Unit, String]
+
+pub fn apply_operations(Project, Array[String]) -> Result[Int32, (Int32, String)]
+
+pub fn breakpoints_json() -> String
+
+pub fn builtin_components() -> Map[String, ComponentDef]
+
+pub fn builtin_slotted_components() -> Map[String, SlottedComponent]
+
+pub fn builtin_themes() -> Array[Theme]
+
+pub fn collect_param_refs(UserComponentDef) -> Array[String] raise
+
+pub fn component_default_shadow(String, String) -> String
+
+pub fn component_norm(String) -> String?
+
+pub fn contrast_ratio(String, String) -> Double
+
+pub fn decide(Gate, Array[Violation]) -> GateDecision
+
+pub fn default_breakpoints() -> Array[Breakpoint]
+
+pub fn design_doc_extract(String) -> DesignDocExtract
+
+pub fn design_spec_draft_json(String) -> String
+
+pub fn diff_docs(Document, Document) -> DocDiff
+
+pub fn ds_components_policy(String) -> (Array[String], Array[String])
+
+pub fn ds_style_theme(String) -> String
+
+pub fn extended_components(Map[String, ComponentDef]) -> Map[String, ComponentDef]
+
+pub fn extended_components_v5(Map[String, ComponentDef]) -> Map[String, ComponentDef]
+
+pub fn extract_interaction_marker(String) -> String
+
+pub fn fade_in_animation(String, duration? : Double) -> AnimationClip
+
+pub fn hex_mix(String, String, Double) -> String
+
+pub fn index_of_str(String, String) -> Int32
+
+pub fn instantiate_component(ComponentDef, String, variant? : String, tokens? : DesignTokens) -> Node
+
+pub fn interaction_manifest_json() -> String
+
+pub fn interpolate(Double, Double, Double, Easing) -> Double
+
+pub fn is_back_like_node(Node) -> Bool
+
+pub fn json_escape(String) -> String
+
+pub fn json_string_array(Array[String]) -> String
+
+pub fn list_components_json(Map[String, ComponentDef]) -> String
+
+pub fn list_ops_json() -> String
+
+pub fn list_slotted_json() -> String
+
+pub fn list_templates() -> Array[TemplateInfo]
+
+pub fn list_templates_json() -> String
+
+pub fn list_tools() -> Array[AgentTool]
+
+pub fn list_tools_json() -> String
+
+pub fn lt_box(id~ : String, fill~ : String, w~ : Double, h~ : Double, radius? : Double, shadow? : String, stroke? : String, tokens? : DesignTokens) -> LT
+
+pub fn lt_btn(id~ : String, label~ : String, variant? : String, tokens? : DesignTokens) -> LT
+
+pub fn lt_card(id~ : String, gap? : Double, pad? : Double, justify? : Justify, kids? : Array[LT], tokens? : DesignTokens) -> LT
+
+pub fn lt_dot(id~ : String, fill~ : String, d? : Double, tokens? : DesignTokens, label? : String) -> LT
+
+pub fn lt_flex(id~ : String, fill? : String) -> LT
+
+pub fn lt_h(id~ : String, gap? : Double, pad? : Double, kids? : Array[LT]) -> LT
+
+pub fn lt_input(id~ : String, ph~ : String, tokens? : DesignTokens) -> LT
+
+pub fn lt_text(id~ : String, role~ : String, s~ : String, width? : SizeSpec, tokens? : DesignTokens) -> LT
+
+pub fn lt_v(id~ : String, gap? : Double, pad? : Double, justify? : Justify, kids? : Array[LT]) -> LT
+
+pub fn mcf_header_json(UserComponentDef) -> String
+
+pub fn mcf_pack(String, String) -> Result[Bytes, String]
+
+pub fn mcf_unpack(Bytes) -> Result[(String, String), String]
+
+pub fn merge_sessions(AgentSession, AgentSession) -> MergeResult
+
+pub fn merge_sessions_from_spec(String) -> String
+
+pub fn modal_present(String) -> AnimationClip
+
+pub fn motion_node_safe_presets() -> Array[String]
+
+pub fn motion_stagger_css(String, indent? : String) -> String
+
+pub fn motion_tokens_css() -> String
+
+pub fn motion_tokens_css_for(DesignTokens) -> String
+
+pub fn node_motion_keyframes_css(String, indent? : String) -> String
+
+pub fn node_motion_rule_css(String, String, indent? : String) -> String
+
+pub fn norm_density_issues(Document) -> Array[String]
+
+pub fn norm_fix_pass(Document, SolvedLayout, radius_base? : Double, canvas_bg? : String) -> Array[String]
+
+pub fn norm_grid_issues(Document) -> Array[String]
+
+pub fn norm_is_action_component(String) -> Bool
+
+pub fn norm_is_full_bleed_component(String) -> Bool
+
+pub fn norm_is_pure_dark(String) -> Bool
+
+pub fn norm_is_rounded_component(String) -> Bool
+
+pub fn norm_issues(Document, SolvedLayout, radius_base? : Double, canvas_bg? : String) -> Array[String]
+
+pub fn norm_issues_v2(Document, SolvedLayout, radius_base? : Double, contrast_min? : Double, touch_min? : Double, canvas_bg? : String) -> Array[String]
+
+pub fn norm_readability_issues(Document, SolvedLayout, contrast_min? : Double, canvas_bg? : String) -> Array[String]
+
+pub fn norm_touch_fix_pass(Document, SolvedLayout, touch_min? : Double) -> Array[String]
+
+pub fn norm_touch_issues(Document, SolvedLayout, touch_min? : Double) -> Array[String]
+
+pub fn norm_type_issues(Document) -> Array[String]
+
+pub fn norm_visual_issues(Document, canvas_bg? : String) -> Array[String]
+
+pub fn normalize_flow_trigger(String) -> Result[String, String]
+
+pub fn normalize_transition(String) -> Result[String, String]
+
+pub fn norms_list_runs(Document, SolvedLayout) -> Array[NormListRun]
+
+pub fn op_entries() -> Array[OpEntry]
+
+pub fn parse_double(String) -> Double
+
+pub fn parse_generate_intent(String) -> GenIntent
+
+pub fn parse_interaction_marker(String) -> (String, String)?
+
+pub fn parse_layout_intent(String) -> LayoutIntent
+
+pub fn parse_op_double(String) -> Double
+
+pub fn parse_place_args(Array[String]) -> PlaceArgs
+
+pub fn parse_state_markers(String) -> Array[(String, NodePatch)]?
+
+pub fn place_user_component(Document, UserComponentDef, String, variant? : String, args? : Map[String, String], dx? : Double, dy? : Double) -> Result[String, String]
+
+pub fn pop_animation(String) -> AnimationClip
+
+pub fn pos_offset_x(PosSpec) -> Double
+
+pub fn pos_offset_y(PosSpec) -> Double
+
+pub fn press_animation(String) -> AnimationClip
+
+pub fn qa_is_interactive_component(String) -> Bool
+
+pub fn qa_is_mock_container(String) -> Bool
+
+pub fn qa_is_placeholder_text(String) -> Bool
+
+pub fn rebuild_name(String, Array[String]) -> String
+
+pub fn render_svg(Document, surface? : String, frame? : String, filter_ns? : String, node_ids? : Map[String, String]?) -> String
+
+pub fn resolve_aesthetic_theme(String, Bool) -> String
+
+pub fn run_protest_script(Project, String, String) -> String
+
+pub fn shake_animation(String) -> AnimationClip
+
+pub fn size_is_valid(Double, Double) -> Bool
+
+pub fn slide_in_right(String) -> AnimationClip
+
+pub fn solve(Document) -> SolvedLayout
+
+pub fn split_cmd(String) -> Array[String]
+
+pub fn split_intent_segments(String) -> Array[String]
+
+pub fn strip_all_markers(String) -> String
+
+pub fn strip_markers(String) -> String
+
+pub fn text_intrinsic(String, Double, line_height? : Double) -> Size
+
+pub fn text_intrinsic_wrapped(String, Double, Double, line_height? : Double) -> Size
+
+pub fn theme_alias(String) -> String
+
+pub fn transform_insert_index(Int32, Int32, Double, Double) -> Int32
+
+pub fn transition_from_name(String) -> Transition?
+
+pub fn trigger_from_spec(String) -> Trigger?
+
+pub fn unescape_value(String) -> String
+
+pub fn validate(Document) -> Array[Violation]
+
+pub fn validate_node_motion(String) -> Result[String, String]
+
+pub fn wrap_text_lines(String, Double, Double) -> Array[String]
+
+// Errors
+
+// Types and methods
+pub(all) enum Action {
+  NavigateTo(String)
+  Back
+  ToggleState(String, String)
+  SetState(String, String)
+  SetText(String, String)
+  SubmitForm(Array[String])
+  ShowToast(String)
+  HapticFeedback
+  PlaySound(String)
+}
+pub fn Action::describe(Self) -> String
+pub fn Action::kind(Self) -> String
+pub fn Action::params_json(Self) -> String
+
+pub(all) struct AgentNote {
+  artboard : String
+  note : String
+  priority : String
+}
+
+pub(all) struct AgentSession {
+  agent_id : String
+  base_revision : Int32
+  ops : Array[DesignOp]
+}
+pub fn AgentSession::add_op(Self, DesignOp) -> Unit
+pub fn AgentSession::new(String, Int32) -> Self
+pub fn AgentSession::summary(Self) -> String
+
+pub(all) struct AgentTool {
+  name : String
+  description : String
+  args : Array[ToolArg]
+}
+
+pub(all) struct AlignmentHint {
+  node_a : String
+  node_b : String
+  axis : String
+  delta : Double
+  suggestion : String
+}
+
+pub(all) enum AnimatableProperty {
+  AnimFill(String)
+  AnimOpacity(Double)
+  AnimX(Double)
+  AnimY(Double)
+  AnimWidth(Double)
+  AnimHeight(Double)
+  AnimRadius(Double)
+  AnimFontSize(Double)
+}
+pub fn AnimatableProperty::name(Self) -> String
+pub fn AnimatableProperty::to_double(Self) -> Double
+
+pub(all) struct AnimationClip {
+  node_id : String
+  keyframes : Array[Keyframe]
+  mut easing : Easing
+  mut duration : Double
+  mut delay : Double
+}
+pub fn AnimationClip::add_keyframe(Self, Double, Array[AnimatableProperty]) -> Unit
+pub fn AnimationClip::new(String) -> Self
+
+pub(all) struct ArtboardBenchmark {
+  artboard : String
+  node_count : Int32
+  max_depth : Int32
+  avg_children : Double
+  stack_layout_count : Int32
+  fill_node_count : Int32
+  hug_node_count : Int32
+  text_node_count : Int32
+  total_text_length : Int32
+  svg_output_length : Int32
+  layout_complexity : Int32
+  render_complexity : Int32
+  memory_estimate_bytes : Int32
+  antipatterns : Array[String]
+  score : Int32
+}
+pub fn ArtboardBenchmark::to_json(Self) -> String
+
+pub(all) struct ArtboardMeta {
+  id : String
+  name : String
+  width : Double
+  height : Double
+  mut doc : Document
+}
+
+pub(all) struct AutoFixOp {
+  node_id : String
+  predicate : String
+  action : String
+  before : String
+  after : String
+}
+
+pub(all) struct Breakpoint {
+  name : String
+  width : Double
+  height : Double
+  columns : Int32
+  description : String
+}
+
+pub(all) struct CollabManager {
+  sessions : Map[String, AgentSession]
+  mut base_revision : Int32
+}
+pub fn CollabManager::join(Self, String) -> AgentSession
+pub fn CollabManager::merge_all(Self) -> Array[MergeResult]
+pub fn CollabManager::new(Int32) -> Self
+pub fn CollabManager::status(Self) -> String
+pub fn CollabManager::total_conflicts(Self) -> Int32
+
+pub(all) struct ColorNote {
+  node_id : String
+  field : String
+  hex : String
+  token_name : String
+}
+
+pub(all) struct ComponentDef {
+  id : String
+  kind : String
+  description : String
+  variants : Map[String, NodePatch]
+  default_variant : String
+  default_size : (Double, Double)
+  default_layout : StackLayout?
+  category : String
+}
+
+pub(all) struct ComponentNote {
+  node_id : String
+  component : String
+  variant : String
+  props : String
+}
+
+pub(all) struct ComponentStateDef {
+  node_id : String
+  states : Map[String, NodePatch]
+  mut current : String
+}
+
+pub(all) struct Conflict {
+  node_id : String
+  field : String
+  ours_desc : String
+  theirs_desc : String
+  resolution : String
+  suggestion : String
+}
+
+pub(all) struct CritiqueResult {
+  principle : String
+  score : Int32
+  verdict : String
+  observation : String
+  advice : String
+}
+
+pub(all) struct DesignDocExtract {
+  spec_json : String
+  extracted : Array[String]
+  gaps : Array[String]
+}
+
+pub(all) struct DesignHistory {
+  entries : Array[HistoryEntry]
+  mut current_revision : Int32
+  mut branch_name : String
+  mut undo_stack : Array[Int32]
+  mut redo_stack : Array[Int32]
+}
+pub fn DesignHistory::branch(Self, Int32, String) -> Result[Document, String]
+pub fn DesignHistory::checkout(Self, Int32) -> Result[Document, String]
+pub fn DesignHistory::commit(Self, String, String, Array[DesignOp], Document) -> Int32
+pub fn DesignHistory::diff(Self, Int32, Int32) -> Result[String, String]
+pub fn DesignHistory::log(Self) -> String
+pub fn DesignHistory::new(Document) -> Self
+pub fn DesignHistory::redo(Self) -> Result[Document, String]
+pub fn DesignHistory::replay(Self, Int32, Int32) -> Result[String, String]
+pub fn DesignHistory::rev(Self) -> Int32
+pub fn DesignHistory::undo(Self) -> Result[Document, String]
+
+pub(all) struct DesignLint {
+  rule : String
+  severity : String
+  node_id : String
+  message : String
+  suggestion : String
+}
+
+pub(all) enum DesignOp {
+  OpInsert(String, String)
+  OpDelete(String)
+  OpMove(String, String)
+  OpSetFill(String, String, String)
+  OpSetRadius(String, Double, Double)
+  OpSetFontSize(String, Double, Double)
+  OpSetText(String, String, String)
+  OpSetPosition(String, Double, Double, Double, Double)
+  OpSetSize(String, Double, Double, Double, Double)
+  OpSetGap(String, Double, Double)
+}
+pub fn DesignOp::describe(Self) -> String
+pub fn DesignOp::field(Self) -> String
+pub fn DesignOp::from_text(String) -> Self?
+pub fn DesignOp::node_id(Self) -> String
+
+pub(all) struct DesignSuggestion {
+  category : String
+  severity : String
+  description : String
+  fix_command : String
+}
+
+pub(all) struct DesignTokens {
+  mut colors : Map[String, String]
+  mut spacing : Map[String, Double]
+  mut radii : Map[String, Double]
+  mut typography : Map[String, Double]
+  mut motion : Map[String, Double]
+}
+pub fn DesignTokens::apply_to_node(Self, Node) -> Node
+pub fn DesignTokens::default() -> Self
+pub fn DesignTokens::resolve_color(Self, String) -> String
+pub fn DesignTokens::resolve_font(Self, String) -> Double?
+pub fn DesignTokens::resolve_motion(Self, String) -> Double?
+pub fn DesignTokens::resolve_radius(Self, String) -> Double?
+pub fn DesignTokens::resolve_spacing(Self, String) -> Double?
+pub fn DesignTokens::to_json(Self) -> String
+
+pub(all) struct DiffEntry {
+  node_id : String
+  before : String
+  after : String
+}
+
+pub(all) struct DocComment {
+  text : String
+  anchor : String?
+}
+
+pub(all) struct DocDiff {
+  added : Array[String]
+  removed : Array[String]
+  moved : Array[DiffEntry]
+  resized : Array[DiffEntry]
+  restyled : Array[DiffEntry]
+  relayout : Array[DiffEntry]
+}
+pub fn DocDiff::summary(Self) -> String
+pub fn DocDiff::to_json(Self) -> String
+
+pub(all) struct Document {
+  mut root_id : String
+  mut nodes : Map[String, Node]
+  mut revision : Int32
+  journal : Array[JournalEntry]
+  mut content_seq : Int32
+}
+pub fn Document::clone(Self) -> Self
+pub fn Document::find_parent(Self, String) -> String?
+pub fn Document::from_json(String) -> Result[Self, String]
+pub fn Document::get(Self, String) -> Node?
+pub fn Document::has(Self, String) -> Bool
+pub fn Document::insert_node(Self, Node, String) -> Bool
+pub fn Document::new(Size) -> Self
+pub fn Document::register(Self, Node) -> Bool
+pub fn Document::sample_login() -> Self
+pub fn Document::to_json(Self) -> String
+pub fn Document::update_node(Self, String, (Node) -> Node) -> Bool
+
+pub(all) enum Easing {
+  Linear
+  EaseIn
+  EaseOut
+  EaseInOut
+  Spring(Double)
+  Bounce
+  None
+}
+pub fn Easing::css_value(Self) -> String
+pub fn Easing::name(Self) -> String
+
+pub(all) struct ExtractedComponent {
+  inferred_name : String
+  instance_count : Int32
+  common_fill : String
+  common_radius : Double
+  common_height : Double
+  sample_ids : Array[String]
+}
+
+pub(all) struct ExtractedDesignSystem {
+  color_tokens : Array[ExtractedToken]
+  spacing_tokens : Array[ExtractedSpacing]
+  font_tokens : Array[ExtractedFontSize]
+  components : Array[ExtractedComponent]
+  total_nodes : Int32
+  total_colors : Int32
+  total_sizes : Int32
+}
+pub fn ExtractedDesignSystem::summary(Self) -> String
+pub fn ExtractedDesignSystem::to_json(Self) -> String
+
+pub(all) struct ExtractedFontSize {
+  value : Double
+  usage_count : Int32
+  suggested_name : String
+}
+
+pub(all) struct ExtractedSpacing {
+  value : Double
+  usage_count : Int32
+  suggested_name : String
+}
+
+pub(all) struct ExtractedToken {
+  name : String
+  value : String
+  usage_count : Int32
+  confidence : Double
+}
+
+pub(all) struct FlowEdge {
+  from : String
+  to : String
+  trigger : String
+  transition : String
+}
+
+pub(all) struct FontNote {
+  node_id : String
+  size : Double
+  color : String
+  token_hint : String
+}
+
+pub(all) enum Gate {
+  HumanGate
+  AgentGate
+}
+
+pub(all) enum GateDecision {
+  Allow(Array[Violation])
+  Reject(Array[Violation])
+}
+
+pub(all) struct GenIntent {
+  template_id : String
+  artboard_name : String
+  width : Double
+  height : Double
+  theme : String
+  page_hint : String
+  alternatives : Array[String]
+}
+
+pub(all) struct HistoryEntry {
+  revision : Int32
+  timestamp : String
+  agent_id : String
+  message : String
+  ops : Array[DesignOp]
+  snapshot : Document
+}
+
+pub(all) struct JournalEntry {
+  revision : Int32
+  source : OpSource
+  message : String
+  violation_count : Int32
+}
+
+type JsonNodeStore
+
+pub(all) enum Justify {
+  Start
+  Center
+  End
+}
+
+pub(all) struct Keyframe {
+  time : Double
+  properties : Array[AnimatableProperty]
+}
+
+pub(all) struct LT {
+  node : Node
+  kids : Array[LT]
+}
+pub fn LT::color(Self, String) -> Self
+pub fn LT::cx(Self) -> Self
+pub fn LT::cy(Self) -> Self
+pub fn LT::h(Self, SizeSpec) -> Self
+pub fn LT::w(Self, SizeSpec) -> Self
+
+pub(all) enum LayoutIntent {
+  CenterNode(String)
+  VerticalStack
+  HorizontalRow
+  EqualWidth
+  EqualHeight
+  EqualSpacing
+  GridAlign(Double)
+  MoveTop
+  MoveBottom
+  MoveCenter
+  ScaleAll(Double)
+  SetPadding(Double)
+  SetGap(Double)
+  Unknown
+}
+pub fn LayoutIntent::describe(Self) -> String
+
+type LoadOutcome
+
+pub(all) struct MergeResult {
+  clean : Bool
+  conflicts : Array[Conflict]
+  auto_resolved : Int32
+  total_ops_ours : Int32
+  total_ops_theirs : Int32
+  applied_ops : Int32
+}
+pub fn MergeResult::auto_resolve(Self, strategy? : String) -> Self
+pub fn MergeResult::to_json(Self) -> String
+
+pub(all) struct MoonVizArtifact {
+  mut meta_version : String
+  mut meta_created_by : String
+  mut meta_context : String
+  mut artboard_decls : Map[String, String]
+  mut artboard_names : Map[String, String]
+  mut artboard_sizes : Map[String, (Double, Double)]
+  mut flows : Array[(String, String, String)]
+  mut todos : Array[String]
+  mut notes : Array[AgentNote]
+}
+pub fn MoonVizArtifact::add_note(Self, String, String, String) -> Unit
+pub fn MoonVizArtifact::add_todo(Self, String) -> Unit
+pub fn MoonVizArtifact::new() -> Self
+pub fn MoonVizArtifact::summary(Self) -> String
+
+pub(all) struct MoonVizRT {
+  project : Project
+  nav : NavigationState
+  mut overlay_toast : String?
+  mut input_values : Map[String, String]
+  listeners : Array[(StateChange) -> Unit]
+}
+pub fn MoonVizRT::can_go_back(Self) -> Bool
+pub fn MoonVizRT::create(Project, initial_artboard? : String) -> Result[Self, String]
+pub fn MoonVizRT::current_artboard(Self) -> String
+pub fn MoonVizRT::get_all_inputs(Self) -> Map[String, String]
+pub fn MoonVizRT::get_input(Self, String) -> String
+pub fn MoonVizRT::handle_event(Self, VizEvent) -> Array[StateChange]
+pub fn MoonVizRT::hot_reload_doc(Self, Document) -> Result[String, String]
+pub fn MoonVizRT::nav_stack(Self) -> Array[String]
+pub fn MoonVizRT::on_change(Self, (StateChange) -> Unit) -> Unit
+pub fn MoonVizRT::render_plan(Self) -> Result[RenderPlan, String]
+pub fn MoonVizRT::set_input(Self, String, String) -> Unit
+
+pub(all) struct NavigationState {
+  mut stack : Array[String]
+  mut current : String
+}
+pub fn NavigationState::go_back(Self) -> String?
+pub fn NavigationState::navigate(Self, String) -> String
+pub fn NavigationState::new(String) -> Self
+
+pub(all) struct Node {
+  id : String
+  kind : NodeKind
+  name : String
+  component : String
+  width : SizeSpec
+  height : SizeSpec
+  x : PosSpec
+  y : PosSpec
+  layout : StackLayout?
+  style : NodeStyle
+  text : String
+  children : Array[String]
+  constraint : String
+}
+pub fn Node::make(String, NodeKind) -> Self
+
+pub(all) enum NodeKind {
+  Frame
+  Group
+  Rect
+  Text
+  Image
+}
+
+pub(all) struct NodePatch {
+  name : String?
+  width : SizeSpec?
+  height : SizeSpec?
+  x : PosSpec?
+  y : PosSpec?
+  text : String?
+  layout_dir : StackDir?
+  layout_gap : Double?
+  layout_justify : Justify?
+  layout_padding : Padding?
+  fill : String?
+  stroke : String?
+  corner_radius : Double?
+  font_size : Double?
+  text_color : String?
+}
+pub fn NodePatch::empty() -> Self
+
+pub(all) struct NodeStyle {
+  fill : String
+  stroke : String
+  stroke_width : Double
+  corner_radius : Double
+  opacity : Double
+  font_size : Double
+  text_color : String
+  font_weight : String
+  shadow : String
+  rotate : Double
+  blur : Double
+  blend : String
+  line_height : Double
+  tracking : Double
+  flip : String
+  text_align : String
+  font_style : String
+  stroke_dash : String
+  visible : Bool
+  motion : String
+}
+pub fn NodeStyle::default() -> Self
+
+pub(all) struct NormListRun {
+  parent_id : String
+  row_ids : Array[String]
+}
+
+pub(all) struct NormsProfile {
+  radius_base : Double
+  contrast_min : Double
+  touch_min : Double
+}
+
+pub(all) enum Op {
+  InsertNode(Node, String)
+  UpdateNode(String, NodePatch)
+  MoveNode(String, String)
+  DeleteNode(String)
+}
+
+pub(all) struct OpEntry {
+  op : String
+  usage : String
+  category : String
+  description : String
+}
+
+pub(all) enum OpSource {
+  HumanOp
+  AgentOp
+}
+pub fn OpSource::name(Self) -> String
+
+pub(all) struct Padding {
+  top : Double
+  right : Double
+  bottom : Double
+  left : Double
+}
+pub fn Padding::uniform(Double) -> Self
+
+pub(all) enum PageType {
+  AuthPage
+  DashboardPage
+  ListPage
+  DetailPage
+  ProfilePage
+  SettingsPage
+  FormPage
+  NavigationPage
+  EmptyStatePage
+  UnknownPage
+}
+pub fn PageType::name(Self) -> String
+
+type ParseResult
+
+pub(all) struct Patch {
+  base_revision : Int32
+  message : String
+  ops : Array[Op]
+}
+
+pub(all) enum PatchError {
+  StaleBase(Int32)
+  UnknownNode(String)
+  UnknownParent(String)
+  DuplicateId(String)
+  HierarchyError(String)
+  StructuralBlock(Array[Violation])
+  HardBlock(Array[Violation])
+}
+pub fn PatchError::to_json(Self) -> String
+
+pub(all) struct PlaceArgs {
+  variant : String
+  x : Double
+  y : Double
+  w : Double
+  h : Double
+  args : Map[String, String]
+  error : String
+}
+
+pub(all) enum PosSpec {
+  Fixed(Double)
+  AlignStart(Double)
+  AlignEnd(Double)
+  CenterInParent
+}
+
+pub(all) enum Predicate {
+  TreeValid
+  SizeValid
+  ContainedInParent
+  NoSiblingOverlap
+  ConstraintSolvable
+}
+pub fn Predicate::is_structural(Self) -> Bool
+pub fn Predicate::name(Self) -> String
+
+pub(all) struct Project {
+  mut artboards : Map[String, ArtboardMeta]
+  mut flows : Array[FlowEdge]
+  mut tokens : DesignTokens
+  mut components : Map[String, ComponentDef]
+  mut user_components : Map[String, UserComponentDef]
+  mut node_states : Map[String, ComponentStateDef]
+  mut revision : Int32
+  mut token_overrides : Map[String, String]?
+  mut active_theme : String
+  mut doc_comments : Array[DocComment]
+  mut extra_front_matter : Array[String]
+  mut design_spec : String
+}
+pub fn Project::active_state_patch(Self, String) -> NodePatch?
+pub fn Project::add_agent_note(Self, artboard~ : String, note~ : String, priority? : String) -> Unit
+pub fn Project::add_flow(Self, from~ : String, to~ : String, trigger? : String, transition? : String) -> Unit
+pub fn Project::add_interaction(Self, artboard~ : String, node_id~ : String, trigger~ : Trigger, action~ : Action) -> Result[String, String]
+pub fn Project::align_nodes(Self, artboard~ : String, mode~ : String, node_ids~ : Array[String]) -> Result[String, String]
+pub fn Project::apply_constraint(Self, String, artboard~ : String, parent_id? : String) -> Result[String, String]
+pub fn Project::apply_design_spec(Self, artboard~ : String, spec~ : String) -> Result[Unit, String]
+pub fn Project::apply_intent(Self, LayoutIntent, artboard~ : String, parent_id? : String) -> Result[String, String]
+pub fn Project::apply_spec_tokens(Self, String) -> Int32
+pub fn Project::apply_template(Self, template_id~ : String, name? : String, width? : Double, height? : Double) -> Result[String, String]
+pub fn Project::apply_theme(Self, String) -> Result[String, String]
+pub fn Project::attach_interaction(Self, artboard~ : String, node_id~ : String, trigger~ : String, action_spec~ : String) -> Result[String, String]
+pub fn Project::audit_design_system(Self) -> String
+pub fn Project::auto_arrange(Self, artboard~ : String, parent_id? : String) -> Result[String, String]
+pub fn Project::auto_fix(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::autofill_missing(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::benchmark(Self) -> ProjectBenchmark
+pub fn Project::benchmark_artboard(Self, artboard~ : String) -> Result[ArtboardBenchmark, String]
+pub fn Project::build_artboard(Self, name~ : String, width~ : Double, height~ : Double, tree~ : LT) -> String
+pub fn Project::center_in_parent(Self, artboard~ : String, node_id~ : String) -> Result[String, String]
+pub fn Project::clone(Self) -> Self
+pub fn Project::component_lineage(Self, component_id~ : String) -> Result[String, String]
+pub fn Project::copy_node(Self, artboard~ : String, node_id~ : String, new_id~ : String, dx~ : Double, dy~ : Double) -> Result[String, String]
+pub fn Project::create_artboard(Self, name~ : String, width? : Double, height? : Double) -> String
+pub fn Project::critique(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::critique_summary(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::define_component_state(Self, artboard~ : String, node_id~ : String, state_name~ : String, patch~ : NodePatch) -> Result[String, String]
+pub fn Project::delete_artboard(Self, id~ : String) -> Result[String, String]
+pub fn Project::delete_node(Self, artboard~ : String, node_id~ : String) -> Result[String, String]
+pub fn Project::design_quality_score(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::design_spec_color_violations(Self, artboard~ : String) -> Array[String]
+pub fn Project::design_spec_compliance(Self, artboard~ : String) -> String
+pub fn Project::design_spec_component_violations(Self, artboard~ : String) -> Array[String]
+pub fn Project::design_spec_radius_base(Self) -> Double
+pub fn Project::design_spec_text_contrast(Self) -> Double
+pub fn Project::design_spec_touch_min(Self) -> Double
+pub fn Project::detach_interaction(Self, artboard~ : String, node_id~ : String) -> Result[String, String]
+pub fn Project::duplicate_artboard(Self, src~ : String, new_name~ : String) -> Result[String, String]
+pub fn Project::edit_node(Self, artboard~ : String, node_id~ : String, kvs~ : Array[(String, String)]) -> Result[String, String]
+pub fn Project::enable_auto_dark(Self) -> Result[String, String]
+pub fn Project::export_artifact(Self, agent_id? : String, context? : String) -> String
+pub fn Project::export_design_system(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::export_html(Self, lang? : String) -> String
+pub fn Project::export_react(Self) -> String
+pub fn Project::export_svg(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::extract_design_system(Self, artboard~ : String) -> Result[ExtractedDesignSystem, String]
+pub fn Project::fill_slot(Self, artboard~ : String, instance_id~ : String, slot_name~ : String, content~ : String) -> Result[String, String]
+pub fn Project::fill_slot_with_component(Self, artboard~ : String, instance_id~ : String, slot_name~ : String, child_component~ : String, child_id~ : String) -> Result[String, String]
+pub fn Project::flip_node(Self, artboard~ : String, node_id~ : String, axis~ : String) -> Result[String, String]
+pub fn Project::flow_json(Self) -> String
+pub fn Project::fork_variants(Self, base~ : String, names~ : Array[String]) -> Result[String, String]
+pub fn Project::from_project_json(Self, String) -> Result[Unit, String]
+pub fn Project::generate(Self, intent_text~ : String, name? : String, spec? : String) -> Result[String, String]
+pub fn Project::generate_from_doc(Self, intent_text~ : String, doc~ : String, name? : String) -> Result[String, String]
+pub fn Project::generate_multi(Self, Array[String], name? : String, spec? : String) -> Result[String, String]
+pub fn Project::generate_responsive(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::generate_spec(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::get_slot(Self, artboard~ : String, instance_id~ : String, slot_name~ : String) -> Result[String, String]
+pub fn Project::get_token(Self, String) -> Result[String, String]
+pub fn Project::group_nodes(Self, artboard~ : String, node_ids~ : Array[String], group_id~ : String) -> Result[String, String]
+pub fn Project::impact_analysis(Self, artboard~ : String, node_id~ : String, patch~ : NodePatch) -> Result[String, String]
+pub fn Project::infer_missing(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::infer_page_type(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::interactions_json(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::lint(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::list_artboards_json(Self) -> String
+pub fn Project::list_breakpoint_variants(Self, artboard~ : String) -> String
+pub fn Project::list_interactions(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::list_slots(Self, artboard~ : String, instance_id~ : String) -> Result[String, String]
+pub fn Project::merge_variant(Self, source~ : String, target~ : String) -> Result[String, String]
+pub fn Project::mock_data_gaps(Self, artboard~ : String) -> Array[String]
+pub fn Project::motion_tokens_css(Self) -> String
+pub fn Project::move_node(Self, artboard~ : String, node_id~ : String, x~ : Double, y~ : Double) -> Result[String, String]
+pub fn Project::new() -> Self
+pub fn Project::node_states_json(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::norm_back_issues(Self, artboard~ : String) -> Array[String]
+pub fn Project::norm_selected_state_issues(Self, artboard~ : String) -> Array[String]
+pub fn Project::normalize_nesting(Self, String) -> Unit
+pub fn Project::norms_profile(Self) -> NormsProfile
+pub fn Project::place_component(Self, artboard~ : String, component_id~ : String, instance_id~ : String, variant? : String, parent_id? : String, x? : Double, y? : Double, w? : Double, h? : Double, args? : Map[String, String]) -> Result[String, String]
+pub fn Project::place_slotted(Self, artboard~ : String, component_id~ : String, instance_id~ : String, x? : Double, y? : Double) -> Result[String, String]
+pub fn Project::preview_breakpoint(Self, artboard~ : String, breakpoint~ : String) -> Result[String, String]
+pub fn Project::preview_themes(Self, String) -> Result[String, String]
+pub fn Project::qa_agent_conflicts(Self) -> Result[Unit, String]
+pub fn Project::qa_component_known(Self, String) -> Bool
+pub fn Project::qa_is_bound(Self, String, Node) -> Bool
+pub fn Project::qa_issues(Self, artboard~ : String) -> Array[String]
+pub fn Project::query_nodes(Self, artboard~ : String, kind? : String, component? : String, text_contains? : String) -> Result[String, String]
+pub fn Project::rebuild_node_states(Self, artboard~ : String) -> Unit
+pub fn Project::remove_flow(Self, from~ : String, to~ : String, trigger~ : String) -> Result[Unit, String]
+pub fn Project::reorder_node(Self, artboard~ : String, node_id~ : String, order~ : String) -> Result[String, String]
+pub fn Project::replace_with(Self, Self) -> Unit
+pub fn Project::resize_canvas(Self, artboard~ : String, width~ : Double, height~ : Double) -> Result[String, String]
+pub fn Project::restyle_component(Self, artboard~ : String, component_id~ : String, kvs~ : Array[(String, String)]) -> Result[String, String]
+pub fn Project::score_variants(Self) -> String
+pub fn Project::set_artboard_doc(Self, artboard~ : String, Document) -> Result[Unit, String]
+pub fn Project::set_node_state(Self, node_id~ : String, state_name~ : String, toggle? : Bool) -> Result[String, String]
+pub fn Project::set_theme_tokens(Self, String) -> Unit
+pub fn Project::set_token(Self, String, String) -> Result[String, String]
+pub fn Project::snap_to_grid(Self, artboard~ : String, grid? : Double) -> Result[String, String]
+pub fn Project::spec_json(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::suggest_alignment(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::suggest_fix(Self, artboard~ : String, node_id~ : String) -> Result[String, String]
+pub fn Project::suggest_improvements(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::suggest_optimizations(Self, artboard~ : String) -> Result[String, String]
+pub fn Project::to_project_json(Self) -> String
+pub fn Project::token_lineage(Self, token_name~ : String) -> Result[String, String]
+pub fn Project::ungroup_node(Self, artboard~ : String, group_id~ : String) -> Result[String, String]
+
+pub(all) struct ProjectBenchmark {
+  artboards : Array[ArtboardBenchmark]
+  total_nodes : Int32
+  total_memory : Int32
+  avg_score : Double
+  grade : String
+}
+pub fn ProjectBenchmark::report(Self) -> String
+pub fn ProjectBenchmark::to_json(Self) -> String
+
+pub(all) struct ProtoTest {
+  rt : MoonVizRT
+  mut passed : Int32
+  mut failed : Int32
+  mut failures : Array[String]
+}
+pub fn ProtoTest::back_and_expect(Self, String) -> Bool
+pub fn ProtoTest::create(Project, initial? : String) -> Result[Self, String]
+pub fn ProtoTest::expect_no_violations(Self) -> Bool
+pub fn ProtoTest::expect_renderable(Self) -> Bool
+pub fn ProtoTest::is_pass(Self) -> Bool
+pub fn ProtoTest::reject_invalid(Self, String) -> Bool
+pub fn ProtoTest::result(Self) -> String
+pub fn ProtoTest::set_input_and_expect(Self, String, String) -> Bool
+pub fn ProtoTest::swipe_and_expect(Self, String, String) -> Bool
+pub fn ProtoTest::tap_and_expect_navigate(Self, Double, Double, String) -> Bool
+
+pub(all) struct Rect {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+}
+pub fn Rect::bottom(Self) -> Double
+pub fn Rect::contains_rect(Self, Self) -> Bool
+pub fn Rect::contains_rect_eps(Self, Self, Double) -> Bool
+pub fn Rect::inset(Self, Double, Double, Double, Double) -> Self
+pub fn Rect::intersects(Self, Self) -> Bool
+pub fn Rect::new(Double, Double, Double, Double) -> Self
+pub fn Rect::right(Self) -> Double
+
+pub(all) enum RenderCommand {
+  CmdRect(Double, Double, Double, Double, String, Double)
+  CmdText(Double, Double, String, Double, String)
+  CmdLine(Double, Double, Double, Double, String)
+  CmdClipPush(Double, Double, Double, Double)
+  CmdClipPop
+}
+
+pub(all) struct RenderPlan {
+  artboard : String
+  width : Double
+  height : Double
+  commands : Array[RenderCommand]
+}
+
+type ScalarOrSpec
+
+pub(all) struct Size {
+  width : Double
+  height : Double
+}
+
+pub(all) enum SizeSpec {
+  Fixed(Double)
+  Fill
+  Hug
+}
+
+pub(all) struct SlotDef {
+  name : String
+  description : String
+  accepts : Array[String]
+  default_content : String
+}
+
+pub(all) struct SlottedComponent {
+  component_id : String
+  display_name : String
+  slots : Array[SlotDef]
+  layout : StackLayout
+  base_style : NodeStyle
+}
+
+pub(all) enum SolveFailure {
+  MissingRoot
+  MissingNode(String)
+  NegativeResidual(String, Double)
+  UnsupportedSpec(String)
+}
+pub fn SolveFailure::describe(Self) -> String
+
+pub(all) struct SolvedLayout {
+  rects : Map[String, Rect]
+  failures : Array[SolveFailure]
+}
+pub fn SolvedLayout::rect_of(Self, String) -> Rect?
+
+pub(all) struct SpacingNote {
+  node_id : String
+  label : String
+  value : Double
+  unit : String
+}
+
+pub(all) enum StackDir {
+  Vertical
+  Horizontal
+}
+
+pub(all) struct StackLayout {
+  dir : StackDir
+  gap : Double
+  justify : Justify
+  padding : Padding
+}
+
+pub(all) enum StateChange {
+  ArtboardChanged(String)
+  NodeUpdated(String)
+  NavigationPushed(String)
+  NavigationPopped(String)
+  ToastShown(String)
+  FormSubmitted(Map[String, String])
+}
+pub fn StateChange::describe(Self) -> String
+
+type StyleParse
+
+pub(all) struct TemplateInfo {
+  id : String
+  name : String
+  description : String
+  category : String
+  tags : Array[String]
+  device : String
+}
+
+pub(all) struct Theme {
+  name : String
+  display_name : String
+  tokens : DesignTokens
+  is_dark : Bool
+}
+pub fn Theme::apple() -> Self
+pub fn Theme::apple_dark() -> Self
+pub fn Theme::auto_dark(Self) -> Self
+pub fn Theme::dark() -> Self
+pub fn Theme::editorial() -> Self
+pub fn Theme::harmony() -> Self
+pub fn Theme::harmony_dark() -> Self
+pub fn Theme::high_contrast() -> Self
+pub fn Theme::light() -> Self
+pub fn Theme::nord() -> Self
+pub fn Theme::playful() -> Self
+pub fn Theme::sepia() -> Self
+pub fn Theme::sunset() -> Self
+pub fn Theme::vivid() -> Self
+
+pub(all) struct Timeline {
+  clips : Array[AnimationClip]
+  mut total_duration : Double
+}
+pub fn Timeline::add(Self, AnimationClip) -> Unit
+pub fn Timeline::add_parallel(Self, Array[AnimationClip]) -> Unit
+pub fn Timeline::add_sequence(Self, Array[AnimationClip]) -> Unit
+pub fn Timeline::new() -> Self
+pub fn Timeline::to_css(Self) -> String
+
+pub(all) struct ToolArg {
+  name : String
+  type_ : String
+  desc : String
+  required : Bool
+}
+
+pub(all) enum Transition {
+  Push
+  Pop
+  ModalPresent
+  ModalDismiss
+  SheetPresent
+  Fade
+  NoTransition
+}
+pub fn Transition::name(Self) -> String
+
+pub(all) enum Trigger {
+  Tap
+  LongPress(Double)
+  SwipeLeft
+  SwipeRight
+  SwipeUp
+  SwipeDown
+  ScrollEnd
+  KeyboardEnter
+  Focus
+  Blur
+}
+pub fn Trigger::name(Self) -> String
+pub fn Trigger::spec(Self) -> String
+
+pub(all) struct UserComponentDef {
+  id : String
+  description : String
+  category : String
+  params : Array[UserParam]
+  variants : Map[String, Map[String, String]]
+  default_variant : String
+  width : Double
+  height : Double
+  doc : Document
+  source : String
+}
+
+pub(all) struct UserParam {
+  name : String
+  kind : String
+  default_value : String
+}
+
+pub(all) struct VariantScore {
+  artboard : String
+  violations : Int32
+  lint_issues : Int32
+  alignment_hints : Int32
+  node_count : Int32
+  score : Int32
+}
+
+pub(all) struct Violation {
+  predicate : Predicate
+  node_id : String
+  detail : String
+}
+pub fn Violation::to_json(Self) -> String
+
+pub(all) enum VizEvent {
+  TapEvent(Double, Double)
+  LongPressEvent(Double, Double, Double)
+  ScrollEndEvent
+  SwipeEvent(String)
+  KeyEvent(String)
+  FocusEvent(String)
+  BlurEvent(String)
+}
+pub fn VizEvent::describe(Self) -> String
+
+// Type aliases
+
+// Traits

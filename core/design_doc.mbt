@@ -43,14 +43,14 @@ fn dd_has(s : String, kws : Array[String]) -> Bool {
 /// 扫描行内全部 #RRGGBB（hex 归一为小写 #rrggbb），带 '#' 的行内位置——
 /// 对位算法需要：关键词必须落在本 hex 与上一个 hex 之间才算本 hex 的
 /// 配对候选（夹杂无关角色词不再抢走后面的对位）。
-fn dd_hexes_at(line : String) -> Array[(String, Int)] {
-  let out : Array[(String, Int)] = []
+fn dd_hexes_at(line : String) -> Array[(String, Int32)] {
+  let out : Array[(String, Int32)] = []
   let chars = line.to_array()
   let mut i = 0
   while i + 7 <= chars.length() {
     if chars[i] == '#' {
       let mut ok = true
-      let sb = StringBuilder::new()
+      let sb = StringBuilder()
       sb.write_char('#')
       let mut j = 1
       while j <= 6 {
@@ -82,7 +82,7 @@ fn dd_hexes_at(line : String) -> Array[(String, Int)] {
 /// dd 的位置统一用 code point 下标：String::find 的偏移与 to_array 的
 /// 字符下标在非 BMP 字符（emoji 等 surrogate pair，如「🎨🎨背景」）上
 /// 不一致，会把紧贴 hex 的关键词排除出候选区间。
-fn dd_index_of(chars : Array[Char], needle : String, from : Int) -> Int {
+fn dd_index_of(chars : Array[Char], needle : String, from : Int32) -> Int32 {
   let n = chars.length()
   let pat = needle.to_array()
   let m = pat.length()
@@ -114,7 +114,7 @@ fn dd_index_of(chars : Array[Char], needle : String, from : Int) -> Int {
 /// 颜色行同行的场景下，伪数字会顶掉真实档位（正文 15 被 #0B2A26 的
 /// 26 抢占）。
 fn dd_strip_hexes(line : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let chars = line.to_array()
   let mut i = 0
   while i < chars.length() {
@@ -218,10 +218,10 @@ fn dd_sorted_unique(vals : Array[Double]) -> Array[Double] {
 ///|
 /// 从设计文档提取设计规范。缺失关键项只进 gaps，不用引擎默认值顶替。
 pub fn design_doc_extract(doc : String) -> DesignDocExtract {
-  let palette : Map[String, String] = Map::new()
+  let palette : Map[String, String] = Map([])
   let extracted : Array[String] = []
   let gaps : Array[String] = []
-  let typography : Map[String, Double] = Map::new()
+  let typography : Map[String, Double] = Map([])
   let scale : Array[Double] = []
   let radii : Array[Double] = []
   let motion_nums : Array[Double] = []
@@ -232,8 +232,14 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
   // 「文字」之后会被截走，复合角色（surface_variant/text_secondary）必须
   // 排在其宽泛父词（surface/background/text）之前。
   let role_kws : Array[(String, Array[String])] = [
-    ("surface_variant", ["次级背景", "输入底", "surfacevariant", "surface variant"]),
-    ("text_secondary", ["次要文字", "辅助文字", "muted", "secondary text"]),
+    (
+      "surface_variant",
+      ["次级背景", "输入底", "surfacevariant", "surface variant"],
+    ),
+    (
+      "text_secondary",
+      ["次要文字", "辅助文字", "muted", "secondary text"],
+    ),
     ("warning", ["警告色", "警告", "warning"]),
     ("error", ["错误", "危险", "error", "danger"]),
     ("success", ["成功", "success"]),
@@ -266,9 +272,13 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
       continue
     }
     if clean.has_prefix("#") {
-      sec_type = dd_has(clean, ["字号", "字体", "font", "typography", "type"])
+      sec_type = dd_has(clean, [
+        "字号", "字体", "font", "typography", "type",
+      ])
       sec_radius = dd_has(clean, ["圆角", "radius"])
-      sec_motion = dd_has(clean, ["动效", "动画", "motion", "时长", "duration"])
+      sec_motion = dd_has(clean, [
+        "动效", "动画", "motion", "时长", "duration",
+      ])
       sec_spacing = dd_has(clean, ["间距", "spacing", "grid", "栅格"])
       sec_touch = dd_has(clean, ["交互", "触控", "touch"])
       continue
@@ -288,7 +298,7 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
       // 最近的候选（色值在前的行与 markdown 表「| #X | 背景 |」）；
       // 仍无 → primary 兜底。
       let lower_chars = line.to_lower().to_array()
-      let cands : Array[(String, Int, Int)] = []
+      let cands : Array[(String, Int32, Int32)] = []
       for pair in role_kws.iter() {
         let (role, kws) = pair
         for k in kws.iter() {
@@ -317,8 +327,8 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
         }
       }
       // 贪心接受：与已接受区间重叠的那一次淘汰
-      let accepted : Array[(String, Int, Int)] = []
-      let spans : Array[(Int, Int)] = []
+      let accepted : Array[(String, Int32, Int32)] = []
+      let spans : Array[(Int32, Int32)] = []
       for c in cands.iter() {
         let p = c.1
         let l = c.2
@@ -345,7 +355,7 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
         }
       }
       let n_h = hexes.length()
-      let picks : Array[Int] = []
+      let picks : Array[Int32] = []
       for _ in 0..<n_h {
         picks.push(-1)
       }
@@ -403,8 +413,8 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     if sec_type ||
       dd_has(line, [
         "字号", "font", "type scale", "typography", "正文", "body", "标题",
-        "说明", "caption", "注释", "display", "h1", "h2", "h3", "h4",
-        "二级标题", "三级标题", "四级标题", "大标题",
+        "说明", "caption", "注释", "display", "h1", "h2", "h3", "h4", "二级标题",
+        "三级标题", "四级标题", "大标题",
       ]) {
       let nums = dd_numbers(dd_strip_hexes(line))
       for n in nums.iter() {
@@ -448,10 +458,8 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
             typography.set("caption", n)
             extracted.push("type:caption=\{n.to_int()}")
           }
-        } else {
-          if scale.length() < 8 && !scale.contains(n) {
-            scale.push(n)
-          }
+        } else if scale.length() < 8 && !scale.contains(n) {
+          scale.push(n)
         }
       }
     }
@@ -464,11 +472,15 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
       }
     }
     // 4) 间距
-    if sec_spacing || dd_has(line, ["8pt", "4 的倍数", "4的倍数", "间距", "spacing", "grid"]) {
+    if sec_spacing ||
+      dd_has(line, [
+        "8pt", "4 的倍数", "4的倍数", "间距", "spacing", "grid",
+      ]) {
       spacing_ok = true
     }
     // 5) 动效
-    if sec_motion || dd_has(line, ["动效", "动画", "motion", "时长", "duration"]) {
+    if sec_motion ||
+      dd_has(line, ["动效", "动画", "motion", "时长", "duration"]) {
       for n in dd_numbers(dd_strip_hexes(line)).iter() {
         if n >= 60.0 && n <= 1000.0 && !motion_nums.contains(n) {
           motion_nums.push(n)
@@ -516,7 +528,9 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     m_base = ms[1]
     m_slow = ms[2]
     has_motion = true
-    extracted.push("motion:\{m_fast.to_int()}/\{m_base.to_int()}/\{m_slow.to_int()}")
+    extracted.push(
+      "motion:\{m_fast.to_int()}/\{m_base.to_int()}/\{m_slow.to_int()}",
+    )
   } else if ms.length() == 2 {
     // 两档不再静默丢弃：短值归 fast（交互反馈），长值归 base/slow
     // （内容转场共用）——文档动效意图随 extracted 上报
@@ -524,7 +538,9 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     m_base = ms[1]
     m_slow = ms[1]
     has_motion = true
-    extracted.push("motion:\{m_fast.to_int()}/\{m_base.to_int()}（两档→slow 同 base）")
+    extracted.push(
+      "motion:\{m_fast.to_int()}/\{m_base.to_int()}（两档→slow 同 base）",
+    )
   } else if ms.length() == 1 {
     m_base = ms[0]
     has_motion = true
@@ -547,11 +563,11 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     gaps.push("radius（圆角档）")
   }
   // 组装 spec JSON
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\"v\":1,\"source\":\"design_doc\",\"palette\":{")
   let role_order = [
-    "primary", "secondary", "info", "warning", "error", "success",
-    "background", "surface", "surface_variant", "text_primary", "text_secondary",
+    "primary", "secondary", "info", "warning", "error", "success", "background",
+    "surface", "surface_variant", "text_primary", "text_secondary",
   ]
   let mut first = true
   for role in role_order.iter() {
@@ -630,7 +646,7 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     sb.write_string("\"" + r + "\"")
   }
   sb.write_string("]}")
-  { spec_json: sb.to_string(), extracted, gaps }
+  { spec_json: sb.to_string(), extracted, gaps, }
 }
 
 ///|
@@ -644,7 +660,7 @@ pub fn Project::generate_from_doc(
   self : Project,
   intent_text~ : String,
   doc~ : String,
-  name? : String = "",
+  name~ : String = "",
 ) -> Result[String, String] {
   let ex = design_doc_extract(doc)
   if ex.gaps.length() > 0 {
@@ -677,9 +693,8 @@ pub fn Project::design_spec_compliance(
 ) -> String {
   let violations : Array[String] = []
   let ab = match self.artboards.get(artboard) {
-    None => {
+    None =>
       return "{\"ok\":false,\"error\":\"unknown_artboard:\{artboard}\",\"violations\":[]}"
-    }
     Some(a) => a
   }
   // 1) 颜色
@@ -691,10 +706,8 @@ pub fn Project::design_spec_compliance(
   let base_typography = DesignTokens::default().typography
   for role in ["display", "h1", "h2", "h3", "h4", "body", "caption"].iter() {
     match ds_number_value(self.design_spec, role) {
-      Some(v) => if v > 0.0 {
-        type_allowed.push(v)
-      }
-      None => {
+      Some(v) => if v > 0.0 { type_allowed.push(v) }
+      None =>
         // spec 未声明该档：引擎默认档值即合规——文档没约束的维度按基线，
         // 不判违规（与 norms_profile 的阈值兜底同一哲学）。否则模板默认
         // h3=20/h4=16 在只声明 body/h1 的文档下生成即违规，自家 comply
@@ -703,15 +716,12 @@ pub fn Project::design_spec_compliance(
           Some(b) => type_allowed.push(b)
           None => ()
         }
-      }
     }
   }
   let radius_allowed : Array[Double] = [0.0, 999.0]
   for role in ["sm", "md", "lg"].iter() {
     match ds_number_value(self.design_spec, role) {
-      Some(v) => if v > 0.0 {
-        radius_allowed.push(v)
-      }
+      Some(v) => if v > 0.0 { radius_allowed.push(v) }
       None => ()
     }
   }
@@ -735,7 +745,9 @@ pub fn Project::design_spec_compliance(
           Text => true
           _ => false
         }
-        if n.text != "" && is_text && type_allowed.length() > 0 &&
+        if n.text != "" &&
+          is_text &&
+          type_allowed.length() > 0 &&
           !in_set(n.style.font_size, type_allowed) {
           violations.push(
             "type: \{json_escape(id)} 字号 \{n.style.font_size} 不在规范字号阶",
@@ -756,7 +768,7 @@ pub fn Project::design_spec_compliance(
       Some(spec_ms) =>
         match self.tokens.motion.get(role) {
           Some(tok_ms) =>
-            if (spec_ms - tok_ms) > 0.5 || (tok_ms - spec_ms) > 0.5 {
+            if spec_ms - tok_ms > 0.5 || tok_ms - spec_ms > 0.5 {
               violations.push(
                 "motion: 规范 \{role}=\{spec_ms.to_int()}ms 与动效令牌 \{tok_ms.to_int()}ms 不一致",
               )

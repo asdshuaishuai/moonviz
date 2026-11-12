@@ -33,7 +33,7 @@ pub(all) struct Project {
   /// 组件多态状态：node_id → 状态定义（default/pressed/disabled/… 的补丁集）。
   /// 存于节点名标记，会话内可变模型由此重建；作用于渲染前的节点变换。
   mut node_states : Map[String, ComponentStateDef]
-  mut revision : Int
+  mut revision : Int32
   /// 令牌自定义覆盖（set_token 产生）：随 canonical MBT frontmatter
   /// `tokens:` 段往返；load 时在主题恢复后叠加应用。
   mut token_overrides : Map[String, String]?
@@ -64,12 +64,12 @@ pub(all) struct DocComment {
 ///|
 pub fn Project::new() -> Project {
   {
-    artboards: Map::new(),
+    artboards: Map([]),
     flows: [],
     tokens: DesignTokens::default(),
     components: builtin_components(),
-    user_components: Map::new(),
-    node_states: Map::new(),
+    user_components: Map([]),
+    node_states: Map([]),
     revision: 1,
     active_theme: "light",
     token_overrides: None,
@@ -150,7 +150,7 @@ pub fn Project::clone(self : Project) -> Project {
       // ComponentStateDef 值对象深拷贝：states Map 与 mut current 若共享，
       // 克隆上的 set-state op 会原地写穿原会话（别名污染）
       Some(def) => {
-        let states_copy : Map[String, NodePatch] = Map::new()
+        let states_copy : Map[String, NodePatch] = Map([])
         for st in def.states.keys() {
           match def.states.get(st) {
             Some(patch) => states_copy.set(st, patch)
@@ -170,7 +170,7 @@ pub fn Project::clone(self : Project) -> Project {
   copy.active_theme = self.active_theme
   match self.token_overrides {
     Some(ov) => {
-      let ov_copy : Map[String, String] = Map::new()
+      let ov_copy : Map[String, String] = Map([])
       for role in ov.keys() {
         match ov.get(role) {
           Some(v) => ov_copy.set(role, v)
@@ -225,8 +225,8 @@ pub fn Project::replace_with(self : Project, source : Project) -> Unit {
 pub fn Project::create_artboard(
   self : Project,
   name~ : String,
-  width? : Double = 390.0,
-  height? : Double = 844.0,
+  width~ : Double = 390.0,
+  height~ : Double = 844.0,
 ) -> String {
   let id = sanitize_id(name)
   let doc = Document::new({ width, height, })
@@ -273,13 +273,13 @@ pub fn Project::place_component(
   artboard~ : String,
   component_id~ : String,
   instance_id~ : String,
-  variant? : String = "",
-  parent_id? : String = "",
-  x? : Double = 0.0,
-  y? : Double = 0.0,
-  w? : Double = 0.0,
-  h? : Double = 0.0,
-  args? : Map[String, String] = Map::new(),
+  variant~ : String = "",
+  parent_id~ : String = "",
+  x~ : Double = 0.0,
+  y~ : Double = 0.0,
+  w~ : Double = 0.0,
+  h~ : Double = 0.0,
+  args~ : Map[String, String] = Map([]),
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard: \{artboard}")
@@ -353,7 +353,11 @@ pub fn Project::place_component(
                     Ok(_) => ()
                   }
                 } else if !is_edit_key(k) {
-                  return Err("place_unknown_key:" + k + "（place k=v 仅接受 edit 词表键：text/fill/stroke/text_color/radius/opacity/motion/…）")
+                  return Err(
+                    "place_unknown_key:" +
+                    k +
+                    "（place k=v 仅接受 edit 词表键：text/fill/stroke/text_color/radius/opacity/motion/…）",
+                  )
                 }
               }
               // 统一边界策略：负坐标夹回 0；右上不夹紧——按默认尺寸夹紧会在
@@ -415,7 +419,7 @@ pub fn Project::delete_artboard(
   self : Project,
   id~ : String,
 ) -> Result[String, String] {
-  if self.artboards.size() <= 1 {
+  if self.artboards.length() <= 1 {
     return Err("cannot_delete_last_artboard")
   }
   match self.artboards.get(id) {
@@ -464,8 +468,8 @@ pub fn Project::add_flow(
   self : Project,
   from~ : String,
   to~ : String,
-  trigger? : String = "tap",
-  transition? : String = "push",
+  trigger~ : String = "tap",
+  transition~ : String = "push",
 ) -> Unit {
   // 审查修复：canonical 含 flows 段——变更必须推进 revision 以失效
   // 会话级 canon_cache（否则新导航边不出现在 canonical 里）
@@ -518,7 +522,7 @@ pub fn Project::flow_json(self : Project) -> String {
 
 ///|
 fn join_str4(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")
@@ -538,7 +542,7 @@ pub fn Project::list_artboards_json(self : Project) -> String {
   for id in self.artboards.keys() {
     match self.artboards.get(id) {
       Some(ab) => {
-        let nv = ab.doc.nodes.size()
+        let nv = ab.doc.nodes.length()
         parts.push(
           "{\"id\":\"\{ab.id}\",\"name\":\"\{ab.name}\",\"width\":\{ab.width},\"height\":\{ab.height},\"nodes\":\{nv}}",
         )
@@ -555,9 +559,9 @@ pub fn Project::list_artboards_json(self : Project) -> String {
 pub fn Project::query_nodes(
   self : Project,
   artboard~ : String,
-  kind? : String = "",
-  component? : String = "",
-  text_contains? : String = "",
+  kind~ : String = "",
+  component~ : String = "",
+  text_contains~ : String = "",
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard: \{artboard}")
@@ -619,7 +623,7 @@ fn query_node_json(id : String, n : Node, r : Rect, parent : String) -> String {
       "}"
     None => "null"
   }
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_string("{\"id\":\"" + id + "\",")
   out.write_string("\"parent\":\"" + json_escape_field(parent) + "\",")
   out.write_string("\"kind\":\"" + kind_of(n) + "\",")
@@ -715,7 +719,7 @@ fn kind_of(n : Node) -> String {
 ///|
 /// JSON 字符串字段转义（query 输出用）
 fn json_escape_field(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '"' => sb.write_string("\\\"")
@@ -763,7 +767,11 @@ fn lint_parent_of(doc : Document, id : String) -> String? {
 /// 渐变/透明跳过（无法可靠计算时按画布底兜底）。此前只看自身 fill，
 /// 深色侧栏/标题栏上的浅色文字（fill=none）对白底算对比度 → 全量误报
 /// （pc_app 9 条、web_dashboard 6 条）。
-fn Project::lint_effective_bg(self : Project, doc : Document, id : String) -> String {
+fn Project::lint_effective_bg(
+  self : Project,
+  doc : Document,
+  id : String,
+) -> String {
   let mut cur : String? = Some(id)
   while true {
     match cur {
@@ -907,14 +915,14 @@ fn relative_luminance(hex : String) -> Double {
     if c <= 0.03928 {
       c / 12.92
     } else {
-      Double::pow((c + 0.055) / 1.055, 2.4)
+      @math.pow((c + 0.055) / 1.055, 2.4)
     }
   }
   0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
 }
 
 ///|
-fn hex_val(hex : String, offset : Int) -> Double {
+fn hex_val(hex : String, offset : Int32) -> Double {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
     hex.substring(start=1)
   } else {
@@ -929,7 +937,7 @@ fn hex_val(hex : String, offset : Int) -> Double {
 }
 
 ///|
-fn hex_digit_val(c : Char?) -> Int {
+fn hex_digit_val(c : Char?) -> Int32 {
   match c {
     Some(ch) => {
       let code = ch.to_int()
@@ -1025,7 +1033,7 @@ pub fn Project::export_svg(
 
 ///|
 fn sanitize_id(name : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in name.iter() {
     let code = c.to_int()
     if (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 95 {
@@ -1056,23 +1064,26 @@ fn Project::apply_place_kv(
       match k {
         "text" => cur = { ..cur, text: v, }
         "fill" =>
-          cur = { ..cur, style: { ..cur.style, fill: self.tokens.resolve_color(v), }, }
+          cur = {
+            ..cur,
+            style: { ..cur.style, fill: self.tokens.resolve_color(v), },
+          }
         "stroke" =>
-          cur = { ..cur, style: { ..cur.style, stroke: self.tokens.resolve_color(v), }, }
+          cur = {
+            ..cur,
+            style: { ..cur.style, stroke: self.tokens.resolve_color(v), },
+          }
         "text_color" =>
-          cur = { ..cur, style: { ..cur.style, text_color: self.tokens.resolve_color(v), }, }
-        "radius" =>
-          cur = { ..cur, style: { ..cur.style, corner_radius: d, }, }
-        "opacity" =>
-          cur = { ..cur, style: { ..cur.style, opacity: d, }, }
-        "font_size" =>
-          cur = { ..cur, style: { ..cur.style, font_size: d, }, }
-        "weight" =>
-          cur = { ..cur, style: { ..cur.style, font_weight: v, }, }
-        "shadow" =>
-          cur = { ..cur, style: { ..cur.style, shadow: v, }, }
-        "motion" =>
-          cur = { ..cur, style: { ..cur.style, motion: v, }, }
+          cur = {
+            ..cur,
+            style: { ..cur.style, text_color: self.tokens.resolve_color(v), },
+          }
+        "radius" => cur = { ..cur, style: { ..cur.style, corner_radius: d, }, }
+        "opacity" => cur = { ..cur, style: { ..cur.style, opacity: d, }, }
+        "font_size" => cur = { ..cur, style: { ..cur.style, font_size: d, }, }
+        "weight" => cur = { ..cur, style: { ..cur.style, font_weight: v, }, }
+        "shadow" => cur = { ..cur, style: { ..cur.style, shadow: v, }, }
+        "motion" => cur = { ..cur, style: { ..cur.style, motion: v, }, }
         _ => ()
       }
     }

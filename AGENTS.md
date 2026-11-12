@@ -105,7 +105,8 @@ curl -X POST https://mooncakes.io/api/v0/publish \
 ```
 成功响应 `{"status":"ok"}`；语义化版本每次发布必须递增。
 0.1.7 已于 2026-10-07 用此通道上架（[包页](https://mooncakes.io/asdshuaishuai/moonviz)），
-「moon add → 编译 → 渲染」闭环实测通过。工具链底线 moonc ≥ 0.10.14，ci.yml 有版本硬门。
+「moon add → 编译 → 渲染」闭环实测通过。工具链底线 moonc ≥ 0.10.20（0.2.0 适配：弃用 API 迁移 + native runtime 需
+moonbitlang/moonbit-native-runtime 装入 `~/.moon/lib/runtime`），ci.yml 有版本硬门。
 
 ## 本设备 Git 操作规定（强制）
 

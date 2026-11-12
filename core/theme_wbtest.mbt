@@ -85,11 +85,11 @@ test "主题：各预定义主题的 primary 色不同" {
     primaries.push(t.tokens.resolve_color("primary"))
   }
   // 确保至少有 4 种不同的 primary 色
-  let unique : Map[String, Bool] = Map::new()
+  let unique : Map[String, Bool] = Map([])
   for c in primaries.iter() {
     unique.set(c, true)
   }
-  assert_true(unique.size() >= 4)
+  assert_true(unique.length() >= 4)
 }
 
 ///|
@@ -118,10 +118,9 @@ test "主题：set_token 单令牌修改" {
 test "主题：set_token 值含引号/反斜杠仍产出合法 JSON envelope（回归锚）" {
   let p = Project::new()
   match p.set_token("primary", "a\"b\\c") {
-    Ok(json) => {
+    Ok(json) =>
       // value 区必须是转义序列，裸引号/裸反斜杠即 envelope 非法
       assert_true(json.contains("\"value\":\"a\\\"b\\\\c\""))
-    }
     Err(_) => assert_true(false)
   }
   // 生效不受转义影响：落库的是原始值

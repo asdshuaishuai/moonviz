@@ -183,13 +183,11 @@ test "声明文本往返保留 Inspector 可编辑的视觉属性" {
 ///|
 test "声明文本往返：三种位置规格 pos_text/pos_val 对称" {
   let page = prototype(name="pos-roundtrip", width=390.0, height=844.0)
-  page.add(
-    {
-      ..rect(id="c", width=@core.Fixed(80.0), height=@core.Fixed(40.0)),
-      x: @core.CenterInParent,
-      y: @core.AlignEnd(24.0),
-    },
-  )
+  page.add({
+    ..rect(id="c", width=@core.Fixed(80.0), height=@core.Fixed(40.0)),
+    x: @core.CenterInParent,
+    y: @core.AlignEnd(24.0),
+  })
   let source = page.to_decl_text()
   assert_true(source.contains("x=@decl.center"))
   assert_true(source.contains("y=@decl.end(24"))
@@ -257,17 +255,15 @@ test "move_node：人类语义操作修改声明并保持谓词通过" {
 ///|
 test "canonical 往返：节点文本含单个不配对括号可重载" {
   let page = prototype(name="paren", width=390.0, height=844.0)
-  page.add(
-    {
-      ..rect(id="weird", width=@core.Fixed(100.0), height=@core.Fixed(40.0)),
-      text: "(a",
-    },
-  )
+  page.add({
+    ..rect(id="weird", width=@core.Fixed(100.0), height=@core.Fixed(40.0)),
+    text: "(a",
+  })
   let decl = page.to_decl_text()
   // decl_escape 把裸 `(` 写成 `\(`
   assert_true(decl.contains("text=\"\\(a\""))
   // 走完整 .mbt.md 装载链：mbt_visual_decl 的括号归并必须转义感知
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("<!-- moonviz:artboard p -->\n```mbt\n")
   sb.write_string("fn visual_p() -> @decl.Prototype {\n")
   for line in lines_of(decl).iter() {
@@ -323,14 +319,12 @@ test "声明文本往返：含引号的容器 id 不损坏" {
 
 ///|
 test "声明文本往返：C0 控制符经 \\u00xx 对称还原" {
-  let ctrl = "a" + Char::from_int(1).to_string() + "b"
+  let ctrl = "a" + (1).unsafe_to_char().to_string() + "b"
   let page = prototype(name="ctrl", width=390.0, height=844.0)
-  page.add(
-    {
-      ..rect(id="ctl", width=@core.Fixed(80.0), height=@core.Fixed(20.0)),
-      text: ctrl,
-    },
-  )
+  page.add({
+    ..rect(id="ctl", width=@core.Fixed(80.0), height=@core.Fixed(20.0)),
+    text: ctrl,
+  })
   let source = page.to_decl_text()
   assert_true(source.contains("\\u0001"))
   let parsed : Prototype = match parse_decl(source) {

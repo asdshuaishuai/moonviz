@@ -175,7 +175,7 @@ pub fn Node::make(id : String, kind : NodeKind) -> Node {
 pub const TEXT_LINE_HEIGHT_RATIO : Double = 1.5
 
 ///|
-pub const CJK_CODEPOINT_MIN : Int = 0x2E80
+pub const CJK_CODEPOINT_MIN : Int32 = 0x2E80
 
 ///|
 /// 拉丁字符宽度系数：按 Chrome 默认字体栈（-apple-system/SF Pro Text）实测
@@ -186,7 +186,7 @@ pub const CJK_CODEPOINT_MIN : Int = 0x2E80
 pub const ASCII_ADVANCE_RATIO : Double = 0.48
 
 ///|
-fn char_advance(code : Int, font_size : Double) -> Double {
+fn char_advance(code : Int32, font_size : Double) -> Double {
   if code >= CJK_CODEPOINT_MIN {
     font_size
   } else {
@@ -198,7 +198,7 @@ fn char_advance(code : Int, font_size : Double) -> Double {
 pub fn text_intrinsic(
   text : String,
   font_size : Double,
-  line_height? : Double = 1.5,
+  line_height~ : Double = 1.5,
 ) -> Size {
   // 多行：取最宽行，高度 = 行数 × 行高
   let mut max_w = 0.0
@@ -238,7 +238,7 @@ fn token_advance(tok : String, font_size : Double) -> Double {
 /// 折行断行点的最小单位——CJK 逐字可断，拉丁词整词可断。
 fn tokenize_text(seg : String) -> Array[String] {
   let toks : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for c in seg.iter() {
     if c == ' ' {
       if cur.to_string().length() > 0 {
@@ -276,7 +276,7 @@ pub fn wrap_text_lines(
       out.push(seg)
       continue
     }
-    let cur = StringBuilder::new()
+    let cur = StringBuilder()
     let mut cur_w = 0.0
     let mut line_started = false
     for tok in tokenize_text(seg).iter() {
@@ -336,7 +336,7 @@ fn trim_trailing_space(s : String) -> String {
   while end > 0 && chars[end - 1] == ' ' {
     end = end - 1
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<end {
     sb.write_char(chars[i])
   }
@@ -350,7 +350,7 @@ pub fn text_intrinsic_wrapped(
   text : String,
   font_size : Double,
   max_width : Double,
-  line_height? : Double = TEXT_LINE_HEIGHT_RATIO,
+  line_height~ : Double = TEXT_LINE_HEIGHT_RATIO,
 ) -> Size {
   let lines = wrap_text_lines(text, font_size, max_width)
   let mut max_w = 0.0

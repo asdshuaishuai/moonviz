@@ -18,7 +18,7 @@ pub(all) enum GateDecision {
 
 ///|
 pub fn decide(gate : Gate, violations : Array[Violation]) -> GateDecision {
-  let blocking : Array[Violation] = Array::new()
+  let blocking : Array[Violation] = Array()
   for v in violations.iter() {
     let blocks : Bool = match gate {
       AgentGate => true

@@ -58,13 +58,17 @@ test "MBT transport rejects malformed Base64 before parsing source" {
 ///|
 test "generate: one-sentence intent produces a full artboard plus report" {
   let project = @core.Project::new()
-  let result = cli_exec(project, "generate 登录页 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19")
+  let result = cli_exec(
+    project, "generate 登录页 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19",
+  )
   assert_true(result.contains("\"ok\":true"))
   assert_true(result.contains("\"template\":\"login\""))
   assert_true(result.contains("\"autofix\""))
   assert_true(result.contains("\"score\""))
   // 自定义画板名（as 尾缀）
-  let named = cli_exec(project, "generate 设置页 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as my_settings")
+  let named = cli_exec(
+    project, "generate 设置页 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as my_settings",
+  )
   assert_true(named.contains("\"artboard\":\"my_settings\""))
 }
 
@@ -76,16 +80,22 @@ test "generate: one-sentence intent produces a full artboard plus report" {
 test "generate: mid-intent as stays in the intent, trailing as names the artboard" {
   let project = @core.Project::new()
   // as 居中（其后还有 token）：不劫持——意图完整，画板名回落 template_id
-  let mid = cli_exec(project, "generate login spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as hero page")
+  let mid = cli_exec(
+    project, "generate login spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as hero page",
+  )
   assert_true(mid.contains("\"ok\":true"))
   assert_true(mid.contains("\"template\":\"login\""))
   assert_true(mid.contains("\"artboard\":\"login\""))
   // as 尾部：仍按声明生效
-  let tail = cli_exec(project, "generate login page spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as hero")
+  let tail = cli_exec(
+    project, "generate login page spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19 as hero",
+  )
   assert_true(tail.contains("\"template\":\"login\""))
   assert_true(tail.contains("\"artboard\":\"hero\""))
   // 引号意图含 as：split_cmd 还原为单 token，as 永不劫持（与 wasm 臂同构）
-  let quoted = cli_exec(project, "generate \"登录页 with as badge 中间词\" spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19")
+  let quoted = cli_exec(
+    project, "generate \"登录页 with as badge 中间词\" spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19",
+  )
   assert_true(quoted.contains("\"template\":\"login\""))
   assert_true(quoted.contains("\"artboard\":\"login\""))
   assert_true(!quoted.contains("\"artboard\":\"badge"))
@@ -133,7 +143,7 @@ test "ops-batch: over-limit rejection reports applied:0 with sentinel index" {
     many.push("create x\{i} 100 100")
     i = i + 1
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut first = true
   for op in many.iter() {
     if first == false {
@@ -152,7 +162,9 @@ test "ops-batch: over-limit rejection reports applied:0 with sentinel index" {
 /// help 是会话内 Agent 的发现面：SKILL.md 执行阶梯的首选入口必须在列
 test "help surfaces the generative commands" {
   let help = cli_exec(@core.Project::new(), "help")
-  assert_true(help.contains("generate <意图一句话> [spec=<b64>] [as <name>]"))
+  assert_true(
+    help.contains("generate <意图一句话> [spec=<b64>] [as <name>]"),
+  )
   assert_true(help.contains("ops-batch-b64 <b64>"))
   // 组合意图通道（"+" 多段 → mode:multi）必须从 help 可发现——与
   // core/agent_api.mbt 的 generate 描述同源，SKILL.md 不再是唯一入口
@@ -164,7 +176,7 @@ test "help surfaces the generative commands" {
 /// → load-mbt-b64 重载，板与流零损失——genUI 的正确性根基（会话保存/重开
 /// 与 wasm canonical 交换同走此路径）。
 fn unescape_json_str(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let chars = s.to_array()
   let mut i = 0
   while i < chars.length() {
@@ -199,7 +211,7 @@ fn envelope_mbt(envelope : String) -> String {
     None => return ""
   }
   let rest = envelope.substring(start=i)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let chars = rest.to_array()
   let mut j = 0
   while j < chars.length() {
@@ -220,7 +232,9 @@ fn envelope_mbt(envelope : String) -> String {
 ///|
 test "组合意图产物 canonical 往返：双板与导航流零损失" {
   let p = @core.Project::new()
-  let gen = cli_exec(p, "generate 登录+注册 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19")
+  let gen = cli_exec(
+    p, "generate 登录+注册 spec=eyJ2IjoxLCJwYWxldHRlIjp7InByaW1hcnkiOiIjNEI2QkZCIn19",
+  )
   assert_true(gen.contains("\"mode\":\"multi\""))
   let exp = cli_exec(p, "export-mbt-agent")
   let mbt = envelope_mbt(exp)
@@ -229,9 +243,14 @@ test "组合意图产物 canonical 往返：双板与导航流零损失" {
   // 重载到全新会话
   let p2 = @core.Project::new()
   let loaded = cli_exec(p2, "load-mbt-b64 " + cli_b64(mbt))
-  assert_true(loaded.contains("\"ok\":true"), msg="canonical 重载应成功: \{loaded}")
+  assert_true(
+    loaded.contains("\"ok\":true"),
+    msg="canonical 重载应成功: \{loaded}",
+  )
   let list = cli_exec(p2, "list")
-  assert_true(list.contains("\"id\":\"login\"") && list.contains("\"id\":\"signup\""))
+  assert_true(
+    list.contains("\"id\":\"login\"") && list.contains("\"id\":\"signup\""),
+  )
   let flows = cli_exec(p2, "flows")
   assert_true(flows.contains("\"from\":\"login\",\"to\":\"signup\""))
   assert_true(flows.contains("tap:signup_btn"))
@@ -267,7 +286,10 @@ fn envelope_b64(envelope : String, key : String) -> String {
 /// 收尾 } ——每次导入成功都返回非法 JSON。
 test "component-import 成功信封合法：header 对象嵌入且 id 与组件一致" {
   let p = @core.Project::new()
-  let comp = cli_exec(p, "component-compile-b64 " + cli_b64(cli_sample_component))
+  let comp = cli_exec(
+    p,
+    "component-compile-b64 " + cli_b64(cli_sample_component),
+  )
   assert_true(comp.contains("\"ok\":true"), msg="compile 应成功: \{comp}")
   let exp = cli_exec(p, "component-export badge")
   let mcf = envelope_b64(exp, "mcf_b64")
@@ -306,7 +328,10 @@ test "set-state 最小形式生效且 toggle 尾缀可开" {
 /// param.kind/variant 裸插值产出非法 JSON——"component":"a"b"）。
 test "含引号组件名：compile 与 list-components 信封仍合法" {
   let p = @core.Project::new()
-  let comp = cli_exec(p, "component-compile-b64 " + cli_b64(cli_quoted_component))
+  let comp = cli_exec(
+    p,
+    "component-compile-b64 " + cli_b64(cli_quoted_component),
+  )
   assert_true(comp.contains("\"ok\":true"), msg="compile 应成功: \{comp}")
   assert_true(comp.contains("\"component\":\"a\\\"b\""), msg=comp)
   assert_true(comp.contains("\"variants\":[\"pri\\\"mary\"]"), msg=comp)
@@ -345,7 +370,10 @@ test "flow CLI：手势 trigger 与未知触发报错" {
   let _ = cli_exec(p, "create gb 390 844")
   for spec in ["swipe_left", "long_press:0.8", "focus"] {
     let out = cli_exec(p, "flow ga gb " + spec)
-    assert_true(out.contains("\"ok\":true"), msg="flow \{spec} 应成功：\{out}")
+    assert_true(
+      out.contains("\"ok\":true"),
+      msg="flow \{spec} 应成功：\{out}",
+    )
     assert_true(out.contains(spec), msg=out)
   }
   let bad = cli_exec(p, "flow ga gb nonsense:xyz")

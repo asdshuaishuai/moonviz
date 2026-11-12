@@ -22,21 +22,21 @@ pub fn OpSource::name(self : OpSource) -> String {
 
 ///|
 pub(all) struct JournalEntry {
-  revision : Int
+  revision : Int32
   source : OpSource
   message : String
-  violation_count : Int // 合并时携带的视觉债（人类路线可以 > 0）
+  violation_count : Int32 // 合并时携带的视觉债（人类路线可以 > 0）
 }
 
 ///|
 pub(all) struct Document {
   mut root_id : String
   mut nodes : Map[String, Node]
-  mut revision : Int
+  mut revision : Int32
   journal : Array[JournalEntry]
   /// 内容序号（issue #28）：任何节点变更 +1——快照按板失效的 O(1) 键。
   /// 与 revision 不同：revision 是文档/历史语义，content_seq 只服务增量。
-  mut content_seq : Int
+  mut content_seq : Int32
 }
 
 ///|
@@ -49,7 +49,7 @@ pub fn Document::new(viewport : Size) -> Document {
     x: Fixed(0.0),
     y: Fixed(0.0),
   }
-  let nodes : Map[String, Node] = Map::new()
+  let nodes : Map[String, Node] = Map([])
   nodes.set("root", root)
   { root_id: "root", nodes, revision: 1, journal: [], content_seq: 0, }
 }
@@ -144,14 +144,14 @@ pub fn Document::find_parent(self : Document, id : String) -> String? {
 ///|
 /// 深拷贝：事务式合并的候选副本（apply 前先在副本上验证，见 docs/05）
 pub fn Document::clone(self : Document) -> Document {
-  let nodes : Map[String, Node] = Map::new()
+  let nodes : Map[String, Node] = Map([])
   for id in self.nodes.keys() {
     match self.nodes.get(id) {
       Some(n) => nodes.set(id, { ..n, children: n.children.copy(), })
       None => ()
     }
   }
-  let journal : Array[JournalEntry] = Array::new()
+  let journal : Array[JournalEntry] = Array()
   for e in self.journal.iter() {
     journal.push(e)
   }

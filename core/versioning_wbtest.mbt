@@ -36,7 +36,7 @@ test "版本控制：时间旅行 checkout" {
   let _ = h.commit("b", "v2", [], doc)
   // checkout 到版本 0
   match h.checkout(0) {
-    Ok(d) => assert_true(d.nodes.size() > 0)
+    Ok(d) => assert_true(d.nodes.length() > 0)
     Err(_) => assert_true(false)
   }
   // checkout 到不存在的版本
@@ -96,7 +96,7 @@ test "版本控制：分支" {
   let _ = h.commit("a", "main work", [], doc)
   // 从 rev 1 创建分支
   match h.branch(1, "experiment") {
-    Ok(d) => assert_true(d.nodes.size() > 0)
+    Ok(d) => assert_true(d.nodes.length() > 0)
     Err(_) => assert_true(false)
   }
   assert_eq(h.branch_name, "experiment")

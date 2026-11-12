@@ -6,7 +6,7 @@
 ///|
 /// 整个项目序列化为 JSON（save 用）
 pub fn Project::to_project_json(self : Project) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\"moonviz\":\"studio\",\"version\":2,\"artboards\":[")
   let mut first = true
   for id in self.artboards.keys() {
@@ -43,7 +43,7 @@ pub fn Project::from_project_json(
     Some(i) => i + art_marker.length()
     None => return Err("missing_artboards")
   }
-  let staged : Map[String, ArtboardMeta] = Map::new()
+  let staged : Map[String, ArtboardMeta] = Map([])
   let errors : Array[String] = []
   let body = text.substring(start=arr_start)
   let mut pos = 0
@@ -68,7 +68,7 @@ pub fn Project::from_project_json(
   }
   if errors.length() > 0 {
     Err("artboard_load_failed: " + jstr8(errors, "; "))
-  } else if staged.size() == 0 {
+  } else if staged.length() == 0 {
     Err("no_artboards_loaded")
   } else {
     // 全部成功：原子替换
@@ -173,7 +173,7 @@ fn jnum_field(obj : String, key : String) -> Double {
 
 ///|
 /// 从 from 起（含）找第一个 '{'
-fn find_obj_from(s : String, from : Int) -> Int? {
+fn find_obj_from(s : String, from : Int32) -> Int32? {
   let n = s.length()
   let mut i = from
   while i < n {
@@ -186,7 +186,7 @@ fn find_obj_from(s : String, from : Int) -> Int? {
 }
 
 ///|
-fn find_obj_start(s : String, from : Int) -> Int {
+fn find_obj_start(s : String, from : Int32) -> Int32 {
   match find_obj_from(s, from) {
     Some(i) => i
     None => -1
@@ -195,7 +195,7 @@ fn find_obj_start(s : String, from : Int) -> Int {
 
 ///|
 /// 跳过完整对象文本（含字符串内转义），返回结束下标（不含）
-fn skip_object2(s : String, start : Int) -> Int {
+fn skip_object2(s : String, start : Int32) -> Int32 {
   let mut depth = 0
   let mut pos = start
   let mut in_str = false

@@ -13,7 +13,7 @@
 ///|
 /// 解析错误：1 起始的行号 + 消息（Agent 修复循环的输入）
 pub(all) struct DeclParseError {
-  line : Int
+  line : Int32
   message : String
 }
 
@@ -80,7 +80,7 @@ fn has_prefix_str(s : String, prefix : String) -> Bool {
 
 ///|
 fn join_with(parts : Array[String], sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(sep)
@@ -92,12 +92,12 @@ fn join_with(parts : Array[String], sep : String) -> String {
 
 ///|
 fn lines_of(text : String) -> Array[String] {
-  let out : Array[String] = Array::new()
-  let mut buf = StringBuilder::new()
+  let out : Array[String] = Array()
+  let mut buf = StringBuilder()
   for c in text.iter() {
     if c == '\n' {
       out.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(c)
     }
@@ -147,11 +147,11 @@ fn trim_spaces(s : String) -> String {
 /// 括号深度感知的逗号切分（顶层逗号才是分隔符）。
 /// 引号感知：双引号内的 `,()` 不参与切分/计数；`\x` 转义序列原样保留。
 fn split_params(s : String) -> Array[String] {
-  let out : Array[String] = Array::new()
+  let out : Array[String] = Array()
   let mut depth = 0
   let mut in_quotes = false
   let mut esc = false
-  let mut buf = StringBuilder::new()
+  let mut buf = StringBuilder()
   for c in s.iter() {
     if esc {
       buf.write_char('\\')
@@ -175,7 +175,7 @@ fn split_params(s : String) -> Array[String] {
       }
       ',' if !in_quotes && depth == 0 => {
         out.push(buf.to_string())
-        buf = StringBuilder::new()
+        buf = StringBuilder()
       }
       _ => buf.write_char(c)
     }
@@ -199,7 +199,7 @@ fn parse_number(s : String) -> Double? {
   } else {
     s
   }
-  let dot : Int? = body.find(".")
+  let dot : Int32? = body.find(".")
   let int_part : String = match dot {
     Some(i) => body.substring(start=0, end=i)
     None => body
@@ -243,7 +243,7 @@ fn parse_number(s : String) -> Double? {
 /// `,` `(` `)`，保证含逗号/括号的文本在 split_params 往返后语义不变。
 fn decl_escape(s : String) -> String {
   let escaped = @core.json_escape(s)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in escaped.iter() {
     match c {
       ',' => sb.write_string("\\,")
@@ -282,7 +282,7 @@ fn pos_text(spec : @core.PosSpec) -> String? {
 ///|
 /// 位置规格解析："@decl.center" → CenterInParent；"@decl.end(24)" → AlignEnd(24)；
 /// "@decl.start(24)" / 裸数字 → AlignStart（default 形式）。
-fn pos_val(v : String, line : Int) -> Result[@core.PosSpec, DeclParseError] {
+fn pos_val(v : String, line : Int32) -> Result[@core.PosSpec, DeclParseError] {
   let body : String = if has_prefix_str(v, DECL_MARKER) {
     v.substring(start=DECL_MARKER.length())
   } else {
@@ -332,7 +332,7 @@ fn flex_text(l : @core.StackLayout) -> String {
 
 ///|
 fn node_call(n : @core.Node) -> String {
-  let parts = Array::new()
+  let parts = Array()
   parts.push("id=\"\{decl_escape(n.id)}\"")
   parts.push("component=\"\{decl_escape(n.component)}\"")
   let kind = match n.kind {
@@ -423,7 +423,7 @@ fn emit_children(
 ///|
 /// Prototype → 规范声明文本（.mbt.md 代码块全文）
 pub fn Prototype::to_decl_text(self : Prototype) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let root = self.root
   let w : Double = match root.width {
     @core.Fixed(v) => v
@@ -451,9 +451,9 @@ pub fn Prototype::to_decl_text(self : Prototype) -> String {
 ///|
 fn parse_params(
   args : String,
-  line : Int,
+  line : Int32,
 ) -> Result[Array[(String, String)], DeclParseError] {
-  let out : Array[(String, String)] = Array::new()
+  let out : Array[(String, String)] = Array()
   for raw in split_params(args).iter() {
     if !is_blank(raw) {
       match raw.find("=") {
@@ -497,7 +497,7 @@ fn str_val(v : String) -> String {
 fn num_req(
   params : Array[(String, String)],
   key : String,
-  line : Int,
+  line : Int32,
 ) -> Result[Double, DeclParseError] {
   match opt_param(params, key) {
     Some(v) =>
@@ -513,7 +513,7 @@ fn num_req(
 fn num_opt(
   params : Array[(String, String)],
   key : String,
-  line : Int,
+  line : Int32,
 ) -> Result[Double?, DeclParseError] {
   match opt_param(params, key) {
     Some(v) =>
@@ -527,7 +527,7 @@ fn num_opt(
 
 ///|
 /// "@decl.fixed(44)" / "@decl.fill" / "@decl.hug" / 裸数字（容错视为定值）
-fn size_val(v : String, line : Int) -> Result[@core.SizeSpec, DeclParseError] {
+fn size_val(v : String, line : Int32) -> Result[@core.SizeSpec, DeclParseError] {
   let body : String = if has_prefix_str(v, DECL_MARKER) {
     v.substring(start=DECL_MARKER.length())
   } else {
@@ -551,7 +551,7 @@ fn size_val(v : String, line : Int) -> Result[@core.SizeSpec, DeclParseError] {
 }
 
 ///|
-fn dir_val(v : String, line : Int) -> Result[@core.StackDir, DeclParseError] {
+fn dir_val(v : String, line : Int32) -> Result[@core.StackDir, DeclParseError] {
   let body = if has_prefix_str(v, DECL_MARKER) {
     v.substring(start=DECL_MARKER.length())
   } else {
@@ -565,7 +565,10 @@ fn dir_val(v : String, line : Int) -> Result[@core.StackDir, DeclParseError] {
 }
 
 ///|
-fn justify_val(v : String, line : Int) -> Result[@core.Justify, DeclParseError] {
+fn justify_val(
+  v : String,
+  line : Int32,
+) -> Result[@core.Justify, DeclParseError] {
   let body = if has_prefix_str(v, DECL_MARKER) {
     v.substring(start=DECL_MARKER.length())
   } else {
@@ -583,7 +586,7 @@ fn justify_val(v : String, line : Int) -> Result[@core.Justify, DeclParseError] 
 /// src 形如 "@decl.flex(direction=..., gap=..., padding=..., justify=...)"
 fn parse_flex(
   src : String,
-  line : Int,
+  line : Int32,
 ) -> Result[@core.StackLayout, DeclParseError] {
   let body = if has_prefix_str(src, DECL_MARKER) {
     src.substring(start=DECL_MARKER.length())
@@ -633,7 +636,7 @@ fn parse_flex(
 fn with_xy(
   n : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let px = match opt_param(params, "x") {
     Some(v) =>
@@ -666,7 +669,7 @@ fn with_xy(
 fn add_layout(
   n : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   match opt_param(params, "layout") {
     None => Ok(n)
@@ -682,7 +685,7 @@ fn add_layout(
 fn with_wh(
   n : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let w : @core.SizeSpec = match opt_param(params, "width") {
     Some(v) =>
@@ -706,7 +709,7 @@ fn with_wh(
 ///|
 fn require_id(
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[String, DeclParseError] {
   match opt_param(params, "id") {
     Some(v) => Ok(str_val(v))
@@ -719,7 +722,7 @@ fn require_id(
 fn apply_decl_style(
   node : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let mut cur = node
   match opt_param(params, "fill") {
@@ -814,8 +817,9 @@ fn apply_decl_style(
     Some(v) => {
       let preset = str_val(v)
       match @core.validate_node_motion(preset) {
-        Ok(checked) => cur = { ..cur, style: { ..cur.style, motion: checked, }, }
-        Err(e) => return Err({ line, message: e })
+        Ok(checked) =>
+          cur = { ..cur, style: { ..cur.style, motion: checked, }, }
+        Err(e) => return Err({ line, message: e, })
       }
     }
     None => ()
@@ -827,7 +831,7 @@ fn apply_decl_style(
 fn build_node(
   component : String,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let n : Result[@core.Node, DeclParseError] = match component {
     "generic_node" => {
@@ -1218,7 +1222,7 @@ fn apply_call(
   page : Prototype,
   call_src : String,
   pid_opt : String?,
-  line : Int,
+  line : Int32,
 ) -> Result[Unit, DeclParseError] {
   if !has_prefix_str(call_src, DECL_MARKER) {
     return Err({
@@ -1227,7 +1231,7 @@ fn apply_call(
     })
   }
   let body = call_src.substring(start=DECL_MARKER.length())
-  let lp : Int = match body.find("(") {
+  let lp : Int32 = match body.find("(") {
     Some(i) => i
     None => return Err({ line, message: "组件调用缺少括号", })
   }
@@ -1274,7 +1278,7 @@ fn p_add(page : Prototype, parent_id : String, n : @core.Node) -> Unit {
 ///|
 /// 找未转义收尾引号：`\x` 转义序列不终止引号；返回 UTF-16 下标。
 /// 与 emit_children 的 decl_escape(pid) 配对，含引号容器 id 往返不损坏。
-fn find_closing_quote(s : String) -> Int? {
+fn find_closing_quote(s : String) -> Int32? {
   let mut esc = false
   let mut i = 0
   for c in s.iter() {

@@ -235,7 +235,7 @@ pub fn Project::suggest_improvements(
       let tokens = self.tokens
 
       // 1. 层次检查：是否有清晰的视觉层次（至少 2 种字号）
-      let font_sizes : Map[Double, Int] = Map::new()
+      let font_sizes : Map[Double, Int32] = Map([])
       for id in ab.doc.nodes.keys() {
         match ab.doc.nodes.get(id) {
           Some(n) =>
@@ -246,7 +246,7 @@ pub fn Project::suggest_improvements(
           None => ()
         }
       }
-      if font_sizes.size() < 2 {
+      if font_sizes.length() < 2 {
         suggestions.push(
           "{\"category\":\"hierarchy\",\"severity\":\"high\",\"description\":\"所有文字字号相同，缺少视觉层次\",\"fix_command\":\"为标题使用 heading h2，正文使用 body_text\"}",
         )
@@ -297,7 +297,7 @@ pub fn Project::suggest_improvements(
       }
 
       // 4. 密度检查：元素是否过于密集或稀疏
-      let node_count = ab.doc.nodes.size() - 1
+      let node_count = ab.doc.nodes.length() - 1
       let area = ab.width * ab.height
       let density = node_count.to_double() / (area / 10000.0) // 节点/万px²
       if density > 8.0 {
@@ -332,16 +332,16 @@ pub fn Project::design_quality_score(
       let layout = solve(doc)
 
       // 维度 1：层次分（字号种类越多越好，上限 5 种）
-      let font_set : Map[Double, Bool] = Map::new()
+      let font_set : Map[Double, Bool] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) => font_set.set(n.style.font_size, true)
           None => ()
         }
       }
-      let hierarchy_score = if font_set.size() >= 3 {
+      let hierarchy_score = if font_set.length() >= 3 {
         25
-      } else if font_set.size() == 2 {
+      } else if font_set.length() == 2 {
         18
       } else {
         8
@@ -379,7 +379,7 @@ pub fn Project::design_quality_score(
       }
 
       // 维度 4：丰富度分（节点数量，考虑层次）
-      let node_count = doc.nodes.size() - 1
+      let node_count = doc.nodes.length() - 1
       let richness_score = if node_count >= 10 {
         25
       } else if node_count >= 5 {
@@ -469,7 +469,7 @@ fn parse_hex_rgb(hex : String) -> (Double, Double, Double) {
 }
 
 ///|
-fn hex_part(s : String, offset : Int) -> Double {
+fn hex_part(s : String, offset : Int32) -> Double {
   if s.length() < offset + 2 {
     return 0.0
   }
@@ -479,7 +479,7 @@ fn hex_part(s : String, offset : Int) -> Double {
 }
 
 ///|
-fn hex_digit_val2(c : Char?) -> Int {
+fn hex_digit_val2(c : Char?) -> Int32 {
   match c {
     Some(ch) => {
       let code = ch.to_int()
@@ -526,7 +526,7 @@ fn extract_field(json : String, field : String) -> String {
 
 ///|
 fn jstr14(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

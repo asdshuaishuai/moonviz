@@ -43,7 +43,7 @@ fn Project::infer_entry(self : Project) -> String {
 /// 引号/反斜杠/'<'/C0 控制符统一转成 JS 转义序列；'<' 一律 \x3c，
 /// 顺带封死 </script> 从字符串内提前闭合（含大小写变体）。
 fn js_string_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '"' => sb.write_string("\\x22")
@@ -88,7 +88,7 @@ fn Project::has_tap_flow(
 /// （mv-board-push / mv-board-modal_present / …），show(id,push,dir,tr)
 /// 只切换 .mv-tr-<name> 类；none 只出禁动画规则、不出关键帧。
 fn board_transition_css() -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for t in [Push, Pop, ModalPresent, ModalDismiss, SheetPresent, Fade].iter() {
     let n = t.name()
     sb.write_string(
@@ -145,7 +145,7 @@ fn dom_id_in(m : Map[String, String]?, id : String) -> String {
 /// id="tab-..." 会生成真实子元素并截断标签文本；浏览器解析回原文后
 /// 与 onclick 的 js_string_escape 串一致，getElementById 两侧匹配。
 fn html_attr_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '&' => sb.write_string("&amp;")
@@ -166,7 +166,7 @@ fn html_attr_escape(s : String) -> String {
 /// DOM id 是 Agent 可控文本，裸插 `<` 会截断 <style> 块（</style> 提前
 /// 闭合整页样式）并破坏选择器语法。
 fn css_ident_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     let code = c.to_int()
     let safe = (code >= 65 && code <= 90) ||
@@ -188,12 +188,10 @@ fn css_ident_escape(s : String) -> String {
 /// html lang 白名单清洗（只留 ASCII 字母与 '-'，空则 zh）：lang 是可选
 /// 入参，必须防止属性注入。
 fn sanitize_lang(lang : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in lang.iter() {
     let code = c.to_int()
-    if (code >= 65 && code <= 90) ||
-      (code >= 97 && code <= 122) ||
-      code == 45 {
+    if (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code == 45 {
       sb.write_char(c)
     }
   }
@@ -230,21 +228,18 @@ fn a11y_label(n : Node) -> String {
 /// 屏幕（分层柔阴影 + hairline），页面按安全区留呼吸边距，窄屏自适应缩放。
 /// 交互：可交互节点挂 mv-live（Hover Lift + 指针 + 键盘 Enter/Space 可达），
 /// 非交互节点不再伪装可点（cursor 只给 mv-live）。
-pub fn Project::export_html(
-  self : Project,
-  lang? : String = "zh",
-) -> String {
-  let sb = StringBuilder::new()
+pub fn Project::export_html(self : Project, lang~ : String = "zh") -> String {
+  let sb = StringBuilder()
   // 节点 DOM id 唯一化：跨板重复的节点 id（duplicate_artboard）在后者加
   // __dupN 后缀——节点 g id 不做全局重命名，首个出现保持 #n_<id> 契约；
   // 每个板一张 raw→dom 映射，MV_ACT/状态/动效选择器统一走它。
-  let dom_ids : Map[String, Map[String, String]] = Map::new()
-  let seen_ids : Map[String, Bool] = Map::new()
+  let dom_ids : Map[String, Map[String, String]] = Map([])
+  let seen_ids : Map[String, Bool] = Map([])
   for ab_id in self.artboards.keys() {
     match self.artboards.get(ab_id) {
       None => ()
       Some(ab) => {
-        let m : Map[String, String] = Map::new()
+        let m : Map[String, String] = Map([])
         for nid in ab.doc.nodes.keys() {
           let mut dom = nid
           let mut n = 1
@@ -314,9 +309,7 @@ pub fn Project::export_html(
   sb.write_string(
     "  .board{display:none;max-width:100%;border-radius:28px;overflow:hidden;background:var(--mv-surface);box-shadow:0 0 0 .5px var(--mv-line),0 1px 2px rgba(0,0,0,.04),0 12px 32px rgba(0,0,0,.08),0 32px 80px rgba(0,0,0,.08)}\n",
   )
-  sb.write_string(
-    "  .board>svg{display:block;max-width:100%;height:auto}\n",
-  )
+  sb.write_string("  .board>svg{display:block;max-width:100%;height:auto}\n")
   // 画板转场：方向感知（navigate 前进 +1 / back 返回 -1 / tab 纯淡入 0），
   // fill 用 backwards——结束后把 transform 交还给按压反馈，不冻结交互。
   // 每类过渡一份 keyframes（名字由 Transition::name() 生成）；无边/无类
@@ -456,8 +449,10 @@ pub fn Project::export_html(
               Some(aid) => dom_id_in(dom_ids.get(aid), node_id)
               None => node_id
             }
-            let sel =
-              "g#n_" + css_ident_escape(dom) + ".st-" + css_ident_escape(state_name)
+            let sel = "g#n_" +
+              css_ident_escape(dom) +
+              ".st-" +
+              css_ident_escape(state_name)
             sb.write_string("  \{sel} rect,\{sel} text{\{decl}}\n")
           }
         }
@@ -574,10 +569,10 @@ pub fn Project::export_html(
                         acts.push(
                           "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"haptic\",\"\"]",
                         )
-      Some(PlaySound(name)) =>
-        acts.push(
-          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"play_sound\",\"\{js_string_escape(name)}\"]",
-        )
+                      Some(PlaySound(name)) =>
+                        acts.push(
+                          "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"play_sound\",\"\{js_string_escape(name)}\"]",
+                        )
                       Some(SetState(id2, st)) =>
                         acts.push(
                           "[\"\{js_string_escape(ab_id)}\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), nid))}\",\"set_state\",\"\{js_string_escape(dom_id_in(dom_ids.get(ab_id), id2))}:\{js_string_escape(st)}\"]",
@@ -733,9 +728,10 @@ pub fn Project::export_html(
   let entry = self.infer_entry()
   for id in self.artboards.keys() {
     match first {
-      None => if id == entry {
-        sb.write_string("show('\{js_string_escape(id)}',true,0)\n")
-      }
+      None =>
+        if id == entry {
+          sb.write_string("show('\{js_string_escape(id)}',true,0)\n")
+        }
       Some(_) => ()
     }
   }
@@ -750,7 +746,7 @@ pub fn Project::export_html(
 ///|
 /// 导出为 React TSX 组件桩（每个画板一个组件，内联样式）
 pub fn Project::export_react(self : Project) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("// Auto-generated by MoonViz Agent Engine\n")
   sb.write_string("// 每个 Artboard 映射为一个 React 组件\n\n")
   for id in self.artboards.keys() {
@@ -785,7 +781,7 @@ fn write_react_node(
   doc : Document,
   id : String,
   layout : SolvedLayout,
-  indent : Int,
+  indent : Int32,
 ) -> Unit {
   let pad = repeat_str("  ", indent)
   match (doc.nodes.get(id), layout.rect_of(id)) {
@@ -825,7 +821,7 @@ fn write_react_node(
 ///|
 /// JSX 文本内容转义：& < > { } 按实体转义，防止文本字面量破坏标签/表达式结构
 fn jsx_text_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '&' => sb.write_string("&amp;")
@@ -862,7 +858,7 @@ fn react_style(n : Node) -> String {
 
 ///|
 fn jstr8(parts : Array[String], sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(sep)
@@ -878,7 +874,7 @@ fn jstr8(parts : Array[String], sep : String) -> String {
 
 ///|
 fn to_pascal_case(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut upper_next = true
   for c in s.iter() {
     let code = c.to_int()
@@ -899,8 +895,8 @@ fn to_pascal_case(s : String) -> String {
 }
 
 ///|
-fn repeat_str(s : String, n : Int) -> String {
-  let sb = StringBuilder::new()
+fn repeat_str(s : String, n : Int32) -> String {
+  let sb = StringBuilder()
   for _i in 0..<n {
     sb.write_string(s)
   }

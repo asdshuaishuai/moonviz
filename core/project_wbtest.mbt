@@ -1,4 +1,3 @@
-
 ///|
 /// issue #29：place k=v 在内置组件上此前静默丢弃（text/fill/motion 全无效
 /// 却返回 ok:true）——现在 edit 词表键在插入前落到节点，未知键显式拒绝。
@@ -22,11 +21,10 @@ test "place k=v：内置组件参数生效，未知键拒绝" {
       assert_true(false)
     }
   }
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="kv_chip",
-    kvs=[("text", "New"), ("fill", "primary")],
-  )
+  let _ = p.edit_node(artboard="login", node_id="kv_chip", kvs=[
+    ("text", "New"),
+    ("fill", "primary"),
+  ])
   match p.artboards.get("login") {
     Some(ab) =>
       match ab.doc.get("kv_chip") {
@@ -39,7 +37,7 @@ test "place k=v：内置组件参数生效，未知键拒绝" {
     None => assert_true(false)
   }
   // 未知键：place 阶段显式拒绝（不再静默 ok:true）
-  let bad_args : Map[String, String] = Map::new()
+  let bad_args : Map[String, String] = Map([])
   bad_args.set("not_a_key", "x")
   match
     p.place_component(
@@ -64,11 +62,9 @@ test "place k=v：内置组件参数生效，未知键拒绝" {
 test "canonical motion 往返：重载保留 + query 可见" {
   let p = Project::new()
   let _ = p.apply_template(template_id="login")
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="login_btn",
-    kvs=[("motion", "fade_in")],
-  )
+  let _ = p.edit_node(artboard="login", node_id="login_btn", kvs=[
+    ("motion", "fade_in"),
+  ])
   // style 写面：edit motion= 直写（与 canonical motion= 同源）
   match p.artboards.get("login") {
     Some(ab) =>

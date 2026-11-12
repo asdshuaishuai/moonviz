@@ -257,13 +257,13 @@ pub fn Project::define_component_state(
   }
   let def = match self.node_states.get(node_id) {
     Some(d) => d
-    None => { node_id, states: Map::new(), current: "default", }
+    None => { node_id, states: Map([]), current: "default", }
   }
   def.states.set(state_name, patch)
   self.node_states.set(node_id, def)
   // 状态定义必须随 canonical MBT 往返：序列化到节点名标记（[state:...]）。
   // 仅存内存会在每次 load-mbt-b64 重建 Project 时静默丢失。
-  let count = def.states.size().to_string()
+  let count = def.states.length().to_string()
   let markers = states_to_markers(def)
   let cur = if def.current != "default" {
     ["[cur:" + def.current + "]"]
@@ -301,7 +301,7 @@ fn states_to_markers(def : ComponentStateDef) -> Array[String] {
 /// [state:name:spec] 标记——裸写时 split_commas 逢逗号即切、标记解析
 /// 逢 ] 即收尾，含逗号/方括号的状态文本每次 canonical 重建都被截断。
 fn spec_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '\\' => sb.write_string("\\\\")
@@ -317,7 +317,7 @@ fn spec_escape(s : String) -> String {
 ///|
 /// spec_escape 的逆（成对存在）。尾部孤立反斜杠原样保留，不做有损丢弃。
 fn spec_unescape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut esc = false
   for c in s.iter() {
     if esc {
@@ -367,7 +367,7 @@ fn patch_to_spec(p : NodePatch) -> String {
     Some(v) => parts.push("gap=" + double_text(v))
     None => ()
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < parts.length(); i = i + 1 {
     if i > 0 {
       sb.write_string(",")
@@ -398,7 +398,7 @@ pub fn extract_interaction_marker(name : String) -> String {
 pub fn rebuild_name(name : String, state_markers : Array[String]) -> String {
   let base = strip_all_markers(name)
   let inter = extract_interaction_marker(name)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string(base)
   if inter != "" {
     if base != "" {
@@ -454,7 +454,7 @@ pub fn Project::rebuild_node_states(self : Project, artboard~ : String) -> Unit 
           Some(states) => {
             let def = match self.node_states.get(id) {
               Some(d) => d
-              None => { node_id: id, states: Map::new(), current: "default", }
+              None => { node_id: id, states: Map([]), current: "default", }
             }
             for kv in states.iter() {
               let (sname, patch) = kv
@@ -572,7 +572,7 @@ fn spec_to_patch(spec : String) -> NodePatch {
 /// 反斜杠保留在 token 里，由调用方对值做 spec_unescape。
 fn split_commas(s : String) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   let mut esc = false
   for c in s.iter() {
     if esc {
@@ -596,7 +596,7 @@ fn split_commas(s : String) -> Array[String] {
 /// 自 start 起查找未被反斜杠转义的子串 seq 首现下标（无则 None）。
 /// 状态标记 spec 的 text 值走 spec_escape 协议——裸 find 会把值里的
 /// \] 当成标记收尾、\[state: 当成下一个标记，往返即截断/误读。
-fn find_unescaped_seq(s : String, start : Int, seq : String) -> Int? {
+fn find_unescaped_seq(s : String, start : Int32, seq : String) -> Int32? {
   let n = s.length()
   let m = seq.length()
   if m == 0 || m > n {
@@ -644,7 +644,7 @@ pub fn Project::set_node_state(
   self : Project,
   node_id~ : String,
   state_name~ : String,
-  toggle? : Bool = false,
+  toggle~ : Bool = false,
 ) -> Result[String, String] {
   let def = match self.node_states.get(node_id) {
     Some(d) => d
@@ -834,7 +834,7 @@ pub fn Project::list_interactions(
 
 ///|
 fn jstr12(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")
@@ -853,9 +853,9 @@ fn jstr12(parts : Array[String]) -> String {
 /// 标记由 add_interaction 追加，格式 "…⚡<trigger>→<action>"。
 /// 用字符迭代 + ASCII 白名单提取 trigger，避免多字节 emoji 的字节偏移歧义。
 pub fn parse_interaction_marker(name : String) -> (String, String)? {
-  let before = StringBuilder::new()
-  let seen_arrow : Ref[Bool] = Ref::new(false)
-  let after = StringBuilder::new()
+  let before = StringBuilder()
+  let seen_arrow : Ref[Bool] = Ref(false)
+  let after = StringBuilder()
   for c in name.iter() {
     if c == '→' {
       seen_arrow.val = true
@@ -881,7 +881,7 @@ pub fn parse_interaction_marker(name : String) -> (String, String)? {
       last_space = i
     }
   }
-  let trig = StringBuilder::new()
+  let trig = StringBuilder()
   for i = last_space + 1; i < chars.length(); i = i + 1 {
     let c = chars[i]
     if (c >= 'a' && c <= 'z') ||
@@ -930,7 +930,11 @@ pub fn trigger_from_spec(spec : String) -> Trigger? {
           let rest = spec.substring(start=i + 1, end=spec.length())
           if head == "long_press" && rest != "" {
             let sec = parse_double(rest)
-            if sec > 0.0 { Some(LongPress(sec)) } else { None }
+            if sec > 0.0 {
+              Some(LongPress(sec))
+            } else {
+              None
+            }
           } else {
             None
           }
@@ -1018,7 +1022,7 @@ pub fn action_from_spec(spec : String) -> Action? {
               } else {
                 Some(PlaySound(rest))
               }
-            "submit_form" => {
+            "submit_form" =>
               // 旧 describe 的 `[N fields]` 占位没有可执行字段——按非法
               // spec 处理（旧文档里该动效本来就未被导出，不做伪绑定）
               if rest.has_prefix("[") && rest.has_suffix(" fields]") {
@@ -1038,7 +1042,6 @@ pub fn action_from_spec(spec : String) -> Action? {
                   Some(SubmitForm(ids))
                 }
               }
-            }
             "toggle_state" =>
               if rest == "" {
                 None
@@ -1101,22 +1104,36 @@ fn unquote_spec(s : String) -> String {
 /// scripts/check-interaction-parity.mjs 对 core/export.mbt 做文本锁步）。
 pub fn interaction_manifest_json() -> String {
   let triggers : Array[String] = []
-  for t in [
-    Tap, LongPress(0.5), SwipeLeft, SwipeRight, SwipeUp, SwipeDown, ScrollEnd,
-    KeyboardEnter, Focus, Blur,
-  ].iter() {
+  for
+    t in [
+      Tap,
+      LongPress(0.5),
+      SwipeLeft,
+      SwipeRight,
+      SwipeUp,
+      SwipeDown,
+      ScrollEnd,
+      KeyboardEnter,
+      Focus,
+      Blur,
+    ].iter() {
     triggers.push("\"" + t.name() + "\"")
   }
   let action_list : Array[String] = []
   let actions : Array[Action] = [
-    NavigateTo(""), Back, ToggleState("", ""), SetState("", ""), SetText("", ""),
-    SubmitForm([]), ShowToast(""), HapticFeedback, PlaySound(""),
+    NavigateTo(""),
+    Back,
+    ToggleState("", ""),
+    SetState("", ""),
+    SetText("", ""),
+    SubmitForm([]),
+    ShowToast(""),
+    HapticFeedback,
+    PlaySound(""),
   ]
   for a in actions.iter() {
     action_list.push(
-      "{\"kind\":\"" +
-      a.kind() +
-      "\",\"supported_in_export\":true}",
+      "{\"kind\":\"" + a.kind() + "\",\"supported_in_export\":true}",
     )
   }
   "{\"ok\":true,\"version\":2,\"triggers\":[" +
@@ -1239,11 +1256,12 @@ pub fn Project::interactions_json(
             match parse_interaction_marker(n.name) {
               Some((trig, spec)) => {
                 let (kind, params, supported) = match action_from_spec(spec) {
-                  Some(act) => (
-                    act.kind(),
-                    act.params_json(),
-                    trig == "tap", // 导出运行时目前只绑 tap
-                  )
+                  Some(act) =>
+                    (
+                      act.kind(),
+                      act.params_json(),
+                      trig == "tap", // 导出运行时目前只绑 tap
+                    )
                   None => ("unknown", "{}", false)
                 }
                 items.push(

@@ -6,7 +6,7 @@
 /// 回归（F9）：parse_string 曾把 \n \t \\ 等转义序列拆坏（反斜杠被直接吞掉，
 /// 剩余字符原样保留），save/open 往返对含换行/反斜杠/控制符的文本静默损坏。
 test "文档 JSON：含转义字符的 name/text 往返恒等" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   let t = {
     ..Node::make("tricky", Text),
     name: "名字\"含\\特殊\n字符",
@@ -33,7 +33,7 @@ test "文档 JSON：含转义字符的 name/text 往返恒等" {
 ///|
 /// 回归（F9）：json_escape 对 C0 控制符输出 \u00xx，解析侧必须还原同码点。
 test "文档 JSON：控制符 \\u00xx 往返还原" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   let t = {
     ..Node::make("bell", Text),
     text: "a\u{0007}b",
@@ -59,7 +59,11 @@ test "文档 JSON：控制符 \\u00xx 往返还原" {
 test "文档 JSON：component 与扩展 style 字段往返不丢" {
   let p = Project::new()
   let ab = p.create_artboard(name="roundtrip")
-  let _ = p.place_component(artboard=ab, component_id="button", instance_id="btn")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="btn",
+  )
   match p.artboards.get(ab) {
     Some(x) => {
       let _ = x.doc.update_node("btn", fn(n) {
@@ -110,7 +114,7 @@ test "网格吸附：嵌套容器内节点按父新原点换算偏移" {
         height: Fixed(200.0),
         x: Fixed(12.0),
         y: Fixed(12.0),
-        style: { ..NodeStyle::default(), fill: "#EEEEEE" },
+        style: { ..NodeStyle::default(), fill: "#EEEEEE", },
       }
       let _ = x.doc.insert_node(box_, "root")
       let inner = {
@@ -119,7 +123,7 @@ test "网格吸附：嵌套容器内节点按父新原点换算偏移" {
         height: Fixed(20.0),
         x: Fixed(5.0),
         y: Fixed(5.0),
-        style: { ..NodeStyle::default(), fill: "#333333" },
+        style: { ..NodeStyle::default(), fill: "#333333", },
       }
       let _ = x.doc.insert_node(inner, "box")
       match p.snap_to_grid(artboard=ab, grid=8.0) {
@@ -162,7 +166,7 @@ test "响应式：嵌套文档变体保持层级且 validate 为空" {
         height: Fixed(200.0),
         x: Fixed(20.0),
         y: Fixed(20.0),
-        style: { ..NodeStyle::default(), fill: "#EEEEEE" },
+        style: { ..NodeStyle::default(), fill: "#EEEEEE", },
       }
       let _ = x.doc.insert_node(outer, "root")
       let inner = {
@@ -223,7 +227,7 @@ test "export_react：Text 节点输出合法 span（含文本转义）" {
 
 ///|
 /// 子串出现次数（F14 断言辅助：单属性输出必须恰好一次）
-fn occurrence_count(hay : String, needle : String) -> Int {
+fn occurrence_count(hay : String, needle : String) -> Int32 {
   let mut count = 0
   let mut i = 0
   let n = hay.length()
@@ -243,7 +247,7 @@ fn occurrence_count(hay : String, needle : String) -> Int {
 /// 回归（F14）：render_svg 曾在 rotate+flip 同设时输出两个 transform 属性、
 /// shadow+blur 同设时输出两个 filter 属性——XML 非良构，flip/blur 静默丢失。
 test "渲染：rotate+flip / shadow+blur 合并为单一属性（XML 良构）" {
-  let doc = Document::new({ width: 200.0, height: 200.0 })
+  let doc = Document::new({ width: 200.0, height: 200.0, })
   let n = {
     ..Node::make("fx", Rect),
     width: Fixed(40.0),
@@ -282,7 +286,7 @@ test "项目 JSON：部分画板失败时回滚现状并汇总错误" {
   let p = Project::new()
   let ab = p.create_artboard(name="keep_me")
   assert_eq(ab, "keep_me")
-  let good_doc = Document::new({ width: 390.0, height: 844.0 })
+  let good_doc = Document::new({ width: 390.0, height: 844.0, })
   let good = "{\"id\":\"good\",\"name\":\"good\",\"width\":390,\"height\":844,\"doc\":\{good_doc.to_json()}}"
   // broken 画板缺 "doc" 对象 → LoadErr(missing_doc)
   let payload = "{\"moonviz\":\"studio\",\"version\":2,\"artboards\":[\{good},{\"id\":\"broken\",\"name\":\"broken\",\"width\":100,\"height\":100}]}"
@@ -300,8 +304,8 @@ test "项目 JSON：部分画板失败时回滚现状并汇总错误" {
 test "项目 JSON：全部成功后原子替换现有画板" {
   let p = Project::new()
   let _ = p.create_artboard(name="old_board")
-  let d1 = Document::new({ width: 320.0, height: 600.0 })
-  let d2 = Document::new({ width: 800.0, height: 600.0 })
+  let d1 = Document::new({ width: 320.0, height: 600.0, })
+  let d2 = Document::new({ width: 800.0, height: 600.0, })
   let payload = "{\"artboards\":[{\"id\":\"a1\",\"name\":\"a1\",\"width\":320,\"height\":600,\"doc\":\{d1.to_json()}},{\"id\":\"a2\",\"name\":\"a2\",\"width\":800,\"height\":600,\"doc\":\{d2.to_json()}}]}"
   match p.from_project_json(payload) {
     Ok(_) => ()
@@ -319,7 +323,11 @@ test "项目 JSON：全部成功后原子替换现有画板" {
 test "主题：enable_auto_dark 从 active_theme 推导并对齐状态三元组" {
   let p = Project::new()
   let ab = p.create_artboard(name="ad")
-  let _ = p.place_component(artboard=ab, component_id="button", instance_id="b1")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="b1",
+  )
   let _ = p.apply_theme("nord")
   match p.enable_auto_dark() {
     Ok(json) => {

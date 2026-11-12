@@ -64,7 +64,12 @@ fn landing_desktop(t : DesignTokens) -> LT {
         ).color(t.resolve_color("text_secondary")),
         lt_h(id="hero_btns", gap=16.0, kids=[
           lt_btn(id="hero_b1", label="Start Free", tokens=t),
-          lt_btn(id="hero_b2", label="Watch Demo", variant="secondary", tokens=t),
+          lt_btn(
+            id="hero_b2",
+            label="Watch Demo",
+            variant="secondary",
+            tokens=t,
+          ),
         ]).h(Fixed(44.0)),
       ]),
       lt_box(
@@ -81,41 +86,65 @@ fn landing_desktop(t : DesignTokens) -> LT {
     // 三列特性卡（Fill 平分）
     // pad 24：与 hero 同一内容栅格（此前 48 让特性卡左缘独占一条线）
     lt_h(id="features", pad=24.0, gap=24.0, kids=[
-      lt_card(id="feat_c0", gap=16.0, justify=Center, kids=[
-        lt_dot(id="feat_d0", fill="primary", d=44.0, tokens=t),
-        lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
-        lt_text(
-          id="feat_b0",
-          role="body",
-          s="Instant canvas with a deterministic solver.",
-          tokens=t,
-        ).color(t.resolve_color("text_secondary")),
-      ], tokens=t),
-      lt_card(id="feat_c1", gap=16.0, justify=Center, kids=[
-        lt_dot(id="feat_d1", fill="secondary", d=44.0, tokens=t),
-        lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
-        lt_text(
-          id="feat_b1",
-          role="body",
-          s="Critique, lint and auto-fix built in.",
-          tokens=t,
-        ).color(t.resolve_color("text_secondary")),
-      ], tokens=t),
-      lt_card(id="feat_c2", gap=16.0, justify=Center, kids=[
-        lt_dot(id="feat_d2", fill="success", d=44.0, tokens=t),
-        lt_text(id="feat_t2", role="h3", s="Open", tokens=t),
-        lt_text(
-          id="feat_b2",
-          role="body",
-          s="Replayable op log as the document.",
-          tokens=t,
-        ).color(t.resolve_color("text_secondary")),
-      ], tokens=t),
+      lt_card(
+        id="feat_c0",
+        gap=16.0,
+        justify=Center,
+        kids=[
+          lt_dot(id="feat_d0", fill="primary", d=44.0, tokens=t),
+          lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
+          lt_text(
+            id="feat_b0",
+            role="body",
+            s="Instant canvas with a deterministic solver.",
+            tokens=t,
+          ).color(t.resolve_color("text_secondary")),
+        ],
+        tokens=t,
+      ),
+      lt_card(
+        id="feat_c1",
+        gap=16.0,
+        justify=Center,
+        kids=[
+          lt_dot(id="feat_d1", fill="secondary", d=44.0, tokens=t),
+          lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
+          lt_text(
+            id="feat_b1",
+            role="body",
+            s="Critique, lint and auto-fix built in.",
+            tokens=t,
+          ).color(t.resolve_color("text_secondary")),
+        ],
+        tokens=t,
+      ),
+      lt_card(
+        id="feat_c2",
+        gap=16.0,
+        justify=Center,
+        kids=[
+          lt_dot(id="feat_d2", fill="success", d=44.0, tokens=t),
+          lt_text(id="feat_t2", role="h3", s="Open", tokens=t),
+          lt_text(
+            id="feat_b2",
+            role="body",
+            s="Replayable op log as the document.",
+            tokens=t,
+          ).color(t.resolve_color("text_secondary")),
+        ],
+        tokens=t,
+      ),
     ]).h(Fixed(260.0)),
     // Footer
     // pad 14：与 nav 同 bar 档留白（pad 24 时内容盒 16 装不下 caption）
     lt_h(id="footer", pad=24.0, gap=16.0, kids=[
-      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", width=Hug, tokens=t)
+      lt_text(
+        id="foot_l",
+        role="caption",
+        s="© 2026 MoonViz",
+        width=Hug,
+        tokens=t,
+      )
       .color(t.resolve_color("text_secondary"))
       .cy(),
       lt_flex(id="foot_sp"),
@@ -128,8 +157,7 @@ fn landing_desktop(t : DesignTokens) -> LT {
       )
       .color(t.resolve_color("text_secondary"))
       .cy(),
-    ])
-    .h(Fixed(72.0))
+    ]).h(Fixed(72.0)),
   ])
 }
 
@@ -179,22 +207,37 @@ fn landing_tablet(t : DesignTokens) -> LT {
       ),
     ]).h(Fixed(420.0)),
     lt_h(id="features", pad=32.0, gap=20.0, kids=[
-      lt_card(id="feat_c0", gap=8.0, justify=Center, kids=[
-        lt_dot(id="feat_d0", fill="primary", d=40.0, tokens=t),
-        lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
-        lt_text(id="feat_b0", role="body", s="Instant canvas.", tokens=t)
-        .color(t.resolve_color("text_secondary")),
-      ], tokens=t),
-      lt_card(id="feat_c1", gap=8.0, justify=Center, kids=[
-        lt_dot(id="feat_d1", fill="secondary", d=40.0, tokens=t),
-        lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
-        lt_text(id="feat_b1", role="body", s="Built-in critique.", tokens=t)
-        .color(t.resolve_color("text_secondary")),
-      ], tokens=t),
+      lt_card(
+        id="feat_c0",
+        gap=8.0,
+        justify=Center,
+        kids=[
+          lt_dot(id="feat_d0", fill="primary", d=40.0, tokens=t),
+          lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
+          lt_text(id="feat_b0", role="body", s="Instant canvas.", tokens=t).color(
+            t.resolve_color("text_secondary"),
+          ),
+        ],
+        tokens=t,
+      ),
+      lt_card(
+        id="feat_c1",
+        gap=8.0,
+        justify=Center,
+        kids=[
+          lt_dot(id="feat_d1", fill="secondary", d=40.0, tokens=t),
+          lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
+          lt_text(id="feat_b1", role="body", s="Built-in critique.", tokens=t).color(
+            t.resolve_color("text_secondary"),
+          ),
+        ],
+        tokens=t,
+      ),
     ]).h(Fixed(220.0)),
     lt_h(id="footer", pad=20.0, kids=[
-      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", tokens=t)
-      .color(t.resolve_color("text_secondary")),
+      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", tokens=t).color(
+        t.resolve_color("text_secondary"),
+      ),
       lt_flex(id="foot_sp"),
     ]).h(Fixed(60.0)),
   ])
@@ -224,8 +267,12 @@ fn landing_mobile(t : DesignTokens) -> LT {
         s="Prototype at the\nspeed of thought",
         tokens=t,
       ),
-      lt_text(id="hero_sub", role="body", s="Human drags, agent commands.", tokens=t)
-      .color(t.resolve_color("text_secondary")),
+      lt_text(
+        id="hero_sub",
+        role="body",
+        s="Human drags, agent commands.",
+        tokens=t,
+      ).color(t.resolve_color("text_secondary")),
       lt_h(id="hero_btns", gap=16.0, kids=[
         lt_btn(id="hero_b1", label="Start Free", tokens=t),
         lt_btn(id="hero_b2", label="Demo", variant="secondary", tokens=t),
@@ -242,34 +289,47 @@ fn landing_mobile(t : DesignTokens) -> LT {
       ),
     ]).h(Fixed(440.0)),
     lt_v(id="features", pad=24.0, gap=16.0, kids=[
-      lt_card(id="feat_c0", gap=8.0, justify=Center, kids=[
-        lt_h(id="feat_r0", gap=12.0, kids=[
-          lt_dot(id="feat_d0", fill="primary", d=36.0, tokens=t),
-          lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
-        ]).h(Fixed(36.0)),
-        lt_text(
-          id="feat_b0",
-          role="body",
-          s="Instant canvas with a deterministic solver.",
-          tokens=t,
-        ).color(t.resolve_color("text_secondary")),
-      ], tokens=t),
-      lt_card(id="feat_c1", gap=8.0, justify=Center, kids=[
-        lt_h(id="feat_r1", gap=12.0, kids=[
-          lt_dot(id="feat_d1", fill="secondary", d=36.0, tokens=t),
-          lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
-        ]).h(Fixed(36.0)),
-        lt_text(
-          id="feat_b1",
-          role="body",
-          s="Critique, lint and auto-fix built in.",
-          tokens=t,
-        ).color(t.resolve_color("text_secondary")),
-      ], tokens=t),
+      lt_card(
+        id="feat_c0",
+        gap=8.0,
+        justify=Center,
+        kids=[
+          lt_h(id="feat_r0", gap=12.0, kids=[
+            lt_dot(id="feat_d0", fill="primary", d=36.0, tokens=t),
+            lt_text(id="feat_t0", role="h3", s="Fast", tokens=t),
+          ]).h(Fixed(36.0)),
+          lt_text(
+            id="feat_b0",
+            role="body",
+            s="Instant canvas with a deterministic solver.",
+            tokens=t,
+          ).color(t.resolve_color("text_secondary")),
+        ],
+        tokens=t,
+      ),
+      lt_card(
+        id="feat_c1",
+        gap=8.0,
+        justify=Center,
+        kids=[
+          lt_h(id="feat_r1", gap=12.0, kids=[
+            lt_dot(id="feat_d1", fill="secondary", d=36.0, tokens=t),
+            lt_text(id="feat_t1", role="h3", s="Smart", tokens=t),
+          ]).h(Fixed(36.0)),
+          lt_text(
+            id="feat_b1",
+            role="body",
+            s="Critique, lint and auto-fix built in.",
+            tokens=t,
+          ).color(t.resolve_color("text_secondary")),
+        ],
+        tokens=t,
+      ),
     ]).h(Fixed(260.0)),
     lt_h(id="footer", pad=16.0, kids=[
-      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", tokens=t)
-      .color(t.resolve_color("text_secondary")),
+      lt_text(id="foot_l", role="caption", s="© 2026 MoonViz", tokens=t).color(
+        t.resolve_color("text_secondary"),
+      ),
       lt_flex(id="foot_sp"),
     ]).h(Fixed(56.0)),
   ])
@@ -309,21 +369,33 @@ fn login_tree(width : Double, tokens : DesignTokens) -> LT {
   let desktop = width >= 900.0
   lt_v(id="page", pad=24.0, kids=[
     lt_flex(id="top_sp"),
-    lt_card(id="login_card", gap=12.0, pad=28.0, kids=[
-      lt_dot(id="logo", fill="primary", d=56.0, tokens=t, label="M").cx(),
-      lt_text(id="title", role="h2", s="Welcome back", tokens=t).cx(),
-      lt_text(id="sub", role="body", s="Sign in to continue", tokens=t)
-      .color(t.resolve_color("text_secondary"))
-      .cx(),
-      lt_input(id="email", ph="Email address", tokens=t),
-      lt_input(id="pass", ph="Password", tokens=t),
-      lt_text(id="forgot", role="caption", s="Forgot password?", tokens=t)
-      .color(t.resolve_color("primary")),
-      lt_btn(id="login_btn", label="Sign In", tokens=t).w(Fill),
-      lt_text(id="signup", role="caption", s="No account? Create one", tokens=t)
-      .color(t.resolve_color("text_secondary"))
-      .cx(),
-    ], tokens=t)
+    lt_card(
+      id="login_card",
+      gap=12.0,
+      pad=28.0,
+      kids=[
+        lt_dot(id="logo", fill="primary", d=56.0, tokens=t, label="M").cx(),
+        lt_text(id="title", role="h2", s="Welcome back", tokens=t).cx(),
+        lt_text(id="sub", role="body", s="Sign in to continue", tokens=t)
+        .color(t.resolve_color("text_secondary"))
+        .cx(),
+        lt_input(id="email", ph="Email address", tokens=t),
+        lt_input(id="pass", ph="Password", tokens=t),
+        lt_text(id="forgot", role="caption", s="Forgot password?", tokens=t).color(
+          t.resolve_color("primary"),
+        ),
+        lt_btn(id="login_btn", label="Sign In", tokens=t).w(Fill),
+        lt_text(
+          id="signup",
+          role="caption",
+          s="No account? Create one",
+          tokens=t,
+        )
+        .color(t.resolve_color("text_secondary"))
+        .cx(),
+      ],
+      tokens=t,
+    )
     .cx()
     .w(if desktop { Fixed(420.0) } else { Fill })
     // 高 435：内容 285+84 gap+56 pad=425，留 10px——旧 460 上紧下松

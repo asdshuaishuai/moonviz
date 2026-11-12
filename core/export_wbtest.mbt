@@ -59,9 +59,11 @@ test "export_html：动效令牌与交互流畅性" {
   assert_true(html.contains("--mv-stagger-max:168ms"))
   assert_true(html.contains("--mv-spring:cubic-bezier(0.34, 1.56, 0.64, 1)"))
   // 方向感知转场：navigate 前进 / back 反向 / tab 纯淡入；backwards 不冻结交互
-  assert_true(html.contains(
-    "animation:mv-board-push var(--mv-dur) var(--mv-out) backwards",
-  ))
+  assert_true(
+    html.contains(
+      "animation:mv-board-push var(--mv-dur) var(--mv-out) backwards",
+    ),
+  )
   assert_true(html.contains("--mv-dir"))
   assert_true(html.contains("show(MV_STACK[MV_STACK.length-1],false,-1)"))
   assert_true(html.contains("if(k==='navigate')show(v,true,1,tr)"))
@@ -77,15 +79,21 @@ test "export_html：动效令牌与交互流畅性" {
   // 节拍走令牌（calc(var(--mv-stagger) × k)），第 8 个起饱和——第 9+ 个
   // 不再把 delay 复位 0（此前级联只写到 nth-of-type(8)，长列表后段抢跑）
   assert_true(html.contains(".board.active>svg>g>g{animation:mv-rise"))
-  assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(2){animation-delay:calc(var(--mv-stagger) * 1)}",
-  ))
-  assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(7){animation-delay:calc(var(--mv-stagger) * 6)}",
-  ))
-  assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(n+8){animation-delay:var(--mv-stagger-max)}",
-  ))
+  assert_true(
+    html.contains(
+      ".board.active>svg>g>g:nth-of-type(2){animation-delay:calc(var(--mv-stagger) * 1)}",
+    ),
+  )
+  assert_true(
+    html.contains(
+      ".board.active>svg>g>g:nth-of-type(7){animation-delay:calc(var(--mv-stagger) * 6)}",
+    ),
+  )
+  assert_true(
+    html.contains(
+      ".board.active>svg>g>g:nth-of-type(n+8){animation-delay:var(--mv-stagger-max)}",
+    ),
+  )
   // 裸毫秒不再出现在级联里（节拍只有一个来源）
   assert_false(html.contains("animation-delay:24ms"))
   assert_false(html.contains("animation-delay:168ms"))
@@ -279,9 +287,11 @@ test "export_html：节点 motion 导出规则与 keyframes" {
   }
   let html = p.export_html()
   assert_true(html.contains("@keyframes mv-p-fade_in"))
-  assert_true(html.contains(
-    "#n_hero{animation:mv-p-fade_in var(--mv-dur) var(--mv-out) backwards}",
-  ))
+  assert_true(
+    html.contains(
+      "#n_hero{animation:mv-p-fade_in var(--mv-dur) var(--mv-out) backwards}",
+    ),
+  )
   assert_false(html.contains("#n_other{animation:mv-p-"))
 }
 
@@ -323,7 +333,9 @@ test "export_html：submit_form 绑定携带字段 id 列表" {
     Err(e) => fail("submit_form 注册失败：\{e}")
   }
   let html = p.export_html()
-  assert_true(html.contains("[\"home\",\"submit\",\"submit_form\",\"email,pwd\"]"))
+  assert_true(
+    html.contains("[\"home\",\"submit\",\"submit_form\",\"email,pwd\"]"),
+  )
   // 不再出现 describe 的字段数占位
   assert_false(html.contains("fields]"))
   assert_true(html.contains("k==='submit_form'"))
@@ -360,13 +372,17 @@ test "export_html：分板过渡按 FlowEdge.transition 出关键帧与绑定" {
   assert_true(html.contains("@keyframes mv-board-modal_present"))
   assert_true(html.contains("@keyframes mv-board-push"))
   assert_true(html.contains("@keyframes mv-board-fade"))
-  assert_true(html.contains(
-    ".board.active.mv-tr-modal_present{animation:mv-board-modal_present",
-  ))
+  assert_true(
+    html.contains(
+      ".board.active.mv-tr-modal_present{animation:mv-board-modal_present",
+    ),
+  )
   assert_true(html.contains(".board.active.mv-tr-none{animation:none}"))
   // show 四参 + 绑定表第 5 位携带该边过渡
   assert_true(html.contains("show(id,push=true,dir=1,tr='')"))
-  assert_true(html.contains("[\"a\",\"go\",\"navigate\",\"b\",\"modal_present\"]"))
+  assert_true(
+    html.contains("[\"a\",\"go\",\"navigate\",\"b\",\"modal_present\"]"),
+  )
   assert_true(html.contains("[\"a\",\"plain\",\"navigate\",\"c\",\"push\"]"))
   assert_true(html.contains("[\"a\",\"skip\",\"navigate\",\"c\",\"none\"]"))
 }
@@ -376,7 +392,7 @@ test "export_html：分板过渡按 FlowEdge.transition 出关键帧与绑定" {
 // ---------------------------------------------------------------------------
 
 ///|
-fn find_from(s : String, needle : String, from : Int) -> Int? {
+fn find_from(s : String, needle : String, from : Int32) -> Int32? {
   let n = needle.length()
   let mut i = from
   while i + n <= s.length() {
@@ -390,7 +406,7 @@ fn find_from(s : String, needle : String, from : Int) -> Int? {
 
 ///|
 /// 子串出现次数（boot show 行 / transition 行等断言用）。
-fn count_needle(s : String, needle : String) -> Int {
+fn count_needle(s : String, needle : String) -> Int32 {
   let mut count = 0
   let mut idx = 0
   while true {
@@ -415,7 +431,7 @@ fn collect_attr_values(s : String, marker : String) -> Array[String] {
       None => break
       Some(pos) => {
         let start = pos + marker.length()
-        let rest = s.substring(start=start)
+        let rest = s.substring(start~)
         match rest.find("\"") {
           None => break
           Some(e) => {
@@ -486,7 +502,9 @@ test "export_html：ghost flow 过滤与 show 存在性兜底" {
   assert_true(html.contains("\"navigate\",\"b\""))
   // show 先取板再改栈：不存在直接 toast 返回
   assert_true(html.contains("if(!b){toast('页面不存在: '+id);return}"))
-  assert_true(html.contains("const b=document.getElementById('board-'+id);if(!b)"))
+  assert_true(
+    html.contains("const b=document.getElementById('board-'+id);if(!b)"),
+  )
   // boot 只对一个板 show；ghost 不在 boot/绑定里
   assert_true(html.contains("\nshow('a',true,0)\n"))
   assert_false(html.contains("\nshow('ghost'"))
@@ -558,7 +576,7 @@ test "export_html：filter id 按画板命名空间唯一" {
   let html = p.export_html()
   let filter_ids = collect_attr_values(html, "filter id=\"")
   assert_true(filter_ids.length() >= 6, msg="两板各 3 个 elevation filter")
-  let seen : Map[String, Bool] = Map::new()
+  let seen : Map[String, Bool] = Map([])
   let mut dup = 0
   for fid in filter_ids.iter() {
     if seen.contains(fid) {
@@ -589,7 +607,7 @@ test "export_html：对抗性画板 id 的 filter 命名空间不碰撞" {
   let html = p.export_html()
   let filter_ids = collect_attr_values(html, "filter id=\"")
   assert_true(filter_ids.length() >= 9, msg="三块板各有 e1/e2/e3")
-  let seen : Map[String, Bool] = Map::new()
+  let seen : Map[String, Bool] = Map([])
   let mut dup = 0
   for fid in filter_ids.iter() {
     if seen.contains(fid) {
@@ -624,7 +642,7 @@ test "export_html：重复画板节点 g id 加 __dupN 且绑定一致" {
   let html = p.export_html()
   let node_ids = collect_attr_values(html, "id=\"n_")
   assert_true(node_ids.length() >= 4, msg="两板各 root+card")
-  let seen : Map[String, Bool] = Map::new()
+  let seen : Map[String, Bool] = Map([])
   let mut dup = 0
   for nid in node_ids.iter() {
     if seen.contains(nid) {
@@ -680,7 +698,9 @@ test "export_html：无障碍焦点环/tab 键/reduced-motion/toast/lang/aria-la
   assert_true(html.contains("matchMedia('(prefers-reduced-motion: reduce)')"))
   assert_true(html.contains("RM?'auto':'smooth'"))
   // ③ toast live region + lang + 无文字 role=button 的 aria-label
-  assert_true(html.contains("id=\"mv-toast\" role=\"status\" aria-live=\"polite\""))
+  assert_true(
+    html.contains("id=\"mv-toast\" role=\"status\" aria-live=\"polite\""),
+  )
   assert_true(html.contains("<html lang=\"zh\">"))
   assert_true(p.export_html(lang="en").contains("<html lang=\"en\">"))
   assert_true(html.contains("MV_LABELS"))
@@ -701,7 +721,12 @@ test "export_html：脚本括号平衡（语法门）" {
   let _ = p.apply_template(template_id="login")
   let _ = p.apply_template(template_id="list")
   let _ = p.create_artboard(name="t_home")
-  let _ = p.add_flow(from="login", to="t_home", trigger="login_btn", transition="modal_present")
+  let _ = p.add_flow(
+    from="login",
+    to="t_home",
+    trigger="login_btn",
+    transition="modal_present",
+  )
   let _ = p.attach_interaction(
     artboard="login",
     node_id="email_input",
@@ -717,7 +742,7 @@ test "export_html：脚本括号平衡（语法门）" {
       return
     }
   }
-  let body = html.substring(start=start)
+  let body = html.substring(start~)
   let end = match body.find("</script>") {
     Some(i) => i
     None => {
@@ -725,7 +750,7 @@ test "export_html：脚本括号平衡（语法门）" {
       return
     }
   }
-  let js = body.substring(start=0, end=end)
+  let js = body.substring(start=0, end~)
   // 括号扫描：跳过 ' " ` 字符串与转义；JS 里没有模板字符串嵌套花括号的需求
   let mut depth = 0
   let mut in_str = 0 // 0=无 1=' 2=" 3=`
@@ -744,20 +769,18 @@ test "export_html：脚本括号平衡（语法门）" {
         (in_str == 3 && code == 96) {
         in_str = 0
       }
-    } else {
-      if code == 39 {
-        in_str = 1
-      } else if code == 34 {
-        in_str = 2
-      } else if code == 96 {
-        in_str = 3
-      } else if code == 40 || code == 91 || code == 123 {
-        depth = depth + 1
-      } else if code == 41 || code == 93 || code == 125 {
-        depth = depth - 1
-        if depth < 0 {
-          bad = true
-        }
+    } else if code == 39 {
+      in_str = 1
+    } else if code == 34 {
+      in_str = 2
+    } else if code == 96 {
+      in_str = 3
+    } else if code == 40 || code == 91 || code == 123 {
+      depth = depth + 1
+    } else if code == 41 || code == 93 || code == 125 {
+      depth = depth - 1
+      if depth < 0 {
+        bad = true
       }
     }
     i = i + 1
@@ -832,11 +855,10 @@ test "export_svg：text-anchor 值无前导空格" {
     x=10.0,
     y=10.0,
   )
-  let _ = p.edit_node(
-    artboard="a",
-    node_id="btn",
-    kvs=[("align", "left"), ("text", "确定")],
-  )
+  let _ = p.edit_node(artboard="a", node_id="btn", kvs=[
+    ("align", "left"),
+    ("text", "确定"),
+  ])
   let svg = p.export_svg(artboard="a")
   match svg {
     Ok(s) => {
@@ -881,7 +903,11 @@ test "export_html：CSS 状态名转义（</style> 不提前闭合样式块）" 
   for _ in html.split("</style>").iter() {
     n_closer = n_closer + 1
   }
-  assert_eq(n_closer, 3, msg="样式块被状态名提前闭合（</style> 多于结构基线）")
+  assert_eq(
+    n_closer,
+    3,
+    msg="样式块被状态名提前闭合（</style> 多于结构基线）",
+  )
   // 选择器字面为 CSS 标识符转义形态（\3c = '<'、\2f = '/'，hex 小写 +
   // 尾空格终止）；类名字面原文不变，与 JS classList.add 两侧匹配
   assert_true(

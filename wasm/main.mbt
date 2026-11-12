@@ -38,7 +38,11 @@ pub fn validate_mbt(mbt : String) -> String {
               board_dump += ","
             }
             board_first = false
-            board_dump += "{\"id\":\"" + @core.json_escape(ab_id) + "\",\"nodes\":" + meta.doc.nodes.keys().length().to_string() + "}"
+            board_dump += "{\"id\":\"" +
+              @core.json_escape(ab_id) +
+              "\",\"nodes\":" +
+              meta.doc.nodes.keys().length().to_string() +
+              "}"
           }
           None => ()
         }
@@ -166,21 +170,21 @@ struct WasmSession {
   /// 而不是在空项目上误操作（issue #4A）。
   alive : Bool
   /// issue #28：快照序号——每次改文档路径严格 +1（宿主按 seq 配对三视图帧）。
-  seq : Int
+  seq : Int32
   /// issue #28：上一快照的节点签名表（板/节点 → 签名），delta 由此差分。
   last_sig : Map[String, String]
   /// issue #28：各板上次快照时的 doc.revision——未变板整板跳过（O(变更)）。
-  sig_rev : Map[String, Int]
+  sig_rev : Map[String, Int32]
   /// issue #28：单板渲染对象缓存（content_seq → board json）——未变板
   /// 复用上次渲染，快照成本不再随总节点数增长。
-  render_cache : Map[String, (Int, String)]
+  render_cache : Map[String, (Int32, String)]
   /// issue #28：canonical 文本转义缓存（project.revision → escaped mbt）——
   /// 未变更快照整段复用（序列化是快照里最重的一步）。
-  canon_cache : (Int, String)
+  canon_cache : (Int32, String)
 }
 
 ///|
-let sessions : @ref.Ref[Array[@ref.Ref[WasmSession]]] = Ref::new([])
+let sessions : @ref.Ref[Array[@ref.Ref[WasmSession]]] = Ref([])
 
 ///|
 fn session_store() -> Array[@ref.Ref[WasmSession]] {
@@ -189,21 +193,21 @@ fn session_store() -> Array[@ref.Ref[WasmSession]] {
 
 ///|
 /// 打开会话：从 canonical MBT 构建有状态 Project。返回句柄（<0 表示错误）。
-pub fn session_open(mbt : String) -> Int {
+pub fn session_open(mbt : String) -> Int32 {
   match @decl.load_mbt_project(mbt) {
     Err(_) => -1
     Ok(model) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
       s.push(
-        Ref::new({
+        Ref({
           project: model.project,
-          histories: Map::new(),
+          histories: Map([]),
           history_board: "",
           alive: true,
           seq: 0,
-          last_sig: Map::new(),
-          sig_rev: Map::new(),
-          render_cache: Map::new(),
+          last_sig: Map([]),
+          sig_rev: Map([]),
+          render_cache: Map([]),
           canon_cache: (0, ""),
         }),
       )
@@ -226,7 +230,7 @@ fn prune_session_histories(cur : WasmSession) -> WasmSession {
 
 ///|
 /// 会话 history 的 revision 解析（对齐 cli parse_rev：非负十进制）。
-fn history_rev(text : String) -> Int? {
+fn history_rev(text : String) -> Int32? {
   let t = text.trim().to_string()
   if t.length() == 0 {
     return None
@@ -338,7 +342,7 @@ fn nd_ids_json(ids : Array[String]) -> String {
 /// 宿主三视图（线框/高保真/源码/动画）只消费同一帧；delta 为与上一快照的
 /// 节点签名差分（id 带板前缀），首帧全部 added。seq 随改文档路径严格递增，
 /// 快照本身不递增（只更新签名基线）。
-pub fn session_snapshot(handle : Int) -> String {
+pub fn session_snapshot(handle : Int32) -> String {
   let s = session_store()
   if handle < 0 || handle >= s.length() || !s[handle].val.alive {
     return "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
@@ -389,7 +393,7 @@ pub fn session_snapshot(handle : Int) -> String {
                   old_keys.push(k)
                 }
               }
-              let live : Map[String, Bool] = Map::new()
+              let live : Map[String, Bool] = Map([])
               for nid in ab.doc.nodes.keys() {
                 match ab.doc.nodes.get(nid) {
                   None => ()
@@ -399,9 +403,7 @@ pub fn session_snapshot(handle : Int) -> String {
                     live.set(key, true)
                     match cur.last_sig.get(key) {
                       None => added.push(key)
-                      Some(old) => if old != sig {
-                        changed.push(key)
-                      }
+                      Some(old) => if old != sig { changed.push(key) }
                     }
                     cur.last_sig.set(key, sig)
                   }
@@ -417,11 +419,12 @@ pub fn session_snapshot(handle : Int) -> String {
             }
             // 3) 渲染对象：缓存命中直接复用（O(1)），否则只渲染本板
             let cached = match cur.render_cache.get(ab_id) {
-              Some((rev, json)) => if rev == rev_now {
-                Some(json)
-              } else {
-                None
-              }
+              Some((rev, json)) =>
+                if rev == rev_now {
+                  Some(json)
+                } else {
+                  None
+                }
               None => None
             }
             let board_json = match cached {
@@ -459,7 +462,10 @@ pub fn session_snapshot(handle : Int) -> String {
             cached
           } else {
             let fresh = @core.json_escape(model.to_mbt())
-            s[handle].val = { ..s[handle].val, canon_cache: (p.revision, fresh), }
+            s[handle].val = {
+              ..s[handle].val,
+              canon_cache: (p.revision, fresh),
+            }
             fresh
           }
       }
@@ -467,7 +473,7 @@ pub fn session_snapshot(handle : Int) -> String {
       //    与预设随同一 seq——宿主动画流与设计稿流同帧）
       let boards_json = render_boards.join(",")
       let n_boards = p.artboards.length()
-      let out = StringBuilder::new()
+      let out = StringBuilder()
       out.write_string("{\"ok\":true,\"revision\":")
       out.write_string(p.revision.to_string())
       out.write_string(",\"seq\":")
@@ -533,7 +539,7 @@ pub fn session_snapshot(handle : Int) -> String {
 }
 
 ///|
-pub fn session_history(handle : Int, line : String) -> String {
+pub fn session_history(handle : Int32, line : String) -> String {
   let s = session_store()
   if handle < 0 || handle >= s.length() || !s[handle].val.alive {
     return "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
@@ -687,25 +693,25 @@ pub fn session_history(handle : Int, line : String) -> String {
 
 ///|
 /// 会话只读变体（line 经辅槽）：与 session_query_nodes 等一一对应。
-pub fn session_history_in(handle : Int) -> String {
+pub fn session_history_in(handle : Int32) -> String {
   session_history(handle, slot_string(g_arg_bytes))
 }
 
 ///|
 /// 关闭会话：清空内容并置 tombstone（槽位下标不复用，句柄稳定）。
 /// 重复 close 同一句柄返回 false。
-pub fn session_close(handle : Int) -> Bool {
+pub fn session_close(handle : Int32) -> Bool {
   let s = session_store()
   if handle >= 0 && handle < s.length() && s[handle].val.alive {
-    s[handle] = Ref::new({
+    s[handle] = Ref({
       project: @core.Project::new(),
-      histories: Map::new(),
+      histories: Map([]),
       history_board: "",
       alive: false,
       seq: 0,
-      last_sig: Map::new(),
-      sig_rev: Map::new(),
-      render_cache: Map::new(),
+      last_sig: Map([]),
+      sig_rev: Map([]),
+      render_cache: Map([]),
       canon_cache: (0, ""),
     })
     true
@@ -717,29 +723,29 @@ pub fn session_close(handle : Int) -> Bool {
 ///|
 /// 当前活跃（已打开且未关闭）会话数：下游测试锁定 session 泄漏用
 /// （issue #1）。
-pub fn session_count() -> Int {
+pub fn session_count() -> Int32 {
   session_store().iter().filter(fn(s) { s.val.alive }).count()
 }
 
 ///|
 /// 从 project JSON 快照（session_save 输出）打开会话——save/open 回灌
 /// 闭环，跨进程持久化会话不再退化回无状态用法（issue #4B）。
-pub fn session_open_project_json(project_json : String) -> Int {
+pub fn session_open_project_json(project_json : String) -> Int32 {
   let p = @core.Project::new()
   match p.from_project_json(project_json) {
     Err(_) => -1
     Ok(_) => {
       let s : Array[@ref.Ref[WasmSession]] = session_store()
       s.push(
-        Ref::new({
+        Ref({
           project: p,
-          histories: Map::new(),
+          histories: Map([]),
           history_board: "",
           alive: true,
           seq: 0,
-          last_sig: Map::new(),
-          sig_rev: Map::new(),
-          render_cache: Map::new(),
+          last_sig: Map([]),
+          sig_rev: Map([]),
+          render_cache: Map([]),
           canon_cache: (0, ""),
         }),
       )
@@ -749,7 +755,7 @@ pub fn session_open_project_json(project_json : String) -> Int {
 }
 
 ///|
-fn session_get(handle : Int) -> @core.Project? {
+fn session_get(handle : Int32) -> @core.Project? {
   let s = session_store()
   if handle >= 0 && handle < s.length() && s[handle].val.alive {
     Some(s[handle].val.project)
@@ -762,7 +768,7 @@ fn session_get(handle : Int) -> @core.Project? {
 /// 统一信封：只读导出返回 {ok:true, data:<原生 JSON>}，与其它导出的
 /// {ok,...} 形态一致——宿主解析不再逐个特判（issue #4C）。
 fn sess_json(
-  handle : Int,
+  handle : Int32,
   f : (@core.Project) -> Result[String, String],
 ) -> String {
   match session_get(handle) {
@@ -784,9 +790,10 @@ fn sess_json(
 /// 未动）不回 mbt。
 /// 内层自带 "ok" 即保留全部字段并拼接 mbt；无 ok 的裸 intent 负载包一层
 /// {"ok":true,"moves":<inner>,"mbt":...}。
+
 ///|
 /// issue #28：改文档路径的 seq 递增（快照契约单调序）。
-fn bump_session_seq(handle : Int) -> Unit {
+fn bump_session_seq(handle : Int32) -> Unit {
   let s = session_store()
   if handle >= 0 && handle < s.length() && s[handle].val.alive {
     let cur = s[handle].val
@@ -796,7 +803,7 @@ fn bump_session_seq(handle : Int) -> Unit {
 
 ///|
 fn sess_mut_json(
-  handle : Int,
+  handle : Int32,
   f : (@core.Project) -> Result[String, String],
 ) -> String {
   match session_get(handle) {
@@ -810,7 +817,7 @@ fn sess_mut_json(
 }
 
 ///|
-fn sess_mut_ok(handle : Int, p : @core.Project, inner : String) -> String {
+fn sess_mut_ok(handle : Int32, p : @core.Project, inner : String) -> String {
   bump_session_seq(handle)
   let mbt_frag = session_canonical_mbt(p)
   if inner.contains("\"ok\":") &&
@@ -827,7 +834,7 @@ fn sess_mut_ok(handle : Int, p : @core.Project, inner : String) -> String {
 ///|
 /// 应用一条 mutating op（AgentGate）。返回 { ok, mbt } —— canonical 文本随
 /// 变更回写，宿主需保存供下次 session_open 使用。
-pub fn session_apply_agent(handle : Int, op : String) -> String {
+pub fn session_apply_agent(handle : Int32, op : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
@@ -870,7 +877,7 @@ pub fn session_apply_agent(handle : Int, op : String) -> String {
 
 ///|
 /// 应用一条 mutating op（HumanGate，视觉债放行）。
-pub fn session_apply_human(handle : Int, op : String) -> String {
+pub fn session_apply_human(handle : Int32, op : String) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
@@ -910,7 +917,7 @@ pub fn session_apply_human(handle : Int, op : String) -> String {
 
 ///|
 /// 画板级 SVG 导出（含主题 surface/outline）。
-pub fn session_export_svg(handle : Int, artboard : String) -> String {
+pub fn session_export_svg(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) {
     match p.export_svg(artboard~) {
       Ok(svg) => Ok("{\"ok\":true,\"svg\":\"\{@core.json_escape(svg)}\"}")
@@ -921,13 +928,13 @@ pub fn session_export_svg(handle : Int, artboard : String) -> String {
 
 ///|
 /// 设计 Lint（对比度/触控/间距/一致性）。
-pub fn session_lint(handle : Int, artboard : String) -> String {
+pub fn session_lint(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.lint(artboard~) })
 }
 
 ///|
 /// AI 设计批评。
-pub fn session_critique(handle : Int, artboard : String) -> String {
+pub fn session_critique(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.critique(artboard~) })
 }
 
@@ -935,43 +942,43 @@ pub fn session_critique(handle : Int, artboard : String) -> String {
 /// 自动修复（违规严格下降才提交）。成功信封回传 canonical mbt——
 /// 与 session_apply_*/history-undo 同形，键控缓存宿主零额外往返即可
 /// 接住变更（issue #19）。
-pub fn session_auto_fix(handle : Int, artboard : String) -> String {
+pub fn session_auto_fix(handle : Int32, artboard : String) -> String {
   sess_mut_json(handle, fn(p) { p.auto_fix(artboard~) })
 }
 
 ///|
 /// 节点查询。
-pub fn session_query_nodes(handle : Int, artboard : String) -> String {
+pub fn session_query_nodes(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.query_nodes(artboard~) })
 }
 
 ///|
 /// 画板清单。
-pub fn session_list_artboards(handle : Int) -> String {
+pub fn session_list_artboards(handle : Int32) -> String {
   sess_json(handle, fn(p) { Ok(p.list_artboards_json()) })
 }
 
 ///|
 /// 导航流清单。
-pub fn session_flows(handle : Int) -> String {
+pub fn session_flows(handle : Int32) -> String {
   sess_json(handle, fn(p) { Ok(p.flow_json()) })
 }
 
 ///|
 /// 交互清单（⚡ 标记解析）。
-pub fn session_interactions(handle : Int, artboard : String) -> String {
+pub fn session_interactions(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.interactions_json(artboard~) })
 }
 
 ///|
 /// 组件状态清单。
-pub fn session_states(handle : Int, artboard : String) -> String {
+pub fn session_states(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.node_states_json(artboard~) })
 }
 
 ///|
 /// 设计标注（开发者交接 Spec）。
-pub fn session_spec(handle : Int, artboard : String) -> String {
+pub fn session_spec(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) {
     match p.generate_spec(artboard~) {
       Ok(spec) => Ok("{\"ok\":true,\"spec\":\"\{@core.json_escape(spec)}\"}")
@@ -984,7 +991,7 @@ pub fn session_spec(handle : Int, artboard : String) -> String {
 /// 自然语言布局意图（居中对齐/垂直排列/等宽/间距 N…）。成功信封回传
 /// canonical mbt——键控缓存宿主要求（issue #19）。
 pub fn session_constrain(
-  handle : Int,
+  handle : Int32,
   artboard : String,
   intent : String,
 ) -> String {
@@ -1009,7 +1016,7 @@ pub fn session_constrain(
 /// （autofix/missing/score）。新画板变更——sess_mut 语义，成功信封回传
 /// canonical mbt（issue #19 同类：键控缓存宿主零额外往返接住变更）。
 pub fn session_generate(
-  handle : Int,
+  handle : Int32,
   intent : String,
   name : String,
 ) -> String {
@@ -1021,7 +1028,7 @@ pub fn session_generate(
 /// spec 缺失/空白 → {"ok":false,"error":"design_spec_required",
 /// "design_spec_draft":{…}}，宿主落盘草案后带 spec 重试。
 pub fn session_generate_spec(
-  handle : Int,
+  handle : Int32,
   intent : String,
   name : String,
   spec : String,
@@ -1031,13 +1038,13 @@ pub fn session_generate_spec(
 
 ///|
 fn session_generate_core(
-  handle : Int,
+  handle : Int32,
   intent : String,
   name : String,
   spec : String,
 ) -> String {
   sess_mut_json(handle, fn(p) {
-    match p.generate(intent_text=intent, name=name, spec=spec) {
+    match p.generate(intent_text=intent, name~, spec~) {
       Ok(env) => Ok(env)
       // issue #24：spec 缺失是显式要求——随信封回传可编辑草案，
       // 而不是普通错误（宿主据此走「写规范 → 重试」闭环）。
@@ -1059,7 +1066,7 @@ fn session_generate_core(
 /// classic 槽变体：主槽（in_）= design spec（issue #24，必带），
 /// 辅槽（arg）= intent，三槽（arg2）= name。name 是新画板名而非画板
 /// 引用，故与 constrain_in 的 arg=artboard 布局不同。
-pub fn session_generate_in(handle : Int) -> String {
+pub fn session_generate_in(handle : Int32) -> String {
   session_generate_core(
     handle,
     slot_string(g_arg_bytes),
@@ -1070,19 +1077,22 @@ pub fn session_generate_in(handle : Int) -> String {
 
 ///|
 /// 页面类型推断。
-pub fn session_infer_page_type(handle : Int, artboard : String) -> String {
+pub fn session_infer_page_type(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.infer_page_type(artboard~) })
 }
 
 ///|
 /// 缺失元素推断。
-pub fn session_infer_missing(handle : Int, artboard : String) -> String {
+pub fn session_infer_missing(handle : Int32, artboard : String) -> String {
   sess_json(handle, fn(p) { p.infer_missing(artboard~) })
 }
 
 ///|
 /// 设计系统反向提取。
-pub fn session_extract_design_system(handle : Int, artboard : String) -> String {
+pub fn session_extract_design_system(
+  handle : Int32,
+  artboard : String,
+) -> String {
   sess_json(handle, fn(p) {
     match p.extract_design_system(artboard~) {
       Ok(ds) => Ok(ds.to_json())
@@ -1095,19 +1105,19 @@ pub fn session_extract_design_system(handle : Int, artboard : String) -> String 
 /// 响应式断点变体生成（新建 _tablet/_desktop 画板）。成功信封回传
 /// canonical mbt——变体是新画板，按 canonical 交换的宿主必须拿到新键
 /// 才能继续操作（issue #19 同类）。
-pub fn session_generate_responsive(handle : Int, artboard : String) -> String {
+pub fn session_generate_responsive(handle : Int32, artboard : String) -> String {
   sess_mut_json(handle, fn(p) { p.generate_responsive(artboard~) })
 }
 
 ///|
 /// 性能基准。
-pub fn session_benchmark(handle : Int) -> String {
+pub fn session_benchmark(handle : Int32) -> String {
   sess_json(handle, fn(p) { Ok(p.benchmark().to_json()) })
 }
 
 ///|
 /// 项目 JSON 快照（save 语义；回灌用 session_open_project_json）。
-pub fn session_save(handle : Int) -> String {
+pub fn session_save(handle : Int32) -> String {
   // 统一信封 {ok:true,data:"<project_json 字符串>"}；session_open_project_json
   // 接收 data 里的 project_json 文本
   sess_json(handle, fn(p) {
@@ -1119,15 +1129,18 @@ pub fn session_save(handle : Int) -> String {
 /// 用户组件：编译注册（声明为 base64 utf8 文本）。注册表是会话级状态，
 /// 不进 canonical mbt（与 session_library_snapshot 配对持久化）；成功
 /// 信封仍带 mbt 字段（与改文档面同形），宿主无需逐面特判（issue #19）。
-pub fn session_component_compile_b64(handle : Int, decl_b64 : String) -> String {
+pub fn session_component_compile_b64(
+  handle : Int32,
+  decl_b64 : String,
+) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
-      let decoded = try Ok(@base64.decode(decl_b64)) catch { e => Err(e) }
+      let decoded = Ok(@base64.decode(decl_b64)) catch { e => Err(e) }
       match decoded {
         Err(_) => "{\"ok\":false,\"error\":\"invalid_base64\"}"
         Ok(bytes) => {
-          let text = try Ok(@utf8.decode(bytes)) catch { e => Err(e) }
+          let text = Ok(@utf8.decode(bytes)) catch { e => Err(e) }
           match text {
             Err(_) => "{\"ok\":false,\"error\":\"invalid_utf8\"}"
             Ok(txt) =>
@@ -1151,7 +1164,7 @@ pub fn session_component_compile_b64(handle : Int, decl_b64 : String) -> String 
 
 ///|
 /// 用户组件库快照（source_b64 列表，持久化用）。
-pub fn session_library_snapshot(handle : Int) -> String {
+pub fn session_library_snapshot(handle : Int32) -> String {
   match session_get(handle) {
     None => "{\"ok\":false,\"error\":\"invalid_session_handle\"}"
     Some(p) => {
@@ -1176,7 +1189,7 @@ pub fn session_library_snapshot(handle : Int) -> String {
 /// ⚡ set_text/set_state 会写穿会话文档（运行时直接持有 Project 引用），
 /// 故成功信封同样回传 canonical mbt——与 #19 同一闭环要求。
 pub fn session_tap(
-  handle : Int,
+  handle : Int32,
   artboard : String,
   x : Double,
   y : Double,
@@ -1210,7 +1223,11 @@ pub fn session_tap(
 ///   swipe:left|right|up|down（也接受 swipe_left 单 token）|
 ///   focus:<node> | blur:<node> | key:<key> | key_enter|keyboard_enter
 /// 非法 spec → {"ok":false,"error":"unknown_event"}（不抛、不改会话）。
-pub fn session_event(handle : Int, artboard : String, spec : String) -> String {
+pub fn session_event(
+  handle : Int32,
+  artboard : String,
+  spec : String,
+) -> String {
   let event : @core.VizEvent = match parse_viz_event(spec) {
     Some(e) => e
     None => return "{\"ok\":false,\"error\":\"unknown_event\"}"
@@ -1359,13 +1376,13 @@ fn encode_mbt_b64(text : String) -> String {
 // ---------------------------------------------------------------------------
 
 ///|
-let g_in_bytes : Ref[Array[Byte]] = Ref::new([])
+let g_in_bytes : Ref[Array[Byte]] = Ref([])
 
 ///|
-let g_arg_bytes : Ref[Array[Byte]] = Ref::new([])
+let g_arg_bytes : Ref[Array[Byte]] = Ref([])
 
 ///|
-fn slot_push(slot : Ref[Array[Byte]], chunk : Int, n : Int) -> Unit {
+fn slot_push(slot : Ref[Array[Byte]], chunk : Int32, n : Int32) -> Unit {
   // 契约外 n（<1）视为宿主误用：no-op（此前钳到 1 会压入 1 个垃圾字节，
   // 静默污染输入槽——越界 n 必须不产生任何字节）。
   if n < 1 {
@@ -1395,13 +1412,13 @@ pub fn in_reset() -> Unit {
 
 ///|
 /// 主输入槽：压入一小块（chunk 小端 4 字节，n 为有效字节数 1-4）。
-pub fn in_push(chunk : Int, n : Int) -> Unit {
+pub fn in_push(chunk : Int32, n : Int32) -> Unit {
   slot_push(g_in_bytes, chunk, n)
 }
 
 ///|
 /// 主输入槽当前字节数。
-pub fn in_len() -> Int {
+pub fn in_len() -> Int32 {
   g_in_bytes.val.length()
 }
 
@@ -1413,13 +1430,13 @@ pub fn arg_reset() -> Unit {
 
 ///|
 /// 辅输入槽：压入一小块（chunk 小端 4 字节，n 为有效字节数 1-4）。
-pub fn arg_push(chunk : Int, n : Int) -> Unit {
+pub fn arg_push(chunk : Int32, n : Int32) -> Unit {
   slot_push(g_arg_bytes, chunk, n)
 }
 
 ///|
 /// 辅输入槽当前字节数。
-pub fn arg_len() -> Int {
+pub fn arg_len() -> Int32 {
   g_arg_bytes.val.length()
 }
 
@@ -1455,82 +1472,82 @@ pub fn apply_human_op_in() -> String {
 
 ///|
 /// 用主输入槽打开会话（等价 session_open）。
-pub fn session_open_in() -> Int {
+pub fn session_open_in() -> Int32 {
   session_open(slot_string(g_in_bytes))
 }
 
 ///|
 /// 会话 Agent 操作：辅槽 = op（等价 session_apply_agent）。
-pub fn session_apply_agent_in(handle : Int) -> String {
+pub fn session_apply_agent_in(handle : Int32) -> String {
   session_apply_agent(handle, slot_string(g_arg_bytes))
 }
 
 ///|
 /// 会话 Human 操作：辅槽 = op（等价 session_apply_human）。
-pub fn session_apply_human_in(handle : Int) -> String {
+pub fn session_apply_human_in(handle : Int32) -> String {
   session_apply_human(handle, slot_string(g_arg_bytes))
 }
 
 ///|
 /// 会话只读变体（artboard 经辅槽）：与 session_query_nodes 等一一对应，
 /// 供 classic wasm 宿主（无 String 传参能力）调用。
-pub fn session_export_svg_in(handle : Int) -> String {
+pub fn session_export_svg_in(handle : Int32) -> String {
   session_export_svg(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_lint_in(handle : Int) -> String {
+pub fn session_lint_in(handle : Int32) -> String {
   session_lint(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_query_nodes_in(handle : Int) -> String {
+pub fn session_query_nodes_in(handle : Int32) -> String {
   session_query_nodes(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_interactions_in(handle : Int) -> String {
+pub fn session_interactions_in(handle : Int32) -> String {
   session_interactions(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_states_in(handle : Int) -> String {
+pub fn session_states_in(handle : Int32) -> String {
   session_states(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_spec_in(handle : Int) -> String {
+pub fn session_spec_in(handle : Int32) -> String {
   session_spec(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_infer_page_type_in(handle : Int) -> String {
+pub fn session_infer_page_type_in(handle : Int32) -> String {
   session_infer_page_type(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_infer_missing_in(handle : Int) -> String {
+pub fn session_infer_missing_in(handle : Int32) -> String {
   session_infer_missing(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_extract_design_system_in(handle : Int) -> String {
+pub fn session_extract_design_system_in(handle : Int32) -> String {
   session_extract_design_system(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_generate_responsive_in(handle : Int) -> String {
+pub fn session_generate_responsive_in(handle : Int32) -> String {
   session_generate_responsive(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_component_compile_b64_in(handle : Int) -> String {
+pub fn session_component_compile_b64_in(handle : Int32) -> String {
   session_component_compile_b64(handle, slot_string(g_arg_bytes))
 }
 
 ///|
 /// 第三槽（intent/value 等自由文本）。
-let g_arg2_bytes : Ref[Array[Byte]] = Ref::new([])
+let g_arg2_bytes : Ref[Array[Byte]] = Ref([])
 
 ///|
 pub fn arg2_reset() -> Unit {
@@ -1538,39 +1555,39 @@ pub fn arg2_reset() -> Unit {
 }
 
 ///|
-pub fn arg2_push(chunk : Int, n : Int) -> Unit {
+pub fn arg2_push(chunk : Int32, n : Int32) -> Unit {
   slot_push(g_arg2_bytes, chunk, n)
 }
 
 ///|
-pub fn session_constrain_in(handle : Int) -> String {
+pub fn session_constrain_in(handle : Int32) -> String {
   session_constrain(handle, slot_string(g_arg_bytes), slot_string(g_arg2_bytes))
 }
 
 ///|
-pub fn session_tap_in(handle : Int, x : Double, y : Double) -> String {
+pub fn session_tap_in(handle : Int32, x : Double, y : Double) -> String {
   session_tap(handle, slot_string(g_arg_bytes), x, y)
 }
 
 ///|
 /// 手势事件的 classic 入口：辅槽 = artboard，主槽 = 事件 spec。
 /// （如主槽压 "long_press:20:20:800"、辅槽压 "home"。）
-pub fn session_event_in(handle : Int) -> String {
+pub fn session_event_in(handle : Int32) -> String {
   session_event(handle, slot_string(g_arg_bytes), slot_string(g_in_bytes))
 }
 
 ///|
-pub fn session_critique_in(handle : Int) -> String {
+pub fn session_critique_in(handle : Int32) -> String {
   session_critique(handle, slot_string(g_arg_bytes))
 }
 
 ///|
-pub fn session_auto_fix_in(handle : Int) -> String {
+pub fn session_auto_fix_in(handle : Int32) -> String {
   session_auto_fix(handle, slot_string(g_arg_bytes))
 }
 
 ///|
 /// save→open 回灌的 classic 入口：主槽压 project_json 字符串后调用。
-pub fn session_open_project_json_in() -> Int {
+pub fn session_open_project_json_in() -> Int32 {
   session_open_project_json(slot_string(g_in_bytes))
 }

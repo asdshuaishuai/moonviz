@@ -2,18 +2,18 @@
 /// 纯 MoonBit PNG 像素画布：渲染计划 → RGBA 位图 → PNG 字节流。
 /// 借用 std 的 @base64 作为文本面；配合 native 目标可以直接打开。
 struct RgbaBuf {
-  width : Int
-  height : Int
-  pixels : FixedArray[Int] // ARGB
+  width : Int32
+  height : Int32
+  pixels : FixedArray[Int32] // ARGB
 }
 
 ///|
-fn rgba_new(width : Int, height : Int) -> RgbaBuf {
+fn rgba_new(width : Int32, height : Int32) -> RgbaBuf {
   { width, height, pixels: FixedArray::make(width * height, 0xFF000000), }
 }
 
 ///|
-fn rgba_set(buf : RgbaBuf, x : Int, y : Int, argb : Int) -> Unit {
+fn rgba_set(buf : RgbaBuf, x : Int32, y : Int32, argb : Int32) -> Unit {
   if x >= 0 && x < buf.width && y >= 0 && y < buf.height {
     buf.pixels[y * buf.width + x] = argb
   }
@@ -22,11 +22,11 @@ fn rgba_set(buf : RgbaBuf, x : Int, y : Int, argb : Int) -> Unit {
 ///|
 fn fill_rect_rgba(
   buf : RgbaBuf,
-  x : Int,
-  y : Int,
-  w : Int,
-  h : Int,
-  argb : Int,
+  x : Int32,
+  y : Int32,
+  w : Int32,
+  h : Int32,
+  argb : Int32,
 ) -> Unit {
   let x0 = if x < 0 { 0 } else { x }
   let y0 = if y < 0 { 0 } else { y }
@@ -42,11 +42,11 @@ fn fill_rect_rgba(
 ///|
 fn stroke_rect_rgba(
   buf : RgbaBuf,
-  x : Int,
-  y : Int,
-  w : Int,
-  h : Int,
-  argb : Int,
+  x : Int32,
+  y : Int32,
+  w : Int32,
+  h : Int32,
+  argb : Int32,
 ) -> Unit {
   let x1 = if x + w > buf.width { buf.width } else { x + w }
   let y1 = if y + h > buf.height { buf.height } else { y + h }
@@ -67,7 +67,7 @@ fn has_pref(s : String, prefix : String) -> Bool {
 }
 
 ///|
-fn hex_digit_c(s : String, i : Int) -> Int? {
+fn hex_digit_c(s : String, i : Int32) -> Int32? {
   match s.get_char(i) {
     Some(c) => hex_digit(c)
     None => None
@@ -75,7 +75,7 @@ fn hex_digit_c(s : String, i : Int) -> Int? {
 }
 
 ///|
-fn hex_digit(c : Char) -> Int? {
+fn hex_digit(c : Char) -> Int32? {
   let code = c.to_int()
   if code >= 48 && code <= 57 {
     Some(code - 48)
@@ -89,7 +89,7 @@ fn hex_digit(c : Char) -> Int? {
 }
 
 ///|
-fn hex2(s : String, i : Int) -> Int {
+fn hex2(s : String, i : Int32) -> Int32 {
   let a = match hex_digit_c(s, i) {
     Some(x) => x
     None => 0
@@ -102,18 +102,18 @@ fn hex2(s : String, i : Int) -> Int {
 }
 
 ///|
-fn color_from_hex(hex : String) -> Int {
+fn color_from_hex(hex : String) -> Int32 {
   let body = if has_pref(hex, "#") { hex.substring(start=1) } else { hex }
   0xFF000000 + (hex2(body, 0) << 16) + (hex2(body, 2) << 8) + hex2(body, 4)
 }
 
 ///|
-fn push_b(arr : Array[Byte], v : Int) -> Unit {
+fn push_b(arr : Array[Byte], v : Int32) -> Unit {
   arr.push((v & 0xFF).to_byte())
 }
 
 ///|
-fn push_be32(arr : Array[Byte], v : Int) -> Unit {
+fn push_be32(arr : Array[Byte], v : Int32) -> Unit {
   push_b(arr, (v >> 24) & 0xFF)
   push_b(arr, (v >> 16) & 0xFF)
   push_b(arr, (v >> 8) & 0xFF)
@@ -132,7 +132,7 @@ fn push_tag(arr : Array[Byte], tag : String) -> Unit {
 
 ///|
 /// CRC32-IEEE：UInt 语义，poly 0xEDB88320；（初始 0xFFFFFFFF>xor-final）
-fn crc32(data : Array[Byte], start : Int, len : Int) -> Int {
+fn crc32(data : Array[Byte], start : Int32, len : Int32) -> Int32 {
   // 64 位承载 32 位 CRC 位模式，避免有符号溢出与算术右移
   let crc = crc32_data(data, start, len)
   let fin : Int64 = crc ^ 4294967295L
@@ -140,7 +140,7 @@ fn crc32(data : Array[Byte], start : Int, len : Int) -> Int {
 }
 
 ///|
-fn crc32_data(data : Array[Byte], start : Int, len : Int) -> Int64 {
+fn crc32_data(data : Array[Byte], start : Int32, len : Int32) -> Int64 {
   let mut crc : Int64 = 4294967295L
   let poly : Int64 = 3988292384L // 0xEDB88320
   for i in 0..<len {
@@ -161,7 +161,7 @@ fn crc32_data(data : Array[Byte], start : Int, len : Int) -> Int64 {
 }
 
 ///|
-fn adler32(data : Array[Byte]) -> Int {
+fn adler32(data : Array[Byte]) -> Int32 {
   let mut a = 1
   let mut b = 0
   for i in 0..<data.length() {
@@ -180,7 +180,7 @@ fn zlib_store(data : Array[Byte]) -> Array[Byte] {
   let out : Array[Byte] = []
   push_b(out, 0x78)
   push_b(out, 0x01)
-  let n : Int = if data.length() == 0 {
+  let n : Int32 = if data.length() == 0 {
     1
   } else {
     (data.length() + 65534) / 65535
@@ -279,8 +279,8 @@ fn base64_encode(data : Array[Byte]) -> String {
 ///|
 pub fn render_png(
   doc : @core.Document,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Array[Byte] {
   let layout = @core.solve(doc)
   let buf = rgba_new(width, height)

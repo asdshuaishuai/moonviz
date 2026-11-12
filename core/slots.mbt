@@ -50,7 +50,7 @@ pub(all) struct SlottedComponent {
 
 ///|
 pub fn builtin_slotted_components() -> Map[String, SlottedComponent] {
-  let m : Map[String, SlottedComponent] = Map::new()
+  let m : Map[String, SlottedComponent] = Map([])
 
   // ── Card：header + content + footer ──
   m.set("card", {
@@ -308,8 +308,8 @@ pub fn Project::place_slotted(
   artboard~ : String,
   component_id~ : String,
   instance_id~ : String,
-  x? : Double = 0.0,
-  y? : Double = 0.0,
+  x~ : Double = 0.0,
+  y~ : Double = 0.0,
 ) -> Result[String, String] {
   let slot_comps = builtin_slotted_components()
   match slot_comps.get(component_id) {
@@ -535,7 +535,7 @@ pub fn Project::fill_slot_with_component(
 
 ///|
 fn jstr22(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

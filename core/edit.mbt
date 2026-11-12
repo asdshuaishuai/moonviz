@@ -168,11 +168,37 @@ pub fn Project::move_node(
 /// 漏同步会被使用新键的既有测试当场打红。
 fn is_edit_key(k : String) -> Bool {
   match k {
-    "w" | "h" | "text" | "fill" | "text_color" | "stroke" | "radius"
-    | "opacity" | "font_size" | "weight" | "shadow" | "rotate" | "blur"
-    | "blend" | "line" | "tracking" | "constraint" | "name" | "stroke_width"
-    | "align" | "italic" | "dash" | "visible" | "width_mode" | "height_mode"
-    | "x_mode" | "y_mode" | "layout" | "gap" | "justify" | "padding"
+    "w"
+    | "h"
+    | "text"
+    | "fill"
+    | "text_color"
+    | "stroke"
+    | "radius"
+    | "opacity"
+    | "font_size"
+    | "weight"
+    | "shadow"
+    | "rotate"
+    | "blur"
+    | "blend"
+    | "line"
+    | "tracking"
+    | "constraint"
+    | "name"
+    | "stroke_width"
+    | "align"
+    | "italic"
+    | "dash"
+    | "visible"
+    | "width_mode"
+    | "height_mode"
+    | "x_mode"
+    | "y_mode"
+    | "layout"
+    | "gap"
+    | "justify"
+    | "padding"
     | "motion" => true
     _ => false
   }
@@ -247,19 +273,31 @@ pub fn Project::edit_node(
             "fill" => {
               // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
               // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
-              cur = { ..cur, style: { ..cur.style, fill: self.tokens.resolve_color(v), }, }
+              cur = {
+                ..cur,
+                style: { ..cur.style, fill: self.tokens.resolve_color(v), },
+              }
               applied.push("fill")
             }
             "text_color" => {
               // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
               // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
-              cur = { ..cur, style: { ..cur.style, text_color: self.tokens.resolve_color(v), }, }
+              cur = {
+                ..cur,
+                style: {
+                  ..cur.style,
+                  text_color: self.tokens.resolve_color(v),
+                },
+              }
               applied.push("text_color")
             }
             "stroke" => {
               // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
               // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
-              cur = { ..cur, style: { ..cur.style, stroke: self.tokens.resolve_color(v), }, }
+              cur = {
+                ..cur,
+                style: { ..cur.style, stroke: self.tokens.resolve_color(v), },
+              }
               applied.push("stroke")
             }
             "radius" => {
@@ -334,7 +372,7 @@ pub fn Project::edit_node(
               applied.push("italic")
             }
             // 节点级开场动效：与 canonical motion= 同一写面（白名单校验在 core）
-            "motion" => cur = { ..cur, style: { ..cur.style, motion: v }, }
+            "motion" => cur = { ..cur, style: { ..cur.style, motion: v, }, }
             "dash" => {
               let ds = if v == "dashed" || v == "dotted" { v } else { "solid" }
               cur = { ..cur, style: { ..cur.style, stroke_dash: ds, }, }

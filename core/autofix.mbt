@@ -32,21 +32,23 @@ pub fn Project::auto_fix(
       // 的谓词循环把新引入的违规一并清掉。
       let norm_layout = solve(ab.doc)
       let prof = self.norms_profile()
-      for f in norm_fix_pass(
-        ab.doc,
-        norm_layout,
-        radius_base=prof.radius_base,
-        canvas_bg=self.tokens.resolve_color("background"),
-      ).iter() {
+      for
+        f in norm_fix_pass(
+          ab.doc,
+          norm_layout,
+          radius_base=prof.radius_base,
+          canvas_bg=self.tokens.resolve_color("background"),
+        ).iter() {
         fixes.push(f)
       }
       // Norms v2 触控目标（44×44）在同一先修段：norm_fix_pass 改过尺寸，
       // 重新求解取真实 rect。放大同样可能引入溢出——交给下方谓词循环清偿。
       let touch_layout = solve(ab.doc)
-      for f in norm_touch_fix_pass(ab.doc, touch_layout, touch_min=prof.touch_min).iter() {
+      for
+        f in norm_touch_fix_pass(ab.doc, touch_layout, touch_min=prof.touch_min).iter() {
         fixes.push(f)
       }
-      for f in self.norm_list_divider_fix(artboard=artboard).iter() {
+      for f in self.norm_list_divider_fix(artboard~).iter() {
         fixes.push(f)
       }
       let mut remaining = validate(ab.doc).length()
@@ -203,7 +205,7 @@ fn fix_overlap(doc : Document, node_id : String) -> String? {
 
 ///|
 fn jstr6(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")
@@ -263,16 +265,17 @@ fn Project::norm_list_divider_fix(
                 continue
               }
               let sep_id = row_id + "_sep"
-              match self.place_component(
-                artboard=artboard,
-                component_id="divider",
-                instance_id=sep_id,
-                parent_id=row_id,
-                x=16.0,
-                y=rr.height - 1.0,
-                w=rr.width - 32.0,
-                h=1.0,
-              ) {
+              match
+                self.place_component(
+                  artboard~,
+                  component_id="divider",
+                  instance_id=sep_id,
+                  parent_id=row_id,
+                  x=16.0,
+                  y=rr.height - 1.0,
+                  w=rr.width - 32.0,
+                  h=1.0,
+                ) {
                 Ok(_) =>
                   fixes.push(
                     "{\"node\":\"\{json_escape(row_id)}\",\"action\":\"list_divider\",\"why\":\"列表行间分割线\",\"after\":\"行底 1px divider（\{json_escape(sep_id)}）\"}",

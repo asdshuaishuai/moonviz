@@ -41,7 +41,7 @@ test "design_doc：generate_from_doc 强制流程与来源可见" {
     Ok(_) => assert_true(false)
   }
   let doc = "## 配色\n主色 #0F766E\n背景 #F2FBF8\n卡片 #FFFFFF\n正文 #0B2A26\n## 字号\n正文 15\n## 圆角\n圆角 8 / 12 / 16\n"
-  match p.generate_from_doc(intent_text="登录页", doc=doc) {
+  match p.generate_from_doc(intent_text="登录页", doc~) {
     Ok(j) => {
       assert_true(j.contains("\"spec_source\":\"design_doc\""))
       assert_true(j.contains("\"spec_extracted\":"))
@@ -60,7 +60,7 @@ test "design_doc：generate_from_doc 强制流程与来源可见" {
 test "design_doc：design_spec_compliance 四检（颜色/字号/圆角/动效）" {
   let p = Project::new()
   let doc = "## 配色\n主色 #0F766E\n背景 #F2FBF8\n卡片 #FFFFFF\n正文 #0B2A26\n## 字号\n标题 24\n正文 14\n说明 12\n## 圆角\n圆角 8 / 12 / 16\n## 动效\n时长 120 / 240 / 360 ms\n"
-  match p.generate_from_doc(intent_text="登录页", doc=doc) {
+  match p.generate_from_doc(intent_text="登录页", doc~) {
     Ok(_) => ()
     Err(_) => assert_true(false)
   }
@@ -68,21 +68,15 @@ test "design_doc：design_spec_compliance 四检（颜色/字号/圆角/动效�
   let clean = p.design_spec_compliance(artboard="login")
   assert_true(clean.contains("\"ok\":true"))
   // 制造三类违规：字号 15、圆角 10、字面色 #123456
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="welcome_title",
-    kvs=[("font_size", "15")],
-  )
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="email_input",
-    kvs=[("radius", "10")],
-  )
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="subtitle",
-    kvs=[("text_color", "#123456")],
-  )
+  let _ = p.edit_node(artboard="login", node_id="welcome_title", kvs=[
+    ("font_size", "15"),
+  ])
+  let _ = p.edit_node(artboard="login", node_id="email_input", kvs=[
+    ("radius", "10"),
+  ])
+  let _ = p.edit_node(artboard="login", node_id="subtitle", kvs=[
+    ("text_color", "#123456"),
+  ])
   let bad = p.design_spec_compliance(artboard="login")
   assert_true(bad.contains("\"ok\":false"))
   assert_true(bad.contains("type:"))
@@ -109,7 +103,9 @@ test "design_doc：复合角色/多色对位/加粗条目/散装字号/全档字
   assert_true(ex4.spec_json.contains("\"surface_variant\":\"#eeeeee\""))
   assert_false(ex4.spec_json.contains("\"surface\":\"#eeeeee\""))
   // 同行多 hex 多角色按命中序对位
-  let ex5 = design_doc_extract("- 警告 #B45309，错误 #C2410C，成功 #15803D\n")
+  let ex5 = design_doc_extract(
+    "- 警告 #B45309，错误 #C2410C，成功 #15803D\n",
+  )
   assert_true(ex5.spec_json.contains("\"warning\":\"#b45309\""))
   assert_true(ex5.spec_json.contains("\"error\":\"#c2410c\""))
   assert_true(ex5.spec_json.contains("\"success\":\"#15803d\""))
@@ -123,17 +119,23 @@ test "design_doc：复合角色/多色对位/加粗条目/散装字号/全档字
   let ex6 = design_doc_extract("**主色**: #0F766E\n")
   assert_true(ex6.spec_json.contains("\"primary\":\"#0f766e\""))
   // 散装键值（无标题行）+ hex 色值里的数字不冒充档位
-  let ex7 = design_doc_extract("主色 #123456\n背景 #ABCDEF\n正文色 #0B2A26\n正文 15\n圆角 8 12 16\n")
+  let ex7 = design_doc_extract(
+    "主色 #123456\n背景 #ABCDEF\n正文色 #0B2A26\n正文 15\n圆角 8 12 16\n",
+  )
   assert_true(ex7.spec_json.contains("\"body\":15"))
   assert_true(ex7.spec_json.contains("\"sm\":8"))
   // 文档显式 h2/h3/h4 直接落档（此前进 scale 后被丢弃）
-  let ex8 = design_doc_extract("主色 #123456\n背景 #ABCDEF\n正文色 #111111\n正文 15\n标题 28\n二级标题 22\n三级标题 18\n四级标题 15\n圆角 8 12 16\n")
+  let ex8 = design_doc_extract(
+    "主色 #123456\n背景 #ABCDEF\n正文色 #111111\n正文 15\n标题 28\n二级标题 22\n三级标题 18\n四级标题 15\n圆角 8 12 16\n",
+  )
   assert_true(ex8.spec_json.contains("\"h1\":28"))
   assert_true(ex8.spec_json.contains("\"h2\":22"))
   assert_true(ex8.spec_json.contains("\"h3\":18"))
   assert_true(ex8.spec_json.contains("\"h4\":15"))
   // 恰好两档动效：短值 fast、长值 base/slow，意图随 extracted 上报
-  let ex9 = design_doc_extract("主色 #123456\n背景 #ABCDEF\n正文色 #111111\n正文 15\n圆角 8 12 16\n时长 120 / 220\n")
+  let ex9 = design_doc_extract(
+    "主色 #123456\n背景 #ABCDEF\n正文色 #111111\n正文 15\n圆角 8 12 16\n时长 120 / 220\n",
+  )
   assert_true(ex9.spec_json.contains("\"fast\":120"))
   assert_true(ex9.spec_json.contains("\"base\":220"))
   assert_true(ex9.extracted.length() >= 5)
@@ -160,7 +162,7 @@ test "design_doc：radius 全档吸附与 comply 缺档兜底" {
     py = py + 60.0
   }
   let spec = "{\"v\":1,\"palette\":{\"primary\":\"#123456\"},\"radius\":{\"sm\":8,\"md\":12,\"lg\":16}}"
-  match p.apply_design_spec(artboard="r", spec=spec) {
+  match p.apply_design_spec(artboard="r", spec~) {
     Ok(_) => ()
     Err(_) => assert_true(false)
   }
@@ -168,7 +170,10 @@ test "design_doc：radius 全档吸附与 comply 缺档兜底" {
     None => assert_true(false)
     Some(ab) => {
       let want : Array[(String, Double)] = [
-        ("a", 8.0), ("b", 12.0), ("c", 16.0), ("d", 999.0),
+        ("a", 8.0),
+        ("b", 12.0),
+        ("c", 16.0),
+        ("d", 999.0),
       ]
       for pair in want.iter() {
         let (nid, rv) = pair
@@ -197,7 +202,7 @@ test "design_doc：style 暗色预设直通" {
   // 端到端：generate spec 点名 apple_dark 真实切到暗色预设
   let p = Project::new()
   let spec = "{\"v\":1,\"style\":\"apple_dark\",\"palette\":{\"primary\":\"#409CFF\",\"background\":\"#1C1C1E\"},\"typography\":{\"body\":14},\"radius\":{\"sm\":8,\"md\":12,\"lg\":16}}"
-  match p.generate(spec=spec, intent_text="登录页") {
+  match p.generate(spec~, intent_text="登录页") {
     Ok(_) => assert_eq(p.active_theme, "apple_dark")
     Err(_) => assert_true(false)
   }
@@ -210,7 +215,9 @@ test "design_doc：style 暗色预设直通" {
 /// 前方最近、且在上一 hex 之后出现的关键词配对」后：夹杂词不再影响
 /// 归属，跨序/正序/单角色行为保持。
 test "design_doc：夹杂角色词不抢对位（generate-doc 不再被拒）" {
-  let ex = design_doc_extract("主色 #123456（卡片强调），背景 #FFFFFF\n")
+  let ex = design_doc_extract(
+    "主色 #123456（卡片强调），背景 #FFFFFF\n",
+  )
   assert_true(ex.spec_json.contains("\"primary\":\"#123456\""))
   assert_true(ex.spec_json.contains("\"background\":\"#ffffff\""))
   // 单行 variant：无关词不改变归属
@@ -219,7 +226,7 @@ test "design_doc：夹杂角色词不抢对位（generate-doc 不再被拒）" {
   // 端到端：含夹杂词的完整文档不再被 background gap 拒绝
   let p = Project::new()
   let doc = "主色 #123456（卡片强调），背景 #FFFFFF\n正文色 #111111\n正文 15\n圆角 8 12 16\n"
-  match p.generate_from_doc(intent_text="登录页", doc=doc) {
+  match p.generate_from_doc(intent_text="登录页", doc~) {
     Ok(j) => {
       assert_true(j.contains("\"spec_source\":\"design_doc\""))
       assert_eq(p.tokens.resolve_color("background"), "#ffffff")
@@ -233,7 +240,9 @@ test "design_doc：夹杂角色词不抢对位（generate-doc 不再被拒）" {
   let ex3 = design_doc_extract("- 成功 #15803D，警告 #B45309\n")
   assert_true(ex3.spec_json.contains("\"success\":\"#15803d\""))
   assert_true(ex3.spec_json.contains("\"warning\":\"#b45309\""))
-  let ex4 = design_doc_extract("- 警告 #B45309，错误 #C2410C，成功 #15803D\n")
+  let ex4 = design_doc_extract(
+    "- 警告 #B45309，错误 #C2410C，成功 #15803D\n",
+  )
   assert_true(ex4.spec_json.contains("\"warning\":\"#b45309\""))
   assert_true(ex4.spec_json.contains("\"error\":\"#c2410c\""))
   assert_true(ex4.spec_json.contains("\"success\":\"#15803d\""))
@@ -272,9 +281,13 @@ test "design_doc：色值在前/覆盖淘汰按次/emoji 紧贴三类回归" {
   let ex6 = design_doc_extract("- 成功 #15803D，警告 #B45309\n")
   assert_true(ex6.spec_json.contains("\"success\":\"#15803d\""))
   assert_true(ex6.spec_json.contains("\"warning\":\"#b45309\""))
-  let ex7 = design_doc_extract("- 警告 #B45309，错误 #C2410C，成功 #15803D\n")
+  let ex7 = design_doc_extract(
+    "- 警告 #B45309，错误 #C2410C，成功 #15803D\n",
+  )
   assert_true(ex7.spec_json.contains("\"error\":\"#c2410c\""))
-  let ex8 = design_doc_extract("主色 #123456（卡片强调），背景 #FFFFFF\n")
+  let ex8 = design_doc_extract(
+    "主色 #123456（卡片强调），背景 #FFFFFF\n",
+  )
   assert_true(ex8.spec_json.contains("\"background\":\"#ffffff\""))
   let ex9 = design_doc_extract("**主色**: #0F766E\n")
   assert_true(ex9.spec_json.contains("\"primary\":\"#0f766e\""))
@@ -284,7 +297,7 @@ test "design_doc：色值在前/覆盖淘汰按次/emoji 紧贴三类回归" {
   // 端到端：色值在前的 markdown 表文档不再被 generate-doc 拒绝
   let p = Project::new()
   let doc = "| 角色 | 色值 |\n| #123456 | 主色 |\n| #FFFFFF | 背景 |\n正文色 #111111\n正文 15\n圆角 8 12 16\n"
-  match p.generate_from_doc(intent_text="登录页", doc=doc) {
+  match p.generate_from_doc(intent_text="登录页", doc~) {
     Ok(j) => {
       assert_true(j.contains("\"spec_source\":\"design_doc\""))
       assert_eq(p.tokens.resolve_color("primary"), "#123456")
@@ -292,7 +305,10 @@ test "design_doc：色值在前/覆盖淘汰按次/emoji 紧贴三类回归" {
     }
     Err(e) => {
       println("ERR=" + e)
-      assert_true(false, msg="色值在前的表文档不应被 design_doc_spec_gaps 拒绝")
+      assert_true(
+        false,
+        msg="色值在前的表文档不应被 design_doc_spec_gaps 拒绝",
+      )
     }
   }
 }

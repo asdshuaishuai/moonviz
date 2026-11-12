@@ -14,7 +14,7 @@
 /// 输出：结构化评审报告（每个原则一个评分 + 具体建议）
 pub(all) struct CritiqueResult {
   principle : String
-  score : Int // 0-10
+  score : Int32 // 0-10
   verdict : String // "good" | "fair" | "poor"
   observation : String // 观察到什么
   advice : String // 怎么改
@@ -34,7 +34,7 @@ pub fn Project::critique(
       let doc = ab.doc
 
       // ── 1. 视觉层次 ──
-      let font_sizes : Map[Double, Int] = Map::new()
+      let font_sizes : Map[Double, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) =>
@@ -45,7 +45,7 @@ pub fn Project::critique(
           None => ()
         }
       }
-      let distinct_sizes = font_sizes.size()
+      let distinct_sizes = font_sizes.length()
       let hierarchy_score = if distinct_sizes >= 3 {
         9
       } else if distinct_sizes == 2 {
@@ -208,7 +208,7 @@ pub fn Project::critique(
       )
 
       // ── 5. 留白 ──
-      let node_count = doc.nodes.size() - 1
+      let node_count = doc.nodes.length() - 1
       let area = ab.width * ab.height
       let density = if area > 0.0 {
         node_count.to_double() / (area / 10000.0)
@@ -345,7 +345,7 @@ pub fn Project::critique(
       )
 
       // ── 8. 节奏 ──
-      let gaps : Map[Double, Int] = Map::new()
+      let gaps : Map[Double, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) =>
@@ -364,7 +364,7 @@ pub fn Project::critique(
           None => ()
         }
       }
-      let distinct_gaps = gaps.size()
+      let distinct_gaps = gaps.length()
       let rhythm_score = if distinct_gaps <= 3 {
         8
       } else if distinct_gaps <= 5 {
@@ -410,15 +410,15 @@ pub fn Project::critique(
       )
       // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
       // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
-      for s in self.norm_back_issues(artboard=artboard).iter() {
+      for s in self.norm_back_issues(artboard~).iter() {
         norm_list.push(s)
       }
       // issue #23：状态可辨识（选中态无差异 / 纯黑选中色）
-      for s in self.norm_selected_state_issues(artboard=artboard).iter() {
+      for s in self.norm_selected_state_issues(artboard~).iter() {
         norm_list.push(s)
       }
       // issue #25/#26：交互与内容完整性（可交互无去向 / 占位符 / 空壳 / 非库组件）
-      for s in self.qa_issues(artboard=artboard).iter() {
+      for s in self.qa_issues(artboard~).iter() {
         norm_list.push(s)
       }
       let n_norm = norm_list.length()
@@ -446,12 +446,22 @@ pub fn Project::critique(
           if i >= 2 {
             break
           }
-          acc = acc + norm_list[i] + "→ " + norm_issue_hint(norm_list[i]) + "；"
+          acc = acc +
+            norm_list[i] +
+            "→ " +
+            norm_issue_hint(norm_list[i]) +
+            "；"
         }
         acc
       }
       results.push(
-        crit_json("norms", norm_score, norm_verdict, "\{n_norm} 处规范偏差", norm_advice),
+        crit_json(
+          "norms",
+          norm_score,
+          norm_verdict,
+          "\{n_norm} 处规范偏差",
+          norm_advice,
+        ),
       )
 
       // ── 10. 视觉语言（visual：阴影只属于容器 · 卡片层次可辨 · 同心圆角）──
@@ -486,12 +496,22 @@ pub fn Project::critique(
           if i >= 2 {
             break
           }
-          acc = acc + vis_list[i] + "→ " + visual_issue_hint(vis_list[i]) + "；"
+          acc = acc +
+            vis_list[i] +
+            "→ " +
+            visual_issue_hint(vis_list[i]) +
+            "；"
         }
         acc
       }
       results.push(
-        crit_json("visual", vis_score, vis_verdict, "\{n_vis} 处视觉语言偏差", vis_advice),
+        crit_json(
+          "visual",
+          vis_score,
+          vis_verdict,
+          "\{n_vis} 处视觉语言偏差",
+          vis_advice,
+        ),
       )
 
       let j = jstr19(results)
@@ -580,7 +600,7 @@ fn norm_issue_hint(issue : String) -> String {
 ///|
 fn crit_json(
   principle : String,
-  score : Int,
+  score : Int32,
   verdict : String,
   obs : String,
   advice : String,
@@ -600,8 +620,8 @@ fn is_token_color3(tokens : DesignTokens, hex : String) -> Bool {
 }
 
 ///|
-fn extract_scores(json : String) -> Array[Int] {
-  let scores : Array[Int] = []
+fn extract_scores(json : String) -> Array[Int32] {
+  let scores : Array[Int32] = []
   let parts = json.split(",\"score\":")
   // 首段是信封头（{"principles":10,"results":[…"principle":"…"）而非评分，
   // 跳过——否则 extract_leading_int 会抓到头部的 10，均值被 10 冲淡，
@@ -621,7 +641,7 @@ fn extract_scores(json : String) -> Array[Int] {
 }
 
 ///|
-fn extract_leading_int(s : String) -> Int {
+fn extract_leading_int(s : String) -> Int32 {
   let mut result = 0
   let mut found = false
   for c in s.iter() {
@@ -641,7 +661,7 @@ fn extract_leading_int(s : String) -> Int {
 }
 
 ///|
-fn sum_scores(scores : Array[Int]) -> Int {
+fn sum_scores(scores : Array[Int32]) -> Int32 {
   let mut total = 0
   for s in scores.iter() {
     total = total + s
@@ -651,7 +671,7 @@ fn sum_scores(scores : Array[Int]) -> Int {
 
 ///|
 fn jstr19(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

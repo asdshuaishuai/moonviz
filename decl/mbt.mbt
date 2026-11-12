@@ -8,8 +8,8 @@
 pub(all) struct MbtCodeBlock {
   kind : String
   text : String
-  start_line : Int
-  end_line : Int
+  start_line : Int32
+  end_line : Int32
   artboard_id : String?
   visual : Bool
 }
@@ -19,7 +19,7 @@ pub(all) struct MbtDocument {
   source : String
   front_matter : String
   title : String
-  revision : Int
+  revision : Int32
   entry : String
   theme : String
   blocks : Array[MbtCodeBlock]
@@ -61,11 +61,11 @@ fn mbt_trim(s : String) -> String {
 ///|
 fn mbt_lines(text : String) -> Array[String] {
   let out : Array[String] = []
-  let mut buf = StringBuilder::new()
+  let mut buf = StringBuilder()
   for c in text.iter() {
     if c == '\n' {
       out.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(c)
     }
@@ -79,8 +79,8 @@ fn mbt_lines(text : String) -> Array[String] {
 }
 
 ///|
-fn mbt_join(lines : Array[String], start : Int, end : Int) -> String {
-  let out = StringBuilder::new()
+fn mbt_join(lines : Array[String], start : Int32, end : Int32) -> String {
+  let out = StringBuilder()
   let mut i = start
   while i < end && i < lines.length() {
     if i > start {
@@ -93,7 +93,7 @@ fn mbt_join(lines : Array[String], start : Int, end : Int) -> String {
 }
 
 ///|
-fn mbt_fence_length(line : String) -> Int {
+fn mbt_fence_length(line : String) -> Int32 {
   let t = mbt_trim(line)
   let mut count = 0
   while count < t.length() && t.get_char(count) == Some('`') {
@@ -151,7 +151,7 @@ fn mbt_field(front : String, key : String) -> String {
 }
 
 ///|
-fn mbt_int(text : String) -> Int {
+fn mbt_int(text : String) -> Int32 {
   let t = mbt_trim(text)
   let mut sign = 1
   let mut i = 0
@@ -224,7 +224,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
       // 注释可跨行；`<!-- moonviz:...` 是引擎锚标记，不属宿主数据。
       let t = mbt_trim(lines[i])
       if mbt_has_prefix(t, "<!--") {
-        let raw = StringBuilder::new()
+        let raw = StringBuilder()
         raw.write_string(t)
         let mut close = t.find("-->") is Some(_)
         let mut j = i
@@ -320,7 +320,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
 }
 
 ///|
-pub fn MbtDocument::visual_count(self : MbtDocument) -> Int {
+pub fn MbtDocument::visual_count(self : MbtDocument) -> Int32 {
   self.visual_blocks.length()
 }
 
@@ -362,7 +362,7 @@ pub(all) struct MbtProject {
 /// `,()` 不计数，`\x` 转义序列整体跳过。否则节点文本含单个不配对括号
 /// （decl_escape 转义为 `\(`）时会被误计数，多行语句归并提前断句或永不
 /// 归并，引擎导出的 canonical .mbt.md 自己都无法重载。
-fn mbt_paren_delta(line : String) -> Int {
+fn mbt_paren_delta(line : String) -> Int32 {
   let mut delta = 0
   let mut in_quotes = false
   let mut esc = false
@@ -397,7 +397,7 @@ fn mbt_visual_line(line : String) -> Bool {
 /// 不执行其它 MoonBit 语句。多行 page.add(...) 在抽取时规范为单行。
 fn mbt_visual_decl(block : MbtCodeBlock) -> Result[String, String] {
   let lines = mbt_lines(block.text)
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   let mut i = 0
   let mut found = 0
   while i < lines.length() {
@@ -417,7 +417,7 @@ fn mbt_visual_decl(block : MbtCodeBlock) -> Result[String, String] {
         "not_renderable_visual_logic_line:" + (block.start_line + i).to_string(),
       )
     }
-    let statement = StringBuilder::new()
+    let statement = StringBuilder()
     let mut balance = 0
     let mut started = false
     while i < lines.length() {
@@ -467,7 +467,7 @@ fn mbt_root_size(root : @core.Node) -> (Double, Double) {
 ///|
 /// frontmatter `tokens:` 段解析：`  <role>: "<value>"` 两空格缩进键值对。
 fn mbt_parse_token_overrides(front : String) -> Map[String, String] {
-  let out : Map[String, String] = Map::new()
+  let out : Map[String, String] = Map([])
   let lines = mbt_lines(front)
   let mut in_tokens = false
   for raw in lines.iter() {
@@ -686,7 +686,8 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
         ""
       }
       // 空态不校验 entry（issue #27）；有视觉块的文档仍强校验漂移。
-      if document.visual_blocks.length() > 0 && !project.artboards.contains(entry) {
+      if document.visual_blocks.length() > 0 &&
+        !project.artboards.contains(entry) {
         return Err("mbt_unknown_entry:" + entry)
       }
       project.revision = document.revision
@@ -719,7 +720,7 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
 pub fn project_gate_check(
   p : @core.Project,
   gate : @core.Gate,
-) -> Result[Int, String] {
+) -> Result[Int32, String] {
   // issue #25-A3 / #26-A3：交互冲突硬门（仅 AgentGate）——同一节点多条
   // tap flow、可点热区相交（父子包含除外）→ 拒绝并给出定位。
   match gate {
@@ -764,7 +765,7 @@ pub fn project_gate_check(
 pub fn MbtProject::validate_for(
   self : MbtProject,
   gate : @core.Gate,
-) -> Result[Int, String] {
+) -> Result[Int32, String] {
   let mut debt_count = 0
   for artboard_id in self.project.artboards.keys() {
     match self.project.artboards.get(artboard_id) {
@@ -800,8 +801,8 @@ pub fn MbtProject::validate_for(
 /// 生成的文本重新加载，Project 不会成为独立的持久事实源。
 pub fn project_to_mbt(
   project : @core.Project,
-  title? : String = "MoonViz 文档",
-  entry? : String = "",
+  title~ : String = "MoonViz 文档",
+  entry~ : String = "",
 ) -> Result[MbtProject, String] {
   let ids : Array[String] = []
   for id in project.artboards.keys() {
@@ -860,7 +861,7 @@ fn mbt_function_name(id : String) -> String {
 /// 多画板被规范化为多个 `mbt` visual block；每个 block 都是有效 MoonBit
 /// 函数，避免多个画板在同一文学化源码文件中重复定义顶层 `page` 变量。
 pub fn MbtProject::to_mbt(self : MbtProject) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_string("---\n")
   out.write_string("moonbit:\n")
   out.write_string("  backend: native\n")
@@ -1066,12 +1067,12 @@ pub fn MbtProject::commit_and_render(
 }
 
 ///|
+
 ///|
 /// 单板渲染对象（issue #28 增量快照的复用单元）：{id,name,width,height,
 /// nodes,svg} 的 JSON 文本；板不存在或渲染失败返回 None。
 pub fn MbtProject::render_board_json(self : MbtProject, id : String) -> String? {
-  match
-    (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
+  match (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
     (Some(artboard), Ok(svg)) => {
       let nodes = match self.project.query_nodes(artboard=id) {
         Ok(json) => json
@@ -1106,7 +1107,7 @@ pub fn MbtProject::render_json(self : MbtProject) -> String {
       None => ()
     }
   }
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_string(
     "{\"ok\":true,\"entry\":\"" + @core.json_escape(self.entry) + "\",",
   )
@@ -1136,7 +1137,7 @@ pub fn MbtProject::render_json(self : MbtProject) -> String {
 
 ///|
 /// 行首空格数（frontmatter 缩进判定用；仅 ASCII 空格）。
-fn mbt_indent(s : String) -> Int {
+fn mbt_indent(s : String) -> Int32 {
   let mut i = 0
   for c in s.iter() {
     if c == ' ' {

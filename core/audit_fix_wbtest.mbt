@@ -12,9 +12,8 @@ test "主题：容器文字角色在两种放置顺序下同效" {
   for theme_name in ["apple_dark", "harmony_dark", "dark", "nord"].iter() {
     // web_login/detail 覆盖 badge on_primary 与 button secondary_container
     // 两类反查歧义位（第 4 轮 web_login brand_logo 50/51 唯一差即前者）
-    for tpl in [
-      "login", "dashboard", "settings", "list", "web_login", "detail",
-    ].iter() {
+    for
+      tpl in ["login", "dashboard", "settings", "list", "web_login", "detail"].iter() {
       let pa = Project::new()
       let _ = pa.apply_theme(theme_name)
       let _ = pa.apply_template(template_id=tpl, name="board")
@@ -22,7 +21,7 @@ test "主题：容器文字角色在两种放置顺序下同效" {
       let _ = pb.apply_template(template_id=tpl, name="board")
       let _ = pb.apply_theme(theme_name)
       match (pa.artboards.get("board"), pb.artboards.get("board")) {
-        (Some(aba), Some(abb)) => {
+        (Some(aba), Some(abb)) =>
           for nid in aba.doc.nodes.keys() {
             match (aba.doc.get(nid), abb.doc.get(nid)) {
               (Some(na), Some(nb)) => {
@@ -41,10 +40,13 @@ test "主题：容器文字角色在两种放置顺序下同效" {
                   )
                 }
               }
-              _ => assert_true(false, msg="\{theme_name}/\{tpl} 节点 \{nid} 缺失")
+              _ =>
+                assert_true(
+                  false,
+                  msg="\{theme_name}/\{tpl} 节点 \{nid} 缺失",
+                )
             }
           }
-        }
         _ => assert_true(false)
       }
     }
@@ -56,12 +58,12 @@ test "主题：容器文字角色在两种放置顺序下同效" {
 /// （撞色红线 2.0 以下整类清除）。
 test "主题：暗色主题下模板文字无出厂黑" {
   for theme_name in ["apple_dark", "harmony_dark", "dark"].iter() {
-    for tpl in [
-      "login", "signup", "dashboard", "profile", "settings", "list", "detail",
-      "checkout", "list_detail", "onboarding", "empty_state", "web_landing",
-      "web_login", "web_dashboard", "pc_app", "adaptive_landing", "login_v2",
-    ]
-    .iter() {
+    for
+      tpl in [
+        "login", "signup", "dashboard", "profile", "settings", "list", "detail",
+        "checkout", "list_detail", "onboarding", "empty_state", "web_landing", "web_login",
+        "web_dashboard", "pc_app", "adaptive_landing", "login_v2",
+      ].iter() {
       let p = Project::new()
       let _ = p.apply_theme(theme_name)
       let _ = p.apply_template(template_id=tpl, name="board")
@@ -90,11 +92,10 @@ test "主题：暗色主题下模板文字无出厂黑" {
 /// 落成非法色值（结构式模板按角色取色的前提）。
 test "主题：全部内置主题令牌角色集完备" {
   let roles = [
-    "primary", "primary_container", "on_primary", "on_secondary_container",
-    "secondary", "secondary_container", "text_on_primary", "surface",
-    "surface_variant", "background", "error", "error_container", "success",
-    "warning", "outline", "outline_variant", "text_primary", "text_secondary",
-    "text_hint",
+    "primary", "primary_container", "on_primary", "on_secondary_container", "secondary",
+    "secondary_container", "text_on_primary", "surface", "surface_variant", "background",
+    "error", "error_container", "success", "warning", "outline", "outline_variant",
+    "text_primary", "text_secondary", "text_hint",
   ]
   for th in builtin_themes().iter() {
     for role in roles.iter() {
@@ -112,7 +113,7 @@ test "主题：全部内置主题令牌角色集完备" {
 /// 亮色文字（#F5F5F7 on #1C1C1E 实为 12.8:1 合规）不再被误判为白底撞色、
 /// 也不再被 fix 翻成近黑在画布上不可见（审计 R6：12 模板 16 节点被改坏）。
 test "norms：暗色画布底兜底——fix 不再翻转正确的亮色文字" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   let title = {
     ..Node::make("title", Text),
     width: Fixed(300.0),
@@ -169,7 +170,7 @@ test "文本：wrap_text_lines 折行口径" {
 /// S6 回归锚：渲染输出——xml:space=preserve（模板空格分列不被折叠）、
 /// 折行 tspan、行盒垂直居中（36 高行盒 + 14px 单行 → 基线在盒中线下移）。
 test "渲染：preserve / 折行 tspan / 行盒垂直居中" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   // 行盒垂直居中：36 高盒 + 14px 单行（块高 21）→ block_top = y + 7.5，
   // 基线 = block_top + 14 = y + 21.5；节点在原点 → 基线 21.5
   // （旧行为首行基线 y+14，文字顶在行盒上沿）
@@ -204,8 +205,14 @@ test "渲染：preserve / 折行 tspan / 行盒垂直居中" {
     svg.contains("xml:space=\"preserve\""),
     msg="渲染未输出 xml:space=preserve",
   )
-  assert_true(svg.contains("ops: 3   revision: 12"), msg="连续空格被折叠")
-  assert_true(svg.contains("y=\"21.5\""), msg="行盒未垂直居中（期望基线 21.5）")
+  assert_true(
+    svg.contains("ops: 3   revision: 12"),
+    msg="连续空格被折叠",
+  )
+  assert_true(
+    svg.contains("y=\"21.5\""),
+    msg="行盒未垂直居中（期望基线 21.5）",
+  )
   // desc 节点应产出多个 tspan（折行生效）
   let seg = extract_g(svg, "desc")
   assert_true(seg.contains("<tspan"), msg="desc 未折行（无 tspan）")
@@ -262,7 +269,12 @@ test "主题：语义底文字直派与往返稳定（text ctx 回归锚）" {
     None => assert_true(false)
     Some(ab) =>
       match ab.doc.get("logout_btn") {
-        Some(n) => assert_eq(n.style.text_color, "#FFFFFF", msg="danger 底文字应还原 on_primary 白")
+        Some(n) =>
+          assert_eq(
+            n.style.text_color,
+            "#FFFFFF",
+            msg="danger 底文字应还原 on_primary 白",
+          )
         None => assert_true(false, msg="logout_btn 缺失")
       }
   }
@@ -276,7 +288,12 @@ test "主题：语义底文字直派与往返稳定（text ctx 回归锚）" {
     None => assert_true(false)
     Some(ab) =>
       match ab.doc.get("brand_title") {
-        Some(n) => assert_eq(n.style.text_color, "#FFFFFF", msg="primary 面板文字应还原 on_primary 白")
+        Some(n) =>
+          assert_eq(
+            n.style.text_color,
+            "#FFFFFF",
+            msg="primary 面板文字应还原 on_primary 白",
+          )
         None => assert_true(false, msg="brand_title 缺失")
       }
   }
@@ -292,8 +309,16 @@ test "主题：语义底文字直派与往返稳定（text ctx 回归锚）" {
     Some(ab) =>
       match ab.doc.get("back_btn") {
         Some(n) => {
-          assert_eq(n.style.fill, "#FBE9E7", msg="次按钮底应还原 secondary_container")
-          assert_eq(n.style.text_color, "#4E2A18", msg="次按钮文字应还原 on_secondary_container")
+          assert_eq(
+            n.style.fill,
+            "#FBE9E7",
+            msg="次按钮底应还原 secondary_container",
+          )
+          assert_eq(
+            n.style.text_color,
+            "#4E2A18",
+            msg="次按钮文字应还原 on_secondary_container",
+          )
         }
         None => assert_true(false, msg="back_btn 缺失")
       }
@@ -309,19 +334,19 @@ fn extract_g(svg : String, id : String) -> String {
       let close = find_sub_from(svg, "</g>", start)
       match close {
         None => ""
-        Some(end) => svg.substring(start=start, end=end + 4)
+        Some(end) => svg.substring(start~, end=end + 4)
       }
     }
   }
 }
 
 ///|
-fn find_sub(s : String, needle : String) -> Int? {
+fn find_sub(s : String, needle : String) -> Int32? {
   find_sub_from(s, needle, 0)
 }
 
 ///|
-fn find_sub_from(s : String, needle : String, from : Int) -> Int? {
+fn find_sub_from(s : String, needle : String, from : Int32) -> Int32? {
   let n = s.length()
   let m = needle.length()
   let sc = s.to_array()
@@ -354,10 +379,10 @@ test "结构式模板：卡片子树完整（kids 回归锚）" {
   match p.artboards.get("lv2") {
     None => assert_true(false)
     Some(ab) => {
-      for must in [
-        "email", "pass", "forgot", "login_btn", "title", "sub", "signup",
-      ]
-      .iter() {
+      for
+        must in [
+          "email", "pass", "forgot", "login_btn", "title", "sub", "signup",
+        ].iter() {
         assert_true(
           ab.doc.nodes.contains(must),
           msg="login_v2 丢子节点 \{must}（lt_card kids 回归）",
@@ -390,10 +415,15 @@ test "结构式模板：卡片子树完整（kids 回归锚）" {
         match ab.doc.get(tid) {
           Some(n) =>
             match ab.doc.find_parent(n.id) {
-              Some(parent) => assert_eq(parent, cid, msg="\{tid} 应收编进 \{cid}")
+              Some(parent) =>
+                assert_eq(parent, cid, msg="\{tid} 应收编进 \{cid}")
               None => assert_true(false, msg="\{tid} 无父节点")
             }
-          None => assert_true(false, msg="特性卡内容 \{tid} 丢失（kids 回归）")
+          None =>
+            assert_true(
+              false,
+              msg="特性卡内容 \{tid} 丢失（kids 回归）",
+            )
         }
       }
   }
@@ -413,11 +443,21 @@ test "结构式模板：暗色令牌 + 布局容器无虚线" {
     Err(_) => ""
   }
   // hero_art = primary_container 暗色值，而非出厂 #EDF1FE
-  assert_false(svg_dark.contains("#EDF1FE"), msg="插图占位仍是硬编码亮色")
+  assert_false(
+    svg_dark.contains("#EDF1FE"),
+    msg="插图占位仍是硬编码亮色",
+  )
   // 布局容器/spacer 不再有装饰虚线框（线框稿观感的根因）
-  assert_false(svg_dark.contains("stroke-dasharray=\"4 3\""), msg="布局容器仍被描虚线")
+  assert_false(
+    svg_dark.contains("stroke-dasharray=\"4 3\""),
+    msg="布局容器仍被描虚线",
+  )
   match p.export_svg(artboard="lv2") {
-    Ok(s) => assert_false(s.contains("fill=\"#FFFFFF\""), msg="login_v2 卡仍是出厂白")
+    Ok(s) =>
+      assert_false(
+        s.contains("fill=\"#FFFFFF\""),
+        msg="login_v2 卡仍是出厂白",
+      )
     Err(_) => assert_true(false)
   }
 }
@@ -427,13 +467,13 @@ test "结构式模板：暗色令牌 + 布局容器无虚线" {
 /// 折出的行数时按检测项报出（此前 profile 统计卡越出 34px、detail 描述
 /// 越 130px、onboarding 副标题越 213px 全部无人报）。
 test "norms：文字折行超盒高检测" {
-  let doc = Document::new({ width: 390.0, height: 844.0 })
+  let doc = Document::new({ width: 390.0, height: 844.0, })
   // 200 宽 × 24 高的盒放 60 字符（14px ≈ 288px 宽 → 折 2 行 42 高，超盒）
   let over = {
     ..Node::make("over", Text),
     width: Fixed(200.0),
     height: Fixed(24.0),
-    style: { ..NodeStyle::default(), text_color: "#42474F" },
+    style: { ..NodeStyle::default(), text_color: "#42474F", },
     text: "A short paragraph describing this item in two or three lines.",
   }
   let _ = doc.insert_node(over, "root")
@@ -442,7 +482,7 @@ test "norms：文字折行超盒高检测" {
     ..Node::make("fits", Text),
     width: Fixed(200.0),
     height: Fixed(60.0),
-    style: { ..NodeStyle::default(), text_color: "#42474F" },
+    style: { ..NodeStyle::default(), text_color: "#42474F", },
     text: "A short paragraph describing this item in two or three lines.",
   }
   let _ = doc.insert_node(fits, "root")

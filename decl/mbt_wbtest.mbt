@@ -260,7 +260,7 @@ test "structural templates round-trip without duplicating container children" {
 
 ///|
 /// 在文本中从 from 位置查找子串（回归测试辅助）。
-fn find_from(text : String, needle : String, from : Int) -> Int? {
+fn find_from(text : String, needle : String, from : Int32) -> Int32? {
   let n = needle.length()
   let mut i = from
   while i + n <= text.length() {
@@ -274,7 +274,7 @@ fn find_from(text : String, needle : String, from : Int) -> Int? {
 
 ///|
 /// 子串出现次数（motion= 只应在设置了该字段的节点上出现一次）。
-fn count_needle(text : String, needle : String) -> Int {
+fn count_needle(text : String, needle : String) -> Int32 {
   let mut count = 0
   let mut idx = 0
   let mut scanning = true
@@ -358,7 +358,8 @@ test "空态往返：零画板项目 → canonical → load 闭环（issue #27�
 }
 
 ///|
-test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue #20）" {  let src = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  entry: w\n  extra_section: hello\n  artboards:\n    - w\n  deepdesign_ink:\n    v: 1\ncustom_top: 42\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
+test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue #20）" {
+  let src = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  entry: w\n  extra_section: hello\n  artboards:\n    - w\n  deepdesign_ink:\n    v: 1\ncustom_top: 42\n---\n\n# T\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page\n}\n```\n"
   let model = match load_mbt_project(src) {
     Ok(m) => m
     Err(e) => {
@@ -390,7 +391,10 @@ test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue 
   let canonical2 = back.to_mbt()
   let needles = ["extra_section: hello", "deepdesign_ink:", "custom_top: 42"]
   for needle in needles.iter() {
-    assert_true(canonical2.contains(needle), msg="二次往返必须保持 \{needle}")
+    assert_true(
+      canonical2.contains(needle),
+      msg="二次往返必须保持 \{needle}",
+    )
   }
 }
 
@@ -443,8 +447,7 @@ test "节点 motion 白名单：未知与写死几何预设拒绝" {
   for preset in ["press", "pop", "modal_present", "slide_in_right"].iter() {
     match load_mbt_project(base.replace(old="__P__", new=preset)) {
       Ok(_) => assert_true(false)
-      Err(e) =>
-        assert_true(e.contains("motion_preset_not_node_safe"), msg=e)
+      Err(e) => assert_true(e.contains("motion_preset_not_node_safe"), msg=e)
     }
   }
 }
@@ -485,8 +488,7 @@ test "flows：手势 trigger 声明往返与未知触发报错" {
   let bad2 = src.replace(old="trigger: focus", new="trigger: focus:missing")
   match load_mbt_project(bad2) {
     Ok(_) => assert_true(false)
-    Err(e) =>
-      assert_true(e.contains("mbt_flow_unknown_node:f1:missing"), msg=e)
+    Err(e) => assert_true(e.contains("mbt_flow_unknown_node:f1:missing"), msg=e)
   }
 }
 
@@ -521,7 +523,10 @@ test "flows：transition 声明往返与默认 Push 省略" {
   }
   assert_eq(back.project.flows[0].transition, "modal_present")
   // 未知过渡
-  let bad = src.replace(old="transition: modal_present", new="transition: nonsense")
+  let bad = src.replace(
+    old="transition: modal_present",
+    new="transition: nonsense",
+  )
   match load_mbt_project(bad) {
     Ok(_) => assert_true(false)
     Err(e) => assert_true(e.contains("mbt_flow_unknown_transition"), msg=e)

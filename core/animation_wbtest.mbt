@@ -124,7 +124,9 @@ test "animation：节点 motion 白名单与错误码" {
     Err(e) => assert_true(e.contains("unknown_motion_preset"))
   }
   // 导出片段：规则选择器对齐 DOM id，keyframes 名带 mv-p- 前缀
-  assert_true(node_motion_keyframes_css("fade_in").contains("@keyframes mv-p-fade_in"))
+  assert_true(
+    node_motion_keyframes_css("fade_in").contains("@keyframes mv-p-fade_in"),
+  )
   assert_true(
     node_motion_rule_css("hero", "fade_in").contains(
       "#n_hero{animation:mv-p-fade_in",

@@ -10,11 +10,11 @@
 /// ```
 ///
 /// Agent（或 shell 脚本）可以管道组合多个命令。
-extern "c" fn getchar() -> Int = "getchar"
+extern "c" fn getchar() -> Int32 = "getchar"
 
 ///|
 fn read_line() -> String {
-  let bytes : Array[Int] = []
+  let bytes : Array[Int32] = []
   let mut on = true
   while on {
     let c = getchar()
@@ -38,31 +38,31 @@ fn read_line() -> String {
 ///|
 /// stdin 是 UTF-8 字节流：逐字节收集后解码（getchar 逐字节返回，
 /// 直接用 Int::to_char 会按 Latin-1 拼坏非 ASCII 文本）
-fn utf8_from_bytes(bytes : Array[Int]) -> String {
-  let sb = StringBuilder::new()
+fn utf8_from_bytes(bytes : Array[Int32]) -> String {
+  let sb = StringBuilder()
   let mut i = 0
   let n = bytes.length()
   while i < n {
     let b0 = bytes[i]
     if b0 < 0x80 {
-      sb.write_char(Int::to_char(b0).unwrap_or('?'))
+      sb.write_char(Int32::to_char(b0).unwrap_or('?'))
       i = i + 1
     } else if b0 < 0xE0 && i + 1 < n {
       let cp = ((b0 - 0xC0) << 6) + (bytes[i + 1] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 2
     } else if b0 < 0xF0 && i + 2 < n {
       let cp = ((b0 - 0xE0) << 12) +
         ((bytes[i + 1] - 0x80) << 6) +
         (bytes[i + 2] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 3
     } else if i + 3 < n {
       let cp = ((b0 - 0xF0) << 18) +
         ((bytes[i + 1] - 0x80) << 12) +
         ((bytes[i + 2] - 0x80) << 6) +
         (bytes[i + 3] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 4
     } else {
       i = i + 1
@@ -76,12 +76,12 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 /// 落回该画板——此前用 keys().next() 取第一个画板，多画板项目会静默写错。
 // 按板历史注册表（issue #21）：apply 不会使注册失效；init 幂等不重基线，
 // 「重开 + init-all」宿主模式可跨 apply 累积多级撤销。
-let g_histories : @ref.Ref[Map[String, @core.DesignHistory]] = @ref.Ref::new(
-  Map::new(),
+let g_histories : @ref.Ref[Map[String, @core.DesignHistory]] = @ref.Ref(
+  Map([]),
 )
 
 ///|
-let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
+let g_history_board : @ref.Ref[String] = @ref.Ref("")
 
 ///|
 /// history 子命令族（CLI 侧薄分发；状态在 g_history）。
@@ -202,7 +202,7 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
 }
 
 ///|
-fn parse_rev(text : String) -> Int? {
+fn parse_rev(text : String) -> Int32? {
   let t = text.trim().to_string()
   if t.length() == 0 {
     return None
@@ -310,7 +310,7 @@ fn mbt_trim_ws(s : String) -> String {
 
 ///|
 /// 全项目谓词违规总数（跨画板求和）。
-fn project_total_violations(project : @core.Project) -> Int {
+fn project_total_violations(project : @core.Project) -> Int32 {
   let mut total = 0
   for id in project.artboards.keys() {
     match project.artboards.get(id) {
@@ -663,7 +663,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             i = i + 1
           }
         }
-        match p.generate(intent_text=intent, name=artboard_name, spec=spec_json) {
+        match
+          p.generate(intent_text=intent, name=artboard_name, spec=spec_json) {
           Ok(json) => json
           Err(e) =>
             if e == "design_spec_required" {
@@ -677,7 +678,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "spec-extract" =>
       // 设计文档 → 设计规范提取（0.2 规范流程入口）：doc=<b64(markdown)>
-      if parts.length() < 2 || !parts[1].has_prefix("doc=") || parts[1].length() <= 4 {
+      if parts.length() < 2 ||
+        !parts[1].has_prefix("doc=") ||
+        parts[1].length() <= 4 {
         cli_err("usage: spec-extract doc=<base64(设计文档 markdown)>")
       } else {
         match decode_mbt_b64(parts[1].substring(start=4)) {
@@ -692,9 +695,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             for g in ex.gaps.iter() {
               parts_g.push("\"" + @core.json_escape(g) + "\"")
             }
-            "{\"ok\":true,\"spec\":" + ex.spec_json +
-            ",\"extracted\":[" + parts_e.join(",") +
-            "],\"gaps\":[" + parts_g.join(",") + "]}"
+            "{\"ok\":true,\"spec\":" +
+            ex.spec_json +
+            ",\"extracted\":[" +
+            parts_e.join(",") +
+            "],\"gaps\":[" +
+            parts_g.join(",") +
+            "]}"
           }
         }
       }
@@ -702,7 +709,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       // 强制规范流程：只从设计文档生成（缺关键项拒绝）。多词意图与
       // generate 同款拼接（未加引号的「web 落地页」不能静默截成一词）
       if parts.length() < 3 {
-        cli_err("usage: generate-doc <意图一句话> doc=<base64(设计文档)> [as <name>]")
+        cli_err(
+          "usage: generate-doc <意图一句话> doc=<base64(设计文档)> [as <name>]",
+        )
       } else {
         let mut intent = parts[1]
         let mut doc_md = ""
@@ -723,7 +732,12 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             i = i + 1
           }
         }
-        match p.generate_from_doc(intent_text=intent, doc=doc_md, name=artboard_name) {
+        match
+          p.generate_from_doc(
+            intent_text=intent,
+            doc=doc_md,
+            name=artboard_name,
+          ) {
           Ok(json) => json
           Err(e) =>
             // 缺口信封与 MCP 同形：结构化 {ok:false,error,gaps,spec_draft}
@@ -737,7 +751,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               }
               "{\"ok\":false,\"error\":\"design_doc_spec_gaps\",\"gaps\":[" +
               parts_g.join(",") +
-              "],\"spec_draft\":" + ex.spec_json + "}"
+              "],\"spec_draft\":" +
+              ex.spec_json +
+              "}"
             } else {
               cli_err(e)
             }
@@ -745,7 +761,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       }
     "comply" =>
       if parts.length() < 2 {
-        cli_err("usage: comply <artboard>  （设计规范遵从校验：颜色/字号/圆角/动效）")
+        cli_err(
+          "usage: comply <artboard>  （设计规范遵从校验：颜色/字号/圆角/动效）",
+        )
       } else {
         p.design_spec_compliance(artboard=parts[1])
       }
@@ -914,7 +932,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         cli_err("usage: load <project_json> （JSON 需单行）")
       } else {
         match p.from_project_json(raw) {
-          Ok(_) => "{\"ok\":true,\"artboards\":\{p.artboards.size()}}"
+          Ok(_) => "{\"ok\":true,\"artboards\":\{p.artboards.length()}}"
           Err(e) => cli_err(e)
         }
       }
@@ -981,12 +999,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             match @core.normalize_flow_trigger(parts[3]) {
               Err(e) => cli_err(e)
               Ok(trigger) => {
-                p.add_flow(
-                  from=parts[1],
-                  to=parts[2],
-                  trigger~,
-                  transition~,
-                )
+                p.add_flow(from=parts[1], to=parts[2], trigger~, transition~)
                 "{\"ok\":true,\"flow\":\"\{parts[1]} --\{trigger}/\{transition}--> \{parts[2]}\"}"
               }
             }
@@ -1366,7 +1379,7 @@ fn split_cmd(line : String) -> Array[String] {
 }
 
 ///|
-fn index_of_str(s : String, sub : String) -> Int {
+fn index_of_str(s : String, sub : String) -> Int32 {
   @core.index_of_str(s, sub)
 }
 
@@ -1497,7 +1510,7 @@ fn split_change(d : String) -> (String, String) {
 }
 
 ///|
-fn char_at_str(s : String, i : Int) -> String {
+fn char_at_str(s : String, i : Int32) -> String {
   s.substring(start=i, end=i + 1)
 }
 
@@ -1506,7 +1519,7 @@ fn char_at_str(s : String, i : Int) -> String {
 
 ///|
 fn join_arr(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

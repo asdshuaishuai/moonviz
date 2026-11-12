@@ -13,6 +13,7 @@
 // 主题定义
 // ---------------------------------------------------------------------------
 
+///|
 pub(all) struct Theme {
   name : String
   display_name : String
@@ -523,7 +524,7 @@ fn invert_luminance(hex : String) -> String {
 }
 
 ///|
-fn parse_rgb5(hex : String) -> (Int, Int, Int) {
+fn parse_rgb5(hex : String) -> (Int32, Int32, Int32) {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
     hex.substring(start=1)
   } else {
@@ -536,7 +537,7 @@ fn parse_rgb5(hex : String) -> (Int, Int, Int) {
 }
 
 ///|
-fn hv5(s : String, offset : Int) -> Int {
+fn hv5(s : String, offset : Int32) -> Int32 {
   if s.length() < offset + 2 {
     return 0
   }
@@ -546,7 +547,7 @@ fn hv5(s : String, offset : Int) -> Int {
 }
 
 ///|
-fn hd5(c : Char?) -> Int {
+fn hd5(c : Char?) -> Int32 {
   match c {
     Some(ch) => {
       let code = ch.to_int()
@@ -565,18 +566,18 @@ fn hd5(c : Char?) -> Int {
 }
 
 ///|
-fn to_hex(r : Int, g : Int, b : Int) -> String {
+fn to_hex(r : Int32, g : Int32, b : Int32) -> String {
   // 转为 hex
   "#" + int_to_hex(r) + int_to_hex(g) + int_to_hex(b)
 }
 
 ///|
-fn int_to_hex(v : Int) -> String {
+fn int_to_hex(v : Int32) -> String {
   // Int::to_char 返回 Char?，直接 .to_string() 会产出 "Some(c)" 形态的垃圾
   // 十六进制——用 Char::from_int 构造（与 json.mbt write_c0_u_escape 同款）
   let hi = v / 16
   let lo = v % 16
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char(Char::from_int(if hi < 10 { hi + 48 } else { hi + 87 }))
   sb.write_char(Char::from_int(if lo < 10 { lo + 48 } else { lo + 87 }))
   sb.to_string()
@@ -650,7 +651,12 @@ pub fn Theme::editorial() -> Theme {
   t.colors.set("text_primary", "#171412")
   t.colors.set("text_secondary", "#57504A")
   t.colors.set("text_hint", "#635C55")
-  { name: "editorial", display_name: "Editorial 杂志", tokens: t, is_dark: false, }
+  {
+    name: "editorial",
+    display_name: "Editorial 杂志",
+    tokens: t,
+    is_dark: false,
+  }
 }
 
 ///|
@@ -679,7 +685,12 @@ pub fn Theme::playful() -> Theme {
   t.colors.set("text_primary", "#0B2A26")
   t.colors.set("text_secondary", "#3F5D57")
   t.colors.set("text_hint", "#4A6660")
-  { name: "playful", display_name: "Playful 童趣", tokens: t, is_dark: false, }
+  {
+    name: "playful",
+    display_name: "Playful 童趣",
+    tokens: t,
+    is_dark: false,
+  }
 }
 
 ///|
@@ -738,7 +749,7 @@ pub fn Project::apply_theme(
 /// text_color 语境的角色分级（小者优先）：文字位置的十六进制值优先按
 /// 文字角色解释——#1A1C1E 出现在文字上应视为 light.text_primary 而不是
 /// dark.surface，否则 nord 等深色主题会得到「深字压深底」。
-fn role_rank_for_text(role : String) -> Int {
+fn role_rank_for_text(role : String) -> Int32 {
   if role_has_prefix(role, "text_") {
     1
   } else if role_has_prefix(role, "on_") {
@@ -763,7 +774,7 @@ fn role_rank_for_text(role : String) -> Int {
 /// on_primary/on_secondary 语义——#FFFFFF 出现在按钮上应还原成
 /// on_primary 而不是 surface，否则深色主题往返后按钮文字错位成
 /// text_primary 的深色值。
-fn role_rank_for_text_on(role : String) -> Int {
+fn role_rank_for_text_on(role : String) -> Int32 {
   if role_has_prefix(role, "on_") {
     1
   } else if role_has_prefix(role, "text_") {
@@ -781,17 +792,19 @@ fn role_rank_for_text_on(role : String) -> Int {
 /// divider/次按钮塌缩成 #EDEDF2（14 模板 39 节点）。按组件语义加权
 /// 消歧：divider → outline_variant，按钮/chip 族 → secondary_container，
 /// badge → on_primary。放置路径 resolve_color 不经过本函数。
-fn role_rank_for_fill_ctx(component : String, role : String) -> Int {
+fn role_rank_for_fill_ctx(component : String, role : String) -> Int32 {
   if role == "outline_variant" && component == "divider" {
     return -1
   }
   if role == "secondary_container" &&
-    (component == "button" ||
-    component == "chip" ||
-    component == "toggle_group" ||
-    component == "radio" ||
-    component == "switch" ||
-    component == "tag") {
+    (
+      component == "button" ||
+      component == "chip" ||
+      component == "toggle_group" ||
+      component == "radio" ||
+      component == "switch" ||
+      component == "tag"
+    ) {
     return -1
   }
   if role == "on_primary" && component == "badge" {
@@ -804,7 +817,7 @@ fn role_rank_for_fill_ctx(component : String, role : String) -> Int {
 /// stroke 语境权重：描边几乎总是 outline 族——outline/outline_variant
 /// 优先于与它们同值的 surface_variant/secondary_container（暗色主题
 /// 三值同源），往返切换才能还原 outline 语义。
-fn role_rank_for_stroke_ctx(role : String) -> Int {
+fn role_rank_for_stroke_ctx(role : String) -> Int32 {
   if role == "outline_variant" || role == "outline" {
     return -1
   }
@@ -814,10 +827,8 @@ fn role_rank_for_stroke_ctx(role : String) -> Int {
 ///|
 /// fill 语境的角色分级：底/容器优先，文字角色殿后（同一字面量被用作
 /// 面色时几乎总是 surface/container 语义）。
-fn role_rank_for_fill(role : String) -> Int {
-  if role == "surface" ||
-    role == "surface_variant" ||
-    role == "background" {
+fn role_rank_for_fill(role : String) -> Int32 {
+  if role == "surface" || role == "surface_variant" || role == "background" {
     1
   } else if role_has_suffix(role, "_container") {
     2
@@ -854,8 +865,8 @@ fn role_has_suffix(s : String, suffix : String) -> Bool {
 fn Project::recolor_with(
   self : Project,
   target : DesignTokens,
-  prior? : DesignTokens? = None,
-) -> Int {
+  prior~ : DesignTokens? = None,
+) -> Int32 {
   // 字面量 → 角色：以「全部内置主题 ∪ 默认」的调色板并集反查。
   // 操作路径每条命令都从 canonical MBT 重建 Project（tokens 恒为默认），
   // 仅按当前/默认反查会让「nord → light」无从映射——并集保证任一主题的
@@ -863,12 +874,12 @@ fn Project::recolor_with(
   // 字面量 → 候选角色集合。同一字面量在不同主题里可能是不同角色
   // （#1A1C1E 既是 light.text_primary 也是 dark.surface）——不能取
   // 「最后写入」那个，按使用处（fill / text_color）的角色类分级选义。
-  let lit_roles : Map[String, Map[String, Bool]] = Map::new()
+  let lit_roles : Map[String, Map[String, Bool]] = Map([])
   let remember = fn(lit : String, role : String) {
     match lit_roles.get(lit) {
       Some(set) => set.set(role, true)
       None => {
-        let set : Map[String, Bool] = Map::new()
+        let set : Map[String, Bool] = Map([])
         set.set(role, true)
         lit_roles.set(lit, set)
       }
@@ -895,7 +906,7 @@ fn Project::recolor_with(
   // 历史默认主色 #4B6BFB（WCAG 校准前的存量文档/模板字面量）仍按 primary
   // 反查——默认调色板已换成校准值 #4361EE，老字面量不丢映射
   remember("#4B6BFB", "primary")
-  let pick = fn(lit : String, rank : (String) -> Int) -> String? {
+  let pick = fn(lit : String, rank : (String) -> Int32) -> String? {
     match lit_roles.get(lit) {
       None => None
       Some(set) => {
@@ -922,9 +933,10 @@ fn Project::recolor_with(
     for nid in ab.doc.nodes.keys() {
       let _ = ab.doc.update_node(nid, fn(n) {
         let mut node = n
-        match pick(n.style.fill, fn(role : String) -> Int {
-          role_rank_for_fill_ctx(n.component, role)
-        }) {
+        match
+          pick(n.style.fill, fn(role : String) -> Int32 {
+            role_rank_for_fill_ctx(n.component, role)
+          }) {
           Some(role) =>
             match target.colors.get(role) {
               Some(v) => {
@@ -959,7 +971,7 @@ fn Project::recolor_with(
         // primary_container/secondary_container 平手按字典序归
         // primary_container，secondary 底的 on_secondary_container 直派
         // 不触发（back_btn 文字漂 #3E2723）
-        let fill_role = pick(node.style.fill, fn(role : String) -> Int {
+        let fill_role = pick(node.style.fill, fn(role : String) -> Int32 {
           role_rank_for_fill_ctx(n.component, role)
         })
         let mut on_context = match fill_role {
@@ -998,9 +1010,9 @@ fn Project::recolor_with(
           }
         }
         let secondary_fill = fill_role is Some("secondary_container")
-        let text_rank : (String) -> Int = match fill_role {
+        let text_rank : (String) -> Int32 = match fill_role {
           Some("secondary_container") =>
-            fn(role : String) -> Int {
+            fn(role : String) -> Int32 {
               if role == "on_secondary_container" {
                 1
               } else if role_has_prefix(role, "on_") ||
@@ -1022,7 +1034,10 @@ fn Project::recolor_with(
         // 往返切换后与基线字节稳定（否则 #111111→on_primary→#FFFFFF
         // 的无意义漂移污染 diff 与 .mbt.md）
         let mut text_assigned = n.text.length() == 0
-        if on_context && !text_assigned && norm_is_hex6(n.style.text_color) && n.style.text_color != "none" {
+        if on_context &&
+          !text_assigned &&
+          norm_is_hex6(n.style.text_color) &&
+          n.style.text_color != "none" {
           // 语义底直派：secondary_container 底 → on_secondary_container，
           // 其余语义底 → on_primary
           let target_text = if secondary_fill {
@@ -1087,7 +1102,7 @@ fn Project::recolor_with(
 /// 令牌表深快照：recolor 反查需要「变更前」的字面量→角色来源，
 /// 自定义值（set_token 产物）不在任何内置调色板里。
 fn Project::tokens_snapshot(self : Project) -> DesignTokens {
-  let colors : Map[String, String] = Map::new()
+  let colors : Map[String, String] = Map([])
   for role in self.tokens.colors.keys() {
     match self.tokens.colors.get(role) {
       Some(v) => colors.set(role, v)
@@ -1139,7 +1154,7 @@ pub fn Project::set_token(
     }
     self.tokens.motion.set(key, ms)
     if self.token_overrides is None {
-      self.token_overrides = Some(Map::new())
+      self.token_overrides = Some(Map([]))
     }
     match self.token_overrides {
       Some(ov) => ov.set(token_name, value)
@@ -1159,7 +1174,7 @@ pub fn Project::set_token(
   }
   self.tokens.colors.set(token_name, value)
   if self.token_overrides is None {
-    self.token_overrides = Some(Map::new())
+    self.token_overrides = Some(Map([]))
   }
   match self.token_overrides {
     Some(ov) => ov.set(token_name, value)
@@ -1212,9 +1227,7 @@ pub fn Project::preview_themes(
             let d = DesignTokens::default()
             for r in d.colors.keys() {
               match d.colors.get(r) {
-                Some(v) => if v == n.style.fill {
-                  role = r
-                }
+                Some(v) => if v == n.style.fill { role = r }
                 None => ()
               }
             }
@@ -1258,7 +1271,7 @@ pub fn Project::enable_auto_dark(self : Project) -> Result[String, String] {
   let prior = self.tokens_snapshot()
   self.tokens = dark.tokens
   // 派生主题的整个令牌面即本次覆盖意图：整体记入 token_overrides
-  let ov : Map[String, String] = Map::new()
+  let ov : Map[String, String] = Map([])
   for role in dark.tokens.colors.keys() {
     match dark.tokens.colors.get(role) {
       Some(v) => ov.set(role, v)
@@ -1275,7 +1288,7 @@ pub fn Project::enable_auto_dark(self : Project) -> Result[String, String] {
 
 ///|
 fn jstr21(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")
@@ -1292,7 +1305,7 @@ fn jstr21(parts : Array[String]) -> String {
 pub fn hex_mix(a : String, b : String, t : Double) -> String {
   let (ar, ag, ab) = parse_rgb5(a)
   let (br, bg, bb) = parse_rgb5(b)
-  let mix = fn(x : Int, y : Int) -> Int {
+  let mix = fn(x : Int32, y : Int32) -> Int32 {
     let v = x.to_double() * (1.0 - t) + y.to_double() * t
     let v = if v < 0.0 { 0.0 } else if v > 255.0 { 255.0 } else { v }
     v.to_int()

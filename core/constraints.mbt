@@ -37,7 +37,7 @@ fn second_char(s : String, fallback : String) -> String {
 /// 按 '_' 或 '-' 拆成两段（无分隔：两字符简写拆开）
 fn split_two_axes(c : String) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for ch in c.iter() {
     if ch == '_' || ch == '-' {
       out.push(cur.to_string())
