@@ -27,7 +27,7 @@ fn parse_constraint(c : String) -> (String, String) {
 /// 两字符简写的第二个字符（"lt" → "t"）
 fn second_char(s : String, fallback : String) -> String {
   if s.length() >= 2 {
-    s.substring(start=1, end=2)
+    s[1:2].to_owned()
   } else {
     fallback
   }
@@ -53,7 +53,7 @@ fn split_two_axes(c : String) -> Array[String] {
 ///|
 fn first_char(s : String) -> String {
   if s.length() > 0 {
-    s.substring(start=0, end=1)
+    s[0:1].to_owned()
   } else {
     ""
   }

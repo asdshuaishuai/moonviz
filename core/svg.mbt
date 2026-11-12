@@ -369,14 +369,14 @@ fn has_url_prefix(s : String) -> Bool {
   let https = "https://"
   let data = "data:"
   if s.length() >= http.length() &&
-    s.substring(start=0, end=http.length()) == http {
+    s[0:http.length()].to_owned() == http {
     true
   } else if s.length() >= https.length() &&
-    s.substring(start=0, end=https.length()) == https {
+    s[0:https.length()].to_owned() == https {
     true
   } else {
     s.length() >= data.length() &&
-    s.substring(start=0, end=data.length()) == data
+    s[0:data.length()].to_owned() == data
   }
 }
 
@@ -419,7 +419,7 @@ fn svg_ns_tag(id : String) -> String {
       } else {
         while v > 0 {
           let d = v % 16
-          hex.write_char(Char::from_int(if d < 10 { d + 48 } else { d + 87 }))
+          hex.write_char((if d < 10 { d + 48 } else { d + 87 }).unsafe_to_char())
           v = v / 16
         }
       }
@@ -496,13 +496,13 @@ fn has_prefix(s : String, pre : String) -> Bool {
   if s.length() < pre.length() {
     return false
   }
-  s.substring(start=0, end=pre.length()) == pre
+  s[0:pre.length()].to_owned() == pre
 }
 
 ///|
 fn gradient_def(paint : String, id : String) -> String {
   if has_prefix(paint, "linear:") {
-    let body = paint.substring(start=7, end=paint.length())
+    let body = paint[7:paint.length()].to_owned()
     let (c1, c2, deg) = parse_two_colors_angle(body)
     let tag = "g_\{svg_id_tag(id)}"
     // 角度 → (x1,y1,x2,y2)：0°=→ 90°=↓
@@ -514,7 +514,7 @@ fn gradient_def(paint : String, id : String) -> String {
     return "<linearGradient id=\"\{tag}\" x1=\"\{x1}\" y1=\"\{y1}\" x2=\"\{x2}\" y2=\"\{y2}\"><stop offset=\"0\" stop-color=\"\{c1}\"/><stop offset=\"1\" stop-color=\"\{c2}\"/></linearGradient>"
   }
   if has_prefix(paint, "radial:") {
-    let body = paint.substring(start=7, end=paint.length())
+    let body = paint[7:paint.length()].to_owned()
     let (c1, c2, _deg) = parse_two_colors_angle(body)
     let tag = "g_\{svg_id_tag(id)}"
     return "<radialGradient id=\"\{tag}\"><stop offset=\"0\" stop-color=\"\{c1}\"/><stop offset=\"1\" stop-color=\"\{c2}\"/></radialGradient>"
@@ -530,8 +530,8 @@ fn parse_two_colors_angle(body : String) -> (String, String, Double) {
   let mut deg = 90.0
   let at = index_of_at(body)
   if at >= 0 {
-    color_part = body.substring(start=0, end=at)
-    deg = parse_deg(body.substring(start=at + 1, end=body.length()))
+    color_part = body[0:at].to_owned()
+    deg = parse_deg(body[at + 1:body.length()].to_owned())
   }
   let parts = split_char(color_part, ':')
   let c1 = if parts.length() > 0 { parts[0] } else { "#cccccc" }

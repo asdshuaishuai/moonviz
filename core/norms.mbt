@@ -608,7 +608,7 @@ fn norm_is_hex6(color : String) -> Bool {
         let ok = (code >= 48 && code <= 57) ||
           (code >= 97 && code <= 102) ||
           (code >= 65 && code <= 70)
-        if not(ok) {
+        if !ok {
           return false
         }
       }
@@ -764,7 +764,7 @@ fn has_word(s_lower : String, word : String) -> Bool {
     return false
   }
   for i in 0..<=(n - w) {
-    if s_lower.substring(start=i, end=i + w) == word {
+    if s_lower[i:i + w].to_owned() == word {
       let b_ok = if i == 0 {
         true
       } else {

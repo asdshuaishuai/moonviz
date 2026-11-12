@@ -223,7 +223,7 @@ pub fn Project::autofill_missing(
   }
   let after_count = match after.find("\"missing_count\":") {
     Some(i) => {
-      let rest = after.substring(start=i + 16)
+      let rest = after[i + 16:].to_owned()
       let mut j = 0
       while j < rest.length() {
         match rest.get_char(j) {
@@ -231,7 +231,7 @@ pub fn Project::autofill_missing(
           None => break
         }
       }
-      rest.substring(start=0, end=j).to_string()
+      rest[0:j].to_owned().to_string()
     }
     None => "?"
   }
@@ -256,9 +256,9 @@ fn parse_missing_envelope(json : String) -> Array[String] {
 fn missing_array_scope(json : String) -> String {
   match json.find("\"missing\":[") {
     Some(i) => {
-      let rest = json.substring(start=i + "\"missing\":[".length())
+      let rest = json[i + "\"missing\":[".length():].to_owned()
       match rest.find("]") {
-        Some(j) => rest.substring(start=0, end=j).to_string()
+        Some(j) => rest[0:j].to_owned().to_string()
         None => ""
       }
     }
@@ -274,13 +274,13 @@ fn parse_missing_elements(scope : String) -> Array[String] {
   let mut from = 0
   let key = "\"element\":\""
   while from + key.length() <= scope.length() {
-    match scope.substring(start=from).find(key) {
+    match scope[from:].to_owned().find(key) {
       Some(rel) => {
         let i = from + rel + key.length()
-        let rest = scope.substring(start=i)
+        let rest = scope[i:].to_owned()
         match rest.find("\"") {
           Some(j) => {
-            elements.push(rest.substring(start=0, end=j).to_string())
+            elements.push(rest[0:j].to_owned().to_string())
             from = i + j
           }
           None => from = scope.length()

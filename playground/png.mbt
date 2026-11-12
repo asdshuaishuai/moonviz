@@ -63,7 +63,7 @@ fn stroke_rect_rgba(
 ///|
 fn has_pref(s : String, prefix : String) -> Bool {
   s.length() >= prefix.length() &&
-  s.substring(start=0, end=prefix.length()) == prefix
+  s[0:prefix.length()].to_owned() == prefix
 }
 
 ///|
@@ -103,7 +103,7 @@ fn hex2(s : String, i : Int32) -> Int32 {
 
 ///|
 fn color_from_hex(hex : String) -> Int32 {
-  let body = if has_pref(hex, "#") { hex.substring(start=1) } else { hex }
+  let body = if has_pref(hex, "#") { hex[1:].to_owned() } else { hex }
   0xFF000000 + (hex2(body, 0) << 16) + (hex2(body, 2) << 8) + hex2(body, 4)
 }
 

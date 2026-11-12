@@ -157,7 +157,7 @@ pub fn Project::qa_agent_conflicts(self : Project) -> Result[Unit, String] {
           if f.from == artboard_id &&
             f.trigger.length() > 4 &&
             f.trigger.has_prefix("tap:") {
-            let nid = f.trigger.substring(start=4)
+            let nid = f.trigger[4:].to_owned()
             let c = match tap_counts.get(nid) {
               Some(v) => v
               None => 0

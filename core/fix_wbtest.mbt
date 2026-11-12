@@ -233,7 +233,7 @@ fn occurrence_count(hay : String, needle : String) -> Int32 {
   let n = hay.length()
   let m = needle.length()
   while i + m <= n {
-    if hay.substring(start=i, end=i + m) == needle {
+    if hay[i:i + m].to_owned() == needle {
       count = count + 1
       i = i + m
     } else {

@@ -264,7 +264,7 @@ fn find_from(text : String, needle : String, from : Int32) -> Int32? {
   let n = needle.length()
   let mut i = from
   while i + n <= text.length() {
-    if text.substring(start=i, end=i + n) == needle {
+    if text[i:i + n].to_owned() == needle {
       return Some(i)
     }
     i = i + 1

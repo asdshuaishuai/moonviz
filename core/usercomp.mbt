@@ -299,16 +299,16 @@ pub fn collect_param_refs(def : UserComponentDef) -> Array[String] raise {
             match rest.find("${") {
               None => scanning = false
               Some(start) => {
-                let after = rest[start + 2:].to_string()
+                let after = rest[start + 2:].to_owned()
                 match after.find("}") {
                   None => scanning = false
                   Some(end) => {
-                    let name = after[:end].to_string()
+                    let name = after[:end].to_owned()
                     if name != "" && known.contains(name) == false {
                       known.set(name, true)
                       refs.push(name)
                     }
-                    rest = after[end + 1:].to_string()
+                    rest = after[end + 1:].to_owned()
                   }
                 }
               }

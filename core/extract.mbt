@@ -258,7 +258,7 @@ fn infer_color_tokens(usage : Map[String, Int32]) -> Array[ExtractedToken] {
 ///|
 fn parse_rgb(hex : String) -> (Int32, Int32, Int32) {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
-    hex.substring(start=1)
+    hex[1:].to_owned()
   } else {
     hex
   }
@@ -450,7 +450,7 @@ fn detect_component_patterns(doc : Document) -> Array[ExtractedComponent] {
                 parts.push(p2)
               }
               let comp_name = if parts.length() >= 2 {
-                parts[1].to_string()
+                parts[1].to_owned()
               } else {
                 "unknown"
               }
@@ -618,7 +618,7 @@ fn design_slug(name : String) -> String {
       _ => break
     }
   }
-  s.substring(start=0, end~)
+  s[0:end].to_owned()
 }
 
 ///|

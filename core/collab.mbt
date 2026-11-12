@@ -393,7 +393,7 @@ pub fn CollabManager::status(self : CollabManager) -> String {
 pub fn DesignOp::from_text(spec : String) -> DesignOp? {
   let parts : Array[String] = []
   for p in spec.split(":").iter() {
-    parts.push(p.to_string())
+    parts.push(p.to_owned())
   }
   let head = match parts.get(0) {
     Some(h) => h.to_string()
@@ -518,10 +518,10 @@ pub fn DesignOp::from_text(spec : String) -> DesignOp? {
 /// 例：`1 a=fill:btn:#000:#111 b=pos:btn:1:2:3:4+gap:btn:8:16`
 /// 返回 MergeResult 数组的 JSON（含冲突标记与自动解决结果）。
 pub fn merge_sessions_from_spec(spec : String) -> String {
-  let trimmed = spec.trim().to_string()
+  let trimmed = spec.trim().to_owned()
   let words : Array[String] = []
   for w in trimmed.split(" ").iter() {
-    let t = w.to_string()
+    let t = w.to_owned()
     if t != "" {
       words.push(t)
     }
@@ -547,12 +547,12 @@ pub fn merge_sessions_from_spec(spec : String) -> String {
         continue
       }
     }
-    let agent = c.substring(start=0, end=eq).to_string()
+    let agent = c[0:eq].to_owned().to_string()
     let s = AgentSession::new(agent, base)
-    let ops_part = c.substring(start=eq + 1).to_string()
+    let ops_part = c[eq + 1:].to_owned().to_string()
     let op_specs : Array[String] = []
     for o in ops_part.split("+").iter() {
-      op_specs.push(o.to_string())
+      op_specs.push(o.to_owned())
     }
     for o in op_specs {
       if o == "" {
@@ -587,18 +587,18 @@ pub fn merge_sessions_from_spec(spec : String) -> String {
 ///|
 /// 十进制整数解析（纯 core，无外部依赖）；None 表示非法。
 fn parse_int_opt(text : String) -> Int32? {
-  let t = text.trim().to_string()
+  let t = text.trim().to_owned()
   if t.length() == 0 {
     return None
   }
   let mut value = 0
   let mut i = 0
-  let neg = t.substring(start=0, end=1) == "-"
+  let neg = t[0:1].to_owned() == "-"
   if neg {
     i = 1
   }
   while i < t.length() {
-    let c = t.substring(start=i, end=i + 1)
+    let c = t[i:i + 1].to_owned()
     let d = "0123456789".find(c)
     match d {
       None => return None

@@ -211,7 +211,7 @@ fn a11y_label(n : Node) -> String {
   if base != "" && base != n.id {
     base
   } else if n.text.trim() != "" {
-    n.text.trim().to_string()
+    n.text.trim().to_owned()
   } else if n.component != "" {
     n.component
   } else {
@@ -517,8 +517,8 @@ pub fn Project::export_html(self : Project, lang~ : String = "zh") -> String {
   let acts : Array[String] = []
   for e in self.flows.iter() {
     let node = if e.trigger.length() > 4 &&
-      e.trigger.substring(start=0, end=4) == "tap:" {
-      e.trigger.substring(start=4)
+      e.trigger[0:4].to_owned() == "tap:" {
+      e.trigger[4:].to_owned()
     } else {
       ""
     }
@@ -882,7 +882,7 @@ fn to_pascal_case(s : String) -> String {
       upper_next = true
     } else if upper_next {
       if code >= 97 && code <= 122 {
-        sb.write_char(Char::from_int(code - 32))
+        sb.write_char((code - 32).unsafe_to_char())
       } else {
         sb.write_char(c)
       }

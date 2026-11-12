@@ -259,7 +259,7 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
   let mut sec_spacing = false
   let mut sec_touch = false
   for raw in doc.split("\n").iter() {
-    let line = raw.trim().to_string()
+    let line = raw.trim().to_owned()
     if line == "" {
       continue
     }
@@ -267,7 +267,7 @@ pub fn design_doc_extract(doc : String) -> DesignDocExtract {
     // 与普通条目同样提取；纯加粗标题（**字号**）剥后无数据自然无副作用。
     // 此前整行 has_prefix("**") 判为标题并 continue，常见 markdown 条目
     // 全部静默不可提取。
-    let clean = line.replace(old="**", new="").trim().to_string()
+    let clean = line.replace(old="**", new="").trim().to_owned()
     if clean == "" {
       continue
     }
@@ -672,7 +672,7 @@ pub fn Project::generate_from_doc(
       // 单通道信封恒以 {"ok":true 开头——注入来源字段（同 skipped 前缀手术）
       Ok(
         "{\"spec_source\":\"design_doc\",\"spec_extracted\":\{ex.extracted.length()}," +
-        json.substring(start=1),
+        json[1:].to_owned(),
       )
   }
 }

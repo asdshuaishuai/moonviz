@@ -203,14 +203,14 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
 
 ///|
 fn parse_rev(text : String) -> Int32? {
-  let t = text.trim().to_string()
+  let t = text.trim().to_owned()
   if t.length() == 0 {
     return None
   }
   let mut v = 0
   let mut i = 0
   while i < t.length() {
-    let c = t.substring(start=i, end=i + 1)
+    let c = t[i:i + 1].to_owned()
     let d = "0123456789".find(c)
     match d {
       None => return None
@@ -278,7 +278,7 @@ fn mbt_has_cmd_prefix(operation : String, prefix : String) -> Bool {
   }
   let head = prefix + " "
   op.length() > head.length() &&
-  op.substring(start=0, end=head.length()) == head
+  op[0:head.length()].to_owned() == head
 }
 
 ///|
@@ -289,7 +289,7 @@ fn mbt_trim_ws(s : String) -> String {
   let mut ended = s.length()
   let mut trimming = true
   while trimming && start < ended {
-    let c = s.substring(start~, end=start + 1)
+    let c = s[start:start + 1].to_owned()
     if ws.contains(c) {
       start = start + 1
     } else {
@@ -298,14 +298,14 @@ fn mbt_trim_ws(s : String) -> String {
   }
   let mut trimming2 = true
   while trimming2 && ended > start {
-    let c = s.substring(start=ended - 1, end=ended)
+    let c = s[ended - 1:ended].to_owned()
     if ws.contains(c) {
       ended = ended - 1
     } else {
       trimming2 = false
     }
   }
-  s.substring(start~, end=ended)
+  s[start:ended].to_owned()
 }
 
 ///|
@@ -360,7 +360,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         builtin
       } else {
         // builtin 是 [ ... ]：剥掉首尾括号拼接
-        let inner = builtin.substring(start=1, end=builtin.length() - 1)
+        let inner = builtin[1:builtin.length() - 1].to_owned()
         let sep = if inner == "" { "" } else { "," }
         "[\{inner}\{sep}\{join_arr(user_items)}]"
       }
@@ -653,7 +653,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             i = i + 2
           } else if parts[i].has_prefix("spec=") && parts[i].length() > 5 {
             // issue #24：spec=<base64(design spec JSON)>（行协议内避免引号/空格）
-            match decode_mbt_b64(parts[i].substring(start=5)) {
+            match decode_mbt_b64(parts[i][5:].to_owned()) {
               Ok(text) => spec_json = text
               Err(e) => return cli_err(e)
             }
@@ -683,7 +683,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         parts[1].length() <= 4 {
         cli_err("usage: spec-extract doc=<base64(设计文档 markdown)>")
       } else {
-        match decode_mbt_b64(parts[1].substring(start=4)) {
+        match decode_mbt_b64(parts[1][4:].to_owned()) {
           Err(e) => cli_err(e)
           Ok(md) => {
             let ex = @core.design_doc_extract(md)
@@ -722,7 +722,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             artboard_name = parts[i + 1]
             i = i + 2
           } else if parts[i].has_prefix("doc=") && parts[i].length() > 4 {
-            match decode_mbt_b64(parts[i].substring(start=4)) {
+            match decode_mbt_b64(parts[i][4:].to_owned()) {
               Ok(text) => doc_md = text
               Err(e) => return cli_err(e)
             }
@@ -778,7 +778,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Ok(block) => {
             let ops : Array[String] = []
             for line in block.split("\n").iter() {
-              let trimmed = mbt_trim_ws(line.to_string())
+              let trimmed = mbt_trim_ws(line.to_owned())
               if trimmed.length() > 0 {
                 ops.push(trimmed)
               }
@@ -886,9 +886,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           let kv = parts[i]
           let eq = index_of_str(kv, "=")
           if eq > 0 {
-            let k = kv.substring(start=0, end=eq)
+            let k = kv[0:eq].to_owned()
             let v = @decl.unescape_value(
-              kv.substring(start=eq + 1, end=kv.length()),
+              kv[eq + 1:kv.length()].to_owned(),
             )
             kvs.push((k, v))
           }
@@ -927,7 +927,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
     "load" => {
       // 从原始行截取载荷：split_cmd 的引号支持会剥掉 JSON 的双引号，
       // 必须在分词前截取 "load " 之后的原文
-      let raw = line.substring(start=4, end=line.length()).trim().to_string()
+      let raw = line[4:line.length()].to_owned().trim().to_owned()
       if raw.length() == 0 {
         cli_err("usage: load <project_json> （JSON 需单行）")
       } else {
@@ -1129,8 +1129,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           if eq > 0 {
             kvs.push(
               (
-                kv.substring(start=0, end=eq),
-                kv.substring(start=eq + 1, end=kv.length()),
+                kv[0:eq].to_owned(),
+                kv[eq + 1:kv.length()].to_owned(),
               ),
             )
           }
@@ -1228,8 +1228,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               bad = "state_invalid_arg:" + parts[i]
             }
           } else {
-            let k = parts[i].substring(start=0, end=eq)
-            let v = @decl.unescape_value(parts[i].substring(start=eq + 1))
+            let k = parts[i][0:eq].to_owned()
+            let v = @decl.unescape_value(parts[i][eq + 1:].to_owned())
             let d = parse_d(v)
             match k {
               "fill" => fill = Some(v)
@@ -1298,13 +1298,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       if parts.length() < 3 {
         cli_err("usage: constrain <artboard> <intent_text>")
       } else {
-        let raw = line.substring(start=10, end=line.length()).trim().to_string()
+        let raw = line[10:line.length()].to_owned().trim().to_owned()
         let sp = index_of_str(raw, " ")
         if sp <= 0 {
           cli_err("usage: constrain <artboard> <intent_text>")
         } else {
-          let ab = raw.substring(start=0, end=sp)
-          let intent = raw.substring(start=sp + 1, end=raw.length())
+          let ab = raw[0:sp].to_owned()
+          let intent = raw[sp + 1:raw.length()].to_owned()
           match p.apply_constraint(intent, artboard=ab) {
             Ok(json) => json
             Err(e) => cli_err(e)
@@ -1340,13 +1340,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             "usage: protest <artboard> <script>（tap:x:y>board; back>board; noviol; render）",
           )
         Some(sp) => {
-          let rest = line.substring(start=sp + 1).trim().to_string()
+          let rest = line[sp + 1:].to_owned().trim().to_owned()
           let sp2 = match rest.find(" ") {
             Some(i) => i
             None => return cli_err("usage: protest <artboard> <script>")
           }
-          let artboard = rest.substring(start=0, end=sp2).to_string()
-          let script = rest.substring(start=sp2 + 1).trim().to_string()
+          let artboard = rest[0:sp2].to_owned().to_string()
+          let script = rest[sp2 + 1:].to_owned().trim().to_owned()
           @core.run_protest_script(p, artboard, script)
         }
       }
@@ -1362,7 +1362,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         None =>
           cli_err("usage: collab-merge <base_rev> <agent>=<op>[+op...] ...")
         Some(sp) => {
-          let rest = line.substring(start=sp + 1).trim().to_string()
+          let rest = line[sp + 1:].to_owned().trim().to_owned()
           @core.merge_sessions_from_spec(rest)
         }
       }
@@ -1502,7 +1502,7 @@ fn split_change(d : String) -> (String, String) {
   let n = d.length()
   while i < n {
     if char_at_str(d, i) == ":" {
-      return (d.substring(start=0, end=i), d.substring(start=i + 1, end=n))
+      return (d[0:i].to_owned(), d[i + 1:n].to_owned())
     }
     i = i + 1
   }
@@ -1511,7 +1511,7 @@ fn split_change(d : String) -> (String, String) {
 
 ///|
 fn char_at_str(s : String, i : Int32) -> String {
-  s.substring(start=i, end=i + 1)
+  s[i:i + 1].to_owned()
 }
 
 // JSON 字符串转义直接复用 @core.json_escape（core/json.mbt：引号/反斜杠/

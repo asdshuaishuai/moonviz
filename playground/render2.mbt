@@ -551,7 +551,7 @@ fn render_node_hires(
 
 ///|
 fn ascii_only(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     let code = c.to_int()
     if code >= 32 && code <= 126 {

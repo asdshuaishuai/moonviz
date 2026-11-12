@@ -458,7 +458,7 @@ fn find_nearest_token_color(
 ///|
 fn parse_hex_rgb(hex : String) -> (Double, Double, Double) {
   let body = if hex.length() > 0 && hex.get_char(0) == Some('#') {
-    hex.substring(start=1)
+    hex[1:].to_owned()
   } else {
     hex
   }
@@ -514,9 +514,9 @@ fn extract_field(json : String, field : String) -> String {
   match json.find(key) {
     Some(idx) => {
       let start = idx + key.length()
-      let rest = json.substring(start~)
+      let rest = json[start:].to_owned()
       match rest.find("\"") {
-        Some(end) => rest.substring(start=0, end~)
+        Some(end) => rest[0:end].to_owned()
         None => ""
       }
     }

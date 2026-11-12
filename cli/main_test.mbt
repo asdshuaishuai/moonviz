@@ -210,7 +210,7 @@ fn envelope_mbt(envelope : String) -> String {
     Some(x) => x + key.length()
     None => return ""
   }
-  let rest = envelope.substring(start=i)
+  let rest = envelope[i:].to_owned()
   let sb = StringBuilder()
   let chars = rest.to_array()
   let mut j = 0
@@ -272,9 +272,9 @@ fn envelope_b64(envelope : String, key : String) -> String {
     Some(x) => x + k.length()
     None => return ""
   }
-  let rest = envelope.substring(start=i)
+  let rest = envelope[i:].to_owned()
   match rest.find("\"") {
-    Some(end) => rest.substring(start=0, end~)
+    Some(end) => rest[0:end].to_owned()
     None => ""
   }
 }

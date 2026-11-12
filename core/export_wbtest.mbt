@@ -396,7 +396,7 @@ fn find_from(s : String, needle : String, from : Int32) -> Int32? {
   let n = needle.length()
   let mut i = from
   while i + n <= s.length() {
-    if s.substring(start=i, end=i + n) == needle {
+    if s[i:i + n].to_owned() == needle {
       return Some(i)
     }
     i = i + 1
@@ -431,11 +431,11 @@ fn collect_attr_values(s : String, marker : String) -> Array[String] {
       None => break
       Some(pos) => {
         let start = pos + marker.length()
-        let rest = s.substring(start~)
+        let rest = s[start:].to_owned()
         match rest.find("\"") {
           None => break
           Some(e) => {
-            out.push(rest.substring(start=0, end=e))
+            out.push(rest[0:e].to_owned())
             idx = start + e + 1
           }
         }
@@ -742,7 +742,7 @@ test "export_html：脚本括号平衡（语法门）" {
       return
     }
   }
-  let body = html.substring(start~)
+  let body = html[start:].to_owned()
   let end = match body.find("</script>") {
     Some(i) => i
     None => {
@@ -750,7 +750,7 @@ test "export_html：脚本括号平衡（语法门）" {
       return
     }
   }
-  let js = body.substring(start=0, end~)
+  let js = body[0:end].to_owned()
   // 括号扫描：跳过 ' " ` 字符串与转义；JS 里没有模板字符串嵌套花括号的需求
   let mut depth = 0
   let mut in_str = 0 // 0=无 1=' 2=" 3=`

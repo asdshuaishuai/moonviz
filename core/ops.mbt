@@ -35,7 +35,7 @@ fn unescape_decl(s : String) -> String {
           Some('t') => sb.write_char('\t')
           Some('u') =>
             match hex4(it) {
-              Some(code) => sb.write_char(Char::from_int(code))
+              Some(code) => sb.write_char((code).unsafe_to_char())
               None => sb.write_string("\\u")
             }
           Some(other) => {
@@ -114,7 +114,7 @@ pub fn index_of_str(s : String, sub : String) -> Int32 {
   }
   let mut i = 0
   while i + subl <= sl {
-    if s.substring(start=i, end=i + subl) == sub {
+    if s[i:i + subl].to_owned() == sub {
       return i
     }
     i = i + 1
@@ -162,7 +162,7 @@ pub fn parse_op_double(s : String) -> Double {
 fn place_token_is_number(t : String) -> Bool {
   t.length() > 0 &&
   ({
-    let c0 = t.substring(start=0, end=1)
+    let c0 = t[0:1].to_owned()
     c0 >= "0" && c0 <= "9"
   })
 }
@@ -228,9 +228,9 @@ pub fn parse_place_args(parts : Array[String]) -> PlaceArgs {
     match parts[i].find("=") {
       None => if kv_error == "" { kv_error = "place_invalid_arg:" + parts[i] }
       Some(pos) => {
-        let k = parts[i].substring(start=0, end=pos)
+        let k = parts[i][0:pos].to_owned()
         // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
-        let v = unescape_value(parts[i].substring(start=pos + 1))
+        let v = unescape_value(parts[i][pos + 1:].to_owned())
         if k != "" {
           kv.set(k, v)
         }
@@ -278,8 +278,8 @@ pub fn apply_operation(
           if eq > 0 {
             kvs.push(
               (
-                kv.substring(start=0, end=eq),
-                unescape_value(kv.substring(start=eq + 1)),
+                kv[0:eq].to_owned(),
+                unescape_value(kv[eq + 1:].to_owned()),
               ),
             )
           } else if bad_token == "" {
@@ -528,8 +528,8 @@ pub fn apply_operation(
           if eq > 0 {
             kvs.push(
               (
-                parts[i].substring(start=0, end=eq),
-                unescape_value(parts[i].substring(start=eq + 1)),
+                parts[i][0:eq].to_owned(),
+                unescape_value(parts[i][eq + 1:].to_owned()),
               ),
             )
           }
@@ -599,8 +599,8 @@ pub fn apply_operation(
               bad_token = parts[i]
             }
           } else {
-            let k = parts[i].substring(start=0, end=eq)
-            let v = unescape_value(parts[i].substring(start=eq + 1))
+            let k = parts[i][0:eq].to_owned()
+            let v = unescape_value(parts[i][eq + 1:].to_owned())
             let d = parse_op_double(v)
             match k {
               "fill" => fill = Some(v)

@@ -334,7 +334,7 @@ fn extract_g(svg : String, id : String) -> String {
       let close = find_sub_from(svg, "</g>", start)
       match close {
         None => ""
-        Some(end) => svg.substring(start~, end=end + 4)
+        Some(end) => svg[start:end + 4].to_owned()
       }
     }
   }

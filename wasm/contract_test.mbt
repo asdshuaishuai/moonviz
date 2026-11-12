@@ -151,7 +151,7 @@ fn extract_data(envelope : String) -> String {
     Some(x) => x + marker.length()
     None => return ""
   }
-  let rest = envelope.substring(start=i)
+  let rest = envelope[i:].to_owned()
   // json_escape 后的值：扫描到未转义的 " 为止
   let sb = StringBuilder()
   let chars : Array[Char] = []
@@ -300,7 +300,7 @@ fn extract_mbt(envelope : String) -> String {
     Some(x) => x + marker.length()
     None => return ""
   }
-  let rest = envelope.substring(start=i)
+  let rest = envelope[i:].to_owned()
   let sb = StringBuilder()
   let chars : Array[Char] = []
   for c in rest.iter() {
@@ -623,7 +623,7 @@ test "契约：canonical 透传宿主批注注释——写路径往返不丢（i
     msg="会话路径批注也须透传: " + r2,
   )
   assert_true(
-    r2.split("deepdesign:ink").length() == 2,
+    r2.split("deepdesign:ink").count() == 2,
     msg="批注应恰好一份（不翻倍）: " + r2,
   )
   let _ = session_close(h2)

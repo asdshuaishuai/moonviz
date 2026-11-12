@@ -45,7 +45,7 @@ pub fn Project::from_project_json(
   }
   let staged : Map[String, ArtboardMeta] = Map([])
   let errors : Array[String] = []
-  let body = text.substring(start=arr_start)
+  let body = text[arr_start:].to_owned()
   let mut pos = 0
   let n = body.length()
   while pos < n {
@@ -57,7 +57,7 @@ pub fn Project::from_project_json(
         if end <= os {
           break
         }
-        let obj = body.substring(start=os, end~)
+        let obj = body[os:end].to_owned()
         match load_one_artboard(obj) {
           LoadOk(id, meta) => staged.set(id, meta)
           LoadErr(e) => errors.push(e)
@@ -116,7 +116,7 @@ fn load_one_artboard(obj : String) -> LoadOutcome {
     None => return LoadErr("missing_doc_obj")
   }
   let dend = skip_object2(obj, dstart)
-  let doc_json = obj.substring(start=dstart, end=dend)
+  let doc_json = obj[dstart:dend].to_owned()
   match Document::from_json(doc_json) {
     Ok(doc) => LoadOk(id, { id, name, width: w, height: h, doc, })
     Err(e) => LoadErr(e)
@@ -129,9 +129,9 @@ fn jstr_field(obj : String, key : String) -> String {
   let pattern = "\"" + key + "\":\""
   match obj.find(pattern) {
     Some(i) => {
-      let rest = obj.substring(start=i + pattern.length())
+      let rest = obj[i + pattern.length():].to_owned()
       match rest.find("\"") {
-        Some(e) => unescape_json(rest.substring(start=0, end=e))
+        Some(e) => unescape_json(rest[0:e].to_owned())
         None => ""
       }
     }
@@ -145,7 +145,7 @@ fn jnum_field(obj : String, key : String) -> Double {
   let pattern = "\"" + key + "\":"
   match obj.find(pattern) {
     Some(i) => {
-      let rest = obj.substring(start=i + pattern.length())
+      let rest = obj[i + pattern.length():].to_owned()
       let mut num = 0.0
       let mut frac = 0.1
       let mut dot = false
