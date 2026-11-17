@@ -23,7 +23,9 @@ jobs:
           # （install 脚本报 Unsupported platform），Intel Mac 走 bin.mjs 的
           # moon run 回退。
           - platform: darwin-arm64
-            runner: macos-14
+            # macos-15（ARM）：0.2.0 发布时 macos-14 池连续三轮启动即取消
+            # （0 秒、无步骤、runner 未分配），切换镜像池绕开
+            runner: macos-15
           - platform: linux-x64
             runner: ubuntu-24.04
           - platform: linux-arm64
