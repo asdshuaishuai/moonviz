@@ -33,6 +33,19 @@ and breathing room, and a complete animation + interaction system.**
   two-tier type scale / grouped spacing systematized; catalog 65x118.
 - **Playground** — five requirement-spec presets plus side-by-side comparison of
   one intent under two specs (independent sessions).
+- **Enforced spec workflow (0.2 close-out)** — the design spec moves from
+  "advisory" to "process": CLI `generate-doc <intent> doc=<b64(design doc)>
+  [as <name>]` has the engine DETERMINISTICALLY extract a spec from a design
+  document (palette / typography / radius / spacing / motion / touch sections);
+  missing key items refuse generation with `design_doc_spec_gaps` (no silent
+  fallback to built-in specs), and the envelope carries
+  `spec_source:"design_doc"`. `spec-extract doc=<b64>` previews the extraction;
+  `comply <ab>` (`design_compliance`) runs four mechanical checks on the
+  generated UI (color/type/radius/motion) — interaction timing must equal the
+  spec's motion tokens, so both design and interaction fully obey the spec.
+- Test matrix: default target 407 / `--target native` 426, all green; dual wasm
+  ABI assertions (classic 78 exports incl. memory / gc 77) and the component
+  table consistency self-check pass.
 
 ## What's New in 0.1.11
 

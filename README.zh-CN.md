@@ -25,6 +25,16 @@
   往返/结构式模板令牌化清零；8pt 栅格/内容线/行尾控件/底部动作栏/两级
   字阶/分组留白系统化；组件目录 65×118。
 - **Playground**——五套需求 spec 预设 + 同意图双规范并排对比（独立会话）。
+- **强制规范流程（0.2 收束）**——设计规范从「建议」升级为「流程」：CLI
+  `generate-doc <意图> doc=<b64(设计文档)> [as <name>]` 由引擎从设计文档
+  **确定性提取** spec（配色/字号/圆角/间距/动效/触控六章节），缺关键项返回
+  `design_doc_spec_gaps` **拒绝生成**（不静默回退内置规范），信封带
+  `spec_source:"design_doc"`；`spec-extract doc=<b64>` 预览提取结果；
+  `comply <ab>`（`design_compliance`）对生成 UI 做四项机械校验
+  （color/type/radius/motion）——交互节拍必须等于 spec.motion 令牌，
+  UI 的设计与交互**完全遵守**设计规范。
+- 测试矩阵：默认目标 407 / `--target native` 426，全绿；双 wasm ABI 断言
+  （classic 78 实导 / gc 77）+ 组件表一致性自校验通过。
 
 ## 0.1.11 新特性
 
