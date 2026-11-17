@@ -18,7 +18,7 @@
 pub fn Project::auto_arrange(
   self : Project,
   artboard~ : String,
-  parent_id? : String = "root",
+  parent_id~ : String = "root",
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard")
@@ -95,7 +95,7 @@ pub fn Project::auto_arrange(
 pub fn Project::snap_to_grid(
   self : Project,
   artboard~ : String,
-  grid? : Double = 8.0,
+  grid~ : Double = 8.0,
 ) -> Result[String, String] {
   match self.artboards.get(artboard) {
     None => Err("unknown_artboard")
@@ -105,7 +105,7 @@ pub fn Project::snap_to_grid(
       // 写回值是「相对父容器新原点」的偏移（父也在移动），与 Map 迭序无关。
       // 直接把绝对吸附坐标当相对偏移写回，会让嵌套节点整体偏移一个父原点。
       let layout = solve(ab.doc)
-      let targets : Map[String, (Double, Double)] = Map::new()
+      let targets : Map[String, (Double, Double)] = Map([])
       for id in ab.doc.nodes.keys() {
         if id != "root" {
           match layout.rect_of(id) {
@@ -137,11 +137,7 @@ pub fn Project::snap_to_grid(
                   None => (tx, ty)
                 }
                 let _ = ab.doc.update_node(id, fn(c) {
-                  {
-                    ..c,
-                    x: AlignStart(tx - px),
-                    y: AlignStart(ty - py),
-                  }
+                  { ..c, x: AlignStart(tx - px), y: AlignStart(ty - py), }
                 })
                 snapped.push(
                   "{\"id\":\"\{id}\",\"from\":\"\{ox.to_int()},\{oy.to_int()}\",\"to\":\"\{tx.to_int()},\{ty.to_int()}\"}",
@@ -289,7 +285,7 @@ pub fn Project::suggest_alignment(
 
 ///|
 fn jstr10(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

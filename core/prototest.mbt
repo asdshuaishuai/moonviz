@@ -10,8 +10,8 @@
 /// 这让原型变成**可测试的**，而不仅仅是"看起来对的"。
 pub(all) struct ProtoTest {
   rt : MoonVizRT
-  mut passed : Int
-  mut failed : Int
+  mut passed : Int32
+  mut failed : Int32
   mut failures : Array[String]
 }
 
@@ -19,7 +19,7 @@ pub(all) struct ProtoTest {
 /// 创建原型测试运行器
 pub fn ProtoTest::create(
   project : Project,
-  initial? : String = "",
+  initial~ : String = "",
 ) -> Result[ProtoTest, String] {
   match MoonVizRT::create(project, initial_artboard=initial) {
     Ok(rt) => Ok({ rt, passed: 0, failed: 0, failures: [], })
@@ -182,7 +182,7 @@ fn jstr16(parts : Array[String]) -> String {
   for p in parts.iter() {
     escaped.push(json_escape(p))
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("[")
   for i in 0..<escaped.length() {
     if i > 0 {
@@ -217,7 +217,7 @@ pub fn run_protest_script(
     Ok(pt) => {
       let lines : Array[String] = []
       for l in script.split(";").iter() {
-        let t = l.trim().to_string()
+        let t = l.trim().to_owned()
         if t != "" {
           lines.push(t)
         }
@@ -229,12 +229,12 @@ pub fn run_protest_script(
           Some(i) => i
           None => -1
         }
-        if cmd.starts_with("tap:") && arrow > 0 {
-          let coords = cmd.substring(start=4, end=arrow).to_string()
-          let expect = cmd.substring(start=arrow + 1).to_string()
+        if cmd.has_prefix("tap:") && arrow > 0 {
+          let coords = cmd[4:arrow].to_owned().to_string()
+          let expect = cmd[arrow + 1:].to_owned().to_string()
           let nums : Array[String] = []
           for n in coords.split(":").iter() {
-            nums.push(n.to_string())
+            nums.push(n.to_owned())
           }
           if nums.length() >= 2 {
             let _ = pt.tap_and_expect_navigate(
@@ -245,22 +245,22 @@ pub fn run_protest_script(
           } else {
             let _ = pt.reject_invalid("tap 断言缺少 >期望画板：\{cmd}")
           }
-        } else if cmd.starts_with("back>") {
-          let expect = cmd.substring(start=5).to_string()
+        } else if cmd.has_prefix("back>") {
+          let expect = cmd[5:].to_owned().to_string()
           let _ = pt.back_and_expect(expect)
-        } else if cmd.starts_with("swipe:") && arrow > 0 {
-          let dir = cmd.substring(start=6, end=arrow).to_string()
-          let expect = cmd.substring(start=arrow + 1).to_string()
+        } else if cmd.has_prefix("swipe:") && arrow > 0 {
+          let dir = cmd[6:arrow].to_owned().to_string()
+          let expect = cmd[arrow + 1:].to_owned().to_string()
           let _ = pt.swipe_and_expect(dir, expect)
-        } else if cmd.starts_with("set:") {
-          let body = cmd.substring(start=4).to_string()
+        } else if cmd.has_prefix("set:") {
+          let body = cmd[4:].to_owned().to_string()
           let colon = match body.find(":") {
             Some(i) => i
             None => -1
           }
           if colon > 0 {
-            let node = body.substring(start=0, end=colon).to_string()
-            let value = body.substring(start=colon + 1).to_string()
+            let node = body[0:colon].to_owned().to_string()
+            let value = body[colon + 1:].to_owned().to_string()
             let _ = pt.set_input_and_expect(node, value)
           } else {
             let _ = pt.reject_invalid("set 断言缺少 :值：\{cmd}")

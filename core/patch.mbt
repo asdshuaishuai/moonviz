@@ -55,14 +55,14 @@ pub(all) enum Op {
 
 ///|
 pub(all) struct Patch {
-  base_revision : Int
+  base_revision : Int32
   message : String
   ops : Array[Op]
 }
 
 ///|
 pub(all) enum PatchError {
-  StaleBase(Int) // 携带文档当前 revision：需重新读取后提交
+  StaleBase(Int32) // 携带文档当前 revision：需重新读取后提交
   UnknownNode(String)
   UnknownParent(String)
   DuplicateId(String)
@@ -295,7 +295,7 @@ fn apply_node_patch(n : Node, p : NodePatch) -> Node {
 fn detach_child(doc : Document, parent_id : String, child_id : String) -> Unit {
   match doc.nodes.get(parent_id) {
     Some(p) => {
-      let kids : Array[String] = Array::new()
+      let kids : Array[String] = Array()
       for c in p.children.iter() {
         if c != child_id {
           kids.push(c)

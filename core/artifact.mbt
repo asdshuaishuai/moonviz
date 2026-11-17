@@ -41,9 +41,9 @@ pub fn MoonVizArtifact::new() -> MoonVizArtifact {
     meta_version: ENGINE_VERSION,
     meta_created_by: "",
     meta_context: "",
-    artboard_decls: Map::new(),
-    artboard_names: Map::new(),
-    artboard_sizes: Map::new(),
+    artboard_decls: Map([]),
+    artboard_names: Map([]),
+    artboard_sizes: Map([]),
     flows: [],
     todos: [],
     notes: [],
@@ -57,8 +57,8 @@ pub fn MoonVizArtifact::new() -> MoonVizArtifact {
 ///|
 pub fn Project::export_artifact(
   self : Project,
-  agent_id? : String = "",
-  context? : String = "",
+  agent_id~ : String = "",
+  context~ : String = "",
 ) -> String {
   let a : MoonVizArtifact = MoonVizArtifact::new()
   a.meta_created_by = agent_id
@@ -86,7 +86,7 @@ pub fn Project::export_artifact(
 /// Agent 占位（避免循环依赖，实际调用 decl 包的 from_document）
 fn decl_snapshot(doc : Document) -> String {
   // 生成声明的简化版本：遍历节点树
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("// MoonViz artifact\n")
   let layout = solve(doc)
   artifact_walk(sb, doc, doc.root_id, layout, 0)
@@ -99,7 +99,7 @@ fn artifact_walk(
   doc : Document,
   id : String,
   layout : SolvedLayout,
-  depth : Int,
+  depth : Int32,
 ) -> Unit {
   match (doc.nodes.get(id), layout.rect_of(id)) {
     (Some(n), Some(r)) => {
@@ -120,8 +120,8 @@ fn artifact_walk(
 }
 
 ///|
-fn repeat_spaces(n : Int) -> String {
-  let sb = StringBuilder::new()
+fn repeat_spaces(n : Int32) -> String {
+  let sb = StringBuilder()
   for _i in 0..<n {
     sb.write_char(' ')
   }
@@ -134,7 +134,7 @@ fn repeat_spaces(n : Int) -> String {
 
 ///|
 fn artifact_to_json(a : MoonVizArtifact) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\n")
   // meta
   sb.write_string("  \"meta\": {\n")
@@ -194,7 +194,7 @@ fn artifact_to_json(a : MoonVizArtifact) -> String {
 
 ///|
 fn jstr13(parts : Array[String], sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(sep)
@@ -234,7 +234,7 @@ pub fn Project::add_agent_note(
   self : Project,
   artboard~ : String,
   note~ : String,
-  priority? : String = "medium",
+  priority~ : String = "medium",
 ) -> Unit {
   // v1: 存储到 artifact 的内存结构中
   // 实际使用时由 runtime 层管理
@@ -249,10 +249,10 @@ pub fn Project::add_agent_note(
 
 ///|
 pub fn MoonVizArtifact::summary(self : MoonVizArtifact) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("MoonViz Artifact v\{self.meta_version}\n")
   sb.write_string("Context: \{self.meta_context}\n")
-  sb.write_string("Artboards: \{self.artboard_decls.size()}\n")
+  sb.write_string("Artboards: \{self.artboard_decls.length()}\n")
   for id in self.artboard_names.keys() {
     match self.artboard_names.get(id) {
       Some(name) => sb.write_string("  - \{id} (\{name})\n")

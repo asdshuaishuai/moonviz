@@ -12,7 +12,7 @@ fn main {
 const MOCKUP : String = "let page = @decl.prototype(name=\"mockup\", width=390, height=844)\npage.add(@decl.rect(id=\"navbar\",x=0,y=0,width=@decl.fixed(390),height=@decl.fixed(88),fill=\"#111827\"))\npage.add(@decl.frame(id=\"hero\",y=88,width=@decl.fixed(390),height=@decl.fixed(160),fill=\"#EEF2FF\"))\npage.add_to(parent_id=\"hero\", node=@decl.rect(id=\"badge\",x=24.0,y=40.0,width=@decl.fixed(96),height=@decl.fixed(36),fill=\"#4B6BFB\",text=\"NEW\"))\npage.add(@decl.frame(id=\"card\",x=24.0,y=280.0,width=@decl.fixed(342.0),height=@decl.fixed(300.0)))\npage.add_to(parent_id=\"card\", node=@decl.rect(id=\"chip-a\",x=16.0,y=16.0,width=@decl.fixed(120),height=@decl.fixed(48),fill=\"#E0E7FF\",text=\"标签 A\"))\npage.add_to(parent_id=\"card\", node=@decl.rect(id=\"chip-b\",x=160.0,y=100.0,width=@decl.fixed(120),height=@decl.fixed(48),fill=\"#CCFBF1\",text=\"标签 B\"))\npage.add(@decl.rect(id=\"fab\",x=318.0,y=772.0,width=@decl.fixed(56),height=@decl.fixed(56),fill=\"#FF7A45\",text=\"+\"))\n"
 
 ///|
-fn count_lines(s : String) -> Int {
+fn count_lines(s : String) -> Int32 {
   let mut n = 0
   for c in s.iter() {
     if c == '\n' {
@@ -27,13 +27,13 @@ fn replace_first(s : String, old : String, new : String) -> String {
   match s.find(old) {
     None => s
     Some(i) =>
-      s.substring(start=0, end=i) + new + s.substring(start=i + old.length())
+      s[0:i].to_owned() + new + s[i + old.length():].to_owned()
   }
 }
 
 ///|
 pub fn scenario_report() -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("== MoonViz 原型工作台 \{version()} ==\n")
   sb.write_string(
     "纯 MoonBit：布局、不崩谓词、SVG、声明往返全部在 moonviz 引擎内计算。\n\n",

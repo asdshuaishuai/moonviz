@@ -47,10 +47,10 @@ extern "c" fn mv_read_file(path : Bytes) -> String = "mv_read_file"
 
 ///|
 #borrow(path, data)
-extern "c" fn mv_write_file(path : Bytes, data : Bytes, len : Int) -> Int = "mv_write_file"
+extern "c" fn mv_write_file(path : Bytes, data : Bytes, len : Int32) -> Int32 = "mv_write_file"
 
 ///|
-extern "c" fn mv_exit(code : Int) -> Unit = "mv_exit"
+extern "c" fn mv_exit(code : Int32) -> Unit = "mv_exit"
 
 ///|
 fn getenv_str(name : String) -> String {
@@ -137,7 +137,9 @@ fn run_smoke() -> Bool {
   } else {
     let s = mv_read_file(c_bytes("examples/login-demo.mbt.md"))
     if s == "" {
-      println("[smoke] FAIL — 无渲染源（设 MOONVIZ_DOC 或在仓库根运行）")
+      println(
+        "[smoke] FAIL — 无渲染源（设 MOONVIZ_DOC 或在仓库根运行）",
+      )
       return false
     }
     s
@@ -154,7 +156,9 @@ fn run_smoke() -> Bool {
     println("[smoke] FAIL — export_html 缺交互运行时")
     return false
   }
-  println("[smoke] 引擎渲染 OK（HTML \{html.length()} 字符，含交互运行时）")
+  println(
+    "[smoke] 引擎渲染 OK（HTML \{html.length()} 字符，含交互运行时）",
+  )
   let mut probe = "_build/moonviz-smoke-render.html"
   let payload = utf8_bytes(html)
   let written = if mv_write_file(c_bytes(probe), payload, payload.length()) == 0 {
@@ -172,7 +176,9 @@ fn run_smoke() -> Bool {
     println("[smoke] FAIL — 兜底产物读回不一致")
     return false
   }
-  println("[smoke] PASS — 源/管线/渲染/兜底写读 全通（\{probe}）")
+  println(
+    "[smoke] PASS — 源/管线/渲染/兜底写读 全通（\{probe}）",
+  )
   true
 }
 

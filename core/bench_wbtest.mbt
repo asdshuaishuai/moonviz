@@ -163,7 +163,11 @@ test "Agent 全流程：设计→基准→优化建议→报告" {
 test "基准：0 建议时 detail 恒输出 []" {
   let p = Project::new()
   let _ = p.create_artboard(name="tiny")
-  let _ = p.place_component(artboard="tiny", component_id="button", instance_id="b")
+  let _ = p.place_component(
+    artboard="tiny",
+    component_id="button",
+    instance_id="b",
+  )
   match p.suggest_optimizations(artboard="tiny") {
     Ok(json) => {
       assert_true(json.contains("\"optimizations\":0"))

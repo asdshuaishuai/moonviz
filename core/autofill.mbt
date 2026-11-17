@@ -18,10 +18,30 @@ fn autofill_recipe(
   let cw = if content_w < 100.0 { 342.0 } else { content_w }
   match element {
     // auth：密码框下方的右对齐链接 + 底部注册链接 + 记住我
+    // 链接色走令牌（默认调色板 primary），不再硬编码旧蓝 #4B6BFB——
+    // 令牌校准后默认主色是 #4361EE（历史教训：字面量残留即漂移源）
     "forgot_password" =>
-      Some(("body_text", "忘记密码？", cw, 20.0, "#4B6BFB", true))
+      Some(
+        (
+          "body_text",
+          "忘记密码？",
+          cw,
+          20.0,
+          DesignTokens::default().resolve_color("primary"),
+          true,
+        ),
+      )
     "signup_link" =>
-      Some(("body_text", "没有账号？立即注册", cw, 20.0, "#4B6BFB", false))
+      Some(
+        (
+          "body_text",
+          "没有账号？立即注册",
+          cw,
+          20.0,
+          DesignTokens::default().resolve_color("primary"),
+          false,
+        ),
+      )
     "remember_me" =>
       Some(("checkbox", "记住我", 160.0, 44.0, "#111111", false))
     // dashboard / list / profile / settings 操作
@@ -52,7 +72,7 @@ pub fn Project::autofill_missing(
     None => return Err("unknown_artboard")
     Some(meta) => meta
   }
-  let missing_json = match self.infer_missing(artboard=artboard) {
+  let missing_json = match self.infer_missing(artboard~) {
     Ok(j) => j
     Err(e) => return Err(e)
   }
@@ -98,7 +118,8 @@ pub fn Project::autofill_missing(
   let mut y_cursor = bottom + 16.0
   for element in elements.iter() {
     match autofill_recipe(element, content_w) {
-      None => skipped.push(af_skip_json(element, "state_semantics_not_placeable"))
+      None =>
+        skipped.push(af_skip_json(element, "state_semantics_not_placeable"))
       Some(recipe) => {
         let (component, text, node_w, node_h, color, anchor_top) = recipe
         let node_id = element
@@ -138,11 +159,11 @@ pub fn Project::autofill_missing(
         }
         let placed_ok = match
           self.place_component(
-            artboard=artboard,
+            artboard~,
             component_id=component,
             instance_id=node_id,
             x=24.0,
-            y=y,
+            y~,
             w=node_w,
             h=node_h,
           ) {
@@ -151,11 +172,7 @@ pub fn Project::autofill_missing(
         }
         if placed_ok {
           if text != "" {
-            let _ = self.edit_node(
-              artboard=artboard,
-              node_id=node_id,
-              kvs=[("text", text)],
-            )
+            let _ = self.edit_node(artboard~, node_id~, kvs=[("text", text)])
           }
           if color != "" {
             let kv = if component == "body_text" {
@@ -163,7 +180,7 @@ pub fn Project::autofill_missing(
             } else {
               [("fill", color)]
             }
-            let _ = self.edit_node(artboard=artboard, node_id=node_id, kvs=kv)
+            let _ = self.edit_node(artboard~, node_id~, kvs=kv)
           }
           placed.push(
             "{\"element\":\"" +
@@ -191,22 +208,22 @@ pub fn Project::autofill_missing(
     }
   }
   // issue #25-B4（规则化）：mock 数据缺口只报 id，内容由 Agent 填充
-  let mock_gap_ids = self.mock_data_gaps(artboard=artboard)
+  let mock_gap_ids = self.mock_data_gaps(artboard~)
   let mock_gaps_json = json_string_array(mock_gap_ids)
   // 清偿：新节点与既有内容的重叠/溢出/触控规范归 auto_fix
-  let autofix_json = match self.auto_fix(artboard=artboard) {
+  let autofix_json = match self.auto_fix(artboard~) {
     Ok(json) => json
     Err(_) => "{\"fixes\":0}"
   }
   // 顶层 ok 如实采纳 autofix 结果：清偿不动（remaining > 0）时不再谎报成功
   let autofix_ok = !autofix_json.contains("\"ok\":false")
-  let after = match self.infer_missing(artboard=artboard) {
+  let after = match self.infer_missing(artboard~) {
     Ok(j) => j
     Err(e) => return Err(e)
   }
   let after_count = match after.find("\"missing_count\":") {
     Some(i) => {
-      let rest = after.substring(start=i + 16)
+      let rest = after[i + 16:].to_owned()
       let mut j = 0
       while j < rest.length() {
         match rest.get_char(j) {
@@ -214,7 +231,7 @@ pub fn Project::autofill_missing(
           None => break
         }
       }
-      rest.substring(start=0, end=j).to_string()
+      rest[0:j].to_owned().to_string()
     }
     None => "?"
   }
@@ -239,9 +256,9 @@ fn parse_missing_envelope(json : String) -> Array[String] {
 fn missing_array_scope(json : String) -> String {
   match json.find("\"missing\":[") {
     Some(i) => {
-      let rest = json.substring(start=i + "\"missing\":[".length())
+      let rest = json[i + "\"missing\":[".length():].to_owned()
       match rest.find("]") {
-        Some(j) => rest.substring(start=0, end=j).to_string()
+        Some(j) => rest[0:j].to_owned().to_string()
         None => ""
       }
     }
@@ -257,13 +274,13 @@ fn parse_missing_elements(scope : String) -> Array[String] {
   let mut from = 0
   let key = "\"element\":\""
   while from + key.length() <= scope.length() {
-    match scope.substring(start=from).find(key) {
+    match scope[from:].to_owned().find(key) {
       Some(rel) => {
         let i = from + rel + key.length()
-        let rest = scope.substring(start=i)
+        let rest = scope[i:].to_owned()
         match rest.find("\"") {
           Some(j) => {
-            elements.push(rest.substring(start=0, end=j).to_string())
+            elements.push(rest[0:j].to_owned().to_string())
             from = i + j
           }
           None => from = scope.length()

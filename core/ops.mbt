@@ -16,7 +16,7 @@ pub fn unescape_value(s : String) -> String {
 /// 编码段 \u00xx——decl_escape 经 json_escape 把控制符写成 \u00xx，解码端
 /// 必须对称还原，否则控制符文本往返后变成字面 backslash-u 序列。
 fn unescape_decl(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let it = s.iter()
   let mut running = true
   while running {
@@ -35,7 +35,7 @@ fn unescape_decl(s : String) -> String {
           Some('t') => sb.write_char('\t')
           Some('u') =>
             match hex4(it) {
-              Some(code) => sb.write_char(Char::from_int(code))
+              Some(code) => sb.write_char((code).unsafe_to_char())
               None => sb.write_string("\\u")
             }
           Some(other) => {
@@ -51,16 +51,16 @@ fn unescape_decl(s : String) -> String {
 
 ///|
 /// 从迭代器读 4 个十六进制字符（\uXXXX）；任一非法即 None（调用方按原文回填）。
-fn hex4(it : Iter[Char]) -> Int? {
+fn hex4(it : Iter[Char]) -> Int32? {
   let mut code = 0
   for _ in 0..<4 {
     match it.next() {
       None => return None
       Some(h) => {
         let d = match h {
-          '0'..='9' => h.to_int() - 48
-          'a'..='f' => h.to_int() - 87
-          'A'..='F' => h.to_int() - 55
+          '0'..<='9' => h.to_int() - 48
+          'a'..<='f' => h.to_int() - 87
+          'A'..<='F' => h.to_int() - 55
           _ => return None
         }
         code = code * 16 + d
@@ -74,7 +74,7 @@ fn hex4(it : Iter[Char]) -> Int? {
 pub fn split_cmd(line : String) -> Array[String] {
   // 支持双引号包裹带空格的参数：update ab n text="Hello World"
   let out : Array[String] = []
-  let buf = StringBuilder::new()
+  let buf = StringBuilder()
   let mut in_q = false
   let mut esc = false
   for c in line.iter() {
@@ -106,7 +106,7 @@ pub fn split_cmd(line : String) -> Array[String] {
 
 ///|
 /// 查找子串首次出现位置；未找到返回 -1
-pub fn index_of_str(s : String, sub : String) -> Int {
+pub fn index_of_str(s : String, sub : String) -> Int32 {
   let sl = s.length()
   let subl = sub.length()
   if subl == 0 || subl > sl {
@@ -114,7 +114,7 @@ pub fn index_of_str(s : String, sub : String) -> Int {
   }
   let mut i = 0
   while i + subl <= sl {
-    if s.substring(start=i, end=i + subl) == sub {
+    if s[i:i + subl].to_owned() == sub {
       return i
     }
     i = i + 1
@@ -162,7 +162,7 @@ pub fn parse_op_double(s : String) -> Double {
 fn place_token_is_number(t : String) -> Bool {
   t.length() > 0 &&
   ({
-    let c0 = t.substring(start=0, end=1)
+    let c0 = t[0:1].to_owned()
     c0 >= "0" && c0 <= "9"
   })
 }
@@ -191,16 +191,8 @@ pub fn parse_place_args(parts : Array[String]) -> PlaceArgs {
   } else {
     ""
   }
-  let x = if parts.length() >= 6 {
-    parse_op_double(parts[5])
-  } else {
-    0.0
-  }
-  let y = if parts.length() >= 7 {
-    parse_op_double(parts[6])
-  } else {
-    0.0
-  }
+  let x = if parts.length() >= 6 { parse_op_double(parts[5]) } else { 0.0 }
+  let y = if parts.length() >= 7 { parse_op_double(parts[6]) } else { 0.0 }
   // 位置参数 w/h（issue #18）：place 一步到位指定最终尺寸，
   // AgentGate 在最终 bbox 上评估，消除中间态拒绝
   let mut w = 0.0
@@ -228,35 +220,24 @@ pub fn parse_place_args(parts : Array[String]) -> PlaceArgs {
     }
   }
   // 尾部 k=v 对为用户组件参数槽
-  let kv : Map[String, String] = Map::new()
+  let kv : Map[String, String] = Map([])
   for i = kv_start; i < parts.length(); i = i + 1 {
     if kv_error != "" {
       break
     }
     match parts[i].find("=") {
-      None =>
-        if kv_error == "" {
-          kv_error = "place_invalid_arg:" + parts[i]
-        }
+      None => if kv_error == "" { kv_error = "place_invalid_arg:" + parts[i] }
       Some(pos) => {
-        let k = parts[i].substring(start=0, end=pos)
+        let k = parts[i][0:pos].to_owned()
         // k=v 值反转义（与 update 路径一致，兑现 split_cmd 注释协议）
-        let v = unescape_value(parts[i].substring(start=pos + 1))
+        let v = unescape_value(parts[i][pos + 1:].to_owned())
         if k != "" {
           kv.set(k, v)
         }
       }
     }
   }
-  {
-    variant,
-    x,
-    y,
-    w,
-    h,
-    args: kv,
-    error: kv_error,
-  }
+  { variant, x, y, w, h, args: kv, error: kv_error, }
 }
 
 ///|
@@ -297,8 +278,8 @@ pub fn apply_operation(
           if eq > 0 {
             kvs.push(
               (
-                kv.substring(start=0, end=eq),
-                unescape_value(kv.substring(start=eq + 1)),
+                kv[0:eq].to_owned(),
+                unescape_value(kv[eq + 1:].to_owned()),
               ),
             )
           } else if bad_token == "" {
@@ -547,8 +528,8 @@ pub fn apply_operation(
           if eq > 0 {
             kvs.push(
               (
-                parts[i].substring(start=0, end=eq),
-                unescape_value(parts[i].substring(start=eq + 1)),
+                parts[i][0:eq].to_owned(),
+                unescape_value(parts[i][eq + 1:].to_owned()),
               ),
             )
           }
@@ -618,8 +599,8 @@ pub fn apply_operation(
               bad_token = parts[i]
             }
           } else {
-            let k = parts[i].substring(start=0, end=eq)
-            let v = unescape_value(parts[i].substring(start=eq + 1))
+            let k = parts[i][0:eq].to_owned()
+            let v = unescape_value(parts[i][eq + 1:].to_owned())
             let d = parse_op_double(v)
             match k {
               "fill" => fill = Some(v)
@@ -672,27 +653,46 @@ pub fn apply_operation(
       }
     "flow" =>
       if parts.length() < 4 {
-        Err("mbt_operation_usage:flow <from> <to> <node>")
+        Err("mbt_operation_usage:flow <from> <to> <trigger|node> [transition]")
       } else {
-        project.add_flow(from=parts[1], to=parts[2], trigger="tap:" + parts[3])
-        project.revision = project.revision + 1
-        Ok(())
+        // 可选第 5 参数 = 分板过渡（Transition::name()，缺省 push）；
+        // 未知过渡 Err(unknown_transition)
+        let tr = if parts.length() >= 5 { parts[4] } else { "" }
+        match normalize_transition(tr) {
+          Err(error) => Err(error)
+          Ok(transition) =>
+            // trigger 不再硬编码 tap:：裸节点 id 仍兼容为 tap:<node>，
+            // 手势词（swipe_left / long_press:0.8 / focus[:node] / scroll_end /
+            // keyboard_enter）经 normalize_flow_trigger 校验，未知 → Err
+            match normalize_flow_trigger(parts[3]) {
+              Err(error) => Err(error)
+              Ok(trigger) => {
+                project.add_flow(
+                  from=parts[1],
+                  to=parts[2],
+                  trigger~,
+                  transition~,
+                )
+                project.revision = project.revision + 1
+                Ok(())
+              }
+            }
+        }
       }
     "unflow" =>
       if parts.length() < 4 {
-        Err("mbt_operation_usage:unflow <from> <to> <node>")
+        Err("mbt_operation_usage:unflow <from> <to> <trigger|node>")
       } else {
-        match
-          project.remove_flow(
-            from=parts[1],
-            to=parts[2],
-            trigger="tap:" + parts[3],
-          ) {
-          Ok(_) => {
-            project.revision = project.revision + 1
-            Ok(())
-          }
+        match normalize_flow_trigger(parts[3]) {
           Err(error) => Err(error)
+          Ok(trigger) =>
+            match project.remove_flow(from=parts[1], to=parts[2], trigger~) {
+              Ok(_) => {
+                project.revision = project.revision + 1
+                Ok(())
+              }
+              Err(error) => Err(error)
+            }
         }
       }
     "theme" =>
@@ -737,7 +737,7 @@ pub fn apply_operation(
 
 ///|
 /// 批量执行上限：防滥用/防失控循环；64 条足够覆盖一次精修轮。
-pub const OPS_BATCH_LIMIT : Int = 64
+pub const OPS_BATCH_LIMIT : Int32 = 64
 
 ///|
 /// 批量执行 mutating ops（生成式执行策略第二级：确定的精修一次提交，
@@ -746,7 +746,7 @@ pub const OPS_BATCH_LIMIT : Int = 64
 pub fn apply_operations(
   project : Project,
   operations : Array[String],
-) -> Result[Int, (Int, String)] {
+) -> Result[Int32, (Int32, String)] {
   if operations.length() > OPS_BATCH_LIMIT {
     return Err((-1, "mbt_ops_batch_too_many:\{OPS_BATCH_LIMIT}"))
   }

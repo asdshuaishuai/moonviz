@@ -13,8 +13,8 @@ pub fn Document::from_json(text : String) -> Result[Document, String] {
     Some(i) => i + marker.length()
     None => return Err("json_missing_nodes")
   }
-  let body = text.substring(start=idx)
-  let store : JsonNodeStore = { nodes: Map::new(), }
+  let body = text[idx:].to_owned()
+  let store : JsonNodeStore = { nodes: Map([]), }
   match parse_node_obj(body, 0, store) {
     ParseFail(msg) => Err(msg)
     ParseOk(root, _end) => {
@@ -70,7 +70,7 @@ fn remap_children(
 
 ///|
 enum ParseResult {
-  ParseOk(Node, Int)
+  ParseOk(Node, Int32)
   ParseFail(String)
 }
 
@@ -79,7 +79,7 @@ enum ParseResult {
 /// 整棵子树注册进 store，返回根节点与消费长度
 fn parse_node_obj(
   s : String,
-  start : Int,
+  start : Int32,
   store : JsonNodeStore,
 ) -> ParseResult {
   // 必须以 { 开头
@@ -163,7 +163,7 @@ fn parse_node_obj(
       // style 子对象：递归解析全部视觉字段
       if char_at2(s, pos) == "{" {
         let send = skip_object(s, pos)
-        let sp = parse_style_obj(s.substring(start=pos, end=send))
+        let sp = parse_style_obj(s[pos:send].to_owned())
         if sp.fill != "" {
           fill = sp.fill
         }
@@ -319,8 +319,8 @@ fn parse_node_obj(
 /// \n \t \r \b \f \\ \" \/ 与 \uXXXX（含代理对合成）。
 /// 返回解码后的内容与结束位置——调用侧不得再做二次 unescape，
 /// 否则解码结果中的字面反斜杠会被再次吃掉。
-fn parse_string(s : String, start : Int) -> (String, Int) {
-  let sb = StringBuilder::new()
+fn parse_string(s : String, start : Int32) -> (String, Int32) {
+  let sb = StringBuilder()
   let mut pos = start + 1 // 跳过开引号
   let n = s.length()
   while pos < n {
@@ -344,11 +344,11 @@ fn parse_string(s : String, start : Int) -> (String, Int) {
           pos = pos + 2
         }
         "b" => {
-          sb.write_char(Char::from_int(8))
+          sb.write_char((8).unsafe_to_char())
           pos = pos + 2
         }
         "f" => {
-          sb.write_char(Char::from_int(12))
+          sb.write_char((12).unsafe_to_char())
           pos = pos + 2
         }
         "u" => {
@@ -361,7 +361,8 @@ fn parse_string(s : String, start : Int) -> (String, Int) {
           } else {
             pos = pos + 6
             let mut cp = hi
-            if hi >= 0xD800 && hi <= 0xDBFF &&
+            if hi >= 0xD800 &&
+              hi <= 0xDBFF &&
               pos + 1 < n &&
               char_at2(s, pos) == "\\" &&
               char_at2(s, pos + 1) == "u" {
@@ -371,7 +372,7 @@ fn parse_string(s : String, start : Int) -> (String, Int) {
                 pos = pos + 6
               }
             }
-            sb.write_char(Char::from_int(cp))
+            sb.write_char((cp).unsafe_to_char())
           }
         }
         other => {
@@ -393,7 +394,7 @@ fn parse_string(s : String, start : Int) -> (String, Int) {
 
 ///|
 /// 从 pos 起读 4 位十六进制（\uXXXX 的 XXXX），非法返回 -1
-fn hex4_at(s : String, pos : Int) -> Int {
+fn hex4_at(s : String, pos : Int32) -> Int32 {
   let n = s.length()
   if pos + 4 > n {
     return -1
@@ -428,7 +429,7 @@ struct ScalarOrSpec {
 }
 
 ///|
-fn parse_value(s : String, start : Int) -> (ScalarOrSpec, Int) {
+fn parse_value(s : String, start : Int32) -> (ScalarOrSpec, Int32) {
   let out : ScalarOrSpec = {
     num: 0.0,
     str: "",
@@ -440,7 +441,7 @@ fn parse_value(s : String, start : Int) -> (ScalarOrSpec, Int) {
     let (kind_s, p1) = parse_string_after_key(s, start, "kind")
     let end = skip_object(s, start)
     let kind = unescape_json(kind_s)
-    let value = load_number(s.substring(start~, end~), "value")
+    let value = load_number(s[start:end].to_owned(), "value")
     let r : ScalarOrSpec = match kind {
       "fixed" => { num: value, str: "", spec: Fixed(value), pos: Fixed(value), }
       "fill" => { num: 0.0, str: "", spec: Fill, pos: Fixed(0.0), }
@@ -511,17 +512,17 @@ fn parse_value(s : String, start : Int) -> (ScalarOrSpec, Int) {
 /// 在对象里找 "key":"value" 的 value（parse_value 辅助）
 fn parse_string_after_key(
   s : String,
-  start : Int,
+  start : Int32,
   key : String,
-) -> (String, Int) {
+) -> (String, Int32) {
   let pattern = "\"" + key + "\":\""
-  let sub = s.substring(start~)
+  let sub = s[start:].to_owned()
   match sub.find(pattern) {
     Some(i) => {
       let vs = i + pattern.length()
-      let rest = sub.substring(start=vs)
+      let rest = sub[vs:].to_owned()
       match rest.find("\"") {
-        Some(e) => (rest.substring(start=0, end=e), start + vs + e)
+        Some(e) => (rest[0:e].to_owned(), start + vs + e)
         None => ("", start)
       }
     }
@@ -531,7 +532,7 @@ fn parse_string_after_key(
 
 ///|
 /// 跳过一个完整对象/数组文本，返回结束下标（不含）
-fn skip_object(s : String, start : Int) -> Int {
+fn skip_object(s : String, start : Int32) -> Int32 {
   let mut depth = 0
   let mut pos = start
   let mut in_str = false
@@ -567,7 +568,7 @@ fn load_number(s : String, key : String) -> Double {
   let pattern = "\"" + key + "\":"
   match s.find(pattern) {
     Some(i) => {
-      let rest = s.substring(start=i + pattern.length())
+      let rest = s[i + pattern.length():].to_owned()
       let mut num = 0.0
       let mut frac = 0.1
       let mut dot = false
@@ -596,7 +597,7 @@ fn load_number(s : String, key : String) -> Double {
 ///|
 /// 还原 JSON 转义（\n \t \" \\ 等）
 fn unescape_json(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let n = s.length()
   let mut i = 0
   while i < n {
@@ -619,7 +620,7 @@ fn unescape_json(s : String) -> String {
 }
 
 ///|
-fn skip_ws2(s : String, pos : Int) -> Int {
+fn skip_ws2(s : String, pos : Int32) -> Int32 {
   let n = s.length()
   let mut p = pos
   while p < n {
@@ -634,9 +635,9 @@ fn skip_ws2(s : String, pos : Int) -> Int {
 }
 
 ///|
-fn char_at2(s : String, i : Int) -> String {
+fn char_at2(s : String, i : Int32) -> String {
   if i < s.length() {
-    s.substring(start=i, end=i + 1)
+    s[i:i + 1].to_owned()
   } else {
     ""
   }
@@ -644,7 +645,7 @@ fn char_at2(s : String, i : Int) -> String {
 
 ///|
 /// 取位置 i 处字符的码点（越界返回 0）
-fn char_code2(s : String, i : Int) -> Int {
+fn char_code2(s : String, i : Int32) -> Int32 {
   let mut idx = 0
   for c in s.iter() {
     if idx == i {
@@ -684,11 +685,11 @@ struct StyleParse {
 
 ///|
 /// 位置 pos 处是否是 true/false 字面量（visible 等布尔字段解析用）
-fn match_bool_at(s : String, pos : Int) -> Bool? {
+fn match_bool_at(s : String, pos : Int32) -> Bool? {
   let n = s.length()
-  if pos + 4 <= n && s.substring(start=pos, end=pos + 4) == "true" {
+  if pos + 4 <= n && s[pos:pos + 4].to_owned() == "true" {
     Some(true)
-  } else if pos + 5 <= n && s.substring(start=pos, end=pos + 5) == "false" {
+  } else if pos + 5 <= n && s[pos:pos + 5].to_owned() == "false" {
     Some(false)
   } else {
     None
@@ -765,7 +766,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
       }
     } else {
       let end = value_end(obj, pos)
-      let num = parse_num_str(obj.substring(start=pos, end~))
+      let num = parse_num_str(obj[pos:end].to_owned())
       match key_t {
         "stroke_width" => stroke_width = num
         "corner_radius" => radius = num
@@ -809,7 +810,7 @@ fn parse_style_obj(obj : String) -> StyleParse {
 
 ///|
 /// 数值 token 结束位置（数字/小数点/负号之外）
-fn value_end(s : String, start : Int) -> Int {
+fn value_end(s : String, start : Int32) -> Int32 {
   let n = s.length()
   let mut i = start
   while i < n {

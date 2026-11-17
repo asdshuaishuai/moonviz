@@ -13,7 +13,7 @@
 ///|
 /// 解析错误：1 起始的行号 + 消息（Agent 修复循环的输入）
 pub(all) struct DeclParseError {
-  line : Int
+  line : Int32
   message : String
 }
 
@@ -71,7 +71,7 @@ const COMMA : String = ","
 /// has_prefix 的纯 String 实现（避免 StringView 边界）
 fn has_prefix_str(s : String, prefix : String) -> Bool {
   s.length() >= prefix.length() &&
-  s.substring(start=0, end=prefix.length()) == prefix
+  s[0:prefix.length()].to_owned() == prefix
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ fn has_prefix_str(s : String, prefix : String) -> Bool {
 
 ///|
 fn join_with(parts : Array[String], sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(sep)
@@ -92,12 +92,12 @@ fn join_with(parts : Array[String], sep : String) -> String {
 
 ///|
 fn lines_of(text : String) -> Array[String] {
-  let out : Array[String] = Array::new()
-  let mut buf = StringBuilder::new()
+  let out : Array[String] = Array()
+  let mut buf = StringBuilder()
   for c in text.iter() {
     if c == '\n' {
       out.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(c)
     }
@@ -138,7 +138,7 @@ fn trim_spaces(s : String) -> String {
           None => running = false
         }
       }
-      s.substring(start=a, end=end + 1)
+      s[a:end + 1].to_owned()
     }
   }
 }
@@ -147,11 +147,11 @@ fn trim_spaces(s : String) -> String {
 /// 括号深度感知的逗号切分（顶层逗号才是分隔符）。
 /// 引号感知：双引号内的 `,()` 不参与切分/计数；`\x` 转义序列原样保留。
 fn split_params(s : String) -> Array[String] {
-  let out : Array[String] = Array::new()
+  let out : Array[String] = Array()
   let mut depth = 0
   let mut in_quotes = false
   let mut esc = false
-  let mut buf = StringBuilder::new()
+  let mut buf = StringBuilder()
   for c in s.iter() {
     if esc {
       buf.write_char('\\')
@@ -175,7 +175,7 @@ fn split_params(s : String) -> Array[String] {
       }
       ',' if !in_quotes && depth == 0 => {
         out.push(buf.to_string())
-        buf = StringBuilder::new()
+        buf = StringBuilder()
       }
       _ => buf.write_char(c)
     }
@@ -195,17 +195,17 @@ pub fn unescape_value(s : String) -> String {
 ///|
 fn parse_number(s : String) -> Double? {
   let body : String = if s.length() > 0 && s.get_char(0) == Some('-') {
-    s.substring(start=1)
+    s[1:].to_owned()
   } else {
     s
   }
-  let dot : Int? = body.find(".")
+  let dot : Int32? = body.find(".")
   let int_part : String = match dot {
-    Some(i) => body.substring(start=0, end=i)
+    Some(i) => body[0:i].to_owned()
     None => body
   }
   let frac_part : String = match dot {
-    Some(i) => body.substring(start=i + 1)
+    Some(i) => body[i + 1:].to_owned()
     None => "0"
   }
   let mut acc = 0
@@ -243,7 +243,7 @@ fn parse_number(s : String) -> Double? {
 /// `,` `(` `)`，保证含逗号/括号的文本在 split_params 往返后语义不变。
 fn decl_escape(s : String) -> String {
   let escaped = @core.json_escape(s)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in escaped.iter() {
     match c {
       ',' => sb.write_string("\\,")
@@ -282,21 +282,21 @@ fn pos_text(spec : @core.PosSpec) -> String? {
 ///|
 /// 位置规格解析："@decl.center" → CenterInParent；"@decl.end(24)" → AlignEnd(24)；
 /// "@decl.start(24)" / 裸数字 → AlignStart（default 形式）。
-fn pos_val(v : String, line : Int) -> Result[@core.PosSpec, DeclParseError] {
+fn pos_val(v : String, line : Int32) -> Result[@core.PosSpec, DeclParseError] {
   let body : String = if has_prefix_str(v, DECL_MARKER) {
-    v.substring(start=DECL_MARKER.length())
+    v[DECL_MARKER.length():].to_owned()
   } else {
     v
   }
   if body == "center" {
     Ok(@core.CenterInParent)
   } else if has_prefix_str(body, "end(") && body.length() > 5 {
-    match parse_number(body.substring(start=4, end=body.length() - 1)) {
+    match parse_number(body[4:body.length() - 1].to_owned()) {
       Some(d) => Ok(@core.AlignEnd(d))
       None => Err({ line, message: "无法解析 end 位置 \{body}", })
     }
   } else if has_prefix_str(body, "start(") && body.length() > 7 {
-    match parse_number(body.substring(start=6, end=body.length() - 1)) {
+    match parse_number(body[6:body.length() - 1].to_owned()) {
       Some(d) => Ok(@core.AlignStart(d))
       None => Err({ line, message: "无法解析 start 位置 \{body}", })
     }
@@ -332,7 +332,7 @@ fn flex_text(l : @core.StackLayout) -> String {
 
 ///|
 fn node_call(n : @core.Node) -> String {
-  let parts = Array::new()
+  let parts = Array()
   parts.push("id=\"\{decl_escape(n.id)}\"")
   parts.push("component=\"\{decl_escape(n.component)}\"")
   let kind = match n.kind {
@@ -377,6 +377,11 @@ fn node_call(n : @core.Node) -> String {
   parts.push("font_style=\"\{decl_escape(n.style.font_style)}\"")
   parts.push("stroke_dash=\"\{decl_escape(n.style.stroke_dash)}\"")
   parts.push("visible=\{n.style.visible}")
+  // 节点级开场动效仅在实际设置时输出（未设置不写 motion=，保持既有
+  // canonical 字节面稳定）
+  if n.style.motion != "" {
+    parts.push("motion=\"\{decl_escape(n.style.motion)}\"")
+  }
   parts.push("constraint=\"\{decl_escape(n.constraint)}\"")
   // name 仅在偏离 id 时输出（交互标记写在这里，缺省即 id，避免每行冗余）
   if n.name != n.id {
@@ -418,7 +423,7 @@ fn emit_children(
 ///|
 /// Prototype → 规范声明文本（.mbt.md 代码块全文）
 pub fn Prototype::to_decl_text(self : Prototype) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let root = self.root
   let w : Double = match root.width {
     @core.Fixed(v) => v
@@ -446,15 +451,15 @@ pub fn Prototype::to_decl_text(self : Prototype) -> String {
 ///|
 fn parse_params(
   args : String,
-  line : Int,
+  line : Int32,
 ) -> Result[Array[(String, String)], DeclParseError] {
-  let out : Array[(String, String)] = Array::new()
+  let out : Array[(String, String)] = Array()
   for raw in split_params(args).iter() {
     if !is_blank(raw) {
       match raw.find("=") {
         Some(eq) => {
-          let key = trim_spaces(raw.substring(start=0, end=eq))
-          let value = trim_spaces(raw.substring(start=eq + 1))
+          let key = trim_spaces(raw[0:eq].to_owned())
+          let value = trim_spaces(raw[eq + 1:].to_owned())
           out.push((key, value))
         }
         None => return Err({ line, message: "参数缺少 '='：\{raw}", })
@@ -481,7 +486,7 @@ fn str_val(v : String) -> String {
   let u : String = if v.length() >= 2 &&
     v.get_char(0) == Some('"') &&
     v.get_char(v.length() - 1) == Some('"') {
-    v.substring(start=1, end=v.length() - 1)
+    v[1:v.length() - 1].to_owned()
   } else {
     v
   }
@@ -492,7 +497,7 @@ fn str_val(v : String) -> String {
 fn num_req(
   params : Array[(String, String)],
   key : String,
-  line : Int,
+  line : Int32,
 ) -> Result[Double, DeclParseError] {
   match opt_param(params, key) {
     Some(v) =>
@@ -508,7 +513,7 @@ fn num_req(
 fn num_opt(
   params : Array[(String, String)],
   key : String,
-  line : Int,
+  line : Int32,
 ) -> Result[Double?, DeclParseError] {
   match opt_param(params, key) {
     Some(v) =>
@@ -522,9 +527,9 @@ fn num_opt(
 
 ///|
 /// "@decl.fixed(44)" / "@decl.fill" / "@decl.hug" / 裸数字（容错视为定值）
-fn size_val(v : String, line : Int) -> Result[@core.SizeSpec, DeclParseError] {
+fn size_val(v : String, line : Int32) -> Result[@core.SizeSpec, DeclParseError] {
   let body : String = if has_prefix_str(v, DECL_MARKER) {
-    v.substring(start=DECL_MARKER.length())
+    v[DECL_MARKER.length():].to_owned()
   } else {
     v
   }
@@ -533,7 +538,7 @@ fn size_val(v : String, line : Int) -> Result[@core.SizeSpec, DeclParseError] {
   } else if body == "hug" {
     Ok(@core.Hug)
   } else if has_prefix_str(body, "fixed(") && body.length() > 7 {
-    match parse_number(body.substring(start=6, end=body.length() - 1)) {
+    match parse_number(body[6:body.length() - 1].to_owned()) {
       Some(d) => Ok(@core.Fixed(d))
       None => Err({ line, message: "无法解析 fixed 尺寸 \{body}", })
     }
@@ -546,9 +551,9 @@ fn size_val(v : String, line : Int) -> Result[@core.SizeSpec, DeclParseError] {
 }
 
 ///|
-fn dir_val(v : String, line : Int) -> Result[@core.StackDir, DeclParseError] {
+fn dir_val(v : String, line : Int32) -> Result[@core.StackDir, DeclParseError] {
   let body = if has_prefix_str(v, DECL_MARKER) {
-    v.substring(start=DECL_MARKER.length())
+    v[DECL_MARKER.length():].to_owned()
   } else {
     v
   }
@@ -560,9 +565,12 @@ fn dir_val(v : String, line : Int) -> Result[@core.StackDir, DeclParseError] {
 }
 
 ///|
-fn justify_val(v : String, line : Int) -> Result[@core.Justify, DeclParseError] {
+fn justify_val(
+  v : String,
+  line : Int32,
+) -> Result[@core.Justify, DeclParseError] {
   let body = if has_prefix_str(v, DECL_MARKER) {
-    v.substring(start=DECL_MARKER.length())
+    v[DECL_MARKER.length():].to_owned()
   } else {
     v
   }
@@ -578,10 +586,10 @@ fn justify_val(v : String, line : Int) -> Result[@core.Justify, DeclParseError] 
 /// src 形如 "@decl.flex(direction=..., gap=..., padding=..., justify=...)"
 fn parse_flex(
   src : String,
-  line : Int,
+  line : Int32,
 ) -> Result[@core.StackLayout, DeclParseError] {
   let body = if has_prefix_str(src, DECL_MARKER) {
-    src.substring(start=DECL_MARKER.length())
+    src[DECL_MARKER.length():].to_owned()
   } else {
     src
   }
@@ -589,7 +597,7 @@ fn parse_flex(
     body.length() > FLEX_MARKER.length() + 1) {
     return Err({ line, message: "layout 须为 @decl.flex(...)", })
   }
-  let args = body.substring(start=FLEX_MARKER.length(), end=body.length() - 1)
+  let args = body[FLEX_MARKER.length():body.length() - 1].to_owned()
   match parse_params(args, line) {
     Err(e) => Err(e)
     Ok(params) => {
@@ -628,7 +636,7 @@ fn parse_flex(
 fn with_xy(
   n : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let px = match opt_param(params, "x") {
     Some(v) =>
@@ -661,7 +669,7 @@ fn with_xy(
 fn add_layout(
   n : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   match opt_param(params, "layout") {
     None => Ok(n)
@@ -677,7 +685,7 @@ fn add_layout(
 fn with_wh(
   n : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let w : @core.SizeSpec = match opt_param(params, "width") {
     Some(v) =>
@@ -701,7 +709,7 @@ fn with_wh(
 ///|
 fn require_id(
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[String, DeclParseError] {
   match opt_param(params, "id") {
     Some(v) => Ok(str_val(v))
@@ -714,7 +722,7 @@ fn require_id(
 fn apply_decl_style(
   node : @core.Node,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let mut cur = node
   match opt_param(params, "fill") {
@@ -803,6 +811,19 @@ fn apply_decl_style(
     Some(v) => cur = { ..cur, constraint: str_val(v), }
     None => ()
   }
+  // 节点级开场动效：白名单校验在 core（animation.mbt）——未知预设与
+  // 写死几何的预设都返回 Err，不静默落成无动画字段
+  match opt_param(params, "motion") {
+    Some(v) => {
+      let preset = str_val(v)
+      match @core.validate_node_motion(preset) {
+        Ok(checked) =>
+          cur = { ..cur, style: { ..cur.style, motion: checked, }, }
+        Err(e) => return Err({ line, message: e, })
+      }
+    }
+    None => ()
+  }
   Ok(cur)
 }
 
@@ -810,7 +831,7 @@ fn apply_decl_style(
 fn build_node(
   component : String,
   params : Array[(String, String)],
-  line : Int,
+  line : Int32,
 ) -> Result[@core.Node, DeclParseError] {
   let n : Result[@core.Node, DeclParseError] = match component {
     "generic_node" => {
@@ -1201,7 +1222,7 @@ fn apply_call(
   page : Prototype,
   call_src : String,
   pid_opt : String?,
-  line : Int,
+  line : Int32,
 ) -> Result[Unit, DeclParseError] {
   if !has_prefix_str(call_src, DECL_MARKER) {
     return Err({
@@ -1209,16 +1230,16 @@ fn apply_call(
       message: "节点调用须以 @decl. 开头：\{call_src}",
     })
   }
-  let body = call_src.substring(start=DECL_MARKER.length())
-  let lp : Int = match body.find("(") {
+  let body = call_src[DECL_MARKER.length():].to_owned()
+  let lp : Int32 = match body.find("(") {
     Some(i) => i
     None => return Err({ line, message: "组件调用缺少括号", })
   }
   if body.length() < lp + 3 {
     return Err({ line, message: "组件调用参数不完整", })
   }
-  let component = body.substring(start=0, end=lp)
-  let args = body.substring(start=lp + 1, end=body.length() - 1)
+  let component = body[0:lp].to_owned()
+  let args = body[lp + 1:body.length() - 1].to_owned()
   if is_blank(component) {
     return Err({ line, message: "组件名缺失", })
   }
@@ -1257,7 +1278,7 @@ fn p_add(page : Prototype, parent_id : String, n : @core.Node) -> Unit {
 ///|
 /// 找未转义收尾引号：`\x` 转义序列不终止引号；返回 UTF-16 下标。
 /// 与 emit_children 的 decl_escape(pid) 配对，含引号容器 id 往返不损坏。
-fn find_closing_quote(s : String) -> Int? {
+fn find_closing_quote(s : String) -> Int32? {
   let mut esc = false
   let mut i = 0
   for c in s.iter() {
@@ -1285,10 +1306,7 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
     let line = trim_spaces(raw)
     if line.length() > 0 {
       if has_prefix_str(line, PROTO_PREFIX) {
-        let args = line.substring(
-          start=PROTO_PREFIX.length(),
-          end=line.length() - 1,
-        )
+        let args = line[PROTO_PREFIX.length():line.length() - 1].to_owned()
         match parse_params(args, line_no) {
           Err(e) => return Err(e)
           Ok(params) => {
@@ -1308,10 +1326,7 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
           }
         }
       } else if has_prefix_str(line, LAYOUT_PREFIX) {
-        let inner = line.substring(
-          start=LAYOUT_PREFIX.length(),
-          end=line.length() - 1,
-        )
+        let inner = line[LAYOUT_PREFIX.length():line.length() - 1].to_owned()
         match page {
           None =>
             return Err({
@@ -1326,9 +1341,9 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
         }
       } else if has_prefix_str(line, ADD_TO_PREFIX) {
         // 行形如：page.add_to(parent_id="card", node=@decl.rect(...))
-        let inner = line.substring(start=ADD_TO_PREFIX.length())
+        let inner = line[ADD_TO_PREFIX.length():].to_owned()
         let pid : String = match find_closing_quote(inner) {
-          Some(q) => unescape_value(inner.substring(start=0, end=q))
+          Some(q) => unescape_value(inner[0:q].to_owned())
           None =>
             return Err({
               line: line_no,
@@ -1344,10 +1359,7 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
             })
           Some(i) => {
             // call 从 "@decl." 起（NODE_MARKER 含 node= 前缀）
-            let call = inner.substring(
-              start=i + NODE_MARKER.length() - DECL_MARKER.length(),
-              end=inner.length() - 1,
-            )
+            let call = inner[i + NODE_MARKER.length() - DECL_MARKER.length():inner.length() - 1].to_owned()
             match page {
               None =>
                 return Err({
@@ -1363,10 +1375,7 @@ pub fn parse_decl(text : String) -> Result[Prototype, DeclParseError] {
           }
         }
       } else if has_prefix_str(line, ADD_PREFIX) {
-        let call = line.substring(
-          start=ADD_PREFIX.length(),
-          end=line.length() - 1,
-        )
+        let call = line[ADD_PREFIX.length():line.length() - 1].to_owned()
         match page {
           None =>
             return Err({

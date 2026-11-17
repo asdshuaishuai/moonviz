@@ -10,11 +10,11 @@
 /// ```
 ///
 /// Agent（或 shell 脚本）可以管道组合多个命令。
-extern "c" fn getchar() -> Int = "getchar"
+extern "c" fn getchar() -> Int32 = "getchar"
 
 ///|
 fn read_line() -> String {
-  let bytes : Array[Int] = []
+  let bytes : Array[Int32] = []
   let mut on = true
   while on {
     let c = getchar()
@@ -38,31 +38,31 @@ fn read_line() -> String {
 ///|
 /// stdin 是 UTF-8 字节流：逐字节收集后解码（getchar 逐字节返回，
 /// 直接用 Int::to_char 会按 Latin-1 拼坏非 ASCII 文本）
-fn utf8_from_bytes(bytes : Array[Int]) -> String {
-  let sb = StringBuilder::new()
+fn utf8_from_bytes(bytes : Array[Int32]) -> String {
+  let sb = StringBuilder()
   let mut i = 0
   let n = bytes.length()
   while i < n {
     let b0 = bytes[i]
     if b0 < 0x80 {
-      sb.write_char(Int::to_char(b0).unwrap_or('?'))
+      sb.write_char(Int32::to_char(b0).unwrap_or('?'))
       i = i + 1
     } else if b0 < 0xE0 && i + 1 < n {
       let cp = ((b0 - 0xC0) << 6) + (bytes[i + 1] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 2
     } else if b0 < 0xF0 && i + 2 < n {
       let cp = ((b0 - 0xE0) << 12) +
         ((bytes[i + 1] - 0x80) << 6) +
         (bytes[i + 2] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 3
     } else if i + 3 < n {
       let cp = ((b0 - 0xF0) << 18) +
         ((bytes[i + 1] - 0x80) << 12) +
         ((bytes[i + 2] - 0x80) << 6) +
         (bytes[i + 3] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 4
     } else {
       i = i + 1
@@ -76,12 +76,12 @@ fn utf8_from_bytes(bytes : Array[Int]) -> String {
 /// 落回该画板——此前用 keys().next() 取第一个画板，多画板项目会静默写错。
 // 按板历史注册表（issue #21）：apply 不会使注册失效；init 幂等不重基线，
 // 「重开 + init-all」宿主模式可跨 apply 累积多级撤销。
-let g_histories : @ref.Ref[Map[String, @core.DesignHistory]] = @ref.Ref::new(
-  Map::new(),
+let g_histories : @ref.Ref[Map[String, @core.DesignHistory]] = @ref.Ref(
+  Map([]),
 )
 
 ///|
-let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
+let g_history_board : @ref.Ref[String] = @ref.Ref("")
 
 ///|
 /// history 子命令族（CLI 侧薄分发；状态在 g_history）。
@@ -202,15 +202,15 @@ fn cli_history(p : @core.Project, parts : Array[String]) -> String {
 }
 
 ///|
-fn parse_rev(text : String) -> Int? {
-  let t = text.trim().to_string()
+fn parse_rev(text : String) -> Int32? {
+  let t = text.trim().to_owned()
   if t.length() == 0 {
     return None
   }
   let mut v = 0
   let mut i = 0
   while i < t.length() {
-    let c = t.substring(start=i, end=i + 1)
+    let c = t[i:i + 1].to_owned()
     let d = "0123456789".find(c)
     match d {
       None => return None
@@ -278,7 +278,7 @@ fn mbt_has_cmd_prefix(operation : String, prefix : String) -> Bool {
   }
   let head = prefix + " "
   op.length() > head.length() &&
-  op.substring(start=0, end=head.length()) == head
+  op[0:head.length()].to_owned() == head
 }
 
 ///|
@@ -289,7 +289,7 @@ fn mbt_trim_ws(s : String) -> String {
   let mut ended = s.length()
   let mut trimming = true
   while trimming && start < ended {
-    let c = s.substring(start~, end=start + 1)
+    let c = s[start:start + 1].to_owned()
     if ws.contains(c) {
       start = start + 1
     } else {
@@ -298,19 +298,19 @@ fn mbt_trim_ws(s : String) -> String {
   }
   let mut trimming2 = true
   while trimming2 && ended > start {
-    let c = s.substring(start=ended - 1, end=ended)
+    let c = s[ended - 1:ended].to_owned()
     if ws.contains(c) {
       ended = ended - 1
     } else {
       trimming2 = false
     }
   }
-  s.substring(start~, end=ended)
+  s[start:ended].to_owned()
 }
 
 ///|
 /// 全项目谓词违规总数（跨画板求和）。
-fn project_total_violations(project : @core.Project) -> Int {
+fn project_total_violations(project : @core.Project) -> Int32 {
   let mut total = 0
   for id in project.artboards.keys() {
     match project.artboards.get(id) {
@@ -360,13 +360,15 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         builtin
       } else {
         // builtin 是 [ ... ]：剥掉首尾括号拼接
-        let inner = builtin.substring(start=1, end=builtin.length() - 1)
+        let inner = builtin[1:builtin.length() - 1].to_owned()
         let sep = if inner == "" { "" } else { "," }
         "[\{inner}\{sep}\{join_arr(user_items)}]"
       }
     }
     "list-tools" => @core.list_tools_json()
     "list-ops" => @core.list_ops_json()
+    // 交互词表 manifest（CI 产出 moonviz-interactions.json 的单一来源）
+    "interaction-manifest" => @core.interaction_manifest_json()
     "list-tokens" => p.tokens.to_json()
     "list-themes" => {
       let themes = @core.builtin_themes()
@@ -651,7 +653,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             i = i + 2
           } else if parts[i].has_prefix("spec=") && parts[i].length() > 5 {
             // issue #24：spec=<base64(design spec JSON)>（行协议内避免引号/空格）
-            match decode_mbt_b64(parts[i].substring(start=5)) {
+            match decode_mbt_b64(parts[i][5:].to_owned()) {
               Ok(text) => spec_json = text
               Err(e) => return cli_err(e)
             }
@@ -661,7 +663,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             i = i + 1
           }
         }
-        match p.generate(intent_text=intent, name=artboard_name, spec=spec_json) {
+        match
+          p.generate(intent_text=intent, name=artboard_name, spec=spec_json) {
           Ok(json) => json
           Err(e) =>
             if e == "design_spec_required" {
@@ -672,6 +675,97 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               cli_err(e)
             }
         }
+      }
+    "spec-extract" =>
+      // 设计文档 → 设计规范提取（0.2 规范流程入口）：doc=<b64(markdown)>
+      if parts.length() < 2 ||
+        !parts[1].has_prefix("doc=") ||
+        parts[1].length() <= 4 {
+        cli_err("usage: spec-extract doc=<base64(设计文档 markdown)>")
+      } else {
+        match decode_mbt_b64(parts[1][4:].to_owned()) {
+          Err(e) => cli_err(e)
+          Ok(md) => {
+            let ex = @core.design_doc_extract(md)
+            let parts_e : Array[String] = []
+            for x in ex.extracted.iter() {
+              parts_e.push("\"" + @core.json_escape(x) + "\"")
+            }
+            let parts_g : Array[String] = []
+            for g in ex.gaps.iter() {
+              parts_g.push("\"" + @core.json_escape(g) + "\"")
+            }
+            "{\"ok\":true,\"spec\":" +
+            ex.spec_json +
+            ",\"extracted\":[" +
+            parts_e.join(",") +
+            "],\"gaps\":[" +
+            parts_g.join(",") +
+            "]}"
+          }
+        }
+      }
+    "generate-doc" =>
+      // 强制规范流程：只从设计文档生成（缺关键项拒绝）。多词意图与
+      // generate 同款拼接（未加引号的「web 落地页」不能静默截成一词）
+      if parts.length() < 3 {
+        cli_err(
+          "usage: generate-doc <意图一句话> doc=<base64(设计文档)> [as <name>]",
+        )
+      } else {
+        let mut intent = parts[1]
+        let mut doc_md = ""
+        let mut artboard_name = ""
+        let mut i = 2
+        while i < parts.length() {
+          if parts[i] == "as" && i + 2 == parts.length() {
+            artboard_name = parts[i + 1]
+            i = i + 2
+          } else if parts[i].has_prefix("doc=") && parts[i].length() > 4 {
+            match decode_mbt_b64(parts[i][4:].to_owned()) {
+              Ok(text) => doc_md = text
+              Err(e) => return cli_err(e)
+            }
+            i = i + 1
+          } else {
+            intent = intent + " " + parts[i]
+            i = i + 1
+          }
+        }
+        match
+          p.generate_from_doc(
+            intent_text=intent,
+            doc=doc_md,
+            name=artboard_name,
+          ) {
+          Ok(json) => json
+          Err(e) =>
+            // 缺口信封与 MCP 同形：结构化 {ok:false,error,gaps,spec_draft}
+            //（此前是 {"error":"design_doc_spec_gaps:<分号串>"}，gaps 非
+            // 数组、无草案，宿主无法机读）
+            if e.has_prefix("design_doc_spec_gaps:") {
+              let ex = @core.design_doc_extract(doc_md)
+              let parts_g : Array[String] = []
+              for g in ex.gaps.iter() {
+                parts_g.push("\"" + @core.json_escape(g) + "\"")
+              }
+              "{\"ok\":false,\"error\":\"design_doc_spec_gaps\",\"gaps\":[" +
+              parts_g.join(",") +
+              "],\"spec_draft\":" +
+              ex.spec_json +
+              "}"
+            } else {
+              cli_err(e)
+            }
+        }
+      }
+    "comply" =>
+      if parts.length() < 2 {
+        cli_err(
+          "usage: comply <artboard>  （设计规范遵从校验：颜色/字号/圆角/动效）",
+        )
+      } else {
+        p.design_spec_compliance(artboard=parts[1])
       }
     "ops-batch-b64" =>
       // 执行策略第二级：确定的多条精修一次提交（base64(换行分隔 ops)）。
@@ -684,7 +778,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           Ok(block) => {
             let ops : Array[String] = []
             for line in block.split("\n").iter() {
-              let trimmed = mbt_trim_ws(line.to_string())
+              let trimmed = mbt_trim_ws(line.to_owned())
               if trimmed.length() > 0 {
                 ops.push(trimmed)
               }
@@ -792,9 +886,9 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           let kv = parts[i]
           let eq = index_of_str(kv, "=")
           if eq > 0 {
-            let k = kv.substring(start=0, end=eq)
+            let k = kv[0:eq].to_owned()
             let v = @decl.unescape_value(
-              kv.substring(start=eq + 1, end=kv.length()),
+              kv[eq + 1:kv.length()].to_owned(),
             )
             kvs.push((k, v))
           }
@@ -833,12 +927,12 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
     "load" => {
       // 从原始行截取载荷：split_cmd 的引号支持会剥掉 JSON 的双引号，
       // 必须在分词前截取 "load " 之后的原文
-      let raw = line.substring(start=4, end=line.length()).trim().to_string()
+      let raw = line[4:line.length()].to_owned().trim().to_owned()
       if raw.length() == 0 {
         cli_err("usage: load <project_json> （JSON 需单行）")
       } else {
         match p.from_project_json(raw) {
-          Ok(_) => "{\"ok\":true,\"artboards\":\{p.artboards.size()}}"
+          Ok(_) => "{\"ok\":true,\"artboards\":\{p.artboards.length()}}"
           Err(e) => cli_err(e)
         }
       }
@@ -889,27 +983,44 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         }
       }
     "flow" =>
-      // 建立导航流：flow <from_ab> <to_ab> <node_id>  （tap node → 导航）
+      // 建立导航流：flow <from_ab> <to_ab> <trigger|node> [transition]
+      // 裸节点 id 兼容为 tap:<node>；手势词（swipe_left/long_press[:秒]/
+      // focus[:node]/scroll_end/keyboard_enter）经 normalize_flow_trigger 校验；
+      // 可选分板过渡缺省 push，未知 Err(unknown_transition)
       if parts.length() < 4 {
-        cli_err("usage: flow <from_artboard> <to_artboard> <node_id>")
+        cli_err(
+          "usage: flow <from_artboard> <to_artboard> <trigger|node_id> [push|pop|modal_present|modal_dismiss|sheet_present|fade|none]",
+        )
       } else {
-        let trigger = "tap:\{parts[3]}"
-        p.add_flow(from=parts[1], to=parts[2], trigger~)
-        "{\"ok\":true,\"flow\":\"\{parts[1]} --tap:\{parts[3]}--> \{parts[2]}\"}"
+        let tr = if parts.length() >= 5 { parts[4] } else { "" }
+        match @core.normalize_transition(tr) {
+          Err(e) => cli_err(e)
+          Ok(transition) =>
+            match @core.normalize_flow_trigger(parts[3]) {
+              Err(e) => cli_err(e)
+              Ok(trigger) => {
+                p.add_flow(from=parts[1], to=parts[2], trigger~, transition~)
+                "{\"ok\":true,\"flow\":\"\{parts[1]} --\{trigger}/\{transition}--> \{parts[2]}\"}"
+              }
+            }
+        }
       }
     "flows" => p.flow_json()
     "unflow" =>
-      // 撤销单条导航流：unflow <from_ab> <to_ab> <node_id>（op_entries
+      // 撤销单条导航流：unflow <from_ab> <to_ab> <trigger|node>（op_entries
       // 注册表宣告的 CLI op 面，缺臂会让按 list-ops 逐字发令的 Agent
       // 撞 unknown_command——与 flow 臂对称）
       if parts.length() < 4 {
-        cli_err("usage: unflow <from_artboard> <to_artboard> <node_id>")
+        cli_err("usage: unflow <from_artboard> <to_artboard> <trigger|node_id>")
       } else {
-        match
-          p.remove_flow(from=parts[1], to=parts[2], trigger="tap:\{parts[3]}") {
-          Ok(_) =>
-            "{\"ok\":true,\"unflow\":\"\{parts[1]} --tap:\{parts[3]}--> \{parts[2]}\"}"
+        match @core.normalize_flow_trigger(parts[3]) {
           Err(e) => cli_err(e)
+          Ok(trigger) =>
+            match p.remove_flow(from=parts[1], to=parts[2], trigger~) {
+              Ok(_) =>
+                "{\"ok\":true,\"unflow\":\"\{parts[1]} --\{trigger}--> \{parts[2]}\"}"
+              Err(e) => cli_err(e)
+            }
         }
       }
     "group" =>
@@ -1018,8 +1129,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
           if eq > 0 {
             kvs.push(
               (
-                kv.substring(start=0, end=eq),
-                kv.substring(start=eq + 1, end=kv.length()),
+                kv[0:eq].to_owned(),
+                kv[eq + 1:kv.length()].to_owned(),
               ),
             )
           }
@@ -1061,7 +1172,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       // interact <ab> <node> <trigger> <action_spec> ：注册节点交互（写入标记）
       if parts.length() < 5 {
         cli_err(
-          "usage: interact <artboard> <node> <trigger> <action_spec>  (trigger: tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|key_enter|focus|blur；action: back|haptic|navigate_to:<ab>|show_toast:\\\"msg\\\"|set_text:<node>:\\\"txt\\\"|set_state:<node>:<st>|toggle_state:<node>|play_sound:<name>)",
+          "usage: interact <artboard> <node> <trigger> <action_spec>  (trigger: tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|key_enter|focus|blur；action: back|haptic|navigate_to:<ab>|show_toast:\\\"msg\\\"|set_text:<node>:\\\"txt\\\"|set_state:<node>:<st>|toggle_state:<node>|play_sound:<name>|submit_form:<field>,<field>)",
         )
       } else {
         match
@@ -1117,8 +1228,8 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
               bad = "state_invalid_arg:" + parts[i]
             }
           } else {
-            let k = parts[i].substring(start=0, end=eq)
-            let v = @decl.unescape_value(parts[i].substring(start=eq + 1))
+            let k = parts[i][0:eq].to_owned()
+            let v = @decl.unescape_value(parts[i][eq + 1:].to_owned())
             let d = parse_d(v)
             match k {
               "fill" => fill = Some(v)
@@ -1187,13 +1298,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
       if parts.length() < 3 {
         cli_err("usage: constrain <artboard> <intent_text>")
       } else {
-        let raw = line.substring(start=10, end=line.length()).trim().to_string()
+        let raw = line[10:line.length()].to_owned().trim().to_owned()
         let sp = index_of_str(raw, " ")
         if sp <= 0 {
           cli_err("usage: constrain <artboard> <intent_text>")
         } else {
-          let ab = raw.substring(start=0, end=sp)
-          let intent = raw.substring(start=sp + 1, end=raw.length())
+          let ab = raw[0:sp].to_owned()
+          let intent = raw[sp + 1:raw.length()].to_owned()
           match p.apply_constraint(intent, artboard=ab) {
             Ok(json) => json
             Err(e) => cli_err(e)
@@ -1229,13 +1340,13 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
             "usage: protest <artboard> <script>（tap:x:y>board; back>board; noviol; render）",
           )
         Some(sp) => {
-          let rest = line.substring(start=sp + 1).trim().to_string()
+          let rest = line[sp + 1:].to_owned().trim().to_owned()
           let sp2 = match rest.find(" ") {
             Some(i) => i
             None => return cli_err("usage: protest <artboard> <script>")
           }
-          let artboard = rest.substring(start=0, end=sp2).to_string()
-          let script = rest.substring(start=sp2 + 1).trim().to_string()
+          let artboard = rest[0:sp2].to_owned().to_string()
+          let script = rest[sp2 + 1:].to_owned().trim().to_owned()
           @core.run_protest_script(p, artboard, script)
         }
       }
@@ -1251,7 +1362,7 @@ pub fn cli_exec(p : @core.Project, line : String) -> String {
         None =>
           cli_err("usage: collab-merge <base_rev> <agent>=<op>[+op...] ...")
         Some(sp) => {
-          let rest = line.substring(start=sp + 1).trim().to_string()
+          let rest = line[sp + 1:].to_owned().trim().to_owned()
           @core.merge_sessions_from_spec(rest)
         }
       }
@@ -1268,7 +1379,7 @@ fn split_cmd(line : String) -> Array[String] {
 }
 
 ///|
-fn index_of_str(s : String, sub : String) -> Int {
+fn index_of_str(s : String, sub : String) -> Int32 {
   @core.index_of_str(s, sub)
 }
 
@@ -1307,7 +1418,7 @@ fn cli_help() -> String {
   "  place <ab> <comp> <id> [variant|-] [x] [y] [w] [h] [k=v ...]  Place at final size\n" +
   "  query <ab>           Query nodes in artboard\n" +
   "  lint <ab>            Run design lint\n" +
-  "  critique <ab>        Run 9-principle critique\n" +
+  "  critique <ab>        Run 10-principle critique\n" +
   "  benchmark            Run performance benchmark\n" +
   "  fix <ab>             Auto-fix violations\n" +
   "  theme <name>         Switch theme\n" +
@@ -1317,6 +1428,9 @@ fn cli_help() -> String {
   "\n" +
   "Generative (execution ladder, always start from the top):\n" +
   "  generate <意图一句话> [spec=<b64>] [as <name>]  One-sentence intent → full artboard + report (autofix/missing/score); \"a+b\" composite → multi-artboard + auto nav flows (max 4)\n" +
+  "  generate-doc <意图一句话> doc=<b64(设计文档)> [as <name>]  Enforced spec workflow: extract spec from a design document, missing key items refuse with design_doc_spec_gaps\n" +
+  "  spec-extract doc=<b64(设计文档)>  Extract design spec JSON from a design document (palette/typography/radius/motion/touch), gaps reported\n" +
+  "  comply <ab>          Design-spec compliance check (color/type/radius/motion) — the UI must fully obey the spec\n" +
   "  ops-batch-b64 <b64>  Apply newline-separated ops in ONE call (base64; aborts at first error with index)\n" +
   "  export-design-system <ab>  Export extracted design system (tokens JSON + CSS custom properties)\n" +
   "  autofill <ab>        Materialize the infer_missing report as real nodes, then auto_fix settles layout\n" +
@@ -1353,10 +1467,12 @@ fn cli_help() -> String {
   "      actions:  back | haptic | navigate_to:<board> | show_toast:<msg>\n" +
   "                | set_text:<node>:<text> | set_state:<node>:<state>\n" +
   "                | toggle_state:<node> | play_sound:<name>\n" +
+  "                | submit_form:<field>,<field>…\n" +
   "  uninteract <ab> <node>            Clear node interactions\n" +
-  "  interactions <ab>                 List (node/trigger/action)\n" +
-  "  flow <from> <to> <node>           Add tap navigation edge\n" +
-  "  unflow <from> <to> <node>         Remove a tap navigation edge\n" +
+  "  interactions <ab>                 List v2 (node/trigger/action{kind,params})\n" +
+  "  interaction-manifest              Print the trigger/action vocabulary JSON\n" +
+  "  flow <from> <to> <trigger|node> [transition]  Add navigation edge (trigger: swipe_left/long_press[:秒]/focus[:node]/scroll_end/keyboard_enter；裸节点 id = tap:<node>；transition 缺省 push)\n" +
+  "  unflow <from> <to> <trigger|node>  Remove a navigation edge\n" +
   "  flows                             List navigation edges\n" +
   "  tap <ab> <x> <y>                  Simulate a tap, return state changes\n" +
   "\n" +
@@ -1386,7 +1502,7 @@ fn split_change(d : String) -> (String, String) {
   let n = d.length()
   while i < n {
     if char_at_str(d, i) == ":" {
-      return (d.substring(start=0, end=i), d.substring(start=i + 1, end=n))
+      return (d[0:i].to_owned(), d[i + 1:n].to_owned())
     }
     i = i + 1
   }
@@ -1394,8 +1510,8 @@ fn split_change(d : String) -> (String, String) {
 }
 
 ///|
-fn char_at_str(s : String, i : Int) -> String {
-  s.substring(start=i, end=i + 1)
+fn char_at_str(s : String, i : Int32) -> String {
+  s[i:i + 1].to_owned()
 }
 
 // JSON 字符串转义直接复用 @core.json_escape（core/json.mbt：引号/反斜杠/
@@ -1403,7 +1519,7 @@ fn char_at_str(s : String, i : Int) -> String {
 
 ///|
 fn join_arr(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

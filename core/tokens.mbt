@@ -5,22 +5,31 @@
 /// Agent 通过 `apply_token` 引用令牌，引擎在布局/渲染时解析为具体值。
 /// 这样 Agent 生成的设计自动获得一致的主题（换主题只需改令牌表）。
 pub(all) struct DesignTokens {
-  mut colors : Map[String, String] // "primary" → "#4B6BFB"
+  mut colors : Map[String, String] // "primary" → "#4361EE"
   mut spacing : Map[String, Double] // "sm" → 4, "md" → 8, "lg" → 16
   mut radii : Map[String, Double] // "sm" → 4, "md" → 8, "round" → 999
   mut typography : Map[String, Double] // "h1" → 32, "h2" → 24, "body" → 14
+  /// 动效刻度（ms）：fast/base/slow/tick/stagger/stagger_max。
+  /// 默认值与 animation.mbt 的 MOTION_* 常量同源；spec / theme /
+  /// frontmatter `tokens:` 覆盖后，导出面与 wasm 快照都从这里取。
+  mut motion : Map[String, Double]
 }
 
 ///|
 pub fn DesignTokens::default() -> DesignTokens {
   let t : DesignTokens = {
-    colors: Map::new(),
-    spacing: Map::new(),
-    radii: Map::new(),
-    typography: Map::new(),
+    colors: Map([]),
+    spacing: Map([]),
+    radii: Map([]),
+    typography: Map([]),
+    motion: Map([]),
   }
   // 颜色（Material 3 风格）
-  t.colors.set("primary", "#4B6BFB")
+  // primary/hint 为 WCAG 校准值：#4B6BFB 白字仅 4.38（可读性硬标准 ≥4.5）
+  // 加深到 #4361EE（5.02）；#9098A1 提示文字压 surface_variant 仅 2.63，
+  // 加深到 #686F79（sv 4.57 / surface 5.07 / background 4.82）——提示是
+  // 占位文字，必须可读（审计盲区：default/light 主题提示文字全线不达标）。
+  t.colors.set("primary", "#4361EE")
   t.colors.set("primary_container", "#DEE5FF")
   t.colors.set("on_primary", "#FFFFFF")
   t.colors.set("on_secondary_container", "#1A1C1E")
@@ -33,12 +42,28 @@ pub fn DesignTokens::default() -> DesignTokens {
   t.colors.set("error", "#BA1A1A")
   t.colors.set("error_container", "#FFDAD6")
   t.colors.set("success", "#2E7D32")
-  t.colors.set("warning", "#ED6C02")
+  // warning 加深一档：#ED6C02 白字仅 3.11（可读性硬标准 ≥4.5，badge/
+  // alert 的 warning 档文字色是 on_primary），#B85C00 达 4.6
+  t.colors.set("warning", "#B85C00")
+  // 多彩感第三批角色（视觉语言 0.2）：info 语义色 + 三只 tinted 容器——
+  // chip/图标/插图的多彩用色面，文字一律 text_primary（深容器配亮主题深字、
+  // 暗容器配暗主题亮字，两Mode都 ≥4.5，见 visual_lang_wbtest 逐档断言）
+  // inverse chrome 角色（宽屏/PC 模板的深色侧栏一类「反相层」）：默认深
+  // 底亮字；spec 给 text/surface 时由 apply_spec_tokens 从 spec 色相派生
+  // （亮主题深侧栏、暗主题亮侧栏自动反相），颜色仍可追溯到 spec
+  t.colors.set("inverse_surface", "#1E2126")
+  t.colors.set("inverse_surface_variant", "#111318")
+  t.colors.set("inverse_text", "#F5F5F7")
+  t.colors.set("inverse_muted", "#868D97")
+  t.colors.set("info", "#0060B8")
+  t.colors.set("success_container", "#D8F5DE")
+  t.colors.set("warning_container", "#FFE8CC")
+  t.colors.set("info_container", "#DCEEFB")
   t.colors.set("outline", "#C8CDD6")
   t.colors.set("outline_variant", "#E0E0E0")
   t.colors.set("text_primary", "#1A1C1E")
   t.colors.set("text_secondary", "#42474F")
-  t.colors.set("text_hint", "#9098A1")
+  t.colors.set("text_hint", "#686F79")
   // 间距（4px 基准）
   t.spacing.set("xs", 2.0)
   t.spacing.set("sm", 4.0)
@@ -63,6 +88,14 @@ pub fn DesignTokens::default() -> DesignTokens {
   t.typography.set("body", 14.0)
   t.typography.set("caption", 12.0)
   t.typography.set("overline", 10.0)
+  // 动效（ms）：与 animation.mbt 的 MOTION_* 常量同值（单一事实源是常量，
+  // 令牌表是可变声明面——set_token/spec/frontmatter 只在需要覆盖时写入）
+  t.motion.set("fast", MOTION_FAST.to_double())
+  t.motion.set("base", MOTION_BASE.to_double())
+  t.motion.set("slow", MOTION_SLOW.to_double())
+  t.motion.set("tick", MOTION_TICK.to_double())
+  t.motion.set("stagger", MOTION_STAGGER.to_double())
+  t.motion.set("stagger_max", MOTION_STAGGER_MAX.to_double())
   t
 }
 
@@ -71,7 +104,7 @@ pub fn DesignTokens::default() -> DesignTokens {
 // ---------------------------------------------------------------------------
 
 ///|
-/// 解析颜色令牌："primary" → "#4B6BFB"；非令牌直接返回
+/// 解析颜色令牌："primary" → "#4361EE"；非令牌直接返回
 pub fn DesignTokens::resolve_color(
   self : DesignTokens,
   token_or_hex : String,
@@ -107,6 +140,15 @@ pub fn DesignTokens::resolve_font(
   token : String,
 ) -> Double? {
   self.typography.get(token)
+}
+
+///|
+/// 解析动效令牌："base" → 240.0（ms）
+pub fn DesignTokens::resolve_motion(
+  self : DesignTokens,
+  token : String,
+) -> Double? {
+  self.motion.get(token)
 }
 
 // ---------------------------------------------------------------------------
@@ -172,12 +214,21 @@ pub fn DesignTokens::to_json(self : DesignTokens) -> String {
     }
   }
   parts.push("\"typography\":[" + jstr5(ty) + "]")
+  // motion（时长刻度 ms）
+  let mo : Array[String] = []
+  for k in self.motion.keys() {
+    match self.motion.get(k) {
+      Some(v) => mo.push("{\"k\":\"\{k}\",\"v\":\{v}}")
+      None => ()
+    }
+  }
+  parts.push("\"motion\":[" + jstr5(mo) + "]")
   "{\{jstr5(parts)}}"
 }
 
 ///|
 fn jstr5(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

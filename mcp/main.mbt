@@ -7,11 +7,11 @@
 /// ```bash
 /// echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"apply_template","arguments":{"template_id":"login","name":"my_login"}}}' | moon run --target native mcp
 /// ```
-extern "c" fn getchar() -> Int = "getchar"
+extern "c" fn getchar() -> Int32 = "getchar"
 
 ///|
 fn read_line() -> String {
-  let bytes : Array[Int] = []
+  let bytes : Array[Int32] = []
   let mut on = true
   while on {
     let c = getchar()
@@ -29,31 +29,31 @@ fn read_line() -> String {
 ///|
 /// stdin 是 UTF-8 字节流：逐字节收集后解码（getchar 逐字节返回，
 /// 直接用 Int::to_char 会按 Latin-1 拼坏非 ASCII 文本）
-fn utf8_from_bytes(bytes : Array[Int]) -> String {
-  let sb = StringBuilder::new()
+fn utf8_from_bytes(bytes : Array[Int32]) -> String {
+  let sb = StringBuilder()
   let mut i = 0
   let n = bytes.length()
   while i < n {
     let b0 = bytes[i]
     if b0 < 0x80 {
-      sb.write_char(Int::to_char(b0).unwrap_or('?'))
+      sb.write_char(Int32::to_char(b0).unwrap_or('?'))
       i = i + 1
     } else if b0 < 0xE0 && i + 1 < n {
       let cp = ((b0 - 0xC0) << 6) + (bytes[i + 1] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 2
     } else if b0 < 0xF0 && i + 2 < n {
       let cp = ((b0 - 0xE0) << 12) +
         ((bytes[i + 1] - 0x80) << 6) +
         (bytes[i + 2] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 3
     } else if i + 3 < n {
       let cp = ((b0 - 0xF0) << 18) +
         ((bytes[i + 1] - 0x80) << 12) +
         ((bytes[i + 2] - 0x80) << 6) +
         (bytes[i + 3] - 0x80)
-      sb.write_char(Int::to_char(cp).unwrap_or('?'))
+      sb.write_char(Int32::to_char(cp).unwrap_or('?'))
       i = i + 4
     } else {
       i = i + 1
@@ -68,10 +68,10 @@ let g_project : @core.Project = @core.Project::new()
 
 ///|
 /// 设计版本历史（会话级）：history_init 后随 commit/checkout/undo/redo 演进。
-let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref::new(None)
+let g_history : @ref.Ref[@core.DesignHistory?] = @ref.Ref(None)
 
 ///|
-let g_history_board : @ref.Ref[String] = @ref.Ref::new("")
+let g_history_board : @ref.Ref[String] = @ref.Ref("")
 
 ///|
 fn main {
@@ -189,7 +189,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       if user_items.length() == 0 {
         builtin
       } else {
-        let inner = builtin.substring(start=1, end=builtin.length() - 1)
+        let inner = builtin[1:builtin.length() - 1].to_owned()
         let sep = if inner == "" { "" } else { "," }
         "[\{inner}\{sep}\{mcp_join(user_items)}]"
       }
@@ -231,7 +231,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
           for param in def.params.iter() {
             kvs.push("\{param.name}=<\{param.kind}>")
           }
-          let kv_sb = StringBuilder::new()
+          let kv_sb = StringBuilder()
           let mut first_kv = true
           for kv in kvs.iter() {
             if first_kv == false {
@@ -314,7 +314,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let mut ok_count = 0
       let mut first_error = ""
       for part_view in source_b64s.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
@@ -369,19 +369,19 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         return err_json("missing artboard/component_id/instance_id")
       }
       // 用户组件参数槽：arguments.args = "k=v k=v ..."（空格分隔）
-      let kv : Map[String, String] = Map::new()
+      let kv : Map[String, String] = Map([])
       let raw_args = extract_arg_string(request_line, "args")
       if raw_args != "" {
         for part_view in raw_args.split(" ") {
-          let part = part_view.to_string()
+          let part = part_view.to_owned()
           if part == "" {
             continue
           }
           match part.find("=") {
             None => return err_json("place_invalid_arg:" + part)
             Some(pos) => {
-              let k = part.substring(start=0, end=pos)
-              let v = @decl.unescape_value(part.substring(start=pos + 1))
+              let k = part[0:pos].to_owned()
+              let v = @decl.unescape_value(part[pos + 1:].to_owned())
               if k != "" {
                 kv.set(k, v)
               }
@@ -437,7 +437,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
         return err_json("missing intent")
       }
       let spec = extract_arg_string(request_line, "spec")
-      match p.generate(intent_text=intent, name=name, spec=spec) {
+      match p.generate(intent_text=intent, name~, spec~) {
         Ok(json) => json
         Err(e) =>
           if e == "design_spec_required" {
@@ -448,6 +448,64 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
             err_json(e)
           }
       }
+    }
+    "generate_from_doc" => {
+      // 强制规范流程：设计文档 → spec → 生成（缺关键项拒绝）
+      if intent == "" {
+        return err_json("missing intent")
+      }
+      let doc = extract_arg_string(request_line, "doc")
+      if doc == "" {
+        return err_json("missing doc (design document markdown)")
+      }
+      match p.generate_from_doc(intent_text=intent, doc~, name~) {
+        Ok(json) => json
+        Err(e) =>
+          if e.has_prefix("design_doc_spec_gaps:") {
+            let ex = @core.design_doc_extract(doc)
+            let parts_g : Array[String] = []
+            for g in ex.gaps.iter() {
+              parts_g.push("\"" + @core.json_escape(g) + "\"")
+            }
+            "{\"ok\":false,\"error\":\"design_doc_spec_gaps\",\"gaps\":[" +
+            parts_g.join(",") +
+            "],\"spec_draft\":" +
+            ex.spec_json +
+            "}"
+          } else {
+            err_json(e)
+          }
+      }
+    }
+    "spec_extract" => {
+      // 提取不生成：宿主可在 generate_from_doc 前验证/预演文档
+      //（与 CLI spec-extract 命令同一输出形状）
+      let doc = extract_arg_string(request_line, "doc")
+      if doc == "" {
+        return err_json("missing doc (design document markdown)")
+      }
+      let ex = @core.design_doc_extract(doc)
+      let parts_e : Array[String] = []
+      for x in ex.extracted.iter() {
+        parts_e.push("\"" + @core.json_escape(x) + "\"")
+      }
+      let parts_g : Array[String] = []
+      for g in ex.gaps.iter() {
+        parts_g.push("\"" + @core.json_escape(g) + "\"")
+      }
+      "{\"ok\":true,\"spec\":" +
+      ex.spec_json +
+      ",\"extracted\":[" +
+      parts_e.join(",") +
+      "],\"gaps\":[" +
+      parts_g.join(",") +
+      "]}"
+    }
+    "design_compliance" => {
+      if artboard == "" {
+        return err_json("missing artboard")
+      }
+      p.design_spec_compliance(artboard~)
     }
     "batch_apply" => {
       // 执行策略第二级：多条确定精修一次提交（base64(换行分隔 ops)）。
@@ -464,7 +522,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let lines : Array[String] = []
       for line in block.split("\n").iter() {
-        let trimmed = line.trim().to_string()
+        let trimmed = line.trim().to_owned()
         if trimmed != "" {
           lines.push(trimmed)
         }
@@ -521,9 +579,13 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
     }
     "export_html" => {
+      // preview 必须过 json_escape：H5 导出的 DOCTYPE/头部位含真实换行，
+      // 裸插会让信封 JSON 字符串带控制字符——宿主解析 content.text 即炸
+      //（H5 契约：MCP 通道导出信封必须是合法 JSON，CLI 通道同败面）
       let html = p.export_html()
       let len = html.length().to_string()
-      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{html.substring(start=0, end=120)}...\"}"
+      let preview = @core.json_escape(html[0:120].to_owned())
+      "{\"ok\":true,\"html_length\":\{len},\"preview\":\"\{preview}...\"}"
     }
     "export_svg" => {
       if artboard == "" {
@@ -531,8 +593,10 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       match p.export_svg(artboard~) {
         Ok(svg) => {
+          // 同 export_html：SVG 多行文本裸插 = 非法 JSON 信封
           let len = svg.length().to_string()
-          "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{svg.substring(start=0, end=100)}...\"}"
+          let preview = @core.json_escape(svg[0:100].to_owned())
+          "{\"ok\":true,\"svg_length\":\{len},\"preview\":\"\{preview}...\"}"
         }
         Err(e) => err_json(e)
       }
@@ -781,15 +845,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let kvs : Array[(String, String)] = []
       for part_view in raw.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
         match part.find("=") {
           None => return err_json("update_invalid_arg:" + part)
           Some(pos) => {
-            let k = part.substring(start=0, end=pos)
-            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let k = part[0:pos].to_owned()
+            let v = @decl.unescape_value(part[pos + 1:].to_owned())
             if k != "" {
               kvs.push((k, v))
             }
@@ -824,7 +888,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let ids : Array[String] = []
       for v in nodes_arg.split(",") {
-        let t = v.to_string().trim().to_string()
+        let t = v.to_owned().trim().to_owned()
         if t != "" {
           ids.push(t)
         }
@@ -852,7 +916,7 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       }
       let ids : Array[String] = []
       for v in nodes_arg.split(",") {
-        let t = v.to_string().trim().to_string()
+        let t = v.to_owned().trim().to_owned()
         if t != "" {
           ids.push(t)
         }
@@ -886,15 +950,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let raw = extract_arg_string(request_line, "args")
       let kvs : Array[(String, String)] = []
       for part_view in raw.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
         match part.find("=") {
           None => return err_json("restyle_invalid_arg:" + part)
           Some(pos) => {
-            let k = part.substring(start=0, end=pos)
-            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let k = part[0:pos].to_owned()
+            let v = @decl.unescape_value(part[pos + 1:].to_owned())
             if k != "" {
               kvs.push((k, v))
             }
@@ -950,15 +1014,15 @@ fn execute_tool(request_line : String, tool_name : String) -> String {
       let mut radius : Double? = None
       let mut font_size : Double? = None
       for part_view in raw.split(" ") {
-        let part = part_view.to_string()
+        let part = part_view.to_owned()
         if part == "" {
           continue
         }
         match part.find("=") {
           None => ()
           Some(pos) => {
-            let k = part.substring(start=0, end=pos)
-            let v = @decl.unescape_value(part.substring(start=pos + 1))
+            let k = part[0:pos].to_owned()
+            let v = @decl.unescape_value(part[pos + 1:].to_owned())
             let d = @core.parse_double(v)
             match k {
               "fill" => fill = Some(v)
@@ -1022,7 +1086,7 @@ fn err_json(msg : String) -> String {
 ///|
 /// 定位 params.arguments 对象体起点（容忍 "arguments":{ 与 "arguments": { 两种写法）。
 /// 固定模式会让冒号后带空格的请求全部解析失败（表现为参数 missing）。
-fn find_arguments_body(line : String) -> Int? {
+fn find_arguments_body(line : String) -> Int32? {
   let key = "\"arguments\":"
   match line.find(key) {
     None => None
@@ -1057,7 +1121,7 @@ fn extract_arg_string(line : String, key : String) -> String {
     Some(i) => i
     None => return ""
   }
-  let args_body = line.substring(start=args_idx)
+  let args_body = line[args_idx:].to_owned()
   // 在 arguments 对象内查找 key（同样容忍 "key": "value" 的空格写法）
   let pattern = "\"" + key + "\":"
   match args_body.find(pattern) {
@@ -1070,8 +1134,8 @@ fn extract_arg_string(line : String, key : String) -> String {
         return ""
       }
       // 扫描到第一个未转义的闭引号，途中还原 \X 转义序列
-      let rest = args_body.substring(start=start + 1)
-      let sb = StringBuilder::new()
+      let rest = args_body[start + 1:].to_owned()
+      let sb = StringBuilder()
       let mut i = 0
       let n = rest.length()
       let mut closed = false
@@ -1081,7 +1145,7 @@ fn extract_arg_string(line : String, key : String) -> String {
             closed = true
             i = n
           }
-          Some('\\') => {
+          Some('\\') =>
             if i + 1 < n && rest.get_char(i + 1) == Some('u') {
               // JSON 标准 \uXXXX：解析 4 位十六进制还原码点（含代理对合成）
               match decode_unicode_escape(rest, i, n) {
@@ -1119,7 +1183,6 @@ fn extract_arg_string(line : String, key : String) -> String {
               sb.write_char('\\')
               i = i + 1
             }
-          }
           Some(ch) => {
             sb.write_char(ch)
             i = i + 1
@@ -1143,7 +1206,7 @@ fn extract_arg_string(line : String, key : String) -> String {
 /// 高代理项 \uD800-\uDBFF 后随低代理项转义 \uDC00-\uDFFF 时合成增补码点
 /// （emoji 等 BMP 外字符）。序列非法（hex 残缺、孤立代理项）返回 None，
 /// 由调用方原样保留整段文本（不做有损丢弃）。
-fn decode_unicode_escape(rest : String, i : Int, n : Int) -> (Char, Int)? {
+fn decode_unicode_escape(rest : String, i : Int32, n : Int32) -> (Char, Int32)? {
   // 至少要有 "\uXXXX" 6 个字符
   if i + 6 > n {
     return None
@@ -1154,15 +1217,14 @@ fn decode_unicode_escape(rest : String, i : Int, n : Int) -> (Char, Int)? {
   }
   if code >= 0xD800 && code <= 0xDBFF {
     // 高代理项：紧随 \uXXXX 低代理项（0xDC00-0xDFFF）才合成，否则非法
-    if
-      i + 12 <= n &&
+    if i + 12 <= n &&
       rest.get_char(i + 6) == Some('\\') &&
       rest.get_char(i + 7) == Some('u') {
       match parse_hex4(rest, i + 8) {
         Some(low) =>
           if low >= 0xDC00 && low <= 0xDFFF {
             let cp = 0x10000 + (code - 0xD800) * 0x400 + (low - 0xDC00)
-            return Some((Char::from_int(cp), i + 12))
+            return Some(((cp).unsafe_to_char(), i + 12))
           }
         None => ()
       }
@@ -1173,13 +1235,13 @@ fn decode_unicode_escape(rest : String, i : Int, n : Int) -> (Char, Int)? {
     // 孤立低代理项：非法序列
     return None
   }
-  Some((Char::from_int(code), i + 6))
+  Some(((code).unsafe_to_char(), i + 6))
 }
 
 ///|
 /// 解析 s 自 start 起的 4 位十六进制（\uXXXX 的 XXXX）；含非 hex 字符
 /// 返回 None
-fn parse_hex4(s : String, start : Int) -> Int? {
+fn parse_hex4(s : String, start : Int32) -> Int32? {
   let mut code = 0
   let mut k = 0
   while k < 4 {
@@ -1194,7 +1256,7 @@ fn parse_hex4(s : String, start : Int) -> Int? {
 
 ///|
 /// 单个十六进制字符的数值（0-9 / a-f / A-F）；其余返回 None
-fn hex_digit_value(c : Char?) -> Int? {
+fn hex_digit_value(c : Char?) -> Int32? {
   match c {
     Some(ch) => {
       let code = ch.to_int()
@@ -1222,7 +1284,7 @@ fn extract_arg_num(line : String, key : String) -> Double? {
     Some(i) => i
     None => return None
   }
-  let args_body = line.substring(start=args_idx)
+  let args_body = line[args_idx:].to_owned()
   let pattern = "\"" + key + "\":"
   match args_body.find(pattern) {
     Some(idx) => {
@@ -1231,7 +1293,7 @@ fn extract_arg_num(line : String, key : String) -> Double? {
       while start < args_body.length() && args_body.get_char(start) == Some(' ') {
         start = start + 1
       }
-      let rest = args_body.substring(start~)
+      let rest = args_body[start:].to_owned()
       let mut result = 0.0
       let mut frac = 0.1
       let mut has_dot = false
@@ -1275,9 +1337,9 @@ fn extract_json_string(json : String, key : String) -> String {
       if json.get_char(start) != Some('"') {
         return ""
       }
-      let rest = json.substring(start=start + 1)
+      let rest = json[start + 1:].to_owned()
       match rest.find("\"") {
-        Some(end) => rest.substring(start=0, end~)
+        Some(end) => rest[0:end].to_owned()
         None => ""
       }
     }
@@ -1303,15 +1365,14 @@ fn extract_json_id(json : String) -> String? {
       match json.get_char(start) {
         Some('"') => {
           // 字符串 id：扫描到闭引号，保留引号形态回显
-          let rest = json.substring(start=start + 1)
+          let rest = json[start + 1:].to_owned()
           match rest.find("\"") {
-            Some(end) =>
-              Some("\"" + rest.substring(start=0, end~) + "\"")
+            Some(end) => Some("\"" + rest[0:end].to_owned() + "\"")
             None => None // 截断请求：无合法 id，按通知静默
           }
         }
         Some(_) => {
-          let rest = json.substring(start~)
+          let rest = json[start:].to_owned()
           let mut result = ""
           for c in rest.iter() {
             let code = c.to_int()
@@ -1335,7 +1396,7 @@ fn extract_json_id(json : String) -> String? {
 
 ///|
 fn json_escape_text(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '"' => sb.write_string("\\\"")
@@ -1349,7 +1410,7 @@ fn json_escape_text(s : String) -> String {
 
 ///|
 fn mcp_join(items : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut first = true
   for item in items.iter() {
     if first == false {
@@ -1374,15 +1435,15 @@ fn decode_b64_text(payload : String) -> Result[String, String] {
 }
 
 ///|
-fn mcp_parse_rev(text : String) -> Int? {
-  let t = text.trim().to_string()
+fn mcp_parse_rev(text : String) -> Int32? {
+  let t = text.trim().to_owned()
   if t.length() == 0 {
     return None
   }
   let mut v = 0
   let mut i = 0
   while i < t.length() {
-    let c = t.substring(start=i, end=i + 1)
+    let c = t[i:i + 1].to_owned()
     let d = "0123456789".find(c)
     match d {
       None => return None

@@ -168,11 +168,38 @@ pub fn Project::move_node(
 /// 漏同步会被使用新键的既有测试当场打红。
 fn is_edit_key(k : String) -> Bool {
   match k {
-    "w" | "h" | "text" | "fill" | "text_color" | "stroke" | "radius"
-    | "opacity" | "font_size" | "weight" | "shadow" | "rotate" | "blur"
-    | "blend" | "line" | "tracking" | "constraint" | "name" | "stroke_width"
-    | "align" | "italic" | "dash" | "visible" | "width_mode" | "height_mode"
-    | "x_mode" | "y_mode" | "layout" | "gap" | "justify" | "padding" => true
+    "w"
+    | "h"
+    | "text"
+    | "fill"
+    | "text_color"
+    | "stroke"
+    | "radius"
+    | "opacity"
+    | "font_size"
+    | "weight"
+    | "shadow"
+    | "rotate"
+    | "blur"
+    | "blend"
+    | "line"
+    | "tracking"
+    | "constraint"
+    | "name"
+    | "stroke_width"
+    | "align"
+    | "italic"
+    | "dash"
+    | "visible"
+    | "width_mode"
+    | "height_mode"
+    | "x_mode"
+    | "y_mode"
+    | "layout"
+    | "gap"
+    | "justify"
+    | "padding"
+    | "motion" => true
     _ => false
   }
 }
@@ -198,6 +225,15 @@ pub fn Project::edit_node(
         let (k, _) = kv
         if !is_edit_key(k) {
           return Err("mbt_operation_unknown_key:" + k)
+        }
+        // motion 前置白名单校验（update 闭包返回 Node 不能报错——
+        // 非法预设必须在进入闭包前拒绝）
+        if k == "motion" {
+          let (_, v) = kv
+          match validate_node_motion(v) {
+            Ok(_) => ()
+            Err(e) => return Err(e)
+          }
         }
       }
       let applied : Array[String] = []
@@ -235,15 +271,33 @@ pub fn Project::edit_node(
               applied.push("text")
             }
             "fill" => {
-              cur = { ..cur, style: { ..cur.style, fill: v, }, }
+              // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
+              // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
+              cur = {
+                ..cur,
+                style: { ..cur.style, fill: self.tokens.resolve_color(v), },
+              }
               applied.push("fill")
             }
             "text_color" => {
-              cur = { ..cur, style: { ..cur.style, text_color: v, }, }
+              // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
+              // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
+              cur = {
+                ..cur,
+                style: {
+                  ..cur.style,
+                  text_color: self.tokens.resolve_color(v),
+                },
+              }
               applied.push("text_color")
             }
             "stroke" => {
-              cur = { ..cur, style: { ..cur.style, stroke: v, }, }
+              // 令牌名在此解析（place_comp 补丁同语义）——模板编辑与 Agent 传
+              // "primary" 等角色名即得主题色，字面 hex 原样透传不受影响
+              cur = {
+                ..cur,
+                style: { ..cur.style, stroke: self.tokens.resolve_color(v), },
+              }
               applied.push("stroke")
             }
             "radius" => {
@@ -317,6 +371,8 @@ pub fn Project::edit_node(
               cur = { ..cur, style: { ..cur.style, font_style: f, }, }
               applied.push("italic")
             }
+            // 节点级开场动效：与 canonical motion= 同一写面（白名单校验在 core）
+            "motion" => cur = { ..cur, style: { ..cur.style, motion: v, }, }
             "dash" => {
               let ds = if v == "dashed" || v == "dotted" { v } else { "solid" }
               cur = { ..cur, style: { ..cur.style, stroke_dash: ds, }, }

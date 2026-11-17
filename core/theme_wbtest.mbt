@@ -3,13 +3,22 @@
 ///|
 test "主题：预定义主题清单" {
   let themes = builtin_themes()
-  assert_eq(themes.length(), 6)
+  assert_eq(themes.length(), 13)
   assert_eq(themes[0].name, "light")
   assert_eq(themes[1].name, "dark")
   assert_eq(themes[2].name, "high_contrast")
   assert_eq(themes[3].name, "sepia")
   assert_eq(themes[4].name, "nord")
   assert_eq(themes[5].name, "sunset")
+  // 美学体系一等预设（Apple HIG / HarmonyOS，各含暗色）
+  assert_eq(themes[6].name, "apple")
+  assert_eq(themes[7].name, "apple_dark")
+  assert_eq(themes[8].name, "harmony")
+  assert_eq(themes[9].name, "harmony_dark")
+  // 风格画像（0.2 主题系统第三批）
+  assert_eq(themes[10].name, "vivid")
+  assert_eq(themes[11].name, "editorial")
+  assert_eq(themes[12].name, "playful")
 }
 
 ///|
@@ -34,7 +43,7 @@ test "主题：Project 切换主题" {
   let p = Project::new()
   // 初始是 light
   let l_primary = p.tokens.resolve_color("primary")
-  assert_eq(l_primary, "#4B6BFB")
+  assert_eq(l_primary, "#4361EE")
   // 切换到 dark
   match p.apply_theme("dark") {
     Ok(json) => {
@@ -45,7 +54,7 @@ test "主题：Project 切换主题" {
   }
   // primary 应该变了
   let d_primary = p.tokens.resolve_color("primary")
-  assert_true(d_primary != "#4B6BFB")
+  assert_true(d_primary != "#4361EE")
   // surface 应该是暗色
   let d_surface = p.tokens.resolve_color("surface")
   assert_eq(d_surface, "#1A1C1E")
@@ -76,11 +85,11 @@ test "主题：各预定义主题的 primary 色不同" {
     primaries.push(t.tokens.resolve_color("primary"))
   }
   // 确保至少有 4 种不同的 primary 色
-  let unique : Map[String, Bool] = Map::new()
+  let unique : Map[String, Bool] = Map([])
   for c in primaries.iter() {
     unique.set(c, true)
   }
-  assert_true(unique.size() >= 4)
+  assert_true(unique.length() >= 4)
 }
 
 ///|
@@ -109,10 +118,9 @@ test "主题：set_token 单令牌修改" {
 test "主题：set_token 值含引号/反斜杠仍产出合法 JSON envelope（回归锚）" {
   let p = Project::new()
   match p.set_token("primary", "a\"b\\c") {
-    Ok(json) => {
+    Ok(json) =>
       // value 区必须是转义序列，裸引号/裸反斜杠即 envelope 非法
       assert_true(json.contains("\"value\":\"a\\\"b\\\\c\""))
-    }
     Err(_) => assert_true(false)
   }
   // 生效不受转义影响：落库的是原始值
@@ -193,7 +201,7 @@ test "主题 + 模板：切换主题后组件颜色自动变化" {
       match x.doc.get("btn") {
         Some(n) => {
           let light_fill = n.style.fill
-          assert_eq(light_fill, "#4B6BFB")
+          assert_eq(light_fill, "#4361EE")
         }
         None => assert_true(false)
       }
@@ -207,4 +215,22 @@ test "主题 + 模板：切换主题后组件颜色自动变化" {
   // nord 的 primary 令牌值
   let nord_primary = p.tokens.resolve_color("primary")
   assert_eq(nord_primary, "#88C0D0")
+}
+
+///|
+/// 主题切换保留动效覆盖：tokens: 段比主题更具体——换主题只换未覆盖的
+/// 颜色角色，motion.* 覆盖同样不能被主题默认值冲掉。
+test "主题：切换主题保留 motion 令牌覆盖" {
+  let p = Project::new()
+  match p.set_token("motion.base", "320") {
+    Ok(_) => ()
+    Err(e) => fail("motion.base 应可设置：\{e}")
+  }
+  match p.apply_theme("dark") {
+    Ok(_) => ()
+    Err(e) => fail("apply_theme dark 失败：\{e}")
+  }
+  assert_true(p.motion_tokens_css().contains("--mv-dur:320ms"))
+  // 未覆盖的刻度仍取默认常量
+  assert_true(p.motion_tokens_css().contains("--mv-dur-fast:120ms"))
 }

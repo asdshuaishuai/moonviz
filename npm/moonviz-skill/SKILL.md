@@ -18,7 +18,7 @@ owns page structure, component choice, spacing norms, and visual consistency.
   The default path for anything a page recipe can express.
 - **tool mode（兜底 / fallback, 以前的不抛弃）** — the full per-node
   vocabulary (`create` / `place` / `update` / `move` / `align` / `group` /
-  `flip` / `reorder` …, 55 tools / 27 ops) is retained unchanged and is the
+  `flip` / `reorder` …, 58 tools / 27 ops) is retained unchanged and is the
   legitimate channel for everything genUI does not cover: freeform
   artboards, layouts no template matches, surgical single-node edits, and
   exploratory probing.
@@ -143,7 +143,8 @@ Back navigation is built in: a tap on a back-like node (id containing
 back/prev/return as a word; text 返回/后退/上一步/back/←/‹/«) with no flow or
 marker returns to the previous artboard on the navigation stack — every host
 gets this for free, no client-side heuristic needed. Back-like nodes are also
-included in the interactions listing (marked `"builtin":"back"`). Validation:
+included in the interactions listing (v1 `"builtin":"back"` / v2
+`"source":"builtin"` + `action.kind:"back"`). Validation:
 in multi-artboard documents every non-entry artboard must have an exit — an
 outbound `flow` or a back-like node; a page with neither strands the user and
 is flagged under the norms dimension.
@@ -173,9 +174,19 @@ BEFORE `set-state` can target it (otherwise `no_states`)
   scroll_end key_enter focus blur`
 - actions: `back` · `haptic` · `navigate_to:<board>` · `show_toast:<msg>` ·
   `set_text:<node>:<text>` · `set_state:<node>:<state>` ·
-  `toggle_state:<node>` · `play_sound:<name>`
+  `toggle_state:<node>` · `play_sound:<name>` ·
+  `submit_form:<field>,<field>`（运行时产出带键值 FormSubmitted）
 - interactions persist as name markers and are executed by the runtime:
   tap resolution is flow → marker → `NodeUpdated`
+- gestures are first-class: `long_press[:seconds]` (duration preserved),
+  `focus[:node]`, `blur[:node]`, `scroll_end`, `keyboard_enter` and
+  `swipe_left|right|up|down` all dispatch markers/flows; a tap marker does
+  NOT fire on long_press
+- flow triggers share the same grammar: bare node id = `tap:<node>`;
+  `flow <from> <to> <trigger|node>` rejects unknown triggers
+- wasm hosts send gestures via `session_event(handle, artboard,
+  "long_press:20:20:800")` (classic: `session_event_in`, main slot = spec,
+  arg slot = artboard); invalid spec → `unknown_event`
 - component states persist as `[state:name:k=v,...]` markers and apply as a
   render-time transform when activated
 

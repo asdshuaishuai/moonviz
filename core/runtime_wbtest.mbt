@@ -29,7 +29,6 @@ test "交互注册：为节点添加 tap 交互" {
       node_id="ok_btn",
       trigger=Tap,
       action=NavigateTo("home"),
-      transition=Push,
     ) {
     Ok(json) => assert_true(json.contains("\"ok\":true"))
     Err(_) => assert_true(false)
@@ -113,7 +112,7 @@ test "嵌入式运行时：输入值管理 + 热重载" {
       assert_eq(rt.get_input("email"), "alice@test.com")
       // 获取所有输入
       let all = rt.get_all_inputs()
-      assert_eq(all.size(), 1)
+      assert_eq(all.length(), 1)
       // 热重载：真实替换文档内容（旧实现仅校验非空即返回成功）
       let layout_before = solve(
         match rt.project.artboards.get("form") {
@@ -232,7 +231,7 @@ test "完整 Agent 嵌入式工作流：创建→交互→运行→导出 artifa
       rt.set_input("email_input", "user@test.com")
       rt.set_input("password_input", "secret123")
       let inputs = rt.get_all_inputs()
-      assert_eq(inputs.size(), 2)
+      assert_eq(inputs.length(), 2)
     }
     Err(_) => assert_true(false)
   }
@@ -556,10 +555,13 @@ test "interactions 导出：含引号的 name/action 过 json_escape" {
   }
   match p.interactions_json(artboard=ab) {
     Ok(j) => {
-      // action spec 中的引号必须已转义
+      // action spec 中的引号必须已转义；v2 的 params 是结构化 JSON
+      // （"text":"hi" 是合法字符串值），不再以裸 spec 片段为红线
       assert_true(j.contains("set_text:lbl:\\\"hi\\\""))
       assert_true(j.contains("\"trigger\":\"tap\""))
-      assert_false(j.contains(":\"hi\""))
+      assert_true(j.contains("\"params\":{\"node\":\"lbl\",\"text\":\"hi\"}"))
+      // name 字段不得出现未转义的裸引号（a"b 形态）
+      assert_false(j.contains("a\"b ⚡"))
     }
     Err(_) => assert_true(false)
   }
@@ -585,12 +587,10 @@ test "组件状态：text 含逗号/方括号经名字标记往返保真" {
   )
   let tricky = "第1, 2项 [草稿]\\n换行"
   match
-    p.define_component_state(
-      artboard=ab,
-      node_id="cta",
-      state_name="pressed",
-      patch={ ..NodePatch::empty(), text: Some(tricky) },
-    ) {
+    p.define_component_state(artboard=ab, node_id="cta", state_name="pressed", patch={
+      ..NodePatch::empty(),
+      text: Some(tricky),
+    }) {
     Ok(_) => ()
     Err(e) => assert_true(false, msg=e)
   }
@@ -613,7 +613,10 @@ test "组件状态：text 含逗号/方括号经名字标记往返保真" {
                   }
                 }
               }
-              assert_true(found, msg="pressed 状态标记应可从名字解析")
+              assert_true(
+                found,
+                msg="pressed 状态标记应可从名字解析",
+              )
             }
           }
         None => assert_true(false)
@@ -633,4 +636,697 @@ test "组件状态：text 含逗号/方括号经名字标记往返保真" {
       }
     None => assert_true(false)
   }
+}
+
+// ---------------------------------------------------------------------------
+// 交互词表闭环（P3）：Action 全量 spec 往返 / 注册闸门 / SubmitForm 执行 /
+// interactions v2 字段契约
+// ---------------------------------------------------------------------------
+
+///|
+/// 表驱动遍历每个 Action：describe → action_from_spec → describe 必须相等。
+/// submit_form 的 spec 是真实字段 id 列表（不再是 [N fields] 占位），
+/// 解析后还原 SubmitForm(["email","pwd"])。
+test "交互词表：Action describe→parse 全量往返" {
+  let actions : Array[Action] = [
+    NavigateTo("home"),
+    Back,
+    ToggleState("cta", ""),
+    SetState("cta", "pressed"),
+    SetText("lbl", "hello"),
+    SubmitForm(["email", "pwd"]),
+    ShowToast("已保存"),
+    HapticFeedback,
+    PlaySound("ding"),
+  ]
+  for a in actions.iter() {
+    let spec = a.describe()
+    match action_from_spec(spec) {
+      None => fail("动作 spec 无法反解析：\{spec}")
+      Some(back) => assert_eq(back.describe(), spec)
+    }
+  }
+  // submit_form：字段列表而非字段数占位
+  assert_eq(SubmitForm(["email", "pwd"]).describe(), "submit_form:email,pwd")
+  match action_from_spec("submit_form:email,pwd") {
+    Some(SubmitForm(ids)) => {
+      assert_eq(ids.length(), 2)
+      assert_eq(ids[0], "email")
+      assert_eq(ids[1], "pwd")
+    }
+    _ => assert_true(false)
+  }
+  // 空字段列表非法；旧 describe 的 `[N fields]` 占位也不得伪绑定
+  match action_from_spec("submit_form:") {
+    Some(_) => assert_true(false)
+    None => ()
+  }
+  match action_from_spec("submit_form:[2 fields]") {
+    Some(_) => assert_true(false)
+    None => ()
+  }
+  assert_eq(SubmitForm(["email", "pwd"]).kind(), "submit_form")
+  assert_eq(
+    SubmitForm(["email", "pwd"]).params_json(),
+    "{\"fields\":[\"email\",\"pwd\"]}",
+  )
+  assert_eq(
+    SetState("cta", "pressed").params_json(),
+    "{\"node\":\"cta\",\"state\":\"pressed\"}",
+  )
+}
+
+///|
+/// 注册闸门：非法 trigger/action 必须 Err 且不写标记；合法值规范化写入
+/// （swipe_left + submit_form 组合）。
+test "交互词表：attach_interaction 校验 trigger/action" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="ix_gate")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="cta",
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="swipe:left",
+      action_spec="back",
+    ) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_trigger"))
+  }
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="swipe_left",
+      action_spec="nonsense:xyz",
+    ) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_action"))
+  }
+  // 被拒的调用不得留下任何标记
+  match p.interactions_json(artboard=ab) {
+    Ok(j) => assert_false(j.contains("nonsense"))
+    Err(_) => assert_true(false)
+  }
+  // 合法值：swipe_left + submit_form 组合 Ok，标记规范化为 canonical 名
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="swipe_left",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("合法交互应注册成功：\{e}")
+  }
+  match p.artboards.get(ab) {
+    Some(abd) =>
+      match abd.doc.nodes.get("cta") {
+        Some(n) =>
+          assert_true(n.name.contains("⚡swipe_left→submit_form:email,pwd"))
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // key_enter 别名规范化为 keyboard_enter
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="key_enter",
+      action_spec="back",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("key_enter 别名应接受：\{e}")
+  }
+  match p.artboards.get(ab) {
+    Some(abd) =>
+      match abd.doc.nodes.get("cta") {
+        Some(n) => assert_true(n.name.contains("⚡keyboard_enter→back"))
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+}
+
+///|
+/// SubmitForm 运行时闭环：收集字段输入值 → FormSubmitted 携完整键值
+/// （此前 FormSubmitted 只定义未构造，点提交无任何状态变更）。
+test "运行时：submit_form 收集输入值并构造 FormSubmitted" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="form", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="text_input",
+    instance_id="email",
+    x=20.0,
+    y=80.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="text_input",
+    instance_id="pwd",
+    x=20.0,
+    y=140.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="submit",
+    x=20.0,
+    y=220.0,
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="submit",
+      trigger="tap",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => {
+      fail("submit_form 注册失败：\{e}")
+      abort("")
+    }
+  }
+  let rt = match MoonVizRT::create(p, initial_artboard=ab) {
+    Ok(r) => r
+    Err(e) => {
+      fail("运行时创建失败：\{e}")
+      abort("")
+    }
+  }
+  rt.set_input("email", "a@b.c")
+  rt.set_input("pwd", "s3cret")
+  let doc = match rt.project.artboards.get(ab) {
+    Some(x) => x.doc
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let layout = solve(doc)
+  let rect = match layout.rect_of("submit") {
+    Some(r) => r
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let changes = rt.handle_event(
+    TapEvent(rect.x + rect.width / 2.0, rect.y + rect.height / 2.0),
+  )
+  let mut found : Map[String, String]? = None
+  for c in changes.iter() {
+    match c {
+      FormSubmitted(data) => found = Some(data)
+      _ => ()
+    }
+  }
+  match found {
+    None => assert_true(false)
+    Some(data) => {
+      assert_eq(data.length(), 2)
+      match data.get("email") {
+        Some(v) => assert_eq(v, "a@b.c")
+        None => assert_true(false)
+      }
+      match data.get("pwd") {
+        Some(v) => assert_eq(v, "s3cret")
+        None => assert_true(false)
+      }
+    }
+  }
+}
+
+///|
+/// interactions v2 字段契约：node/name/artboard/trigger/action{kind,params}/
+/// transition/source/supported；非 tap 标记 supported=false，builtin 返回
+/// 热区走 source=builtin + action.kind=back。
+test "interactions v2：字段契约与 builtin 返回热区" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="v2_ab")
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="back_btn",
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="sw",
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="cta",
+      trigger="tap",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => {
+      fail("v2 用例注册失败：\{e}")
+      abort("")
+    }
+  }
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="sw",
+    trigger="swipe_left",
+    action_spec="back",
+  )
+  match p.interactions_json(artboard=ab) {
+    Ok(j) => {
+      assert_true(j.contains("\"node\":\"cta\""))
+      assert_true(j.contains("\"name\":\""))
+      assert_true(j.contains("\"artboard\":\"v2_ab\""))
+      assert_true(j.contains("\"trigger\":\"tap\""))
+      assert_true(
+        j.contains(
+          "\"action\":{\"kind\":\"submit_form\",\"params\":{\"fields\":[\"email\",\"pwd\"]}}",
+        ),
+      )
+      assert_true(j.contains("\"transition\":\"\""))
+      assert_true(j.contains("\"source\":\"marker\""))
+      assert_true(j.contains("\"supported\":true"))
+      // 非 tap 标记：v2 如实标 supported=false（导出运行时只绑 tap）
+      assert_true(j.contains("\"trigger\":\"swipe_left\""))
+      assert_true(j.contains("\"supported\":false"))
+      // builtin 返回热区：source=builtin + action.kind=back
+      assert_true(j.contains("\"source\":\"builtin\""))
+      assert_true(j.contains("\"kind\":\"back\""))
+    }
+    Err(_) => assert_true(false)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 手势事件闭环（P4）：事件矩阵 / long_press 时长 / flow 触发词
+// ---------------------------------------------------------------------------
+
+///|
+fn gesture_setup() -> Project {
+  let p = Project::new()
+  let ab = p.create_artboard(name="g", width=390.0, height=844.0)
+  let _ = p.create_artboard(name="target", width=390.0, height=844.0)
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="lp",
+    x=20.0,
+    y=20.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="fo",
+    x=20.0,
+    y=100.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="bl",
+    x=20.0,
+    y=180.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="se",
+    x=20.0,
+    y=260.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="kb",
+    x=20.0,
+    y=340.0,
+  )
+  let _ = p.place_component(
+    artboard=ab,
+    component_id="button",
+    instance_id="tp",
+    x=20.0,
+    y=420.0,
+  )
+  let _ = p.define_component_state(
+    artboard=ab,
+    node_id="fo",
+    state_name="pressed",
+    patch={ ..NodePatch::empty(), fill: Some("#123456"), },
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="lp",
+    trigger="long_press",
+    action_spec="navigate_to:target",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="fo",
+    trigger="focus",
+    action_spec="set_state:fo:pressed",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="bl",
+    trigger="blur",
+    action_spec="set_text:bl:\"blurred\"",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="se",
+    trigger="scroll_end",
+    action_spec="navigate_to:target",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="kb",
+    trigger="keyboard_enter",
+    action_spec="navigate_to:target",
+  )
+  let _ = p.attach_interaction(
+    artboard=ab,
+    node_id="tp",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
+  p
+}
+
+///|
+fn changes_have_nav(changes : Array[StateChange]) -> Bool {
+  for c in changes.iter() {
+    match c {
+      NavigationPushed(_) | ArtboardChanged(_) => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn changes_have_node(changes : Array[StateChange], id : String) -> Bool {
+  for c in changes.iter() {
+    match c {
+      NodeUpdated(nid) => if nid == id { return true }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+fn array_has(items : Array[String], want : String) -> Bool {
+  for it in items.iter() {
+    if it == want {
+      return true
+    }
+  }
+  false
+}
+
+///|
+test "手势事件矩阵：long_press/focus/blur/scroll_end/keyboard_enter 驱动标记" {
+  let p = gesture_setup()
+  // long_press 命中 lp → NavigationPushed
+  let rt = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch = rt.handle_event(LongPressEvent(80.0, 42.0, 0.8))
+  assert_true(changes_have_nav(ch), msg="long_press 标记应触发导航")
+  assert_eq(rt.current_artboard(), "target")
+  // focus → set_state → NodeUpdated 且状态切换
+  let rt2 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch2 = rt2.handle_event(FocusEvent("fo"))
+  assert_true(
+    changes_have_node(ch2, "fo"),
+    msg="focus 标记应触发 set_state",
+  )
+  match p.node_states.get("fo") {
+    Some(def) => assert_eq(def.current, "pressed")
+    None => assert_true(false)
+  }
+  // blur → set_text
+  let rt3 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch3 = rt3.handle_event(BlurEvent("bl"))
+  assert_true(changes_have_node(ch3, "bl"), msg="blur 标记应触发 set_text")
+  match p.artboards.get("g") {
+    Some(abd) =>
+      match abd.doc.nodes.get("bl") {
+        Some(n) => assert_eq(n.text, "blurred")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  // scroll_end → 画板级标记导航
+  let rt4 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch4 = rt4.handle_event(ScrollEndEvent)
+  assert_true(changes_have_nav(ch4), msg="scroll_end 标记应触发导航")
+  assert_eq(rt4.current_artboard(), "target")
+  // keyboard enter → keyboard_enter 标记导航
+  let rt5 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch5 = rt5.handle_event(KeyEvent("enter"))
+  assert_true(changes_have_nav(ch5), msg="keyboard_enter 标记应触发导航")
+  assert_eq(rt5.current_artboard(), "target")
+  // 只有 tap 标记的节点收到 long_press 不得触发（事件矩阵闸门）
+  let rt6 = match MoonVizRT::create(p, initial_artboard="g") {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch6 = rt6.handle_event(LongPressEvent(80.0, 442.0, 0.8))
+  assert_eq(ch6.length(), 0, msg="tap 标记不应被 long_press 误触发")
+  assert_eq(rt6.current_artboard(), "g")
+}
+
+///|
+test "手势：Trigger spec 往返保留长按时长" {
+  match trigger_from_spec("long_press:0.8") {
+    Some(LongPress(sec)) => {
+      assert_true(sec > 0.79 && sec < 0.81, msg="0.8 应被保留：\{sec}")
+      assert_eq(LongPress(sec).spec(), "long_press:0.8")
+    }
+    _ => assert_true(false)
+  }
+  match trigger_from_spec("long_press") {
+    Some(LongPress(sec)) => assert_eq(sec, 0.5)
+    _ => assert_true(false)
+  }
+  match trigger_from_spec("long_press:0") {
+    Some(_) => assert_true(false)
+    None => ()
+  }
+  let triggers : Array[Trigger] = [
+    Tap,
+    SwipeLeft,
+    SwipeRight,
+    SwipeUp,
+    SwipeDown,
+    ScrollEnd,
+    KeyboardEnter,
+    Focus,
+    Blur,
+  ]
+  for t in triggers.iter() {
+    match trigger_from_spec(t.spec()) {
+      Some(back) => assert_eq(back.spec(), t.spec())
+      None => assert_true(false, msg="无法反解析 \{t.spec()}")
+    }
+  }
+}
+
+///|
+test "手势 flow：swipe_left / long_press:0.8 / focus 导航，阈值以下不触发" {
+  let p = Project::new()
+  let a = p.create_artboard(name="ga")
+  let b = p.create_artboard(name="gb")
+  let c = p.create_artboard(name="gc")
+  let d = p.create_artboard(name="gd")
+  p.add_flow(from=a, to=b, trigger="swipe_left")
+  p.add_flow(from=a, to=c, trigger="long_press:0.8")
+  p.add_flow(from=a, to=d, trigger="focus")
+  let rt = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let _ = rt.handle_event(SwipeEvent("left"))
+  assert_eq(rt.current_artboard(), b)
+  // 0.5s < 0.8s 阈值：不触发
+  let rt2 = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let ch = rt2.handle_event(LongPressEvent(10.0, 10.0, 0.5))
+  assert_eq(ch.length(), 0)
+  assert_eq(rt2.current_artboard(), a)
+  // 0.8s 达标 → 导航
+  let rt3 = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let _ = rt3.handle_event(LongPressEvent(10.0, 10.0, 0.8))
+  assert_eq(rt3.current_artboard(), c)
+  // focus（画板级）→ 导航
+  let rt4 = match MoonVizRT::create(p, initial_artboard=a) {
+    Ok(r) => r
+    Err(_) => {
+      assert_true(false)
+      return
+    }
+  }
+  let _ = rt4.handle_event(FocusEvent("any_node"))
+  assert_eq(rt4.current_artboard(), d)
+}
+
+///|
+test "flow trigger 规范化：手势词、裸节点与未知错误" {
+  let cases : Array[(String, String)] = [
+    ("swipe_left", "swipe_left"),
+    ("long_press", "long_press"),
+    ("long_press:0.8", "long_press:0.8"),
+    ("focus", "focus"),
+    ("focus:email", "focus:email"),
+    ("blur:email", "blur:email"),
+    ("scroll_end", "scroll_end"),
+    ("key_enter", "keyboard_enter"),
+    ("btn", "tap:btn"),
+    ("tap:btn", "tap:btn"),
+  ]
+  for pair in cases.iter() {
+    let (input, want) = pair
+    match normalize_flow_trigger(input) {
+      Ok(v) => assert_eq(v, want)
+      Err(e) => fail("应接受 \{input}：\{e}")
+    }
+  }
+  for bad in ["nonsense:xyz", "long_press:0", "focus:", "tap:"].iter() {
+    match normalize_flow_trigger(bad) {
+      Ok(v) => assert_true(false, msg="应拒绝 \{bad}（得到 \{v}）")
+      Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
+    }
+  }
+}
+
+///|
+test "flow op：不再硬编码 tap:，未知 trigger 报错" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="oa")
+  let _ = p.create_artboard(name="ob")
+  for spec in ["swipe_left", "long_press:0.8", "focus", "node_x"] {
+    match apply_operation(p, "flow oa ob " + spec) {
+      Ok(_) => ()
+      Err(e) => fail("flow \{spec} 应成功：\{e}")
+    }
+  }
+  let trigs : Array[String] = []
+  for f in p.flows.iter() {
+    trigs.push(f.trigger)
+  }
+  assert_true(array_has(trigs, "swipe_left"))
+  assert_true(array_has(trigs, "long_press:0.8"))
+  assert_true(array_has(trigs, "focus"))
+  assert_true(array_has(trigs, "tap:node_x"))
+  match apply_operation(p, "flow oa ob nonsense:xyz") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
+  }
+  // unflow 同规：手势 trigger 可删
+  match apply_operation(p, "unflow oa ob swipe_left") {
+    Ok(_) => ()
+    Err(e) => fail("unflow swipe_left 应成功：\{e}")
+  }
+  let left : Array[String] = []
+  for f in p.flows.iter() {
+    if f.trigger == "swipe_left" {
+      left.push(f.trigger)
+    }
+  }
+  assert_eq(left.length(), 0)
+  match apply_operation(p, "unflow oa ob nonsense:xyz") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_trigger"), msg=e)
+  }
+}
+
+///|
+/// 分板过渡单一来源：FlowEdge.transition 默认 push、显式值随 flow_json 回读；
+/// flow op 可选第 5 参数 transition，未知过渡 Err。
+test "分板过渡：FlowEdge.transition 默认 push 与 flow op 校验" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="ta")
+  let _ = p.create_artboard(name="tb")
+  p.add_flow(from="ta", to="tb", trigger="tap:x", transition="modal_present")
+  p.add_flow(from="ta", to="tb", trigger="tap:y")
+  assert_eq(p.flows[0].transition, "modal_present")
+  assert_eq(p.flows[1].transition, "push")
+  let fj = p.flow_json()
+  assert_true(fj.contains("\"transition\":\"modal_present\""), msg=fj)
+  assert_true(fj.contains("\"transition\":\"push\""), msg=fj)
+  // op：flow <from> <to> <trigger|node> [transition]
+  match apply_operation(p, "flow ta tb swipe_left fade") {
+    Ok(_) => ()
+    Err(e) => fail("flow 带 transition 应成功：\{e}")
+  }
+  assert_eq(p.flows[2].transition, "fade")
+  match apply_operation(p, "flow ta tb swipe_left nonsense") {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_transition"), msg=e)
+  }
+  // 默认省略 = push
+  match apply_operation(p, "flow ta tb focus") {
+    Ok(_) => ()
+    Err(e) => fail("flow 缺省 transition 应成功：\{e}")
+  }
+  assert_eq(p.flows[3].transition, "push")
 }

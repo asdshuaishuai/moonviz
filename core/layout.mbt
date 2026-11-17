@@ -37,8 +37,8 @@ pub fn SolvedLayout::rect_of(self : SolvedLayout, id : String) -> Rect? {
 ///|
 /// 求解入口：输入文档，输出每个节点的画布绝对矩形 + 求解失败列表
 pub fn solve(doc : Document) -> SolvedLayout {
-  let rects : Map[String, Rect] = Map::new()
-  let failures : Array[SolveFailure] = Array::new()
+  let rects : Map[String, Rect] = Map([])
+  let failures : Array[SolveFailure] = Array()
   match doc.nodes.get(doc.root_id) {
     None => failures.push(MissingRoot)
     Some(root) => {
@@ -140,9 +140,9 @@ fn solve_stack(
     l.padding.left,
   )
   let n = node.children.length()
-  let main_sizes : Array[Double] = Array::new()
-  let cross_sizes : Array[Double] = Array::new()
-  let fill_idx : Array[Int] = Array::new()
+  let main_sizes : Array[Double] = Array()
+  let cross_sizes : Array[Double] = Array()
+  let fill_idx : Array[Int32] = Array()
   let mut fixed_total = 0.0
   for cid in node.children.iter() {
     match doc.nodes.get(cid) {
@@ -178,7 +178,18 @@ fn solve_stack(
                 0.0
               }
               Hug => {
-                let s = intrinsic_size(child, failures)
+                // 宽已定（Fill/Fill=内容宽 或 Fixed）且文本超宽时按折行取行数
+                // ——渲染层同口径折行（wrap_text_lines），Hug 高不再少算一行。
+                let s = if cross > 0.0 {
+                  text_intrinsic_wrapped(
+                    child.text,
+                    child.style.font_size,
+                    cross,
+                    line_height=child.style.line_height,
+                  )
+                } else {
+                  intrinsic_size(child, failures)
+                }
                 fixed_total = fixed_total + s.height
                 s.height
               }
@@ -294,7 +305,22 @@ fn solve_absolute(
         let h : Double = match child.height {
           Fixed(v) => v
           Fill => frame.height - y_base
-          Hug => intrinsic_size(child, failures).height
+          // 宽已定（Fixed/Fill）的文本按折行取真实行数（与渲染层同口径）
+          Hug =>
+            match child.kind {
+              Text =>
+                if w > 0.0 {
+                  text_intrinsic_wrapped(
+                    child.text,
+                    child.style.font_size,
+                    w,
+                    line_height=child.style.line_height,
+                  ).height
+                } else {
+                  intrinsic_size(child, failures).height
+                }
+              _ => intrinsic_size(child, failures).height
+            }
         }
         let x = resolve_pos(child.x, frame, w)
         let y = resolve_pos_y(child.y, frame, h)

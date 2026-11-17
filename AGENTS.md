@@ -29,7 +29,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 - `core/version.mbt` 的 `ENGINE_VERSION`（wasm version_info / CLI banner / MCP serverInfo / artifact meta_version 的唯一来源）
 - `.github/workflows/binaries.yml` 的 `MOONVIZ_VERSION`（全产物构建与资产命名基准）
 
-`moon.mod.json` 的 version 随上述两处同步，**例外**：mooncakes 拒绝同版本
+`moon.mod` 的 version 随上述两处同步，**例外**：mooncakes 拒绝同版本
 重发（409 duplicate）时的文档勘误重包，可在 moon.mod version 加打包后缀
 （如 `0.1.9-fix-2`）而 ENGINE_VERSION/MOONVIZ_VERSION 不动——打包号是
 注册表元数据，不是引擎版本（0.1.9-fix-2 先例，2026-10-13）。文档中引用版本示例时用 `<ver>` 占位或动态表述，
@@ -38,7 +38,7 @@ docs/wasm-abi.md     classic ABI 契约（清单由脚本生成，勿手改）
 ### 同步产物时的检查单（每项都过，缺一项即未完成）
 
 1. **计数类**：组件/变体/工具/测试数改动时，同步清扫 `README.md`、`README.zh-CN.md`、
-   `site/docs.html`(`55 工具`/`65×115` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
+   `site/docs.html`(`57 工具`/`65×118` 这类)、`site/index.html`(stat 行)、`ROADMAP.md`、`SKILL.md`，
    以及测试断言（如 `core/agent_test.mbt` 的 catalog 数量测试）。
 2. **playground**：`COMP_ZH` / `COMP_ICON` 随组件目录补全（JS 语法自校验：两表 key 数
    必须与 `builtin_components()` 一致）；界面方法表与 wasm 导出面对齐。
@@ -94,7 +94,7 @@ main 除合并节点与发布基线提交外，不直接承载开发/发布提�
 模块名固定为 `asdshuaishuai/moonviz`——**新建 moon 包时 import 必须用此前缀**
 （`"asdshuaishuai/moonviz/core"` 等），改名需全仓同步并跑三目标验证。
 发布：`moon login`（mooncakes.io 账号）→ `moon publish`，由仓库所有者执行；
-版本取自 moon.mod.json，须与 `ENGINE_VERSION` 基线协调。
+版本取自 moon.mod，须与 `ENGINE_VERSION` 基线协调。
 **已知坑与绕过**（2026-10-07 首次上架验证）：本地网络路径会掐断 mooncake 的
 HTTP/2 上传（`receiver is gone`）。绕过 = 协议直发（FastAPI multipart）：
 ```
@@ -105,7 +105,8 @@ curl -X POST https://mooncakes.io/api/v0/publish \
 ```
 成功响应 `{"status":"ok"}`；语义化版本每次发布必须递增。
 0.1.7 已于 2026-10-07 用此通道上架（[包页](https://mooncakes.io/asdshuaishuai/moonviz)），
-「moon add → 编译 → 渲染」闭环实测通过。工具链底线 moonc ≥ 0.10.14，ci.yml 有版本硬门。
+「moon add → 编译 → 渲染」闭环实测通过。工具链底线 moonc ≥ 0.10.20（0.2.0 适配：弃用 API 迁移 + native runtime 需
+moonbitlang/moonbit-native-runtime 装入 `~/.moon/lib/runtime`），ci.yml 有版本硬门。
 
 ## 本设备 Git 操作规定（强制）
 
@@ -155,10 +156,42 @@ moon build --release --target native cli mcp            # 仅本地验证用；�
 8. 原子快照（issue #28）：`session_snapshot` 返回 `{revision,seq,canonical,render,
    animations,delta}`；seq 随改文档路径严格递增，delta/渲染按板 content_seq 增量
   （未变板零成本，基准见 `scripts/bench-snapshot.mjs`）。
+9. 视觉语言（critique 第 10 维 `visual`，检测项只报不修）：文字节点不带阴影
+   （阴影只属于容器层次）、卡片与画布同色时必须有阴影或 hairline、嵌套圆角同心
+   （子 ≤ 父，胶囊/正圆豁免）。组件默认 elevation 归组件层（`component_default_shadow`：
+   内容卡 e1 / 临时浮层 e2 / 模态 e3），按钮族文字默认居中（`component_centers_text`）。
+   **美学第一要素**：Apple HIG / HarmonyOS 是一等主题预设（apple/apple_dark/
+   harmony/harmony_dark），色值是官方色板的 WCAG 校准翻译——新增或调整预设必须
+   过 `visual_lang_wbtest` 的逐档对比度断言（主按钮字 + 三级文字 × 三层底 ≥4.5），
+   不得照抄官方原值（#007AFF 白字仅 4.02）。三通道等价：意图美学词 / spec `style` 键（`apple|harmony|vivid|editorial|playful`）/
+   `theme` 命令；导出 HTML 的 chrome 全部由主题令牌派生（画布 = background，
+   卡面 = surface），不得硬编码颜色。
+   **spec 是配色的第一权威（需求 → Agent 提取 spec → 引擎跟随）**：palette
+   基础 7 键 + 扩展键（secondary/info/warning/surfaceVariant/*Container）；
+   容器键缺席时从同名语义色对 background 推导 tint（`hex_mix(bg, base, 0.22)`，
+   配色决策来自 spec 而非引擎预设）；generate 在模板实例化**前**落 spec 令牌
+   （消除 theme→template 顺序依赖）；调色板外字面色随信封 `spec_violations`
+   上报（`design_spec_color_violations`）。**强制规范流程（0.2）**：
+   `generate_from_doc`（CLI `generate-doc`）从设计文档确定性提取 spec
+   （配色/字号/圆角/间距/动效/触控章节），缺关键项返回
+   `design_doc_spec_gaps` 拒绝生成；信封带 `spec_source:"design_doc"`。
+   `design_compliance`（CLI `comply`）四项机械校验 UI 与交互的遵从性
+   （color/type/radius/motion）——交互节拍必须等于 spec.motion 令牌。
+   容器色角色：info/success_container/
+   warning_container/info_container 已进全部预设（text_primary 压每只 ≥4.5）。
 
 交互侧同批落地：runtime tap 解析链 **flow → marker → 内置返回兜底**——tap 命中
 返回类节点（id 词边界 back/prev/return；文本 返回/后退/上一步/back/←/‹/«）
 且无 flow/marker 时强制返回上一层（导航栈弹出，栈底原地不动）；
-`list_interactions`/`interactions_json` 导出返回类节点（`"builtin":"back"`），
+`list_interactions`/`interactions_json` 导出返回类节点（v1 `"builtin":"back"` /
+v2 `"source":"builtin"` + `action.kind:"back"`），
 宿主热区直接消费；`norm_back_issues` 校验非入口画板必须有出边 flow 或返回类
 节点（卡死页判入 norms 维度）。测试锚点全在 `core/norms_wbtest.mbt`。
+
+手势事件同链（0.2）：**long_press（带时长）/ focus / blur / scroll_end /
+keyboard_enter / swipe 与 tap 一样派发标记与 flow**，标记按同族闸门执行
+（tap 标记不吃 long_press）；flow trigger 走同一 spec（`swipe_left` /
+`long_press:0.8` / `focus[:node]` / `scroll_end` / `keyboard_enter`，裸节点 id
+兼容 `tap:<node>`，未知报错）；wasm 宿主经 `session_event` / classic
+`session_event_in` 送手势。锚点：`core/runtime_wbtest.mbt`、`decl/mbt_wbtest.mbt`、
+`wasm/contract_test.mbt`。

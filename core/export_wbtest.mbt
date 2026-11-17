@@ -33,7 +33,8 @@ test "export_html：节点级交互与状态变体导出" {
     patch={ ..NodePatch::empty(), fill: Some("#0F1114"), },
   )
   let html = p.export_html()
-  let nav = "[\"home\",\"card\",\"navigate\",\"detail\"]"
+  // navigate 绑定第 5 位 = 分板过渡（默认 push）
+  let nav = "[\"home\",\"card\",\"navigate\",\"detail\",\"push\"]"
   assert_true(html.contains(nav))
   assert_true(html.contains("\"toast\""))
   assert_true(html.contains("st-pressed"))
@@ -52,34 +53,76 @@ test "export_html：动效令牌与交互流畅性" {
   // 动效令牌：时长刻度 + 引擎缓动曲线
   assert_true(html.contains("--mv-dur-fast:120ms"))
   assert_true(html.contains("--mv-dur:240ms"))
+  assert_true(html.contains("--mv-dur-slow:360ms"))
+  assert_true(html.contains("--mv-dur-tick:180ms"))
+  assert_true(html.contains("--mv-stagger:24ms"))
+  assert_true(html.contains("--mv-stagger-max:168ms"))
   assert_true(html.contains("--mv-spring:cubic-bezier(0.34, 1.56, 0.64, 1)"))
   // 方向感知转场：navigate 前进 / back 反向 / tab 纯淡入；backwards 不冻结交互
-  assert_true(html.contains(
-    "animation:mv-board-in var(--mv-dur) var(--mv-out) backwards",
-  ))
+  assert_true(
+    html.contains(
+      "animation:mv-board-push var(--mv-dur) var(--mv-out) backwards",
+    ),
+  )
   assert_true(html.contains("--mv-dir"))
   assert_true(html.contains("show(MV_STACK[MV_STACK.length-1],false,-1)"))
-  assert_true(html.contains("if(k==='navigate')show(v,true,1)"))
+  assert_true(html.contains("if(k==='navigate')show(v,true,1,tr)"))
   assert_true(html.contains("onclick=\"show('a',true,0)\""))
-  // 按压反馈（spring 触感）+ 状态 fill 平滑切换
-  assert_true(html.contains("g[id^=n_]:active{transform:scale(.96)}"))
+  // 按压反馈（spring 触感）+ 状态 fill 平滑切换；按压只给可交互节点
+  assert_true(html.contains("g.mv-live:active{transform:scale(.96)}"))
+  assert_false(html.contains("g[id^=n_]:active"))
   assert_true(html.contains("transition:fill var(--mv-dur) var(--mv-out)"))
   // 入场阶梯：选择器下钻到根 wrapper 内的顶层节点 g——svg 的唯一直接子 g
   // 是根 wrapper（render_svg 只对 root 调一次 render_node），旧选择器
   // >svg>g 只命中 wrapper 一层，逐节点阶梯从未生效；wrapper 自带非 g 的
-  // 背景 rect 占位，按 nth-of-type 对 g 计数，不受普通子元素挤位
+  // 背景 rect 占位，按 nth-of-type 对 g 计数，不受普通子元素挤位。
+  // 节拍走令牌（calc(var(--mv-stagger) × k)），第 8 个起饱和——第 9+ 个
+  // 不再把 delay 复位 0（此前级联只写到 nth-of-type(8)，长列表后段抢跑）
   assert_true(html.contains(".board.active>svg>g>g{animation:mv-rise"))
-  assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(2){animation-delay:24ms}",
-  ))
-  assert_true(html.contains(
-    ".board.active>svg>g>g:nth-of-type(8){animation-delay:168ms}",
-  ))
+  assert_true(
+    html.contains(
+      ".board.active>svg>g>g:nth-of-type(2){animation-delay:calc(var(--mv-stagger) * 1)}",
+    ),
+  )
+  assert_true(
+    html.contains(
+      ".board.active>svg>g>g:nth-of-type(7){animation-delay:calc(var(--mv-stagger) * 6)}",
+    ),
+  )
+  assert_true(
+    html.contains(
+      ".board.active>svg>g>g:nth-of-type(n+8){animation-delay:var(--mv-stagger-max)}",
+    ),
+  )
+  // 裸毫秒不再出现在级联里（节拍只有一个来源）
+  assert_false(html.contains("animation-delay:24ms"))
+  assert_false(html.contains("animation-delay:168ms"))
   assert_false(html.contains(".board.active>svg>g{animation"))
   // 阶梯 keyframes / reduced-motion / ESC 返回
   assert_true(html.contains("@keyframes mv-rise"))
   assert_true(html.contains("prefers-reduced-motion"))
   assert_true(html.contains("if(e.key==='Escape')back()"))
+}
+
+///|
+/// 动效单一来源：boot/pop/tick 三处微动效全部引用 motion_tokens_css 的
+/// 时长变量，导出层不再写死秒数（此前 .36s/.24s/.18s 三处裸时长，
+/// 调刻度要回来同步三遍）。tick 与阶梯步进/饱和上限也只在令牌里定义一次。
+test "export_html：微动效时长全部引用令牌" {
+  let tokens = motion_tokens_css()
+  assert_true(tokens.contains("--mv-dur-tick:180ms"))
+  assert_true(tokens.contains("--mv-stagger:24ms"))
+  assert_true(tokens.contains("--mv-stagger-max:168ms"))
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let html = p.export_html()
+  assert_true(html.contains("body{animation:mv-boot var(--mv-dur-slow)"))
+  assert_true(html.contains(".mv-pop{animation:mv-pop var(--mv-dur)"))
+  assert_true(html.contains(".mv-tick{animation:mv-tick var(--mv-dur-tick)"))
+  // 旧的裸秒数彻底消失（时长只有一个来源）
+  assert_false(html.contains(".36s"))
+  assert_false(html.contains(".24s"))
+  assert_false(html.contains(".18s"))
 }
 
 ///|
@@ -155,9 +198,14 @@ test "export_html：交互动画与精致化断言" {
     action_spec="haptic",
   )
   let html = p.export_html()
-  // haptic 动作进绑定表并在运行时反馈
+  // haptic 动作进绑定表并在运行时反馈：支持振动的设备真振（navigator.vibrate，
+  // 安卓生效 / iOS 静默忽略），再给可见 toast 兜底
   assert_true(html.contains("\"haptic\""))
-  assert_true(html.contains("else if(k==='haptic')toast('📳 触觉反馈')"))
+  assert_true(
+    html.contains(
+      "else if(k==='haptic'){if(navigator.vibrate)navigator.vibrate(12);toast('📳 触觉反馈')}",
+    ),
+  )
   // 微动效三件套
   assert_true(html.contains("@keyframes mv-pop"))
   assert_true(html.contains("@keyframes mv-tick"))
@@ -193,4 +241,682 @@ test "export_html：set_text 绑定的画板字段回归锚" {
   let html = p.export_html()
   assert_true(html.contains("[\"home\",\"btn_set\",\"set_text\""))
   assert_false(html.contains("[\"welcome\",\"btn_set\""))
+}
+
+///|
+/// spec.motion → 动效令牌：apply_design_spec 落值后，令牌入口与导出 HTML
+/// 同时生效（spec 是节拍的第一权威，导出层不写死毫秒）。
+test "export_html：spec.motion 覆盖动效刻度" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="home")
+  match
+    p.apply_design_spec(
+      artboard=ab,
+      spec="{\"v\":1,\"motion\":{\"base\":320,\"tick\":200}}",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("spec 应用失败：\{e}")
+  }
+  assert_true(p.motion_tokens_css().contains("--mv-dur:320ms"))
+  assert_true(p.motion_tokens_css().contains("--mv-dur-tick:200ms"))
+  let html = p.export_html()
+  assert_true(html.contains("--mv-dur:320ms"))
+  assert_true(html.contains("--mv-dur-tick:200ms"))
+}
+
+///|
+/// 节点级 motion 导出：#n_<id> 规则 + mv-p-<preset> keyframes；节拍在规则里
+/// 走 var(--mv-dur)，未设置 motion 的节点不产出任何动画规则。
+test "export_html：节点 motion 导出规则与 keyframes" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="hero",
+    x=10.0,
+    y=10.0,
+  )
+  match p.artboards.get("home") {
+    Some(ab) => {
+      let _ = ab.doc.update_node("hero", fn(n) {
+        { ..n, style: { ..n.style, motion: "fade_in", }, }
+      })
+    }
+    None => assert_true(false)
+  }
+  let html = p.export_html()
+  assert_true(html.contains("@keyframes mv-p-fade_in"))
+  assert_true(
+    html.contains(
+      "#n_hero{animation:mv-p-fade_in var(--mv-dur) var(--mv-out) backwards}",
+    ),
+  )
+  assert_false(html.contains("#n_other{animation:mv-p-"))
+}
+
+///|
+/// submit_form 导出绑定：绑定表携带真实字段 id 列表（此前导出 switch 的
+/// `_ => ()` 把该动作静默丢弃），JS 侧有 submit_form 处理器。
+test "export_html：submit_form 绑定携带字段 id 列表" {
+  let p = Project::new()
+  let ab = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="text_input",
+    instance_id="email",
+    x=20.0,
+    y=80.0,
+  )
+  let _ = p.place_component(
+    artboard="home",
+    component_id="text_input",
+    instance_id="pwd",
+    x=20.0,
+    y=140.0,
+  )
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="submit",
+    x=20.0,
+    y=220.0,
+  )
+  match
+    p.attach_interaction(
+      artboard=ab,
+      node_id="submit",
+      trigger="tap",
+      action_spec="submit_form:email,pwd",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("submit_form 注册失败：\{e}")
+  }
+  let html = p.export_html()
+  assert_true(
+    html.contains("[\"home\",\"submit\",\"submit_form\",\"email,pwd\"]"),
+  )
+  // 不再出现 describe 的字段数占位
+  assert_false(html.contains("fields]"))
+  assert_true(html.contains("k==='submit_form'"))
+}
+
+///|
+/// 分板过渡单一来源：FlowEdge.transition 决定导出关键帧与 navigate 绑定；
+/// 默认 push 不写 frontmatter 但仍走 mv-board-push；none 显式禁用动画。
+test "export_html：分板过渡按 FlowEdge.transition 出关键帧与绑定" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let _ = p.create_artboard(name="b")
+  let _ = p.create_artboard(name="c")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="go",
+  )
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="plain",
+  )
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="skip",
+  )
+  p.add_flow(from="a", to="b", trigger="tap:go", transition="modal_present")
+  p.add_flow(from="a", to="c", trigger="tap:plain")
+  p.add_flow(from="a", to="c", trigger="tap:skip", transition="none")
+  let html = p.export_html()
+  // 每个 Transition::name() 一份关键帧 + 类覆盖；none 只出禁用规则
+  assert_true(html.contains("@keyframes mv-board-modal_present"))
+  assert_true(html.contains("@keyframes mv-board-push"))
+  assert_true(html.contains("@keyframes mv-board-fade"))
+  assert_true(
+    html.contains(
+      ".board.active.mv-tr-modal_present{animation:mv-board-modal_present",
+    ),
+  )
+  assert_true(html.contains(".board.active.mv-tr-none{animation:none}"))
+  // show 四参 + 绑定表第 5 位携带该边过渡
+  assert_true(html.contains("show(id,push=true,dir=1,tr='')"))
+  assert_true(
+    html.contains("[\"a\",\"go\",\"navigate\",\"b\",\"modal_present\"]"),
+  )
+  assert_true(html.contains("[\"a\",\"plain\",\"navigate\",\"c\",\"push\"]"))
+  assert_true(html.contains("[\"a\",\"skip\",\"navigate\",\"c\",\"none\"]"))
+}
+
+// ---------------------------------------------------------------------------
+// 导出正确性（P6）：选择器转义 / ghost 导航 / 返回兜底 / filter 命名空间
+// ---------------------------------------------------------------------------
+
+///|
+fn find_from(s : String, needle : String, from : Int32) -> Int32? {
+  let n = needle.length()
+  let mut i = from
+  while i + n <= s.length() {
+    if s[i:i + n].to_owned() == needle {
+      return Some(i)
+    }
+    i = i + 1
+  }
+  None
+}
+
+///|
+/// 子串出现次数（boot show 行 / transition 行等断言用）。
+fn count_needle(s : String, needle : String) -> Int32 {
+  let mut count = 0
+  let mut idx = 0
+  while true {
+    match find_from(s, needle, idx) {
+      None => break
+      Some(pos) => {
+        count = count + 1
+        idx = pos + needle.length()
+      }
+    }
+  }
+  count
+}
+
+///|
+/// 收集 `marker` 之后到下一个双引号的属性值（filter id / board id 等）。
+fn collect_attr_values(s : String, marker : String) -> Array[String] {
+  let out : Array[String] = []
+  let mut idx = 0
+  while true {
+    match find_from(s, marker, idx) {
+      None => break
+      Some(pos) => {
+        let start = pos + marker.length()
+        let rest = s[start:].to_owned()
+        match rest.find("\"") {
+          None => break
+          Some(e) => {
+            out.push(rest[0:e].to_owned())
+            idx = start + e + 1
+          }
+        }
+      }
+    }
+  }
+  out
+}
+
+///|
+/// ① 选择器转义：ab'cd 这类 Agent 可控画板 id 不得裸拼进 querySelector；
+/// 所有 MV_ACT/setState 选择器走 cssEsc（CSS.escape 优先）。
+test "export_html：CSS.escape 防 id 注入（ab'cd 画板）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.place_component(
+    artboard="login",
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.duplicate_artboard(src="login", new_name="ab'cd")
+  match
+    p.attach_interaction(
+      artboard="ab'cd",
+      node_id="cta",
+      trigger="tap",
+      action_spec="show_toast:\"hi\"",
+    ) {
+    Ok(_) => ()
+    Err(e) => fail("引号画板交互注册失败：\{e}")
+  }
+  let html = p.export_html()
+  assert_true(html.contains("cssEsc"))
+  assert_true(html.contains("CSS.escape"))
+  assert_true(html.contains("'#board-'+cssEsc(b)+' #n_'+cssEsc(n)"))
+  assert_true(html.contains("'#board-'+cssEsc(b)+' #n_'+cssEsc(i)+' text'"))
+  // 选择器路径不再出现裸拼的 #board-ab'cd 字面量
+  assert_false(html.contains("#board-ab'cd"))
+  // DOM id 仍按原名存在（id 属性不需要 CSS 转义）
+  assert_true(html.contains("id=\"board-ab'cd\""))
+}
+
+///|
+/// ② ghost flow：目标板不存在时不写 navigate 绑定；show() 先查板再改栈，
+/// 目标不存在保留当前板并 toast。
+test "export_html：ghost flow 过滤与 show 存在性兜底" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let _ = p.create_artboard(name="b")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="go",
+  )
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="ok",
+  )
+  p.add_flow(from="a", to="ghost", trigger="tap:go")
+  p.add_flow(from="a", to="b", trigger="tap:ok")
+  let html = p.export_html()
+  assert_false(html.contains("\"navigate\",\"ghost\""))
+  assert_true(html.contains("\"navigate\",\"b\""))
+  // show 先取板再改栈：不存在直接 toast 返回
+  assert_true(html.contains("if(!b){toast('页面不存在: '+id);return}"))
+  assert_true(
+    html.contains("const b=document.getElementById('board-'+id);if(!b)"),
+  )
+  // boot 只对一个板 show；ghost 不在 boot/绑定里
+  assert_true(html.contains("\nshow('a',true,0)\n"))
+  assert_false(html.contains("\nshow('ghost'"))
+  // .board.active 计数：boot show 行恰好 1 条（ghost 不会被激活）
+  assert_eq(count_needle(html, "\nshow("), 1)
+}
+
+///|
+/// ③ 内置返回绑定：back-like 节点无 flow/marker 时写 back；普通节点、
+/// 已有 marker 或显式 flow 的节点都不重复绑定。
+test "export_html：返回类节点内置 back 绑定" {
+  let p = Project::new()
+  let home = p.create_artboard(name="home")
+  let _ = p.create_artboard(name="home2")
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="back_btn",
+  )
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="cta",
+  )
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="back_marked",
+  )
+  let _ = p.place_component(
+    artboard=home,
+    component_id="button",
+    instance_id="back_flow",
+  )
+  let _ = p.attach_interaction(
+    artboard=home,
+    node_id="back_marked",
+    trigger="tap",
+    action_spec="show_toast:\"x\"",
+  )
+  p.add_flow(from=home, to="home2", trigger="tap:back_flow")
+  let html = p.export_html()
+  assert_true(html.contains("[\"home\",\"back_btn\",\"back\",\"\"]"))
+  assert_false(html.contains("[\"home\",\"cta\",\"back\""))
+  assert_false(html.contains("[\"home\",\"back_marked\",\"back\""))
+  assert_false(html.contains("[\"home\",\"back_flow\",\"back\""))
+}
+
+///|
+/// ④ filter id 按画板命名空间化：duplicate 后 e1/fx_/blur_ 不再全局重复；
+/// 节点 g id 不做全局重命名（保持 #n_ 契约）。
+test "export_html：filter id 按画板命名空间唯一" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.place_component(
+    artboard="login",
+    component_id="card",
+    instance_id="card",
+  )
+  match p.artboards.get("login") {
+    Some(ab) => {
+      let _ = ab.doc.update_node("card", fn(n) {
+        { ..n, style: { ..n.style, shadow: "e2", }, }
+      })
+    }
+    None => assert_true(false)
+  }
+  let _ = p.duplicate_artboard(src="login", new_name="login2")
+  let html = p.export_html()
+  let filter_ids = collect_attr_values(html, "filter id=\"")
+  assert_true(filter_ids.length() >= 6, msg="两板各 3 个 elevation filter")
+  let seen : Map[String, Bool] = Map([])
+  let mut dup = 0
+  for fid in filter_ids.iter() {
+    if seen.contains(fid) {
+      dup = dup + 1
+    } else {
+      seen.set(fid, true)
+    }
+  }
+  assert_eq(dup, 0, msg="filter id 必须全局唯一")
+  assert_true(seen.contains("e1_login"))
+  assert_true(seen.contains("e1_login2"))
+  assert_false(seen.contains("e1"))
+  assert_true(html.contains("filter=\"url(#e2_login)\""))
+  assert_true(html.contains("filter=\"url(#e2_login2)\""))
+  // 节点 g id 保持 #n_<id>（不随画板改名）
+  assert_true(html.contains("id=\"n_card\""))
+  assert_false(html.contains("id=\"n_card_login\""))
+}
+
+///|
+/// ⑤ 对抗性画板 id：a-b 与 a_b 经可逆 svg_ns_tag 编码后命名空间不同，
+/// 同页 filter id 不再碰撞（此前的有损清洗会把两者都映射成 a_b）。
+test "export_html：对抗性画板 id 的 filter 命名空间不碰撞" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="t")
+  let _ = p.duplicate_artboard(src="t", new_name="a-b")
+  let _ = p.duplicate_artboard(src="t", new_name="a_b")
+  let html = p.export_html()
+  let filter_ids = collect_attr_values(html, "filter id=\"")
+  assert_true(filter_ids.length() >= 9, msg="三块板各有 e1/e2/e3")
+  let seen : Map[String, Bool] = Map([])
+  let mut dup = 0
+  for fid in filter_ids.iter() {
+    if seen.contains(fid) {
+      dup = dup + 1
+    } else {
+      seen.set(fid, true)
+    }
+  }
+  assert_eq(dup, 0, msg="a-b 与 a_b 必须映射到不同命名空间")
+  assert_true(seen.contains("e1_a_2d_b"), msg="'-' 编码为 _2d_")
+  assert_true(seen.contains("e1_a__b"), msg="'_' 编码为 __（不是 _5f_）")
+}
+
+///|
+/// ⑥ 节点 g id 唯一化：duplicate 板的重复节点 id 加 __dupN 后缀，且
+/// MV_ACT 绑定必须引用实际存在的 DOM id（不能 raw/suffixed 错配）。
+test "export_html：重复画板节点 g id 加 __dupN 且绑定一致" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="login")
+  let _ = p.place_component(
+    artboard="login",
+    component_id="button",
+    instance_id="card",
+  )
+  let _ = p.duplicate_artboard(src="login", new_name="login2")
+  let _ = p.attach_interaction(
+    artboard="login2",
+    node_id="card",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
+  let html = p.export_html()
+  let node_ids = collect_attr_values(html, "id=\"n_")
+  assert_true(node_ids.length() >= 4, msg="两板各 root+card")
+  let seen : Map[String, Bool] = Map([])
+  let mut dup = 0
+  for nid in node_ids.iter() {
+    if seen.contains(nid) {
+      dup = dup + 1
+    } else {
+      seen.set(nid, true)
+    }
+  }
+  assert_eq(dup, 0, msg="节点 g id 必须全局唯一")
+  assert_eq(count_needle(html, "id=\"n_card\""), 1)
+  assert_eq(count_needle(html, "id=\"n_card__dup2\""), 1)
+  // 绑定只引用实际存在的 DOM id：raw 或 __dup2 恰好一种
+  let has_raw = html.contains("[\"login2\",\"card\",\"toast\"")
+  let has_dup = html.contains("[\"login2\",\"card__dup2\",\"toast\"")
+  assert_true(has_raw != has_dup, msg="MV_ACT 绑定必须与 DOM id 同形")
+}
+
+///|
+/// 无障碍与 reduced-motion（P7）：焦点环不被压掉、tab 键盘可达、toast
+/// live region、lang 可选、无文字 role=button 有 aria-label。
+test "export_html：无障碍焦点环/tab 键/reduced-motion/toast/lang/aria-label" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="home")
+  let _ = p.place_component(
+    artboard="home",
+    component_id="button",
+    instance_id="icon_btn",
+  )
+  // 无文字按钮：aria-label 应回落到组件名
+  match p.artboards.get("home") {
+    Some(ab) => {
+      let _ = ab.doc.update_node("icon_btn", fn(n) { { ..n, text: "", } })
+    }
+    None => assert_true(false)
+  }
+  let _ = p.attach_interaction(
+    artboard="home",
+    node_id="icon_btn",
+    trigger="tap",
+    action_spec="show_toast:\"hi\"",
+  )
+  let html = p.export_html()
+  // ① 焦点环：不再有 outline:none 覆盖，全局 :focus-visible 生效；
+  //    tab 带 role/tabindex/Enter-Space；按压只给可交互节点
+  assert_false(html.contains("g.mv-live:focus{outline:none}"))
+  assert_true(html.contains(":focus-visible{outline:2px solid"))
+  assert_true(html.contains("role=\"tab\" tabindex=\"0\""))
+  assert_true(html.contains("role=\"tablist\""))
+  assert_true(html.contains("event.key==='Enter'||event.key===' '"))
+  assert_true(html.contains("g.mv-live:active{transform:scale(.96)}"))
+  assert_false(html.contains("g[id^=n_]:active"))
+  // ② reduced-motion 同时约束 JS 滚动行为
+  assert_true(html.contains("matchMedia('(prefers-reduced-motion: reduce)')"))
+  assert_true(html.contains("RM?'auto':'smooth'"))
+  // ③ toast live region + lang + 无文字 role=button 的 aria-label
+  assert_true(
+    html.contains("id=\"mv-toast\" role=\"status\" aria-live=\"polite\""),
+  )
+  assert_true(html.contains("<html lang=\"zh\">"))
+  assert_true(p.export_html(lang="en").contains("<html lang=\"en\">"))
+  assert_true(html.contains("MV_LABELS"))
+  assert_true(html.contains("el.setAttribute('aria-label',lbl)"))
+  assert_true(
+    html.contains("\"home|icon_btn\":\"button\""),
+    msg="无文字按钮标签应回落到组件名",
+  )
+}
+
+///|
+/// 导出脚本括号平衡（回归锚）：P 系列曾把多加一个 `}` 写进 MV_ACT 绑定串，
+/// 浏览器「missing ) after argument list」→ 整页脚本中断、原型空白，而
+/// 子串断言（@keyframes 存在）全部照常通过。这里对 <script> 做一次
+/// 跳过字符串/转义的括号扫描，任何不平衡即失败——导出 JS 的语法门。
+test "export_html：脚本括号平衡（语法门）" {
+  let p = Project::new()
+  let _ = p.apply_template(template_id="login")
+  let _ = p.apply_template(template_id="list")
+  let _ = p.create_artboard(name="t_home")
+  let _ = p.add_flow(
+    from="login",
+    to="t_home",
+    trigger="login_btn",
+    transition="modal_present",
+  )
+  let _ = p.attach_interaction(
+    artboard="login",
+    node_id="email_input",
+    trigger="tap",
+    action_spec="submit_form:email_input,password_input",
+  )
+  let html = p.export_html()
+  // 取最后一个 <script> 块（页面只有一段主脚本）
+  let start = match html.find("<script>") {
+    Some(i) => i + 8
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let body = html[start:].to_owned()
+  let end = match body.find("</script>") {
+    Some(i) => i
+    None => {
+      assert_true(false)
+      return
+    }
+  }
+  let js = body[0:end].to_owned()
+  // 括号扫描：跳过 ' " ` 字符串与转义；JS 里没有模板字符串嵌套花括号的需求
+  let mut depth = 0
+  let mut in_str = 0 // 0=无 1=' 2=" 3=`
+  let mut bad = false
+  let chars = js.to_array()
+  let mut i = 0
+  while i < chars.length() {
+    let code = chars[i].to_int()
+    if in_str != 0 {
+      if code == 92 {
+        i = i + 2
+        continue
+      }
+      if (in_str == 1 && code == 39) ||
+        (in_str == 2 && code == 34) ||
+        (in_str == 3 && code == 96) {
+        in_str = 0
+      }
+    } else if code == 39 {
+      in_str = 1
+    } else if code == 34 {
+      in_str = 2
+    } else if code == 96 {
+      in_str = 3
+    } else if code == 40 || code == 91 || code == 123 {
+      depth = depth + 1
+    } else if code == 41 || code == 93 || code == 125 {
+      depth = depth - 1
+      if depth < 0 {
+        bad = true
+      }
+    }
+    i = i + 1
+  }
+  assert_false(bad)
+  assert_eq(depth, 0)
+  assert_eq(in_str, 0)
+}
+
+///|
+/// 转义安全面：状态名含 </script> 不提前闭合脚本、play_sound 参数真实
+/// 落值（无字面量占位符残留）、tab 的 DOM id/标签文本 HTML 转义 +
+/// aria-selected/tabpanel 角色齐备（WAI-ARIA tabs）。
+test "export_html：MV_STATES/play_sound/tab 转义与 ARIA tabs" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="t_login")
+  let _ = p.place_component(
+    artboard="t_login",
+    component_id="button",
+    instance_id="login_btn",
+    x=10.0,
+    y=10.0,
+  )
+  // 状态名是 Agent 可控文本：含 </script> 的合法状态名不得截断脚本
+  let _ = p.define_component_state(
+    artboard="t_login",
+    node_id="login_btn",
+    state_name="on</script>x",
+    patch={ ..NodePatch::empty(), fill: Some("#FF0000"), },
+  )
+  // play_sound 参数（音效名）：绑定表必须是真实值，不再输出字面量
+  // 占位符（此前 {js_string_escape(name)} 缺 \{} 插值，运行时 toast
+  // 播报占位符原文而非音效名）
+  let _ = p.attach_interaction(
+    artboard="t_login",
+    node_id="login_btn",
+    trigger="tap",
+    action_spec="play_sound:beep_wav",
+  )
+  let html = p.export_html()
+  // MV_STATES 值里 </script> 转成 \x3c/script>，脚本数据区不被状态名
+  // 提前闭合（CSS 类名区的状态名残留是 style 原文，不构成脚本闭合，
+  // 属独立检测面不在本断言内）
+  assert_true(html.contains("\":\"on\\x3c/script>x\""))
+  // play_sound 占位符字面量不再出现，参数真实落值
+  assert_false(html.contains("{js_string_escape"))
+  assert_true(html.contains("\"play_sound\",\"beep_wav\""))
+  // tab：DOM id/文本转义后无裸 <b> 元素；ARIA tabs 属性齐备
+  let _ = p.duplicate_artboard(src="t_login", new_name="it's<b>")
+  let html2 = p.export_html()
+  assert_false(html2.contains("id=\"tab-it's<b>\""))
+  assert_false(html2.contains(">it's<b></div>"))
+  assert_true(html2.contains("aria-selected=\"false\""))
+  assert_true(html2.contains("aria-controls=\"board-"))
+  assert_true(html2.contains("role=\"tabpanel\""))
+  // onclick 的 id 落 JS 字符串：js_string_escape 转义单引号与 <（> 无害）
+  assert_true(html2.contains("it\\'s\\x3cb>"))
+  // show() 切换时同步 aria-selected（JS 侧）
+  assert_true(html2.contains("setAttribute('aria-selected','true')"))
+}
+
+///|
+/// SVG 严格面：text-anchor 属性值不带前导空格（严格 XML/SVG 消费者按
+/// 属性值校验，" start" 非法）。
+test "export_svg：text-anchor 值无前导空格" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="a")
+  let _ = p.place_component(
+    artboard="a",
+    component_id="button",
+    instance_id="btn",
+    x=10.0,
+    y=10.0,
+  )
+  let _ = p.edit_node(artboard="a", node_id="btn", kvs=[
+    ("align", "left"),
+    ("text", "确定"),
+  ])
+  let svg = p.export_svg(artboard="a")
+  match svg {
+    Ok(s) => {
+      assert_true(s.contains("text-anchor=\"start\""))
+      assert_false(s.contains("text-anchor=\" "))
+    }
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
+/// H5 契约（CSS 面）：状态名与 DOM id 是 Agent 可控文本——含 </style>
+/// 的状态名经选择器转义后不得提前闭合样式块；转义只作用于选择器字面
+/// （类名字面保持原文，与 JS classList.add 一致）；正常状态名选择器
+/// 不变形。
+test "export_html：CSS 状态名转义（</style> 不提前闭合样式块）" {
+  let p = Project::new()
+  let _ = p.create_artboard(name="cs")
+  let _ = p.place_component(
+    artboard="cs",
+    component_id="button",
+    instance_id="btn",
+    x=10.0,
+    y=10.0,
+  )
+  let _ = p.define_component_state(
+    artboard="cs",
+    node_id="btn",
+    state_name="a</style><b>z",
+    patch={ ..NodePatch::empty(), fill: Some("#FF0000"), },
+  )
+  let _ = p.define_component_state(
+    artboard="cs",
+    node_id="btn",
+    state_name="pressed",
+    patch={ ..NodePatch::empty(), fill: Some("#0F1114"), },
+  )
+  let html = p.export_html()
+  // </style> 恰 2 处（head 样式块 + 每个 SVG 内嵌的 font-family 样式块，
+  // 本用例 1 板 1 SVG）：样式块不被状态名提前闭合（注入前该值是 4）
+  let mut n_closer = 0
+  for _ in html.split("</style>").iter() {
+    n_closer = n_closer + 1
+  }
+  assert_eq(
+    n_closer,
+    3,
+    msg="样式块被状态名提前闭合（</style> 多于结构基线）",
+  )
+  // 选择器字面为 CSS 标识符转义形态（\3c = '<'、\2f = '/'，hex 小写 +
+  // 尾空格终止）；类名字面原文不变，与 JS classList.add 两侧匹配
+  assert_true(
+    html.contains(".st-a\\3c \\2f style\\3e \\3c b\\3e z"),
+    msg="状态名选择器应为转义形态",
+  )
+  // 正常状态名选择器不变形；类名字面（JS classList.add 原文）由
+  // MV_STATES 转义面守卫（见 MV_STATES 转义测试），此处锚定 CSS 面
+  assert_true(html.contains(".st-pressed"))
+  // 注入内容不再以可闭合样式块的形态出现在 style 区
+  assert_false(html.contains(".st-a</style>"))
 }

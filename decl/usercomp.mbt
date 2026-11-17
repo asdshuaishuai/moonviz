@@ -8,14 +8,14 @@
 
 ///|
 /// 安全切片（非 failable；upto = -1 表示到串尾）
-fn safe_slice(s : String, from : Int, upto : Int) -> String {
+fn safe_slice(s : String, from : Int32, upto : Int32) -> String {
   let n = s.length()
   let a = if from < 0 { 0 } else { from }
   let b = if upto < 0 || upto > n { n } else { upto }
   if a >= b {
     return ""
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = a; i < b; i = i + 1 {
     sb.write_char(s[i].to_int().unsafe_to_char())
   }
@@ -39,7 +39,7 @@ fn parse_component_meta(
   let mut id = ""
   let mut description = ""
   let params : Array[@core.UserParam] = []
-  let variants : Map[String, Map[String, String]] = Map::new()
+  let variants : Map[String, Map[String, String]] = Map([])
   // 0=顶层 1=params 列表 2=variants 列表 3=component 内键
   let mut section = 0
   let mut cur_param_name = ""
@@ -117,7 +117,7 @@ fn parse_component_meta(
     if section == 2 {
       if mbt_has_prefix(line, "- name:") {
         cur_variant = strip_quotes(mbt_trim(safe_slice(line, 7, -1)))
-        variants.set(cur_variant, Map::new())
+        variants.set(cur_variant, Map([]))
         if first_variant == "" {
           first_variant = cur_variant // 首个变体即默认
         }
@@ -148,7 +148,7 @@ fn parse_component_meta(
     return Err("usercomp_missing_id")
   }
   if variants.length() == 0 {
-    variants.set("default", Map::new())
+    variants.set("default", Map([]))
   }
   Ok((id, description, params, variants, first_variant))
 }
@@ -199,11 +199,12 @@ pub fn parse_user_component(
                 source: text,
               }
               // 参数闭合：所有 ${name} 引用必须已声明
-              let refs = match (try Ok(@core.collect_param_refs(def)) catch { e => Err(e) }) {
+              let refs = match
+                (Ok(@core.collect_param_refs(def)) catch { e => Err(e) }) {
                 Ok(rs) => rs
                 Err(_) => return Err("usercomp_ref_scan_failed")
               }
-              let declared : Map[String, Bool] = Map::new()
+              let declared : Map[String, Bool] = Map([])
               for p in params.iter() {
                 declared.set(p.name, true)
               }

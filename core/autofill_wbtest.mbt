@@ -13,11 +13,9 @@ test "autofill：报告驱动补缺与幂等" {
     x=95.0,
     y=120.0,
   )
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="title",
-    kvs=[("text", "登录")],
-  )
+  let _ = p.edit_node(artboard="login", node_id="title", kvs=[
+    ("text", "登录"),
+  ])
   let _ = p.place_component(
     artboard="login",
     component_id="text_input",
@@ -39,11 +37,9 @@ test "autofill：报告驱动补缺与幂等" {
     x=24.0,
     y=340.0,
   )
-  let _ = p.edit_node(
-    artboard="login",
-    node_id="submit",
-    kvs=[("text", "登 录")],
-  )
+  let _ = p.edit_node(artboard="login", node_id="submit", kvs=[
+    ("text", "登 录"),
+  ])
   // 补缺前：auth 三缺（忘记/注册/记住）+ 通用加载态
   let before = match p.infer_missing(artboard="login") {
     Ok(j) => j
@@ -131,11 +127,10 @@ test "autofill：同 id 冲突跳过不改写既有节点" {
     y=24.0,
     h=100.0,
   )
-  let _ = p.edit_node(
-    artboard="dash",
-    node_id="refresh",
-    kvs=[("text", "Reload"), ("name", "数据卡")],
-  )
+  let _ = p.edit_node(artboard="dash", node_id="refresh", kvs=[
+    ("text", "Reload"),
+    ("name", "数据卡"),
+  ])
   let _ = p.place_component(
     artboard="dash",
     component_id="card",
@@ -240,8 +235,7 @@ test "autofill：锚定带区占用回退底缘光标" {
       // 零违规：旧路径会靠精确包含豁免漏报同矩形塌缩
       assert_true(validate(meta.doc).length() == 0)
       // 既有卡片位置分毫不动（旧路径 auto_fix 会把卡片下移改写）
-      for (id, expect_y) in
-        [("c1", 72.0), ("c2", 292.0), ("c3", 512.0)] {
+      for (id, expect_y) in [("c1", 72.0), ("c2", 292.0), ("c3", 512.0)] {
         match meta.doc.get(id) {
           None => assert_true(false)
           Some(n) =>
@@ -353,11 +347,10 @@ test "export_design_system：跨组同 slug 不再加 -2 后缀" {
     x=24.0,
     y=260.0,
   )
-  let _ = p.edit_node(
-    artboard="tokens",
-    node_id="t1",
-    kvs=[("font_size", "18"), ("text", "Token")],
-  )
+  let _ = p.edit_node(artboard="tokens", node_id="t1", kvs=[
+    ("font_size", "18"),
+    ("text", "Token"),
+  ])
   let json = match p.export_design_system(artboard="tokens") {
     Ok(j) => j
     Err(_) => ""

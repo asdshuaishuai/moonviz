@@ -14,7 +14,7 @@
 /// 输出：结构化评审报告（每个原则一个评分 + 具体建议）
 pub(all) struct CritiqueResult {
   principle : String
-  score : Int // 0-10
+  score : Int32 // 0-10
   verdict : String // "good" | "fair" | "poor"
   observation : String // 观察到什么
   advice : String // 怎么改
@@ -34,7 +34,7 @@ pub fn Project::critique(
       let doc = ab.doc
 
       // ── 1. 视觉层次 ──
-      let font_sizes : Map[Double, Int] = Map::new()
+      let font_sizes : Map[Double, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) =>
@@ -45,7 +45,7 @@ pub fn Project::critique(
           None => ()
         }
       }
-      let distinct_sizes = font_sizes.size()
+      let distinct_sizes = font_sizes.length()
       let hierarchy_score = if distinct_sizes >= 3 {
         9
       } else if distinct_sizes == 2 {
@@ -116,6 +116,8 @@ pub fn Project::critique(
       )
 
       // ── 3. 对齐 ──
+      // 左缘或右缘任一贴 8px 网格即算对齐：右对齐的数值/操作列（fee_v、
+      // spec_v、item_c3_0 一类）此前只判左缘被误报为未对齐
       let mut aligned_count = 0
       let mut total_check = 0
       for id in doc.nodes.keys() {
@@ -123,8 +125,23 @@ pub fn Project::critique(
           Some(r) =>
             if id != "root" {
               total_check = total_check + 1
-              // 检查左边缘是否对齐到 8px 网格
-              if r.x % 8.0 < 1.0 || r.x % 8.0 > 7.0 {
+              let left_mod = r.x % 8.0
+              let right_mod = (r.x + r.width) % 8.0
+              let left_ok = left_mod <= 1.0 || left_mod >= 7.0
+              let right_ok = right_mod <= 1.0 || right_mod >= 7.0
+              // 画板中轴 ±2px 也算对齐：居中列（empty_state/login_v2 一类）
+              // 的左右缘天然落在中轴两侧，不应被判未对齐
+              let center_ok = {
+                let c = r.x + r.width / 2.0 - ab.width / 2.0
+                c >= -2.0 && c <= 2.0
+              }
+              // 右对齐文本（金额/规格值/行尾操作）以字形右缘构成内容线，
+              // 即使盒右缘不在 8 栅格上也视为右缘对齐
+              let text_right = match doc.nodes.get(id) {
+                Some(n) => n.style.text_align == "right"
+                None => false
+              }
+              if left_ok || right_ok || center_ok || text_right {
                 aligned_count = aligned_count + 1
               }
             }
@@ -191,7 +208,7 @@ pub fn Project::critique(
       )
 
       // ── 5. 留白 ──
-      let node_count = doc.nodes.size() - 1
+      let node_count = doc.nodes.length() - 1
       let area = ab.width * ab.height
       let density = if area > 0.0 {
         node_count.to_double() / (area / 10000.0)
@@ -229,6 +246,9 @@ pub fn Project::critique(
       )
 
       // ── 6. 平衡 ──
+      // 中心线 ±2px 内的节点视为中性（居中列不平添到任一侧）——此前
+      // center_x < 中点 才归左，居中节点全落右，登录/仪表盘类模板
+      // 被误判「左0% / 右100%」balance 4。
       let mut left_weight = 0.0
       let mut right_weight = 0.0
       for id in doc.nodes.keys() {
@@ -236,11 +256,12 @@ pub fn Project::critique(
           Some(r) =>
             if id != "root" {
               let center_x = r.x + r.width / 2.0
+              let dx = center_x - ab.width / 2.0
               let weight = r.width * r.height
-              if center_x < ab.width / 2.0 {
-                left_weight = left_weight + weight
-              } else {
+              if dx > 2.0 {
                 right_weight = right_weight + weight
+              } else if dx < -2.0 {
+                left_weight = left_weight + weight
               }
             }
           None => ()
@@ -324,22 +345,26 @@ pub fn Project::critique(
       )
 
       // ── 8. 节奏 ──
-      let gaps : Map[Double, Int] = Map::new()
+      let gaps : Map[Double, Int32] = Map([])
       for id in doc.nodes.keys() {
         match doc.nodes.get(id) {
           Some(n) =>
             match n.layout {
               Some(l) =>
-                match gaps.get(l.gap) {
-                  Some(c) => gaps.set(l.gap, c + 1)
-                  None => gaps.set(l.gap, 1)
+                // gap=0 的容器没有声明节拍（未设置/单子项），不计入
+                // 间距档数——否则 page 这类 0 gap 会把 3 档节奏拖成 4 档
+                if l.gap > 0.0 {
+                  match gaps.get(l.gap) {
+                    Some(c) => gaps.set(l.gap, c + 1)
+                    None => gaps.set(l.gap, 1)
+                  }
                 }
               None => ()
             }
           None => ()
         }
       }
-      let distinct_gaps = gaps.size()
+      let distinct_gaps = gaps.length()
       let rhythm_score = if distinct_gaps <= 3 {
         8
       } else if distinct_gaps <= 5 {
@@ -381,18 +406,19 @@ pub fn Project::critique(
         radius_base=prof.radius_base,
         contrast_min=prof.contrast_min,
         touch_min=prof.touch_min,
+        canvas_bg=self.tokens.resolve_color("background"),
       )
       // 返回交互校验（返回是必须的）：非入口画板无出边 flow 且无返回类节点
       // = 用户会卡死——追加进 norms 维度，与检测/修复同一报告
-      for s in self.norm_back_issues(artboard=artboard).iter() {
+      for s in self.norm_back_issues(artboard~).iter() {
         norm_list.push(s)
       }
       // issue #23：状态可辨识（选中态无差异 / 纯黑选中色）
-      for s in self.norm_selected_state_issues(artboard=artboard).iter() {
+      for s in self.norm_selected_state_issues(artboard~).iter() {
         norm_list.push(s)
       }
       // issue #25/#26：交互与内容完整性（可交互无去向 / 占位符 / 空壳 / 非库组件）
-      for s in self.qa_issues(artboard=artboard).iter() {
+      for s in self.qa_issues(artboard~).iter() {
         norm_list.push(s)
       }
       let n_norm = norm_list.length()
@@ -420,17 +446,91 @@ pub fn Project::critique(
           if i >= 2 {
             break
           }
-          acc = acc + norm_list[i] + "→ " + norm_issue_hint(norm_list[i]) + "；"
+          acc = acc +
+            norm_list[i] +
+            "→ " +
+            norm_issue_hint(norm_list[i]) +
+            "；"
         }
         acc
       }
       results.push(
-        crit_json("norms", norm_score, norm_verdict, "\{n_norm} 处规范偏差", norm_advice),
+        crit_json(
+          "norms",
+          norm_score,
+          norm_verdict,
+          "\{n_norm} 处规范偏差",
+          norm_advice,
+        ),
+      )
+
+      // ── 10. 视觉语言（visual：阴影只属于容器 · 卡片层次可辨 · 同心圆角）──
+      // 检测项、只报不修（审美方向由 Agent 决定）；与 norms 维度分账——
+      // norms 是「不出错」，visual 是「有层次」（Apple HIG / 鸿蒙共识）。
+      let vis_list = norm_visual_issues(
+        doc,
+        canvas_bg=self.tokens.resolve_color("background"),
+      )
+      let n_vis = vis_list.length()
+      let vis_score = if n_vis == 0 {
+        9
+      } else if n_vis <= 2 {
+        7
+      } else if n_vis <= 4 {
+        5
+      } else {
+        3
+      }
+      let vis_verdict = if vis_score >= 7 {
+        "good"
+      } else if vis_score >= 5 {
+        "fair"
+      } else {
+        "poor"
+      }
+      let vis_advice = if n_vis == 0 {
+        "视觉层次良好（阴影只在容器 · 卡片可辨 · 圆角同心）"
+      } else {
+        let mut acc = ""
+        for i in 0..<vis_list.length() {
+          if i >= 2 {
+            break
+          }
+          acc = acc +
+            vis_list[i] +
+            "→ " +
+            visual_issue_hint(vis_list[i]) +
+            "；"
+        }
+        acc
+      }
+      results.push(
+        crit_json(
+          "visual",
+          vis_score,
+          vis_verdict,
+          "\{n_vis} 处视觉语言偏差",
+          vis_advice,
+        ),
       )
 
       let j = jstr19(results)
-      Ok("{\"principles\":9,\"results\":[\{j}]}")
+      Ok("{\"principles\":10,\"results\":[\{j}]}")
     }
+  }
+}
+
+///|
+/// visual 维度建议：按偏差类型给具体改法（检测项，无一键修复通道）。
+fn visual_issue_hint(issue : String) -> String {
+  if issue.contains("文字带阴影") {
+    "去掉文字阴影（shadow=none），层次交给容器 elevation"
+  } else if issue.contains("层次不可辨") {
+    "卡片加 e1 阴影或 1px hairline 描边，或画布换 tinted 底（background 令牌）"
+  } else if issue.contains("同心") {
+    "子圆角收到 ≤ 父圆角（内 = 外 − 内边距）"
+  } else {
+    "按视觉语言调整"
   }
 }
 
@@ -488,6 +588,10 @@ fn norm_issue_hint(issue : String) -> String {
     "换语义化真实文案，去掉 TBD/TODO/xxx 一类占位"
   } else if issue.contains("非组件库组件") {
     "换组件库注册表内的组件（list-components 可查）"
+  } else if issue.contains("超盒高") {
+    // norms 检测项（折行越盒）没有 auto_fix 通道——else 兜底的
+    // 「auto_fix 可一键修复」广告会让 Agent 空手而归（fixes:0）
+    "加高盒子或精简文案（norms 检测项，无自动修复通道）"
   } else {
     "auto_fix 可一键修复"
   }
@@ -496,7 +600,7 @@ fn norm_issue_hint(issue : String) -> String {
 ///|
 fn crit_json(
   principle : String,
-  score : Int,
+  score : Int32,
   verdict : String,
   obs : String,
   advice : String,
@@ -516,19 +620,19 @@ fn is_token_color3(tokens : DesignTokens, hex : String) -> Bool {
 }
 
 ///|
-fn extract_scores(json : String) -> Array[Int] {
-  let scores : Array[Int] = []
+fn extract_scores(json : String) -> Array[Int32] {
+  let scores : Array[Int32] = []
   let parts = json.split(",\"score\":")
-  // 首段是信封头（{"principles":9,"results":[…"principle":"…"）而非评分，
-  // 跳过——否则 extract_leading_int 会抓到头部的 9，均值变成 (9+Σ九项)/10，
-  // 档位边界虚高一级
+  // 首段是信封头（{"principles":10,"results":[…"principle":"…"）而非评分，
+  // 跳过——否则 extract_leading_int 会抓到头部的 10，均值被 10 冲淡，
+  // 档位边界虚高
   let mut first = true
   for p0 in parts.iter() {
     if first {
       first = false
       continue
     }
-    let num = extract_leading_int(p0.to_string())
+    let num = extract_leading_int(p0.to_owned())
     if num >= 0 {
       scores.push(num)
     }
@@ -537,7 +641,7 @@ fn extract_scores(json : String) -> Array[Int] {
 }
 
 ///|
-fn extract_leading_int(s : String) -> Int {
+fn extract_leading_int(s : String) -> Int32 {
   let mut result = 0
   let mut found = false
   for c in s.iter() {
@@ -557,7 +661,7 @@ fn extract_leading_int(s : String) -> Int {
 }
 
 ///|
-fn sum_scores(scores : Array[Int]) -> Int {
+fn sum_scores(scores : Array[Int32]) -> Int32 {
   let mut total = 0
   for s in scores.iter() {
     total = total + s
@@ -567,7 +671,7 @@ fn sum_scores(scores : Array[Int]) -> Int {
 
 ///|
 fn jstr19(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

@@ -260,16 +260,34 @@ test "structural templates round-trip without duplicating container children" {
 
 ///|
 /// 在文本中从 from 位置查找子串（回归测试辅助）。
-fn find_from(text : String, needle : String, from : Int) -> Int? {
+fn find_from(text : String, needle : String, from : Int32) -> Int32? {
   let n = needle.length()
   let mut i = from
   while i + n <= text.length() {
-    if text.substring(start=i, end=i + n) == needle {
+    if text[i:i + n].to_owned() == needle {
       return Some(i)
     }
     i = i + 1
   }
   None
+}
+
+///|
+/// 子串出现次数（motion= 只应在设置了该字段的节点上出现一次）。
+fn count_needle(text : String, needle : String) -> Int32 {
+  let mut count = 0
+  let mut idx = 0
+  let mut scanning = true
+  while scanning {
+    match find_from(text, needle, idx) {
+      None => scanning = false
+      Some(pos) => {
+        count = count + 1
+        idx = pos + needle.length()
+      }
+    }
+  }
+  count
 }
 
 ///|
@@ -373,6 +391,144 @@ test "frontmatter 未知键透传：moonviz 子键与顶层键双通道（issue 
   let canonical2 = back.to_mbt()
   let needles = ["extra_section: hello", "deepdesign_ink:", "custom_top: 42"]
   for needle in needles.iter() {
-    assert_true(canonical2.contains(needle), msg="二次往返必须保持 \{needle}")
+    assert_true(
+      canonical2.contains(needle),
+      msg="二次往返必须保持 \{needle}",
+    )
+  }
+}
+
+///|
+/// 节点级 motion 声明面：generic_node 的 motion="fade_in" 解析进
+/// NodeStyle.motion；canonical 只在设置时输出 motion=，二次加载字节稳定。
+test "往返：节点 motion 经 MBT 存活且字节稳定" {
+  let src = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: hero\n---\n\n# Motion\n\n<!-- moonviz:artboard hero -->\n```mbt\nfn visual_hero() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"hero\", width=390.0, height=844.0)\n  page.add(@decl.generic_node(id=\"hero\", component=\"frame\", kind=\"frame\", width=@decl.fixed(390.0), height=@decl.fixed(200.0), fill=\"#FFFFFF\", motion=\"fade_in\"))\n  page.add(@decl.generic_node(id=\"plain\", component=\"rect\", kind=\"rect\", width=@decl.fixed(100.0), height=@decl.fixed(100.0), fill=\"#FFFFFF\"))\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("motion 文档加载失败：\{e}")
+      abort("")
+    }
+  }
+  match model.project.artboards.get("hero") {
+    Some(ab) =>
+      match ab.doc.nodes.get("hero") {
+        Some(n) => assert_eq(n.style.motion, "fade_in")
+        None => assert_true(false)
+      }
+    None => assert_true(false)
+  }
+  let canonical = model.to_mbt()
+  assert_true(canonical.contains("motion=\"fade_in\""), msg=canonical)
+  // 未设置 motion 的节点不写该参数：canonical 每个节点出现两次
+  // （视觉块 + mbt check 块），所以只有 hero 带 motion 时计数应为 2
+  // （两个 plain 节点若被误写会到 4）
+  assert_eq(count_needle(canonical, "motion="), 2)
+  // 二次加载 + 再次序列化：字节稳定
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(back.to_mbt(), canonical)
+}
+
+///|
+/// 节点 motion 白名单：未知预设与写死几何的预设都必须拒绝（不静默降级
+/// 成无动画字段）——press/pop/modal_present 等参数化前不开放。
+test "节点 motion 白名单：未知与写死几何预设拒绝" {
+  let base = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: m\n---\n\n# M\n\n<!-- moonviz:artboard m -->\n```mbt\nfn visual_m() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"m\", width=390.0, height=844.0)\n  page.add(@decl.generic_node(id=\"n\", component=\"rect\", kind=\"rect\", width=@decl.fixed(10.0), height=@decl.fixed(10.0), motion=\"__P__\"))\n  page\n}\n```\n"
+  match load_mbt_project(base.replace(old="__P__", new="nope")) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("unknown_motion_preset"), msg=e)
+  }
+  for preset in ["press", "pop", "modal_present", "slide_in_right"].iter() {
+    match load_mbt_project(base.replace(old="__P__", new=preset)) {
+      Ok(_) => assert_true(false)
+      Err(e) => assert_true(e.contains("motion_preset_not_node_safe"), msg=e)
+    }
+  }
+}
+
+///|
+/// 手势 flow 声明：.mbt.md 的 trigger 可写 swipe_left / long_press:0.8 /
+/// focus（不再只认 tap:），canonical 往返保留；未知 trigger 与 focus:<node>
+/// 指向不存在节点都必须报错。
+test "flows：手势 trigger 声明往返与未知触发报错" {
+  let src = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: f1\n  flows:\n    - from: f1\n      to: f2\n      trigger: swipe_left\n    - from: f1\n      to: f2\n      trigger: long_press:0.8\n    - from: f1\n      to: f2\n      trigger: focus\n---\n\n# F\n\n<!-- moonviz:artboard f1 -->\n```mbt\nfn visual_f1() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"f1\", width=390.0, height=844.0)\n  page\n}\n```\n\n<!-- moonviz:artboard f2 -->\n```mbt\nfn visual_f2() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"f2\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("手势 flow 文档加载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(model.project.flows.length(), 3)
+  let canonical = model.to_mbt()
+  assert_true(canonical.contains("trigger: swipe_left"), msg=canonical)
+  assert_true(canonical.contains("trigger: long_press:0.8"), msg=canonical)
+  assert_true(canonical.contains("trigger: focus"), msg=canonical)
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(back.project.flows.length(), 3)
+  // 未知 trigger
+  let bad = src.replace(old="trigger: swipe_left", new="trigger: nonsense:xyz")
+  match load_mbt_project(bad) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("mbt_flow_unknown_trigger"), msg=e)
+  }
+  // focus:<node> 指向不存在节点
+  let bad2 = src.replace(old="trigger: focus", new="trigger: focus:missing")
+  match load_mbt_project(bad2) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("mbt_flow_unknown_node:f1:missing"), msg=e)
+  }
+}
+
+///|
+/// 分板过渡声明：transition: modal_present 落 frontmatter 并往返；默认
+/// push 不写（旧文档字节稳定）；未知过渡加载即报错。
+test "flows：transition 声明往返与默认 Push 省略" {
+  let src = "---\nmoonviz:\n  format: visual-document\n  revision: 1\n  entry: t1\n  flows:\n    - from: t1\n      to: t2\n      trigger: focus\n      transition: modal_present\n    - from: t1\n      to: t2\n      trigger: swipe_left\n---\n\n# T\n\n<!-- moonviz:artboard t1 -->\n```mbt\nfn visual_t1() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t1\", width=390.0, height=844.0)\n  page\n}\n```\n\n<!-- moonviz:artboard t2 -->\n```mbt\nfn visual_t2() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"t2\", width=390.0, height=844.0)\n  page\n}\n```\n"
+  let model = match load_mbt_project(src) {
+    Ok(m) => m
+    Err(e) => {
+      fail("transition 文档加载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(model.project.flows.length(), 2)
+  assert_eq(model.project.flows[0].transition, "modal_present")
+  assert_eq(model.project.flows[1].transition, "push")
+  let canonical = model.to_mbt()
+  assert_true(canonical.contains("transition: modal_present"), msg=canonical)
+  // 默认 push 不写：全文只出现一次 transition:
+  assert_eq(count_needle(canonical, "transition:"), 1)
+  let fj = model.project.flow_json()
+  assert_true(fj.contains("\"transition\":\"modal_present\""), msg=fj)
+  assert_true(fj.contains("\"transition\":\"push\""), msg=fj)
+  let back = match load_mbt_project(canonical) {
+    Ok(m) => m
+    Err(e) => {
+      fail("canonical 回载失败：\{e}")
+      abort("")
+    }
+  }
+  assert_eq(back.project.flows[0].transition, "modal_present")
+  // 未知过渡
+  let bad = src.replace(
+    old="transition: modal_present",
+    new="transition: nonsense",
+  )
+  match load_mbt_project(bad) {
+    Ok(_) => assert_true(false)
+    Err(e) => assert_true(e.contains("mbt_flow_unknown_transition"), msg=e)
   }
 }

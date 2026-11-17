@@ -18,7 +18,7 @@ owns page structure, component choice, spacing norms, and visual consistency.
   The default path for anything a page recipe can express.
 - **tool mode（兜底 / fallback, 以前的不抛弃）** — the full per-node
   vocabulary (`create` / `place` / `update` / `move` / `align` / `group` /
-  `flip` / `reorder` …, 55 tools / 27 ops) is retained unchanged and is the
+  `flip` / `reorder` …, 58 tools / 27 ops) is retained unchanged and is the
   legitimate channel for everything genUI does not cover: freeform
   artboards, layouts no template matches, surgical single-node edits, and
   exploratory probing.
@@ -38,7 +38,7 @@ does not fit — falling through is correct behavior, not failure):**
    `{ok:false, error:"design_spec_required", design_spec_draft:{…}}` —
    persist the draft (DESIGN.md payload), then retry generate with that
    spec (CLI: `generate <intent> spec=<base64-json>`; MCP/wasm: `spec`
-   argument / `session_generate_spec`). The spec's palette / typography /
+   argument / `session_generate_spec`). The spec's palette (base keys primary/background/surface/text/muted/danger/success + extended secondary/info/warning/surfaceVariant/*Container; container keys absent from the spec are DERIVED from the spec's semantic colors over background — color decisions come from the spec, not engine presets) / typography /
    radius tiers / rules drive generation and norms judgment; the engine
    never silently falls back to its built-in design system. Mock data
    gaps (`mock_missing:[node ids]`) in the report/envelopes are for YOU
@@ -133,7 +133,15 @@ checkout|diff`（设计版本控制）· `anim-css <node> <preset>` / `anim-list
 Navigation / theme / tokens / debt:
 `flow <from_ab> <to_ab> <node>` (tap navigation edge) ·
 `unflow <from_ab> <to_ab> <node>` (remove one navigation edge) ·
-`theme <name>` (`light dark high_contrast sepia nord sunset`) ·
+`generate-doc <intent> doc=<base64(设计文档)> [as <name>]` — **0.2 enforced
+spec workflow**: the design spec is extracted from a DESIGN DOCUMENT
+(markdown sections 配色/字号/圆角/间距/动效/交互), never improvised. Missing
+key items → `design_doc_spec_gaps` (nothing generated, engine does not
+guess); success carries `spec_source:"design_doc"` + `spec_extracted:N`.
+`spec-extract doc=<base64>` previews extraction; `comply <ab>` verifies
+UI+interaction obedience (color/type/radius/motion) ·
+`theme <name>` (`light dark high_contrast sepia nord sunset apple apple_dark harmony harmony_dark vivid editorial playful`;
+aliases `ios`/`苹果` → apple, `鸿蒙`/`harmonyos` → harmony, plus a dark word → dark preset) ·
 `token <name> <value>` (COLOR tokens ONLY — `primary`, `on_primary`,
 `secondary`, `surface`, `background`, `error`, `text_primary`, ...; full set
 via `list-tokens`. Spacing/radii/typography names return `unknown_token`.
@@ -153,7 +161,8 @@ Back navigation is built in: a tap on a back-like node (id containing
 back/prev/return as a word; text 返回/后退/上一步/back/←/‹/«) with no flow or
 marker returns to the previous artboard on the navigation stack — every host
 gets this for free, no client-side heuristic needed. Back-like nodes are also
-included in the interactions listing (marked `"builtin":"back"`). Validation:
+included in the interactions listing (v1 `"builtin":"back"` / v2
+`"source":"builtin"` + `action.kind:"back"`). Validation:
 in multi-artboard documents every non-entry artboard must have an exit — an
 outbound `flow` or a back-like node; a page with neither strands the user and
 is flagged under the norms dimension.
@@ -183,9 +192,19 @@ BEFORE `set-state` can target it (otherwise `no_states`)
   scroll_end key_enter focus blur`
 - actions: `back` · `haptic` · `navigate_to:<board>` · `show_toast:<msg>` ·
   `set_text:<node>:<text>` · `set_state:<node>:<state>` ·
-  `toggle_state:<node>` · `play_sound:<name>`
+  `toggle_state:<node>` · `play_sound:<name>` ·
+  `submit_form:<field>,<field>`（运行时产出带键值 FormSubmitted）
 - interactions persist as name markers and are executed by the runtime:
   tap resolution is flow → marker → `NodeUpdated`
+- gestures are first-class: `long_press[:seconds]` (duration preserved),
+  `focus[:node]`, `blur[:node]`, `scroll_end`, `keyboard_enter` and
+  `swipe_left|right|up|down` all dispatch markers/flows; a tap marker does
+  NOT fire on long_press
+- flow triggers share the same grammar: bare node id = `tap:<node>`;
+  `flow <from> <to> <trigger|node>` rejects unknown triggers
+- wasm hosts send gestures via `session_event(handle, artboard,
+  "long_press:20:20:800")` (classic: `session_event_in`, main slot = spec,
+  arg slot = artboard); invalid spec → `unknown_event`
 - component states persist as `[state:name:k=v,...]` markers and apply as a
   render-time transform when activated
 

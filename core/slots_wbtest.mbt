@@ -199,10 +199,11 @@ test "插槽：content 含引号/反斜杠仍产出合法 JSON envelope（回归
       slot_name="header",
       content=tricky,
     ) {
-    Ok(json) => {
+    Ok(json) =>
       // 裸引号/裸反斜杠不得出现在 value 区；必须以转义序列出现
-      assert_true(json.contains("\"content\":\"say \\\"hi\\\" \\\\ back\\nline\""))
-    }
+      assert_true(
+        json.contains("\"content\":\"say \\\"hi\\\" \\\\ back\\nline\""),
+      )
     Err(_) => assert_true(false)
   }
   // 回显路径同样转义

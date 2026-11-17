@@ -8,4 +8,6 @@ pkgtype(kind: "executable")
 
 supported_targets = "native"
 
-options("native-stub": ["shim/desktop_io.c"])
+options(
+  "native-stub": [ "shim/desktop_io.c" ],
+)

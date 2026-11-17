@@ -113,7 +113,7 @@ pub fn list_tools() -> Array[AgentTool] {
   )
   add(
     "list_themes",
-    "List builtin theme names (light/dark/high_contrast/sepia/nord/sunset).",
+    "List builtin theme names (light/dark/high_contrast/sepia/nord/sunset/apple/apple_dark/harmony/harmony_dark/vivid/editorial/playful).",
     [],
   )
   add(
@@ -266,15 +266,48 @@ pub fn list_tools() -> Array[AgentTool] {
     "generate",
     "Generative UI entry: describe the page in one sentence; the engine picks a semantic template, self-heals norms/predicates, and returns a report (autofix/missing/score). Prefer this over placing nodes one by one — the agent declares intent, the engine generates. Composite intent: \"+\"-separated segments (e.g. \"登录+注册\", max 4) expand to multiple artboards wired with adjacent auto-navigation flows, returned as a mode:\"multi\" envelope (count/artboards/flows).",
     [
-      s("intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard); composite \"登录+注册\" splits on \"+\" (max 4 segments) → mode:\"multi\" envelope. NOTE: theme applies project-wide (recolors all existing artboards)"),
+      s(
+        "intent", "one-sentence page intent (zh/en keywords, e.g. \"登录页 dark\" / \"web 落地页\" / dashboard); composite \"登录+注册\" splits on \"+\" (max 4 segments) → mode:\"multi\" envelope. NOTE: theme applies project-wide (recolors all existing artboards)",
+      ),
       so("name", "artboard name (default = template id)"),
-      s("spec", "design spec JSON (issue #24, required): {v, palette{primary/background/surface/text/muted/danger/success}, typography{display/h1/h2/h3/h4/body/caption}, spacing[], radius{sm/md/lg}, rules[]}. Absent/blank → {ok:false,error:design_spec_required,design_spec_draft:{…}} — persist the draft, then retry generate with it; the engine never silently falls back to its built-in design system"),
+      s(
+        "spec", "design spec JSON (issue #24, required): {v, palette{primary/background/surface/text/muted/danger/success}, typography{display/h1/h2/h3/h4/body/caption}, spacing[], radius{sm/md/lg}, rules[]}. Absent/blank → {ok:false,error:design_spec_required,design_spec_draft:{…}} — persist the draft, then retry generate with it; the engine never silently falls back to its built-in design system",
+      ),
     ],
+  )
+  add(
+    "generate_from_doc",
+    "Enforced spec workflow (0.2): extract the design spec from a DESIGN DOCUMENT (markdown: palette/typography/radius/motion/touch sections), then generate. The engine never guesses: missing key items (primary/background/text/body/radius) return design_doc_spec_gaps and nothing is generated. On success the envelope carries spec_source:\"design_doc\" + spec_extracted count; UI and interaction must then fully obey that spec (verify with design_compliance). Three words of design doc beat ten words of improvisation: the document is the provenance of the palette, type scale, radius tiers and motion beat.",
+    [
+      s("intent", "one-sentence page intent (same grammar as generate)"),
+      s(
+        "doc", "design document markdown text (sections: 配色/字号/圆角/间距/动效/交互 or English equivalents)",
+      ),
+      so("name", "artboard name (default = template id)"),
+    ],
+  )
+  add(
+    "spec_extract",
+    "Extract a design spec from a DESIGN DOCUMENT (markdown: palette/typography/radius/motion/touch sections) WITHOUT generating — deterministic keyword+number scan; missing key items are listed in gaps (the engine never guesses). Use it to validate or dry-run a document before generate_from_doc, or to produce a spec the agent can persist and pass to generate. Same output shape as the CLI spec-extract command: {ok, spec, extracted[], gaps[]}.",
+    [
+      s(
+        "doc", "design document markdown text (sections: 配色/字号/圆角/间距/动效/交互 or English equivalents)",
+      ),
+    ],
+  )
+  add(
+    "design_compliance",
+    "Design-spec compliance check (0.2): four machine checks — color (every fill/text must trace to the spec palette/roles), type (font sizes on the spec scale), radius (corners on the spec tiers), motion (engine motion tokens equal spec.motion, so interaction beats follow the document). Use after any generation/edit to prove the UI fully obeys the design spec.",
+    [s("artboard", "artboard id")],
   )
   add(
     "batch_apply",
     "Generative execution tier 2: apply multiple session ops in ONE call (newline-separated ops, base64 of the block). Executes in order, aborts at the first error and returns its index. Prefer over N single calls for deterministic refinements.",
-    [s("operations_b64", "base64 of newline-separated ops (e.g. update home title text=... lines), max 64")],
+    [
+      s(
+        "operations_b64", "base64 of newline-separated ops (e.g. update home title text=... lines), max 64",
+      ),
+    ],
   )
   // ---- 交互 / 状态 ----
   add(
@@ -287,7 +320,7 @@ pub fn list_tools() -> Array[AgentTool] {
         "trigger", "tap|long_press|swipe_left|swipe_right|swipe_up|swipe_down|scroll_end|keyboard_enter|focus|blur",
       ),
       s(
-        "action_spec", "back|haptic|navigate_to:<board>|show_toast:\"msg\"|play_sound:<name>|toggle_state:<node>|set_state:<node>:<state>|set_text:<node>:\"txt\"",
+        "action_spec", "back|haptic|navigate_to:<board>|show_toast:\"msg\"|play_sound:<name>|toggle_state:<node>|set_state:<node>:<state>|set_text:<node>:\"txt\"|submit_form:<field>,<field>",
       ),
     ],
   )
@@ -297,7 +330,7 @@ pub fn list_tools() -> Array[AgentTool] {
   ])
   add(
     "interactions",
-    "List interactions of an artboard (node/trigger/action).",
+    "List interactions of an artboard (v2: node/trigger/action{kind,params}/source/supported; builtin back nodes included).",
     [s("artboard", "artboard id")],
   )
   add(
@@ -377,7 +410,7 @@ pub fn list_tools() -> Array[AgentTool] {
   )
   add(
     "animation_css",
-    "Generate CSS @keyframes + animation for a node with a preset. args: node_id, preset",
+    "Generate CSS @keyframes + animation for a node with a preset. args: node_id, preset. The emitted rule targets the SVG DOM id `#n_<node_id>` (matches render_svg's `<g id=\"n_...\">`).",
     [
       arg("node_id", "string", "target node id", required=true),
       arg(
@@ -532,10 +565,10 @@ pub fn op_entries() -> Array[OpEntry] {
   )
   // ---- 导航 / 主题 / 令牌 / 债 ----
   add(
-    "flow", "flow <from> <to> <node>", "navigation", "Add a tap navigation edge between artboards.",
+    "flow", "flow <from> <to> <trigger|node> [transition]", "navigation", "Add a navigation edge: bare node id = tap:<node>; also accepts swipe_left/swipe_right/swipe_up/swipe_down, long_press[:sec], focus[:node], blur[:node], scroll_end, keyboard_enter. Optional transition: push (default)/pop/modal_present/modal_dismiss/sheet_present/fade/none.",
   )
   add(
-    "unflow", "unflow <from> <to> <node>", "navigation", "Remove a single navigation edge.",
+    "unflow", "unflow <from> <to> <trigger|node>", "navigation", "Remove a single navigation edge (same trigger grammar as flow).",
   )
   add(
     "theme", "theme <name>", "theme", "Switch global theme: role-recolors matching literals (reversible) and persists via frontmatter `theme:`.",
@@ -544,10 +577,7 @@ pub fn op_entries() -> Array[OpEntry] {
     "token", "token <name> <value>", "tokens", "Override a COLOR design token: recolors old-value literals, persists via frontmatter `tokens:`; setting the default value back reverts.",
   )
   add(
-    "autofill",
-    "autofill <artboard>",
-    "debt",
-    "Materialize the infer_missing report as real nodes (per page-type recipes), then auto_fix settles overlaps/overflows. Idempotent: filled text satisfies the detector. NOTE (issue #25): mock data gaps (\"mock_missing\":[node ids]) are only DETECTED by the engine — empty list/table/card shells and placeholder texts (TBD/TODO/Lorem/xxx/Item 1/项目一). The engine never fabricates sample content: you must fill domain-semantic entries yourself (update/place), ≥2 per container.",
+    "autofill", "autofill <artboard>", "debt", "Materialize the infer_missing report as real nodes (per page-type recipes), then auto_fix settles overlaps/overflows. Idempotent: filled text satisfies the detector. NOTE (issue #25): mock data gaps (\"mock_missing\":[node ids]) are only DETECTED by the engine — empty list/table/card shells and placeholder texts (TBD/TODO/Lorem/xxx/Item 1/项目一). The engine never fabricates sample content: you must fill domain-semantic entries yourself (update/place), ≥2 per container.",
   )
   add(
     "fix", "fix <artboard>", "debt", "Debt-repayment auto-fix: commits only when total violations strictly decrease; the remainder is accepted as visual debt (HumanGate fallback).",

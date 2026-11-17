@@ -131,7 +131,7 @@ test "engine catalog: chip/tag/toast 引用的令牌角色必须已注册（回�
 ///|
 test "设计令牌解析：颜色/间距/圆角" {
   let t = DesignTokens::default()
-  assert_eq(t.resolve_color("primary"), "#4B6BFB")
+  assert_eq(t.resolve_color("primary"), "#4361EE")
   assert_eq(t.resolve_color("#FF0000"), "#FF0000") // 非→原样返回
   assert_true(t.resolve_spacing("md") == Some(8.0))
   assert_true(t.resolve_radius("lg") == Some(12.0))
@@ -170,7 +170,10 @@ test "place_component：未知变体报错（与用户组件路径对齐，回�
     Err(e) => {
       assert_true(e.contains("unknown_variant:outlined"))
       // 错误即文档：消息必须携带语法模板，模型漏 '-' 占位时一轮自纠
-      assert_true(e.contains("[variant|-]"), msg="unknown_variant 应携带 place 语法模板: \{e}")
+      assert_true(
+        e.contains("[variant|-]"),
+        msg="unknown_variant 应携带 place 语法模板: \{e}",
+      )
     }
   }
   // 存在的变体（含显式默认变体）仍然合法
@@ -287,7 +290,8 @@ test "engine catalog: 65 组件 × 全变体放置渲染冒烟（组件目录回
       None => assert_true(false)
     }
   }
-  assert_eq(placed, 115)
+  // badge 补 warning/error/info 语义档后全变体总数 115→118（AGENTS 计数同步）
+  assert_eq(placed, 118)
   // 整画板可渲染且内容非空
   match p.export_svg(artboard="all") {
     Ok(svg) => assert_true(svg.contains("<svg") && svg.length() > 1000)

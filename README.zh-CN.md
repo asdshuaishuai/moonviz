@@ -1,4 +1,41 @@
 # MoonViz — AI 时代的 Agent 驱动原型设计基础引擎
+## 0.2.0 新特性
+
+**0.2 是一次大范围升级：设计规范第一权威 + 精致化美学与呼吸感 + 完整的动画系统与交互系统。**
+
+- **视觉语言（Apple HIG / 鸿蒙 / 风格画像一等预设）**——13 套预设：apple/
+  apple_dark/harmony/harmony_dark 为官方色板的 WCAG 校准翻译，vivid/
+  editorial/playful 三套风格画像（多彩紫玫 / 杂志纸感 / 青橙互补）同权；
+  组件 elevation 三档、按钮居中、inverse chrome 从 spec 色相派生。
+- **设计规范第一权威（强制遵从）**——palette 基础 7 键 + 扩展键
+  （secondary/info/warning/surfaceVariant/*Container），容器色缺席时从
+  spec 语义色对背景推导 tint；spec 令牌先于模板实例化；调色板外字面色随
+  `spec_violations` 上报；17 模板 vivid spec 遵从零违规入测。
+- **动画系统**——动效单一来源：`motion` 令牌进 spec/theme（fast/base/slow/
+  tick/stagger/stagger_max），导出不再手写时长/贝塞尔；入场级联饱和到第 8
+  级、按压/悬停/聚焦三态、`Spring(k)` 过冲随刚度调制（k=1 兼容旧导出）、
+  关键帧 transform 合并与 SVG `fill` 语义修正；分板过渡
+  （push/modal/fade 等 7 型）由 `FlowEdge.transition` 声明并进导出。
+- **交互系统**——Action 词表闭环（SubmitForm 可往返、可导出执行）、长按/
+  滑动/焦点/键盘事件进 runtime 与 wasm `session_event`、手势 trigger 归一、
+  内置返回兜底与 ghost 导航守卫、导出 CSS.escape/DOM id 唯一/无障碍
+  （tablist、焦点环、live region、aria-label、reduced-motion 全覆盖）+
+  语法门回归测试（导出脚本括号平衡）。
+- **精致化与呼吸感**——17 模板 × 5 面板审计 + 6 轮修复包：文字角色/主题
+  往返/结构式模板令牌化清零；8pt 栅格/内容线/行尾控件/底部动作栏/两级
+  字阶/分组留白系统化；组件目录 65×118。
+- **Playground**——五套需求 spec 预设 + 同意图双规范并排对比（独立会话）。
+- **强制规范流程（0.2 收束）**——设计规范从「建议」升级为「流程」：CLI
+  `generate-doc <意图> doc=<b64(设计文档)> [as <name>]` 由引擎从设计文档
+  **确定性提取** spec（配色/字号/圆角/间距/动效/触控六章节），缺关键项返回
+  `design_doc_spec_gaps` **拒绝生成**（不静默回退内置规范），信封带
+  `spec_source:"design_doc"`；`spec-extract doc=<b64>` 预览提取结果；
+  `comply <ab>`（`design_compliance`）对生成 UI 做四项机械校验
+  （color/type/radius/motion）——交互节拍必须等于 spec.motion 令牌，
+  UI 的设计与交互**完全遵守**设计规范。
+- 测试矩阵：默认目标 407 / `--target native` 426，全绿；双 wasm ABI 断言
+  （classic 78 实导 / gc 77）+ 组件表一致性自校验通过。
+
 ## 0.1.11 新特性
 
 - **规范驱动生成（issue #24）**——`generate` 必带 design spec（JSON：调色板/
@@ -6,6 +43,11 @@
   spec 调色板驱动重着色、字号阶与圆角档重映射、norms 档位按 spec 裁决
   （按钮圆角基准 = `radius.sm`）。新导出 `session_generate_spec`；CLI
   `generate <意图> spec=<base64>`。
+  **spec 是配色的第一权威**（需求 → Agent 提取 spec → 引擎跟随）：palette
+  基础 7 键 + 扩展键（`secondary/info/warning/surfaceVariant/*Container`），
+  容器键缺席时从 spec 语义色对背景推导 tint（配色决策来自 spec 而非引擎
+  预设）；spec 令牌在模板实例化**前**生效（无 theme→template 顺序依赖）；
+  调色板外字面色随 `spec_violations` 上报。
 - **交互与内容完整性 QA + 硬门（issue #25/#26）**——可交互组件无去向、占位
   残留、空壳容器、非组件库组件并入 norms 检测；同节点多 flow 与可点热区
   相交是 AgentGate 硬错误（带定位）。
@@ -30,8 +72,8 @@
   export_react JSX）、出口面修复（CLI `unflow` 臂、set-state off-by-one、MCP
   JSON-RPC id/通知语义、缺参校验）、norms v2 触控规则与 v1 档位调和、SDK 修复
   （Project 六方法、sessionGenerate、DDP decrypt mode、npm 平台包版本对齐）。
-- **文档与官网全量同步**——全部计数锚定引擎实测（55 工具 / 27 op / 73 wasm
-  导出 / 九维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
+- **文档与官网全量同步**——全部计数锚定引擎实测（58 工具 / 27 op / 77 wasm
+  导出 / 10 维 critique / 52 核心模块），版本示例改 `<ver>` 占位。
 - 测试矩阵增至 298（默认目标）/ 314（`--target native`），全绿。
 
 ## 0.1.9-fix 新特性
@@ -112,12 +154,12 @@
 │  Agent (任意 LLM)                                            │
 │  发现组件 → 创建画板 → 放置元素 → lint → 修复 → 导出         │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (55 tools, JSON in/out)
+               │ Agent Tools API (58 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  引擎 core/ + decl/（纯 MoonBit 库）                          │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
-│  │ 17色/7距/  │ │ 65组件×115 │ │ 多画板/流  │ │ lint/diff │ │
+│  │ 17色/7距/  │ │ 65组件×118 │ │ 多画板/流  │ │ lint/diff │ │
 │  │ 6角/8字号  │ │ 变体       │ │ /令牌/组件 │ │ /suggest  │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
@@ -135,9 +177,9 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent 工具清单（55 个，节选）
+## Agent 工具清单（58 个，节选）
 
-下表每个名字都与运行面字典逐字一致（CLI `list-tools` / MCP `tools/list`，55 个）——没有一个占位名。
+下表每个名字都与运行面字典逐字一致（CLI `list-tools` / MCP `tools/list`，58 个）——没有一个占位名。
 
 | 工具 | 语义 |
 | :--- | :--- |
@@ -174,16 +216,19 @@
 - **genUI（主通道）**——`generate` 一句话意图 → 完整画板 + 报告
   （autofix/missing/score）；`autofill` 把报告缺失物化为真实节点；
   `batch_apply` 确定精修一次提交。
-- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（55 工具 / 27 op）
+- **工具模式（兜底，以前的不抛弃）**——完整逐节点词汇表（58 工具 / 27 op）
   原样保留：自由形态画板、模板之外的布局、外科手术式修改、探查。阶梯按
   成本排通道、不设权限门槛——配方表达不了你的意图时，逐层下探用工具
   就是正确行为。
 
-## 内置页面模板（14 个完整页面）
+## 内置页面模板（17 个完整页面）
 
 | 模板 | 内容 |
 |:---|:---|
 | `login` | Logo + 标题 + 邮箱 + 密码 + 登录按钮 + 注册链接 |
+| `list` | App Bar + 搜索栏 + 分类标签 + 条目列表（行底分割线）+ 底部导航 |
+| `detail` | 返回栏 + 大图区 + 标题 + 规格参数 + 描述 + 底部主按钮 |
+| `checkout` | 返回栏 + 订单摘要 + 表单字段 + 费用明细（行底分割线）+ 提交按钮 |
 | `signup` | 标题 + 姓名 + 邮箱 + 密码 × 2 + 注册按钮 |
 | `dashboard` | App Bar + 统计卡片 2×2 + 图表 + 活动列表 |
 | `profile` | 头像 + 姓名 + 简介 + 统计 + 操作 + 内容列表 |
@@ -198,7 +243,7 @@
 | `adaptive_landing` | 适配 Web 宽度的落地页 |
 | `login_v2` | 登录页第二种风格 |
 
-## 内置组件库（65 组件 × 115 变体）
+## 内置组件库（65 组件 × 118 变体）
 
 | 组件 | 分类 | 变体 |
 | :--- | :--- | :--- |
@@ -298,9 +343,9 @@ moonviz/
 │   ├── policy.mbt     双路线策略（人类软/Agent 硬）
 │   ├── patch.mbt      事务式补丁
 │   ├── tokens.mbt     设计令牌（Material 3 风格）
-│   ├── component.mbt  组件系统（65 组件×115 变体）
+│   ├── component.mbt  组件系统（65 组件×118 变体）
 │   ├── project.mbt    多画板项目 + 导航流 + lint + 修复建议
-│   ├── agent_api.mbt  Agent 工具 API（55 工具 + list-ops 字典）
+│   ├── agent_api.mbt  Agent 工具 API（58 工具 + list-ops 字典）
 │   ├── autofix.mbt    自动修复引擎（溢出缩放/重叠平移）
 │   ├── templates.mbt  页面模板库（登录/仪表盘/设置/个人主页/空状态…）
 │   ├── align.mbt      智能对齐（网格吸附/居中/等距/近似检测）
@@ -315,7 +360,7 @@ moonviz/
 │   ├── responsive.mbt 响应式断点（手机/平板/桌面自动适配）
 │   ├── collab.mbt     多Agent协作（操作变换OT/冲突检测/三方合并）
 │   ├── history.mbt    设计版本控制（时间旅行/分支/变更回放/undo-redo）
-│   ├── critique.mbt   AI设计批评（9项设计原则自动评审）
+│   ├── critique.mbt   AI设计批评（10项设计原则自动评审）
 │   ├── annotate.mbt   设计标注（自动生成Spec文档/CSS变量/间距颜色字体标注）
 │   ├── animation.mbt  属性动画（关键帧/缓动函数/时间线编排/CSS导出）
 │   ├── extract.mbt    设计系统反向提取（从现有设计推推断牌+组件模式）
@@ -328,8 +373,8 @@ moonviz/
 │   └── agent_test.mbt Agent 工作流端到端测试
 ├── decl/              声明 DSL + .mbt.md 往返
 ├── desktop/           自渲染服务（客户端引导：引擎无 UI，渲染面由客户端 webview 承载；无 webview 走系统层兜底返回结果）
-├── mcp/               MCP Server（stdio JSON-RPC，55 工具，工具面同 CLI）
-├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；11 个无状态 API + 30 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ _in 槽变体
+├── mcp/               MCP Server（stdio JSON-RPC，58 工具，工具面同 CLI）
+├── wasm/              WASM 边界——双构建：wasm-gc（JS 宿主，JS String Builtins）+ classic 标准 MVP；各 77 导出（gc/classic 清单逐字相等）：31 个 session_* 有状态 API（i32 句柄，含 session_history 撤销/时间旅行）+ 22 个 session_*_in 槽位变体 + 24 个无状态 API 与槽位辅助（classic 实导 78，含 memory）
 ├── ddp/               Rust ddp_codec：DDP1 加密（Argon2id+XChaCha20-Poly1305）/ DDP2 免密（zstd+CRC32）
 ├── sdk/               MoonBit SDK 门面（mooncakes.io：moon add asdshuaishuai/moonviz）
 ├── sdk/node/          Node SDK「moonviz-engine-sdk」：会话/Project 构建器/DDP 桥（纯传输层）
@@ -364,12 +409,12 @@ moonviz/
 
 | 概念 | 说明 |
 |:---|:---|
-| **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound（submit_form 仅 API 层，spec 语法未落地） |
+| **Trigger** | tap / long_press（保留时长）/ swipe / scroll_end / keyboard / focus / blur——全部由运行时派发 |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / submit_form（`submit_form:email,pwd`，运行时产出带键值的 FormSubmitted）/ show_toast / haptic / play_sound |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | 组件多态（default / pressed / disabled / loading） |
 | **NavigationState** | 导航栈（push / pop / back） |
-| **Motion** | 引擎动效令牌（120/240/360ms 刻度 + 缓动曲线含 spring）驱动导出原型：方向感知转场（navigate 前进 / back 反向 / tab 淡入）、按压 spring 反馈、入场阶梯、`prefers-reduced-motion`、ESC = 返回 |
+| **Motion** | 引擎动效令牌（120/180/240/360ms 刻度 + 缓动曲线含 spring）驱动导出原型：方向感知转场（navigate 前进 / back 反向 / tab 淡入）、按压 spring 反馈、入场阶梯（第 8 个起饱和）、`prefers-reduced-motion`、ESC = 返回 |
 
 ## Agent 中间产物（.moonviz）
 
@@ -528,7 +573,7 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 
 ## AI 设计批评引擎
 
-引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 9 项设计原则给出整体评价（第 9 维 `norms` 对组件工艺偏差计分）：
+引擎像**资深设计师**一样评审原型——不是检查规则（那是 lint），而是基于 10 项设计原则给出整体评价（第 9 维 `norms` 对组件工艺偏差计分；第 10 维 `visual` 对视觉语言债计分——文字带阴影、卡片融进画布、嵌套圆角不同心）：
 
 | 原则 | 检查什么 |
 |:---|:---|
@@ -541,12 +586,13 @@ h.diff(0, 2)     // → 两个版本间的语义差异
 | 焦点 | 是否有明确的主 CTA（primary 按钮） |
 | 节奏 | 间距值是否统一到标准令牌 |
 | 规范 | 组件规范：按钮不卡文案、撞色、齐缝分隔、触控目标（norms） |
+| 视觉语言 | 阴影只属于容器层次、卡片与画布可辨、嵌套圆角同心（visual） |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":9,"results":[
+// → {"principles":10,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"norms","score":8,"verdict":"good",...},...]}
+//     {"principle":"visual","score":9,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -594,7 +640,7 @@ let ds = p.extract_design_system(artboard="dashboard")
 ds.summary()
 // → Extracted Design System:
 //     Colors: 6 tokens
-//       primary = #4B6BFB (used 5x, confidence 0.9)
+//       primary = #4361EE (used 5x, confidence 0.9)
 //       surface = #FFFFFF (used 12x, confidence 0.9)
 //       error = #BA1A1A (used 1x, confidence 0.5)
 //     Spacing: 3 values
@@ -628,16 +674,30 @@ p.preview_themes("btn")            // 预览各主题下按钮的颜色
 p.enable_auto_dark()          // 从当前主题自动推导暗色版本
 ```
 
-**6 种预定义主题**：
+**13 种预定义主题**（含 Apple HIG / HarmonyOS 两族一等美学预设各带暗色，以及 vivid/editorial/playful 三套风格画像）：
 
 | 主题 | 风格 | primary | surface |
 |:---|:---|:---|:---|
-| light | 浅色（默认） | #4B6BFB | #FFFFFF |
+| light | 浅色（默认） | #4361EE | #FFFFFF |
 | dark | 深色 | #A5B4FC | #1A1C1E |
 | high_contrast | 高对比度 | #0000EE | #FFFFFF |
 | sepia | 复古棕 | #8D6E63 | #FAF6F0 |
 | nord | 极地 | #88C0D0 | #3B4252 |
-| sunset | 落日暖 | #FF7043 | #FFF8E1 |
+| sunset | 落日暖 | #BF360C | #FFF8E1 |
+| apple | Apple HIG（#F2F2F7 分组画布） | #0068D6 | #FFFFFF |
+| apple_dark | Apple HIG 暗色 | #409CFF | #2C2C2E |
+| harmony | HarmonyOS（#F1F3F5 分层画布） | #0A59F7 | #FFFFFF |
+| harmony_dark | HarmonyOS 暗色 | #5291FF | #26292D |
+| vivid | Vivid 多彩（tinted 画布） | #6D28D9 | #FFFFFF |
+| editorial | Editorial 杂志（纸感暖底） | #111827 | #FFFFFF |
+| playful | Playful 童趣（青橙互补） | #0F766E | #FFFFFF |
+
+美学预设的色值是官方色板的**无障碍翻译**而非照抄：每档按 WCAG 校准（主按钮
+文字/三级文字 × 三层底全部 ≥4.5:1，可读性硬标准对全部主题生效）。别名归一：
+`ios`/`苹果`/`hig` → apple，`harmonyos`/`鸿蒙`/`华为` → harmony；`style: vivid|editorial|playful` 直接点名风格画像（三通道同权），同名带暗色词
+（`苹果暗色`/`harmony dark`）直达暗色预设。生成时三条通道等价：意图句里的美学词
+（`apple 风格登录页`、`暗色 鸿蒙 设置页`）、design spec 的 `"style":"apple"` 键
+（palette 随后覆盖同名角色）、或 `theme apple`。
 
 **自动暗色推导**：`Theme::auto_dark(light)` → RGB 通道逐位反转（色相旋转 180°）→ 自动生成暗色版本。
 

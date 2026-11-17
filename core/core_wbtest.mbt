@@ -316,7 +316,8 @@ test "渲染：SVG 输出包含预期形状与文本" {
   assert_true(svg.contains("<svg"))
   assert_true(svg.contains("登录"))
   assert_true(svg.contains("欢迎回来"))
-  assert_true(svg.contains("#4B6BFB"))
+  // 锁定校准后的默认主色（历史教训：|| 接受新旧两值 = 失去锁定力）
+  assert_true(svg.contains("#4361EE"))
 }
 
 ///|
@@ -336,7 +337,7 @@ test "非方形节点 radius=999 钳制为 min(w,h)/2（issue #22 回归锚）" 
     ..base,
     width: Fixed(420.0),
     height: Fixed(40.0),
-    style: { ..base.style, corner_radius: 999.0 },
+    style: { ..base.style, corner_radius: 999.0, },
   }
   let _ = doc.insert_node(n, "root")
   let svg = render_svg(doc)

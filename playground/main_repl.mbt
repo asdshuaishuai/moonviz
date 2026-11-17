@@ -2,7 +2,7 @@
 /// native 目标：交互式画布闭环（getchar 读命令，每条后重绘）
 ///
 /// 运行：moon run --target native playground
-extern "c" fn getchar() -> Int = "getchar"
+extern "c" fn getchar() -> Int32 = "getchar"
 
 ///|
 fn read_line() -> String {
@@ -21,7 +21,7 @@ fn collect_chars() -> String {
     } else if c == -1 {
       on = false
     } else {
-      match Int::to_char(c) {
+      match Int32::to_char(c) {
         Some(ch) => acc = acc + ch.to_string()
         None => on = false
       }

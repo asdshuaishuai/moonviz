@@ -6,7 +6,7 @@
 ///|
 /// 整个项目序列化为 JSON（save 用）
 pub fn Project::to_project_json(self : Project) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("{\"moonviz\":\"studio\",\"version\":2,\"artboards\":[")
   let mut first = true
   for id in self.artboards.keys() {
@@ -43,9 +43,9 @@ pub fn Project::from_project_json(
     Some(i) => i + art_marker.length()
     None => return Err("missing_artboards")
   }
-  let staged : Map[String, ArtboardMeta] = Map::new()
+  let staged : Map[String, ArtboardMeta] = Map([])
   let errors : Array[String] = []
-  let body = text.substring(start=arr_start)
+  let body = text[arr_start:].to_owned()
   let mut pos = 0
   let n = body.length()
   while pos < n {
@@ -57,7 +57,7 @@ pub fn Project::from_project_json(
         if end <= os {
           break
         }
-        let obj = body.substring(start=os, end~)
+        let obj = body[os:end].to_owned()
         match load_one_artboard(obj) {
           LoadOk(id, meta) => staged.set(id, meta)
           LoadErr(e) => errors.push(e)
@@ -68,7 +68,7 @@ pub fn Project::from_project_json(
   }
   if errors.length() > 0 {
     Err("artboard_load_failed: " + jstr8(errors, "; "))
-  } else if staged.size() == 0 {
+  } else if staged.length() == 0 {
     Err("no_artboards_loaded")
   } else {
     // 全部成功：原子替换
@@ -116,7 +116,7 @@ fn load_one_artboard(obj : String) -> LoadOutcome {
     None => return LoadErr("missing_doc_obj")
   }
   let dend = skip_object2(obj, dstart)
-  let doc_json = obj.substring(start=dstart, end=dend)
+  let doc_json = obj[dstart:dend].to_owned()
   match Document::from_json(doc_json) {
     Ok(doc) => LoadOk(id, { id, name, width: w, height: h, doc, })
     Err(e) => LoadErr(e)
@@ -129,9 +129,9 @@ fn jstr_field(obj : String, key : String) -> String {
   let pattern = "\"" + key + "\":\""
   match obj.find(pattern) {
     Some(i) => {
-      let rest = obj.substring(start=i + pattern.length())
+      let rest = obj[i + pattern.length():].to_owned()
       match rest.find("\"") {
-        Some(e) => unescape_json(rest.substring(start=0, end=e))
+        Some(e) => unescape_json(rest[0:e].to_owned())
         None => ""
       }
     }
@@ -145,7 +145,7 @@ fn jnum_field(obj : String, key : String) -> Double {
   let pattern = "\"" + key + "\":"
   match obj.find(pattern) {
     Some(i) => {
-      let rest = obj.substring(start=i + pattern.length())
+      let rest = obj[i + pattern.length():].to_owned()
       let mut num = 0.0
       let mut frac = 0.1
       let mut dot = false
@@ -173,7 +173,7 @@ fn jnum_field(obj : String, key : String) -> Double {
 
 ///|
 /// 从 from 起（含）找第一个 '{'
-fn find_obj_from(s : String, from : Int) -> Int? {
+fn find_obj_from(s : String, from : Int32) -> Int32? {
   let n = s.length()
   let mut i = from
   while i < n {
@@ -186,7 +186,7 @@ fn find_obj_from(s : String, from : Int) -> Int? {
 }
 
 ///|
-fn find_obj_start(s : String, from : Int) -> Int {
+fn find_obj_start(s : String, from : Int32) -> Int32 {
   match find_obj_from(s, from) {
     Some(i) => i
     None => -1
@@ -195,7 +195,7 @@ fn find_obj_start(s : String, from : Int) -> Int {
 
 ///|
 /// 跳过完整对象文本（含字符串内转义），返回结束下标（不含）
-fn skip_object2(s : String, start : Int) -> Int {
+fn skip_object2(s : String, start : Int32) -> Int32 {
   let mut depth = 0
   let mut pos = start
   let mut in_str = false

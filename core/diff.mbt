@@ -143,7 +143,7 @@ fn dir_name(d : StackDir) -> String {
 
 ///|
 fn jstr7(parts : Array[String], sep : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(sep)

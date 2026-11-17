@@ -183,7 +183,7 @@ frontmatter `flows` 表 + `flow` 命令维护的边（`from / to / trigger`，tr
 MoonBit 语言仍在快速演进，确实存在 minor 版本间行为差异的现实风险。对策按层次：
 
 1. **消费者层（最有效）**：预编译二进制与 WASM 产物一经发布即是**冻结快照**——下游永远运行发布时的编译结果，工具链后续任何破坏性变更都不影响已分发产物。这是把"语言不确定性"隔离在构建时的根本手段。
-2. **构建层 pin**：`moon.mod.json` 声明模块版本；CI（`.github/workflows/binaries.yml`）安装固定版本的 moon 工具链——升级工具链是**显式 PR 行为**，配套 `moon test`（142 项）与 CLI/MCP 冒烟测试，不匹配直接挡在 CI。
+2. **构建层 pin**：`moon.mod` 声明模块版本；CI（`.github/workflows/binaries.yml`）安装固定版本的 moon 工具链——升级工具链是**显式 PR 行为**，配套 `moon test`（142 项）与 CLI/MCP 冒烟测试，不匹配直接挡在 CI。
 3. **本地层**：`moon upgrade` 可安装/回滚指定版本；`_build/` 全量产物可随时用 `moon build --release --target native all` 重建并比对。
 4. **架构层兜底**：即使求解器/标准库发生破坏性迭代，`SolvedLayout`、`GateDecision`、`RenderPlan` 等引擎对外协议刻意保持稳定（求解器甚至预留了替换为 Cassowary 的接口）——协议稳定性不依赖语言版本。
 5. **逃生门**：DDP 编解码已示范了"非 MoonBit 组件独立进程化"的路线；极端情况下任何组件都可按此模式替换而不动事实源格式。

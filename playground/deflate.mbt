@@ -1,51 +1,51 @@
 ///|
 /// Vendored from mizchi/zlib (Apache-2.0) — DEFLATE fixed Huffman 压缩
 pub enum DeflateToken {
-  Lit(Int)
-  Match(len~ : Int, dist~ : Int)
+  Lit(Int32)
+  Match(len~ : Int32, dist~ : Int32)
 }
 
 ///|
-let deflate_length_base : FixedArray[Int] = [
+let deflate_length_base : FixedArray[Int32] = [
   3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83,
   99, 115, 131, 163, 195, 227, 258,
 ]
 
 ///|
-let deflate_length_extra : FixedArray[Int] = [
+let deflate_length_extra : FixedArray[Int32] = [
   0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5,
   5, 0,
 ]
 
 ///|
-let deflate_dist_base : FixedArray[Int] = [
+let deflate_dist_base : FixedArray[Int32] = [
   1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769,
   1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
 ]
 
 ///|
-let deflate_dist_extra : FixedArray[Int] = [
+let deflate_dist_extra : FixedArray[Int32] = [
   0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11,
   12, 12, 13, 13,
 ]
 
 ///|
-let window_size : Int = 32768
+let window_size : Int32 = 32768
 
 ///|
-let max_match_len : Int = 258
+let max_match_len : Int32 = 258
 
 ///|
-let min_match_len : Int = 3
+let min_match_len : Int32 = 3
 
 ///|
-let hash_size : Int = 1 << 15
+let hash_size : Int32 = 1 << 15
 
 ///|
-let max_chain : Int = 64
+let max_chain : Int32 = 64
 
 ///|
-fn deflate_reverse_bits(code : Int, len : Int) -> Int {
+fn deflate_reverse_bits(code : Int32, len : Int32) -> Int32 {
   let mut v = code
   let mut out = 0
   let mut n = len
@@ -58,7 +58,7 @@ fn deflate_reverse_bits(code : Int, len : Int) -> Int {
 }
 
 ///|
-fn fixed_lit_code(sym : Int) -> (Int, Int) {
+fn fixed_lit_code(sym : Int32) -> (Int32, Int32) {
   if sym <= 143 {
     let code = sym + 0x30
     (deflate_reverse_bits(code, 8), 8)
@@ -75,12 +75,12 @@ fn fixed_lit_code(sym : Int) -> (Int, Int) {
 }
 
 ///|
-fn fixed_dist_code(sym : Int) -> (Int, Int) {
+fn fixed_dist_code(sym : Int32) -> (Int32, Int32) {
   (deflate_reverse_bits(sym, 5), 5)
 }
 
 ///|
-fn length_code_info(len : Int) -> (Int, Int, Int) {
+fn length_code_info(len : Int32) -> (Int32, Int32, Int32) {
   for i in 0..<deflate_length_base.length() {
     let base = deflate_length_base[i]
     let extra = deflate_length_extra[i]
@@ -93,7 +93,7 @@ fn length_code_info(len : Int) -> (Int, Int, Int) {
 }
 
 ///|
-fn dist_code_info(dist : Int) -> (Int, Int, Int) {
+fn dist_code_info(dist : Int32) -> (Int32, Int32, Int32) {
   for i in 0..<deflate_dist_base.length() {
     let base = deflate_dist_base[i]
     let extra = deflate_dist_extra[i]
@@ -106,7 +106,7 @@ fn dist_code_info(dist : Int) -> (Int, Int, Int) {
 }
 
 ///|
-fn hash3(data : Bytes, pos : Int) -> Int {
+fn hash3(data : Bytes, pos : Int32) -> Int32 {
   let b0 = data[pos].to_int()
   let b1 = data[pos + 1].to_int()
   let b2 = data[pos + 2].to_int()
@@ -116,9 +116,9 @@ fn hash3(data : Bytes, pos : Int) -> Int {
 ///|
 fn insert_hash(
   data : Bytes,
-  pos : Int,
-  head : FixedArray[Int],
-  prev : FixedArray[Int],
+  pos : Int32,
+  head : FixedArray[Int32],
+  prev : FixedArray[Int32],
 ) -> Unit {
   if pos + 2 >= data.length() {
     return
@@ -129,13 +129,13 @@ fn insert_hash(
 }
 
 ///|
-fn write_literal(writer : BitWriter, sym : Int) -> Unit {
+fn write_literal(writer : BitWriter, sym : Int32) -> Unit {
   let (code, len) = fixed_lit_code(sym)
   writer.write_bits(code, len)
 }
 
 ///|
-fn write_match(writer : BitWriter, length : Int, distance : Int) -> Unit {
+fn write_match(writer : BitWriter, length : Int32, distance : Int32) -> Unit {
   let (len_code, len_extra_bits, len_extra_val) = length_code_info(length)
   let (code_bits, code_len) = fixed_lit_code(len_code)
   writer.write_bits(code_bits, code_len)
@@ -170,8 +170,8 @@ fn write_tokens_fixed(tokens : Array[DeflateToken], writer : BitWriter) -> Unit 
 fn build_tokens(data : Bytes) -> Array[DeflateToken] {
   let tokens : Array[DeflateToken] = []
   let len = data.length()
-  let head : FixedArray[Int] = FixedArray::make(hash_size, -1)
-  let prev : FixedArray[Int] = FixedArray::make(len, -1)
+  let head : FixedArray[Int32] = FixedArray::make(hash_size, -1)
+  let prev : FixedArray[Int32] = FixedArray::make(len, -1)
   let mut pos = 0
   while pos < len {
     let remaining = len - pos
@@ -243,8 +243,8 @@ fn deflate_compress_fixed_v(data : Bytes) -> Bytes {
 ///|
 struct BitWriter {
   buf : Array[Byte]
-  mut bit_buf : Int
-  mut bit_count : Int
+  mut bit_buf : Int32
+  mut bit_count : Int32
 }
 
 //
@@ -257,7 +257,7 @@ fn BitWriter::new() -> BitWriter {
 //
 
 ///|
-fn BitWriter::write_bits(self : BitWriter, bits : Int, count : Int) -> Unit {
+fn BitWriter::write_bits(self : BitWriter, bits : Int32, count : Int32) -> Unit {
   let mut value = bits
   let mut remaining = count
   while remaining > 0 {

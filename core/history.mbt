@@ -9,7 +9,7 @@
 /// - 回放两个版本之间的变更（逐步看每步做了什么）
 /// - 撤销 / 重做
 pub(all) struct HistoryEntry {
-  revision : Int
+  revision : Int32
   timestamp : String
   agent_id : String
   message : String
@@ -20,10 +20,10 @@ pub(all) struct HistoryEntry {
 ///|
 pub(all) struct DesignHistory {
   entries : Array[HistoryEntry]
-  mut current_revision : Int
+  mut current_revision : Int32
   mut branch_name : String
-  mut undo_stack : Array[Int]
-  mut redo_stack : Array[Int]
+  mut undo_stack : Array[Int32]
+  mut redo_stack : Array[Int32]
 }
 
 ///|
@@ -53,7 +53,7 @@ pub fn DesignHistory::commit(
   message : String,
   ops : Array[DesignOp],
   doc : Document,
-) -> Int {
+) -> Int32 {
   // 撤销后新提交：截断 current 之后的 redo 分支（git 语义）。否则
   // current+1 会与 redo 链上已存在的 revision 撞号，checkout/redo 的
   // 线性扫描命中旧快照、新提交被静默遮蔽（review 5a5641a）。
@@ -78,14 +78,14 @@ pub fn DesignHistory::commit(
 }
 
 ///|
-pub fn DesignHistory::rev(self : DesignHistory) -> Int {
+pub fn DesignHistory::rev(self : DesignHistory) -> Int32 {
   self.current_revision
 }
 
 ///|
 pub fn DesignHistory::checkout(
   self : DesignHistory,
-  revision : Int,
+  revision : Int32,
 ) -> Result[Document, String] {
   for e in self.entries.iter() {
     if e.revision == revision {
@@ -121,7 +121,7 @@ pub fn DesignHistory::redo(self : DesignHistory) -> Result[Document, String] {
 
 ///|
 pub fn DesignHistory::log(self : DesignHistory) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let total = self.entries.length().to_string()
   sb.write_string("History (" + self.branch_name + ", " + total + " commits)\n")
   for i in 0..<self.entries.length() {
@@ -142,8 +142,8 @@ pub fn DesignHistory::log(self : DesignHistory) -> String {
 ///|
 pub fn DesignHistory::replay(
   self : DesignHistory,
-  from_rev : Int,
-  to_rev : Int,
+  from_rev : Int32,
+  to_rev : Int32,
 ) -> Result[String, String] {
   let ops_found : Array[String] = []
   let mut found = false
@@ -179,7 +179,7 @@ pub fn DesignHistory::replay(
 ///|
 pub fn DesignHistory::branch(
   self : DesignHistory,
-  from_rev : Int,
+  from_rev : Int32,
   branch_name : String,
 ) -> Result[Document, String] {
   let doc = match self.checkout(from_rev) {
@@ -193,8 +193,8 @@ pub fn DesignHistory::branch(
 ///|
 pub fn DesignHistory::diff(
   self : DesignHistory,
-  from_rev : Int,
-  to_rev : Int,
+  from_rev : Int32,
+  to_rev : Int32,
 ) -> Result[String, String] {
   match (self.checkout(from_rev), self.checkout(to_rev)) {
     (Ok(from_doc), Ok(to_doc)) => {
@@ -207,7 +207,7 @@ pub fn DesignHistory::diff(
 
 ///|
 fn jstr18(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")

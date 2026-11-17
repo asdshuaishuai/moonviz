@@ -67,14 +67,14 @@ struct Cell {
 
 ///|
 struct ScreenBuf {
-  cols : Int
-  rows : Int
+  cols : Int32
+  rows : Int32
   cells : Array[Cell]
 }
 
 ///|
-fn screen_new(cols : Int, rows : Int) -> ScreenBuf {
-  let cells : Array[Cell] = Array::new()
+fn screen_new(cols : Int32, rows : Int32) -> ScreenBuf {
+  let cells : Array[Cell] = []
   let total = cols * rows
   let mut i = 0
   let total = cols * rows
@@ -88,8 +88,8 @@ fn screen_new(cols : Int, rows : Int) -> ScreenBuf {
 ///|
 fn screen_set(
   s : ScreenBuf,
-  col : Int,
-  row : Int,
+  col : Int32,
+  row : Int32,
   ch : Char,
   color : String,
 ) -> Unit {
@@ -99,7 +99,7 @@ fn screen_set(
 }
 
 ///|
-fn screen_char_at(s : ScreenBuf, col : Int, row : Int) -> Char? {
+fn screen_char_at(s : ScreenBuf, col : Int32, row : Int32) -> Char? {
   if col >= 0 && col < s.cols && row >= 0 && row < s.rows {
     Some(s.cells[row * s.cols + col].ch)
   } else {
@@ -109,7 +109,7 @@ fn screen_char_at(s : ScreenBuf, col : Int, row : Int) -> Char? {
 
 ///|
 fn screen_render(s : ScreenBuf) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for row in 0..<s.rows {
     for col in 0..<s.cols {
       let cell = s.cells[row * s.cols + col]
@@ -149,8 +149,8 @@ const ANSI_LABEL_DARK : String = "\u{1b}[37m"
 const ANSI_LABEL_LIGHT : String = "\u{1b}[97m"
 
 ///|
-fn rgb_of(hex : String) -> (Int, Int, Int)? {
-  let body = if has_pref(hex, "#") { hex.substring(start=1) } else { hex }
+fn rgb_of(hex : String) -> (Int32, Int32, Int32)? {
+  let body = if has_pref(hex, "#") { hex[1:].to_owned() } else { hex }
   if body.length() != 6 {
     return None
   }

@@ -1,5 +1,52 @@
 # MoonViz — The Agent-Driven Prototype Design Engine for the AI Era
 
+## What's New in 0.2.0
+
+**0.2 is a broad upgrade: design spec as the first authority, refined aesthetics
+and breathing room, and a complete animation + interaction system.**
+
+- **Visual language (Apple HIG / HarmonyOS / style profiles as first-class)** —
+  13 presets: apple/apple_dark/harmony/harmony_dark are WCAG-calibrated
+  translations of the official palettes; vivid/editorial/playful style profiles
+  carry equal weight; three-tier elevation, centered buttons, inverse chrome
+  derived from the spec's hues.
+- **Design spec is the first authority (enforced)** — base 7 palette keys plus
+  extended keys (secondary/info/warning/surfaceVariant/*Container); container
+  tints derived from the spec's semantic colors; spec tokens applied before
+  template instantiation; off-palette literals surface in `spec_violations`;
+  all 17 templates locked at zero violations under a vivid spec.
+- **Animation system** — single source: `motion` tokens live in spec/theme
+  (fast/base/slow/tick/stagger/stagger_max) and the export no longer hard-codes
+  durations or beziers; entrance cascade saturates at step 8, press/hover/focus
+  states, `Spring(k)` overshoot scales with stiffness (k=1 keeps legacy
+  output), keyframe transform merging and SVG `fill` semantics fixed; per-board
+  transitions (7 types) declared via `FlowEdge.transition` and exported.
+- **Interaction system** — Action vocabulary closed (SubmitForm round-trips and
+  executes in exports), long-press/swipe/focus/keyboard events into runtime and
+  wasm `session_event`, gesture trigger normalization, builtin back fallback and
+  ghost-navigation guard, export CSS.escape / unique DOM ids / a11y (tablist,
+  focus ring, live region, aria-label, full reduced-motion) plus a syntax-gate
+  regression test for the exported script.
+- **Refinement & breathing room** — 17 templates × 5 panels audited with six
+  fix rounds: text roles, theme round-trips and structural-template tokenization
+  to zero; 8pt grid / content lines / trailing controls / bottom action bars /
+  two-tier type scale / grouped spacing systematized; catalog 65x118.
+- **Playground** — five requirement-spec presets plus side-by-side comparison of
+  one intent under two specs (independent sessions).
+- **Enforced spec workflow (0.2 close-out)** — the design spec moves from
+  "advisory" to "process": CLI `generate-doc <intent> doc=<b64(design doc)>
+  [as <name>]` has the engine DETERMINISTICALLY extract a spec from a design
+  document (palette / typography / radius / spacing / motion / touch sections);
+  missing key items refuse generation with `design_doc_spec_gaps` (no silent
+  fallback to built-in specs), and the envelope carries
+  `spec_source:"design_doc"`. `spec-extract doc=<b64>` previews the extraction;
+  `comply <ab>` (`design_compliance`) runs four mechanical checks on the
+  generated UI (color/type/radius/motion) — interaction timing must equal the
+  spec's motion tokens, so both design and interaction fully obey the spec.
+- Test matrix: default target 407 / `--target native` 426, all green; dual wasm
+  ABI assertions (classic 78 exports incl. memory / gc 77) and the component
+  table consistency self-check pass.
+
 ## What's New in 0.1.11
 
 - **Spec-driven generation (issue #24)** — `generate` now requires a design
@@ -8,6 +55,13 @@
   spec palette drives recoloring, typography and radius tiers are remapped,
   and norms tiers judge against the spec (button radius base = `radius.sm`).
   New export `session_generate_spec`; CLI `generate <intent> spec=<base64>`.
+  **The spec is the first authority on color** (requirements → Agent extracts
+  the spec → the engine follows): palette takes the 7 base keys plus extended
+  keys (`secondary/info/warning/surfaceVariant/*Container`); container keys
+  absent from the spec are DERIVED from the spec's semantic colors over
+  background; spec tokens take effect BEFORE template instantiation (no
+  theme→template ordering hazard); literal colors outside the palette are
+  reported in `spec_violations`.
 - **Interaction & content QA + hard gates (issues #25/#26)** — unbound
   interactive components, placeholder residue, empty shells and non-registry
   components are reported into the norms dimension; same-node multi-flow and
@@ -41,7 +95,7 @@
   SDK repairs (Project methods, `sessionGenerate`, DDP decrypt mode, npm
   platform-package version alignment).
 - **Docs & site full sync** — every count re-anchored to live engine output
-  (55 tools / 27 ops / 75 wasm exports / 9-dimension critique / 52 core
+  (58 tools / 27 ops / 77 wasm exports / 10-dimension critique / 52 core
   modules), version examples moved to `<ver>` placeholders.
 - Test matrix grows to 298 (default target) / 314 (`--target native`), all green.
 
@@ -135,13 +189,13 @@
 │  discover components → create artboard → place → lint →      │
 │  fix → export                                                │
 └──────────────┬────────▲─────────────────────────────────────┘
-               │ Agent Tools API (55 tools, JSON in/out)
+               │ Agent Tools API (58 tools, JSON in/out)
 ┌──────────────▼────────┴─────────────────────────────────────┐
 │  Engine core/ + decl/ (pure MoonBit libraries)               │
 │  ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌───────────┐ │
 │  │ DesignTokens│ │ Components │ │ Project   │ │ Agent API │ │
 │  │ 17 colors/  │ │ 65 comps × │ │ multi-    │ │ lint/diff │ │
-│  │ 7 spacing/  │ │115 variants│ │ boards/   │ │ /suggest  │ │
+│  │ 7 spacing/  │ │118 variants│ │ boards/   │ │ /suggest  │ │
 │  │ 6 radii/    │ │            │ │ flows/    │ │           │ │
 │  │ 8 font sizes│ │            │ │ tokens    │ │           │ │
 │  └────────────┘ └────────────┘ └───────────┘ └───────────┘ │
@@ -163,7 +217,7 @@
 
 ## Selected Agent Tools (subset)
 
-Every name below is taken verbatim from the live dictionary (`list-tools` on the CLI / `tools/list` on MCP, 55 entries) — nothing here is a placeholder.
+Every name below is taken verbatim from the live dictionary (`list-tools` on the CLI / `tools/list` on MCP, 57 entries) — nothing here is a placeholder.
 
 | Tool | Semantics |
 | :--- | :--- |
@@ -202,16 +256,19 @@ Two modes, one engine — both fully retained:
   materializes the report's missing elements; `batch_apply` packs a
   refinement pass into one call.
 - **Tool mode (fallback, fully retained)** — the complete per-node
-  vocabulary (all 55 tools / 27 ops) stays unchanged: freeform artboards,
+  vocabulary (all 58 tools / 27 ops) stays unchanged: freeform artboards,
   layouts no template matches, surgical edits, probes. The ladder ranks
   channels by cost, not by permission — falling through to tools is correct
   behavior whenever no recipe expresses your intent.
 
-## Built-in Page Templates (14 complete pages)
+## Built-in Page Templates (17 complete pages)
 
 | Template | Contents |
 |:---|:---|
 | `login` | Logo + title + email + password + sign-in button + sign-up link |
+| `list` | App bar + search bar + category chips + item list (row dividers) + bottom nav |
+| `detail` | Back bar + hero image + title + specs + description + primary CTA |
+| `checkout` | Back bar + order summary + form fields + fee breakdown (row dividers) + submit |
 | `signup` | Title + name + email + password × 2 + sign-up button |
 | `dashboard` | App bar + stat cards 2×2 + chart + activity list |
 | `profile` | Avatar + name + bio + stats + actions + content list |
@@ -226,7 +283,7 @@ Two modes, one engine — both fully retained:
 | `adaptive_landing` | Adaptive landing page for web widths |
 | `login_v2` | Login page, second style variant |
 
-## Built-in Component Library (65 components × 115 variants)
+## Built-in Component Library (65 components × 118 variants)
 
 | Component | Category | Variants |
 | :--- | :--- | :--- |
@@ -326,9 +383,9 @@ moonviz/
 │   ├── policy.mbt     Dual-route policy (human soft / agent hard)
 │   ├── patch.mbt      Transactional patches
 │   ├── tokens.mbt     Design tokens (Material 3 style)
-│   ├── component.mbt  Component system (65 components × 115 variants)
+│   ├── component.mbt  Component system (65 components × 118 variants)
 │   ├── project.mbt    Multi-artboard project + navigation flows + lint + fix suggestions
-│   ├── agent_api.mbt  Agent tool API (55 tools + list-ops op dictionary)
+│   ├── agent_api.mbt  Agent tool API (58 tools + list-ops op dictionary)
 │   ├── autofix.mbt    Auto-fix engine (overflow shrink/overlap shift)
 │   ├── templates.mbt  Page template library (login/dashboard/settings/profile/empty state…)
 │   ├── align.mbt      Smart alignment (grid snap/centering/equal spacing/near-detection)
@@ -343,11 +400,11 @@ moonviz/
 │   ├── responsive.mbt Responsive breakpoints (phone/tablet/desktop auto-adaptation)
 │   ├── collab.mbt     Multi-agent collaboration (operational transform/conflict detection/three-way merge)
 │   ├── history.mbt    Design version control (time travel/branching/change replay/undo-redo)
-│   ├── critique.mbt   AI design critique (automatic review against 9 design principles)
+│   ├── critique.mbt   AI design critique (automatic review against 10 design principles)
 │   ├── annotate.mbt   Design annotation (auto-generated spec docs/CSS variables/spacing-color-type annotations)
 │   ├── animation.mbt  Property animation (keyframes/easing/timeline choreography/CSS export)
 │   ├── extract.mbt    Design-system reverse extraction (infer tokens + component patterns from existing designs)
-│   ├── theme.mbt      Theme system (6 predefined themes/auto dark/token-level switching/registry)
+│   ├── theme.mbt      Theme system (13 predefined themes incl. Apple HIG / HarmonyOS / style profiles, auto dark/token switching/registry)
 │   ├── slots.mbt      Component slot system (6 composable components/nested content distribution/recursive composition)
 │   ├── benchmark.mbt  Performance benchmark engine (node stats/complexity analysis/anti-pattern detection/optimization advice)
 │   ├── diff.mbt       Semantic diff (added/moved/resized/restyled)
@@ -357,8 +414,8 @@ moonviz/
 ├── decl/              Declaration DSL + .mbt.md round-trip
 ├── cli/               Agent CLI (newline-framed JSON-lines protocol; one process = one stateful session)
 ├── desktop/           Self-rendering service, client-guided (engine has no UI — the client's webview hosts the rendered artifact; system-layer fallback returns results for webview-less native apps)
-├── mcp/               MCP Server (stdio JSON-RPC; 55 tools mirroring the CLI)
-├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 11 stateless APIs + 28 session_* APIs (i32 handles, incl. session_history undo/redo) + _in slot variants
+├── mcp/               MCP Server (stdio JSON-RPC; 58 tools mirroring the CLI)
+├── wasm/              WASM boundary — dual builds: wasm-gc (JS hosts, JS String Builtins) + classic standard MVP; 77 exports each (gc/classic lists identical): 31 stateful session_* APIs (i32 handles, incl. session_history undo/redo) + 22 session_*_in slot variants + 24 stateless APIs & slot helpers (classic exports 78 incl. memory)
 ├── ddp/               Rust ddp_codec: DDP1 encryption (Argon2id+XChaCha20-Poly1305) / DDP2 keyless (zstd+CRC32)
 ├── sdk/               MoonBit SDK facade (mooncakes.io: `moon add asdshuaishuai/moonviz` → @sdk.new/apply/render_svg/canonical)
 ├── sdk/node/          Node SDK "moonviz-engine-sdk": sessions/Project builder/DDP bridge (pure transport)
@@ -398,12 +455,12 @@ Prototypes are not static pictures — MoonViz has a complete interaction runtim
 
 | Concept | Description |
 |:---|:---|
-| **Trigger** | tap / long_press / swipe / keyboard / focus / blur |
-| **Action** | navigate_to / back / toggle_state / set_state / set_text / show_toast / haptic / play_sound (submit_form exists only at the API layer — no spec syntax yet) |
+| **Trigger** | tap / long_press (duration preserved) / swipe / scroll_end / keyboard / focus / blur — all dispatched by the runtime |
+| **Action** | navigate_to / back / toggle_state / set_state / set_text / submit_form (`submit_form:email,pwd`; runtime emits a keyed FormSubmitted) / show_toast / haptic / play_sound |
 | **Transition** | push / pop / modal / sheet / fade |
 | **ComponentState** | Component polymorphism (default / pressed / disabled / loading) |
 | **NavigationState** | Navigation stack (push / pop / back) |
-| **Motion** | Engine-sourced motion tokens (120/240/360ms scale + easing curves incl. spring) drive the exported prototype: direction-aware transitions (navigate forward / back reversed / tab fade), spring press feedback, staggered entrance, `prefers-reduced-motion` support, ESC = back |
+| **Motion** | Engine-sourced motion tokens (120/180/240/360ms scale + easing curves incl. spring) drive the exported prototype: direction-aware transitions (navigate forward / back reversed / tab fade), spring press feedback, staggered entrance (saturating from the 8th node), `prefers-reduced-motion` support, ESC = back |
 
 ## Agent Intermediate Artifacts (.moonviz)
 
@@ -561,7 +618,7 @@ h.diff(0, 2)     // → semantic diff between two revisions
 
 ## AI Design Critique Engine
 
-The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 9 design principles (the 9th, `norms`, scores component-craft deviations):
+The engine reviews prototypes like a **senior designer** — not rule checking (that's lint), but a holistic evaluation against 10 design principles (the 9th, `norms`, scores component-craft deviations; the 10th, `visual`, scores visual-language debts — shadow misuse, indistinguishable cards, non-concentric corners):
 
 | Principle | What is checked |
 |:---|:---|
@@ -574,12 +631,13 @@ The engine reviews prototypes like a **senior designer** — not rule checking (
 | Focus | A clear primary CTA exists (primary button) |
 | Rhythm | Spacing values unify to standard tokens |
 | Norms | Component norms: button-label fit, contrast, seam dividers, touch targets |
+| Visual | Visual language: shadows belong to containers, cards stay distinguishable, nested corners stay concentric |
 
 ```moonbit
 p.critique(artboard="login")
-// → {"principles":9,"results":[
+// → {"principles":10,"results":[
 //     {"principle":"visual_hierarchy","score":9,"verdict":"good",...},
-//     {"principle":"norms","score":8,"verdict":"good",...},...]}
+//     {"principle":"visual","score":9,"verdict":"good",...},...]}
 
 p.critique_summary(artboard="login")
 // → "Design Critique: B (7/10)"
@@ -627,7 +685,7 @@ let ds = p.extract_design_system(artboard="dashboard")
 ds.summary()
 // → Extracted Design System:
 //     Colors: 6 tokens
-//       primary = #4B6BFB (used 5x, confidence 0.9)
+//       primary = #4361EE (used 5x, confidence 0.9)
 //       surface = #FFFFFF (used 12x, confidence 0.9)
 //       error = #BA1A1A (used 1x, confidence 0.5)
 //     Spacing: 3 values
@@ -661,16 +719,31 @@ p.preview_themes("btn")            // preview the button under each theme
 p.enable_auto_dark()          // derive a dark variant from the current theme
 ```
 
-**6 predefined themes**:
+**13 predefined themes** (first-class Apple HIG / HarmonyOS aesthetic presets with dark variants, plus vivid/editorial/playful style profiles):
 
 | Theme | Style | primary | surface |
 |:---|:---|:---|:---|
-| light | Light (default) | #4B6BFB | #FFFFFF |
+| light | Light (default) | #4361EE | #FFFFFF |
 | dark | Dark | #A5B4FC | #1A1C1E |
 | high_contrast | High contrast | #0000EE | #FFFFFF |
 | sepia | Sepia | #8D6E63 | #FAF6F0 |
 | nord | Nordic | #88C0D0 | #3B4252 |
-| sunset | Warm sunset | #FF7043 | #FFF8E1 |
+| sunset | Warm sunset | #BF360C | #FFF8E1 |
+| apple | Apple HIG (#F2F2F7 grouped canvas) | #0068D6 | #FFFFFF |
+| apple_dark | Apple HIG dark | #409CFF | #2C2C2E |
+| harmony | HarmonyOS (#F1F3F5 layered canvas) | #0A59F7 | #FFFFFF |
+| harmony_dark | HarmonyOS dark | #5291FF | #26292D |
+| vivid | Vivid (tinted canvas) | #6D28D9 | #FFFFFF |
+| editorial | Editorial (paper warm) | #111827 | #FFFFFF |
+| playful | Playful (teal + orange) | #0F766E | #FFFFFF |
+
+The aesthetic presets are **accessible translations** of the official palettes, not
+copies: every tier is WCAG-calibrated (button text and all three text tiers on all
+three surfaces ≥ 4.5:1 — the readability standard applies to every theme). Aliases
+normalize: `ios`/`hig` → apple, `harmonyos`/`huawei` → harmony, and a dark word in the
+same name (`harmony dark`) lands on the dark preset. Three equivalent channels at
+generation time: an aesthetic word in the intent (`apple style login`), the design
+spec's `"style":"apple"` key (palette then overrides same-named roles), or `theme apple`.
 
 **Auto dark**: `Theme::auto_dark(light)` → invert each RGB channel (hue rotates 180°) → a dark variant is generated automatically.
 

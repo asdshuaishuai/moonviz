@@ -26,7 +26,7 @@ test "usercomp: consecutive places on same document" {
     description: "test",
     category: "user",
     params: [{ name: "label", kind: "text", default_value: "X", }],
-    variants: Map::new(),
+    variants: Map([]),
     default_variant: "default",
     width: 64.0,
     height: 64.0,

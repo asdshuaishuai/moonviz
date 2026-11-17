@@ -21,7 +21,7 @@
 const MCF_MAGIC : String = "MVCC"
 
 ///|
-const MCF_VERSION : Int = 1
+const MCF_VERSION : Int32 = 1
 
 ///|
 const MCF_FINGERPRINT_INPUT : String = "MVCC:moonviz:1"
@@ -37,7 +37,7 @@ fn fnv1a64(s : String) -> Int64 {
 }
 
 ///|
-fn mcf_crc32(bytes : Array[Byte], start : Int, len : Int) -> Int {
+fn mcf_crc32(bytes : Array[Byte], start : Int32, len : Int32) -> Int32 {
   let mut crc : Int64 = 4294967295L
   let poly : Int64 = 3988292384L // 0xEDB88320
   for i in 0..<len {
@@ -59,7 +59,7 @@ fn mcf_crc32(bytes : Array[Byte], start : Int, len : Int) -> Int {
 
 ///|
 /// LE u32 写入
-fn push_le32(out : Array[Byte], v : Int) -> Unit {
+fn push_le32(out : Array[Byte], v : Int32) -> Unit {
   out.push((v & 0xFF).to_byte())
   out.push(((v >> 8) & 0xFF).to_byte())
   out.push(((v >> 16) & 0xFF).to_byte())
@@ -75,8 +75,8 @@ fn push_le64(out : Array[Byte], v : Int64) -> Unit {
 }
 
 ///|
-fn read_le32(bytes : Array[Byte], at : Int) -> Int {
-  let b = (i : Int) => {
+fn read_le32(bytes : Array[Byte], at : Int32) -> Int32 {
+  let b = (i : Int32) => {
     match bytes.get(at + i) {
       Some(x) => x.to_int() & 0xFF
       None => 0
@@ -86,7 +86,7 @@ fn read_le32(bytes : Array[Byte], at : Int) -> Int {
 }
 
 ///|
-fn read_le64(bytes : Array[Byte], at : Int) -> Int64 {
+fn read_le64(bytes : Array[Byte], at : Int32) -> Int64 {
   (read_le32(bytes, at).to_int64() & 0xFFFFFFFFL) |
   ((read_le32(bytes, at + 4).to_int64() & 0xFFFFFFFFL) << 32)
 }
@@ -198,7 +198,7 @@ pub fn mcf_header_json(def : UserComponentDef) -> String {
 
 ///|
 fn mcf_join_str(items : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let mut first = true
   for item in items.iter() {
     if first == false {

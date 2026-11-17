@@ -11,15 +11,23 @@
 /// surface（如 nord 的 #2E3440）；默认浅色 #F6F7F9 保持既有文档兼容。
 pub fn render_svg(
   doc : Document,
-  surface? : String = "#F6F7F9",
-  frame? : String = "#C9CFDA",
+  surface~ : String = "#F6F7F9",
+  frame~ : String = "#C9CFDA",
+  filter_ns~ : String = "",
+  node_ids~ : Map[String, String]? = None,
 ) -> String {
   let layout = solve(doc)
   let root_rect : Rect = match layout.rect_of(doc.root_id) {
     Some(r) => r
     None => Rect::new(0.0, 0.0, 390.0, 844.0)
   }
-  let sb = StringBuilder::new()
+  // 多板 HTML 导出时 filter id 必须按画板命名空间化（e1_<ab> 等）：
+  // <defs> 内的 filter 是文档级 id，重复板会让 url(#e1) 互相串台/非法重复。
+  // 单板 SVG 导出保持空 ns（e1/e2/e3），兼容既有产物。
+  // 可逆编码（svg_ns_tag）而非 svg_id_tag 的有损清洗：a-b 与 a_b 必须
+  // 映射到不同命名空间，否则同页 filter id 会重复（验收④的对抗性 id）
+  let ns = if filter_ns == "" { "" } else { "_" + svg_ns_tag(filter_ns) }
+  let sb = StringBuilder()
   sb.write_string(
     "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" viewBox=\"0 0 \{root_rect.width} \{root_rect.height}\">",
   )
@@ -28,19 +36,19 @@ pub fn render_svg(
     "<style>text{font-family:-apple-system,'SF Pro Text','PingFang SC','Segoe UI',Roboto,sans-serif}</style>",
   )
   // Paint v2：渐变 defs（linear:#a:#b@deg / radial:#a:#b）
-  let defs = collect_gradients(doc)
+  let defs = collect_gradients(doc, ns)
   if defs != "" {
     sb.write_string(defs)
   }
   sb.write_string(
-    "<defs><filter id=\"e1\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"1\" stdDeviation=\"2\" flood-opacity=\"0.07\"/></filter><filter id=\"e2\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"4\" stdDeviation=\"10\" flood-opacity=\"0.10\"/></filter><filter id=\"e3\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"14\" stdDeviation=\"28\" flood-opacity=\"0.16\"/></filter></defs>",
+    "<defs><filter id=\"e1\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"4\" flood-opacity=\"0.10\"/></filter><filter id=\"e2\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"6\" stdDeviation=\"14\" flood-opacity=\"0.14\"/></filter><filter id=\"e3\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feDropShadow dx=\"0\" dy=\"16\" stdDeviation=\"30\" flood-opacity=\"0.18\"/></filter></defs>",
   )
   sb.write_string(
     "<rect x=\"0\" y=\"0\" width=\"\{root_rect.width}\" height=\"\{root_rect.height}\" fill=\"\{surface}\" pointer-events=\"none\"/>",
   )
   // SVG viewBox 自带裁剪（root rect 与 viewBox 同尺寸），不再用 clipPath 包裹：
   // WebKit 对 clip-path 组内元素的 hit-test 会整体失效，原型交互点击会穿透。
-  render_node(sb, doc, doc.root_id, layout, surface~, frame~)
+  render_node(sb, doc, doc.root_id, layout, surface~, frame~, ns~, node_ids~)
   sb.write_string("</svg>")
   sb.to_string()
 }
@@ -53,6 +61,8 @@ fn render_node(
   layout : SolvedLayout,
   surface~ : String,
   frame~ : String,
+  ns~ : String,
+  node_ids~ : Map[String, String]?,
 ) -> Unit {
   match doc.nodes.get(id) {
     None => ()
@@ -62,14 +72,30 @@ fn render_node(
       match layout.rect_of(id) {
         None => ()
         Some(r) => {
-          // 每个节点包一层 <g id>：编辑器据此把 DOM 元素与场景图节点关联
-          sb.write_string("<g id=\"n_\{id}\" data-kind=\"\{svg_kind_of(n)}\">")
+          // 每个节点包一层 <g id>：编辑器据此把 DOM 元素与场景图节点关联。
+          // node_ids 提供跨板重复节点 id → __dupN 的映射（DOM id 唯一化）；
+          // 首个出现保持原名，#n_<id> 契约不变。
+          let dom_id = match node_ids {
+            Some(m) =>
+              match m.get(id) {
+                Some(d) => d
+                None => id
+              }
+            None => id
+          }
+          sb.write_string(
+            "<g id=\"n_\{dom_id}\" data-kind=\"\{svg_kind_of(n)}\">",
+          )
           // issue #22：radius=999 只在方形节点上是圆；非方形必须钳制为
           // min(r, min(w,h)/2) 并同时输出 rx/ry，否则 SVG 各自半边钳制
           // 产出极端椭圆（420×40 搜索框 rx=210/ry=20）。
           let rr = if n.style.corner_radius > r.width / 2.0 ||
             n.style.corner_radius > r.height / 2.0 {
-            if r.width < r.height { r.width / 2.0 } else { r.height / 2.0 }
+            if r.width < r.height {
+              r.width / 2.0
+            } else {
+              r.height / 2.0
+            }
           } else {
             n.style.corner_radius
           }
@@ -130,8 +156,16 @@ fn render_node(
                   Some(da) => sb.write_string(" stroke-dasharray=\"\{da}\"")
                   None => ()
                 }
-              } else if n.style.fill == "none" && n.text == "" {
-                // 无填充无文字的容器：细虚线边界，避免"幽灵组件"融进背景
+              } else if n.style.fill == "none" &&
+                n.text == "" &&
+                n.id != doc.root_id &&
+                n.children.length() == 0 &&
+                n.component != "spacer" {
+                // 无填充无文字的**叶子**矩形：细虚线边界，避免"幽灵组件"融
+                // 进背景。豁免三类——根节点（画板本身是画布边界，surface 底
+                // 已由 wrapper rect 画出）；有子节点的容器（结构式模板的布局
+                // Frame，描虚线整页像线框稿）；spacer（刻意留白，不是待填的
+                // 幽灵组件）。
                 sb.write_string(
                   " stroke=\"\{frame}\" stroke-width=\"1\" stroke-dasharray=\"4 3\"",
                 )
@@ -143,11 +177,13 @@ fn render_node(
               // collect_gradients 生成）——输出两个同名属性是 XML 非良构，
               // 浏览器取首个导致 blur 静默丢失，严格解析器直接拒绝整个 SVG
               if n.style.shadow != "none" && n.style.blur > 0.0 {
-                sb.write_string(" filter=\"url(#fx_\{svg_id_tag(n.id)})\"")
+                sb.write_string(" filter=\"url(#fx_\{svg_id_tag(n.id)}\{ns})\"")
               } else if n.style.shadow != "none" {
-                sb.write_string(" filter=\"url(#\{n.style.shadow})\"")
+                sb.write_string(" filter=\"url(#\{n.style.shadow}\{ns})\"")
               } else if n.style.blur > 0.0 {
-                sb.write_string(" filter=\"url(#blur_\{svg_id_tag(n.id)})\"")
+                sb.write_string(
+                  " filter=\"url(#blur_\{svg_id_tag(n.id)}\{ns})\"",
+                )
               }
               // 单一 transform 属性：变换列表从右向左作用，
               // flip 矩阵写在左侧即左乘 rotate（先转后翻）
@@ -179,12 +215,14 @@ fn render_node(
                 let baseline = r.y + (r.height + n.style.font_size * 0.7) / 2.0
                 let pad = 12.0
                 let (tx, anchor) = match n.style.text_align {
-                  "left" => (r.x + pad, " start")
-                  "right" => (r.x + r.width - pad, " end")
-                  _ => (r.x + r.width / 2.0, " middle")
+                  // text-anchor 值不带前导空格：浏览器容忍渲染，严格
+                  // XML/SVG 消费者按属性值校验会拒收（"start" 不是 " start"）
+                  "left" => (r.x + pad, "start")
+                  "right" => (r.x + r.width - pad, "end")
+                  _ => (r.x + r.width / 2.0, "middle")
                 }
                 sb.write_string(
-                  "<text x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",
+                  "<text xml:space=\"preserve\" x=\"\{tx}\" y=\"\{baseline}\" text-anchor=\"\{anchor}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\"",
                 )
                 if n.style.font_style == "italic" {
                   sb.write_string(" font-style=\"italic\"")
@@ -196,7 +234,7 @@ fn render_node(
             }
           }
           for cid in n.children.iter() {
-            render_node(sb, doc, cid, layout, surface~, frame~)
+            render_node(sb, doc, cid, layout, surface~, frame~, ns~, node_ids~)
           }
           sb.write_string("</g>")
         }
@@ -205,11 +243,22 @@ fn render_node(
 }
 
 ///|
-/// 文本节点：支持 \n 多行、自定义行高、字距
+/// 文本节点：支持 \n 多行、按节点宽贪心折行（CJK 逐字断 / 拉丁按词断）、
+/// 自定义行高、字距；盒高大于内容块时整块在行盒内垂直居中（审计 detail
+/// 参数行 / checkout 费用行顶对齐、行盒下半空的根因）；xml:space=preserve
+/// 保留模板用空格做的字段间隔（SVG 默认折叠连续空白会把它们挤成一串）。
 fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
-  let lines = split_lines(n.text)
+  let lines = wrap_text_lines(n.text, n.style.font_size, r.width)
   let lh = n.style.font_size * n.style.line_height
-  let first_baseline = r.y + n.style.font_size * 1.0
+  let block_h = lines.length().to_double() * lh
+  // 行盒内垂直居中：盒高足够时整块下移居中；Hug 高由求解器按内容给值，
+  // block_h == r.height，此分支天然不触发（渲染与布局同口径）
+  let block_top = if r.height > block_h + 0.5 {
+    r.y + (r.height - block_h) / 2.0
+  } else {
+    r.y
+  }
+  let first_baseline = block_top + n.style.font_size * 1.0
   // 水平对齐：left（默认，x 起点）/ center / right（x 终点 + text-anchor）
   let (tx, anchor) = match n.style.text_align {
     "center" => (r.x + r.width / 2.0, " text-anchor=\"middle\"")
@@ -217,7 +266,7 @@ fn render_text_node(sb : StringBuilder, n : Node, r : Rect) -> Unit {
     _ => (r.x, "")
   }
   sb.write_string(
-    "<text x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
+    "<text xml:space=\"preserve\" x=\"\{tx}\" y=\"\{first_baseline}\" font-size=\"\{n.style.font_size}\" font-weight=\"\{n.style.font_weight}\" letter-spacing=\"\{n.style.tracking * n.style.font_size}\" fill=\"\{paint_ref_t(n.style.text_color, n.id)}\"",
   )
   if anchor != "" {
     sb.write_string(anchor)
@@ -257,10 +306,10 @@ fn dash_array(dash : String) -> String? {
 /// 与 render_svg 顶部 defs 的 e1/e2/e3 定义一一对应；未知令牌取 e2 档兜底
 fn shadow_token_params(tok : String) -> (Double, Double, Double, Double) {
   match tok {
-    "e1" => (0.0, 1.0, 2.0, 0.07)
-    "e2" => (0.0, 4.0, 10.0, 0.10)
-    "e3" => (0.0, 14.0, 28.0, 0.16)
-    _ => (0.0, 4.0, 10.0, 0.10)
+    "e1" => (0.0, 2.0, 4.0, 0.10)
+    "e2" => (0.0, 6.0, 14.0, 0.14)
+    "e3" => (0.0, 16.0, 30.0, 0.18)
+    _ => (0.0, 6.0, 14.0, 0.14)
   }
 }
 
@@ -268,7 +317,7 @@ fn shadow_token_params(tok : String) -> (Double, Double, Double, Double) {
 /// 按 \n 拆行（无换行返回单元素数组）
 fn split_lines(s : String) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for c in s.iter() {
     if c == '\n' {
       out.push(cur.to_string())
@@ -320,20 +369,20 @@ fn has_url_prefix(s : String) -> Bool {
   let https = "https://"
   let data = "data:"
   if s.length() >= http.length() &&
-    s.substring(start=0, end=http.length()) == http {
+    s[0:http.length()].to_owned() == http {
     true
   } else if s.length() >= https.length() &&
-    s.substring(start=0, end=https.length()) == https {
+    s[0:https.length()].to_owned() == https {
     true
   } else {
     s.length() >= data.length() &&
-    s.substring(start=0, end=data.length()) == data
+    s[0:data.length()].to_owned() == data
   }
 }
 
 ///|
 fn svg_id_tag(id : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in id.iter() {
     let code = c.to_int()
     if (code >= 48 && code <= 57) ||
@@ -348,9 +397,55 @@ fn svg_id_tag(id : String) -> String {
 }
 
 ///|
+/// 可逆命名空间编码：字母数字原样；'_' → "__"；其余字符 → "_<hex>_"。
+/// 与有损的 svg_id_tag（任何非字母数字→'_'）不同，不同输入不会碰撞，
+/// 用于多板同页的 filter id 命名空间（a-b → a_2d_b / a_b → a_5f_b）。
+fn svg_ns_tag(id : String) -> String {
+  let sb = StringBuilder()
+  for c in id.iter() {
+    let code = c.to_int()
+    if (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) {
+      sb.write_char(c)
+    } else if c == '_' {
+      sb.write_string("__")
+    } else {
+      // 小写十六进制，两侧下划线作定界符（编码可逆）
+      let hex = StringBuilder()
+      let mut v = code
+      if v == 0 {
+        hex.write_char('0')
+      } else {
+        while v > 0 {
+          let d = v % 16
+          hex.write_char((if d < 10 { d + 48 } else { d + 87 }).unsafe_to_char())
+          v = v / 16
+        }
+      }
+      // 反转十六进制串
+      let digits = hex.to_string()
+      let rev = StringBuilder()
+      let mut i = digits.length()
+      while i > 0 {
+        rev.write_char(
+          match digits.get_char(i - 1) {
+            Some(ch) => ch
+            None => '0'
+          },
+        )
+        i = i - 1
+      }
+      sb.write_string("_" + rev.to_string() + "_")
+    }
+  }
+  sb.to_string()
+}
+
+///|
 /// 遍历文档收集全部渐变，生成 <defs> 段
-fn collect_gradients(doc : Document) -> String {
-  let sb = StringBuilder::new()
+fn collect_gradients(doc : Document, ns : String) -> String {
+  let sb = StringBuilder()
   for id in doc.nodes.keys() {
     match doc.get(id) {
       None => ()
@@ -377,11 +472,11 @@ fn collect_gradients(doc : Document) -> String {
         if has_blur && has_shadow {
           let (dx, dy, std, op) = shadow_token_params(n.style.shadow)
           sb.write_string(
-            "<filter id=\"fx_\{svg_id_tag(id)}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"\{n.style.blur}\" result=\"b\"/><feDropShadow in=\"b\" dx=\"\{dx}\" dy=\"\{dy}\" stdDeviation=\"\{std}\" flood-opacity=\"\{op}\"/></filter>",
+            "<filter id=\"fx_\{svg_id_tag(id)}\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"170%\"><feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"\{n.style.blur}\" result=\"b\"/><feDropShadow in=\"b\" dx=\"\{dx}\" dy=\"\{dy}\" stdDeviation=\"\{std}\" flood-opacity=\"\{op}\"/></filter>",
           )
         } else if has_blur {
           sb.write_string(
-            "<filter id=\"blur_\{svg_id_tag(id)}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feGaussianBlur stdDeviation=\"\{n.style.blur}\"/></filter>",
+            "<filter id=\"blur_\{svg_id_tag(id)}\{ns}\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\"><feGaussianBlur stdDeviation=\"\{n.style.blur}\"/></filter>",
           )
         }
       }
@@ -401,13 +496,13 @@ fn has_prefix(s : String, pre : String) -> Bool {
   if s.length() < pre.length() {
     return false
   }
-  s.substring(start=0, end=pre.length()) == pre
+  s[0:pre.length()].to_owned() == pre
 }
 
 ///|
 fn gradient_def(paint : String, id : String) -> String {
   if has_prefix(paint, "linear:") {
-    let body = paint.substring(start=7, end=paint.length())
+    let body = paint[7:paint.length()].to_owned()
     let (c1, c2, deg) = parse_two_colors_angle(body)
     let tag = "g_\{svg_id_tag(id)}"
     // 角度 → (x1,y1,x2,y2)：0°=→ 90°=↓
@@ -419,7 +514,7 @@ fn gradient_def(paint : String, id : String) -> String {
     return "<linearGradient id=\"\{tag}\" x1=\"\{x1}\" y1=\"\{y1}\" x2=\"\{x2}\" y2=\"\{y2}\"><stop offset=\"0\" stop-color=\"\{c1}\"/><stop offset=\"1\" stop-color=\"\{c2}\"/></linearGradient>"
   }
   if has_prefix(paint, "radial:") {
-    let body = paint.substring(start=7, end=paint.length())
+    let body = paint[7:paint.length()].to_owned()
     let (c1, c2, _deg) = parse_two_colors_angle(body)
     let tag = "g_\{svg_id_tag(id)}"
     return "<radialGradient id=\"\{tag}\"><stop offset=\"0\" stop-color=\"\{c1}\"/><stop offset=\"1\" stop-color=\"\{c2}\"/></radialGradient>"
@@ -435,8 +530,8 @@ fn parse_two_colors_angle(body : String) -> (String, String, Double) {
   let mut deg = 90.0
   let at = index_of_at(body)
   if at >= 0 {
-    color_part = body.substring(start=0, end=at)
-    deg = parse_deg(body.substring(start=at + 1, end=body.length()))
+    color_part = body[0:at].to_owned()
+    deg = parse_deg(body[at + 1:body.length()].to_owned())
   }
   let parts = split_char(color_part, ':')
   let c1 = if parts.length() > 0 { parts[0] } else { "#cccccc" }
@@ -446,7 +541,7 @@ fn parse_two_colors_angle(body : String) -> (String, String, Double) {
 
 ///|
 /// 找 @ 首次出现位置，未找到 -1
-fn index_of_at(s : String) -> Int {
+fn index_of_at(s : String) -> Int32 {
   let mut i = 0
   for c in s.iter() {
     if c == '@' {
@@ -472,7 +567,7 @@ fn parse_deg(s : String) -> Double {
 ///|
 fn split_char(s : String, sep : Char) -> Array[String] {
   let out : Array[String] = []
-  let cur = StringBuilder::new()
+  let cur = StringBuilder()
   for c in s.iter() {
     if c == sep {
       out.push(cur.to_string())
@@ -516,7 +611,7 @@ fn wrap_angle(r : Double) -> Double {
 
 ///|
 fn xml_escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for c in s.iter() {
     match c {
       '&' => sb.write_string("&amp;")

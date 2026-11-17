@@ -44,7 +44,10 @@ test "契约：全部导出 × 非法输入 → 合法 JSON（issue #3）" {
     // literate 语义下「没有画板」不是错误。真正的非法文档（结构错误）
     // 在下面单独锚定（entry 漂移），此处只验证空态可开可关。
     let h = session_open(bad)
-    let _ = assert_true(h >= 0, msg="零视觉块输入应视为合法空文档（issue #27）：\{bad}")
+    let _ = assert_true(
+      h >= 0,
+      msg="零视觉块输入应视为合法空文档（issue #27）：\{bad}",
+    )
     let _ = session_close(h)
   }
   // 真非法文档（entry 指向不存在的画板，且有视觉块）必须拒绝开会话。
@@ -148,7 +151,7 @@ fn extract_data(envelope : String) -> String {
     Some(x) => x + marker.length()
     None => return ""
   }
-  let rest = envelope.substring(start=i)
+  let rest = envelope[i:].to_owned()
   // json_escape 后的值：扫描到未转义的 " 为止
   let sb = StringBuilder()
   let chars : Array[Char] = []
@@ -297,7 +300,7 @@ fn extract_mbt(envelope : String) -> String {
     Some(x) => x + marker.length()
     None => return ""
   }
-  let rest = envelope.substring(start=i)
+  let rest = envelope[i:].to_owned()
   let sb = StringBuilder()
   let chars : Array[Char] = []
   for c in rest.iter() {
@@ -620,7 +623,7 @@ test "契约：canonical 透传宿主批注注释——写路径往返不丢（i
     msg="会话路径批注也须透传: " + r2,
   )
   assert_true(
-    r2.split("deepdesign:ink").length() == 2,
+    r2.split("deepdesign:ink").count() == 2,
     msg="批注应恰好一份（不翻倍）: " + r2,
   )
   let _ = session_close(h2)
@@ -687,17 +690,24 @@ test "契约：session_generate 生成即变更回传 canonical mbt" {
   // issue #24：生成必须带 spec（缺 spec 返回 design_spec_required + 草案）
   let missing = session_generate(h, "登录页", "gen_login")
   assert_true(
-    missing.contains("design_spec_required") && missing.contains("design_spec_draft"),
+    missing.contains("design_spec_required") &&
+    missing.contains("design_spec_draft"),
     msg="缺 spec 必须显式要求并给草案: \{missing}",
   )
   let r = session_generate_spec(h, "登录页", "gen_login", SPEC_MIN)
   assert_true(r.contains("\"ok\":true"), msg="generate 应成功: \{r}")
-  assert_true(r.contains("\"mbt\":\""), msg="变更信封必须回传 canonical mbt: \{r}")
+  assert_true(
+    r.contains("\"mbt\":\""),
+    msg="变更信封必须回传 canonical mbt: \{r}",
+  )
   assert_true(r.contains("\"template\":\"login\""))
   assert_true(r.contains("\"score\""))
   // 新画板真实入库（后续会话操作可见）
   let boards = session_list_artboards(h)
-  assert_true(boards.contains("gen_login"), msg="gen_login 应在画板清单: \{boards}")
+  assert_true(
+    boards.contains("gen_login"),
+    msg="gen_login 应在画板清单: \{boards}",
+  )
   let _ = session_close(h)
 }
 
@@ -726,7 +736,10 @@ test "契约：session_generate_in 槽变体（UTF-8 intent 真传输）" {
   }
   let r = session_generate_in(h)
   assert_true(r.contains("\"ok\":true"), msg="generate_in 应成功: \{r}")
-  assert_true(r.contains("gen_login_in"), msg="槽变体应使用三槽 name: \{r}")
+  assert_true(
+    r.contains("gen_login_in"),
+    msg="槽变体应使用三槽 name: \{r}",
+  )
   // 真锚定 intent 槽传输：登录意图必须被识别为 login 模板产物——
   // 被破坏的 intent 只会得到兜底空板，不会带 template:login
   assert_true(
@@ -761,20 +774,29 @@ test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（is
   let h = session_open(SEED)
   assert_true(h >= 0)
   let s1 = session_snapshot(h)
-  assert_true(s1.contains("\"ok\":true"), msg="快照必须是成功信封：\{s1}")
-  assert_true(s1.contains("\"canonical\":\""), msg="快照必须回传 canonical：\{s1}")
-  assert_true(s1.contains("\"render\":{"), msg="快照必须回传 render：\{s1}")
+  assert_true(
+    s1.contains("\"ok\":true"),
+    msg="快照必须是成功信封：\{s1}",
+  )
+  assert_true(
+    s1.contains("\"canonical\":\""),
+    msg="快照必须回传 canonical：\{s1}",
+  )
+  assert_true(
+    s1.contains("\"render\":{"),
+    msg="快照必须回传 render：\{s1}",
+  )
   assert_true(s1.contains("\"seq\":0"), msg="首帧 seq 从 0 开始：\{s1}")
   assert_true(s1.contains("\"delta\":{"), msg="快照必须带 delta：\{s1}")
-  assert_true(
-    s1.contains("\"w/btn\""),
-    msg="首帧 added 必须包含 w/btn",
-  )
+  assert_true(s1.contains("\"w/btn\""), msg="首帧 added 必须包含 w/btn")
   // 一次改文档 → seq +1；同一节点位移后进 changed
   let mut_ = session_constrain(h, "w", "垂直居中")
   assert_true(mut_.contains("\"ok\":true"), msg="constrain 应成功：\{mut_}")
   let s2 = session_snapshot(h)
-  assert_true(s2.contains("\"seq\":1"), msg="改文档后 seq 必须 +1：\{s2}")
+  assert_true(
+    s2.contains("\"seq\":1"),
+    msg="改文档后 seq 必须 +1：\{s2}",
+  )
   assert_true(
     s2.contains("\"changed\":[\"w/btn\"]"),
     msg="位移节点必须进 changed",
@@ -791,7 +813,10 @@ test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（is
     s3.contains("\"animations\":{\"presets\":"),
     msg="快照必须携带 animations.presets",
   )
-  assert_true(s3.contains("\"motion_css\":\""), msg="快照必须携带 motion_css")
+  assert_true(
+    s3.contains("\"motion_css\":\""),
+    msg="快照必须携带 motion_css",
+  )
   // 删除节点 → removed 定位
   let _ = session_apply_human(h, "delete w btn")
   let s4 = session_snapshot(h)
@@ -799,5 +824,94 @@ test "契约：session_snapshot 原子快照——seq 单调 + delta 差分（is
     s4.contains("\"removed\":[\"w/btn\"]"),
     msg="删除节点必须进 removed：\{s4}",
   )
+  let _ = session_close(h)
+}
+
+///|
+/// 动效声明面 seed：frontmatter `tokens: motion.base: 320` + 节点 motion=fade_in。
+/// 快照必须同时反映「项目令牌刻度」与「节点级绑定表」。
+const MOTION_SEED : String = "---\nmoonbit:\n  backend: native\nmoonviz:\n  format: visual-document\n  revision: 2\n  title: M\n  entry: w\n  artboards:\n    - w\n  tokens:\n    motion.base: 320\n    motion.tick: 200\n---\n\n# M\n\n<!-- moonviz:artboard w -->\n```mbt\n///| @moonviz:visual w\nfn visual_w() -> @decl.Prototype {\n  let page = @decl.prototype(name=\"w\", width=390.0, height=844.0)\n  page.add(@decl.generic_node(id=\"hero\", component=\"rect\", kind=\"rect\", width=@decl.fixed(100.0), height=@decl.fixed(100.0), fill=\"#FFFFFF\", motion=\"fade_in\"))\n  page\n}\n```\n"
+
+///|
+/// 动效声明面进快照：motion_css 走项目令牌（frontmatter motion.base/tick），
+/// animations.bound 逐条列出节点级 motion（artboard/node/preset）。
+test "契约：session_snapshot 携带节点 motion 绑定与项目动效令牌" {
+  let h = session_open(MOTION_SEED)
+  assert_true(h >= 0, msg="motion seed 必须可加载")
+  let s = session_snapshot(h)
+  assert_true(
+    s.contains("--mv-dur:320ms"),
+    msg="快照 motion_css 必须走项目令牌（base=320）：\{s}",
+  )
+  assert_true(
+    s.contains("--mv-dur-tick:200ms"),
+    msg="快照 motion_css 必须走项目令牌（tick=200）：\{s}",
+  )
+  assert_true(
+    s.contains(
+      "\"bound\":[{\"artboard\":\"w\",\"node\":\"hero\",\"preset\":\"fade_in\"}]",
+    ),
+    msg="快照必须携带动画绑定表：\{s}",
+  )
+  let _ = session_close(h)
+}
+
+///|
+/// 主输入槽压入 ASCII 字符串（session_event_in 测试用）。
+fn push_event_in(s : String) -> Unit {
+  in_reset()
+  for c in s.to_array() {
+    in_push(c.to_int(), 1)
+  }
+}
+
+///|
+/// 辅输入槽压入 ASCII 字符串（artboard 名）。
+fn push_event_arg(s : String) -> Unit {
+  arg_reset()
+  for c in s.to_array() {
+    arg_push(c.to_int(), 1)
+  }
+}
+
+///|
+/// 手势事件导出：session_event 送 long_press 驱动标记导航；session_event_in
+/// 走字符串槽等价；非法 spec 返回 unknown_event（不改会话、不抛）。
+test "契约：session_event 手势事件与非法 spec" {
+  let h = session_open(SEED)
+  assert_true(h >= 0, msg="session_open 应成功")
+  // SEED 的 btn 在 (20,20) 120×44；注册 long_press → 自导航标记
+  let op = session_apply_human(h, "interact w btn long_press navigate_to:w")
+  assert_true(op.contains("\"ok\":true"), msg="interact 应成功：\{op}")
+  let ev = session_event(h, "w", "long_press:80:42:800")
+  assert_true(
+    ev.contains("\"ok\":true"),
+    msg="long_press 事件应成功：\{ev}",
+  )
+  assert_true(
+    ev.contains("\"changes\":[\""),
+    msg="changes 应为非空数组：\{ev}",
+  )
+  assert_true(ev.contains("nav_push:w"), msg="应产生导航变更：\{ev}")
+  // classic 入口：主槽 spec + 辅槽 artboard
+  push_event_arg("w")
+  push_event_in("long_press:80:42:800")
+  let ev2 = session_event_in(h)
+  assert_true(
+    ev2.contains("\"ok\":true"),
+    msg="session_event_in 应成功：\{ev2}",
+  )
+  assert_true(ev2.contains("nav_push:w"), msg=ev2)
+  // 非法 spec：unknown_event，会话不变
+  let bad = session_event(h, "w", "nonsense:1")
+  assert_true(bad.contains("unknown_event"), msg=bad)
+  let bad2 = session_event(h, "w", "long_press:80:42:0")
+  assert_true(
+    bad2.contains("unknown_event"),
+    msg="0ms 长按应判非法：\{bad2}",
+  )
+  // tap 仍可走同一入口
+  let tap = session_event(h, "w", "tap:80:42")
+  assert_true(tap.contains("\"ok\":true"), msg=tap)
   let _ = session_close(h)
 }

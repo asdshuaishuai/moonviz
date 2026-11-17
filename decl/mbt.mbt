@@ -8,8 +8,8 @@
 pub(all) struct MbtCodeBlock {
   kind : String
   text : String
-  start_line : Int
-  end_line : Int
+  start_line : Int32
+  end_line : Int32
   artboard_id : String?
   visual : Bool
 }
@@ -19,7 +19,7 @@ pub(all) struct MbtDocument {
   source : String
   front_matter : String
   title : String
-  revision : Int
+  revision : Int32
   entry : String
   theme : String
   blocks : Array[MbtCodeBlock]
@@ -36,7 +36,7 @@ pub(all) struct MbtDocument {
 ///|
 fn mbt_has_prefix(s : String, prefix : String) -> Bool {
   s.length() >= prefix.length() &&
-  s.substring(start=0, end=prefix.length()) == prefix
+  s[0:prefix.length()].to_owned() == prefix
 }
 
 ///|
@@ -55,17 +55,17 @@ fn mbt_trim(s : String) -> String {
       _ => break
     }
   }
-  s.substring(start=a, end=b)
+  s[a:b].to_owned()
 }
 
 ///|
 fn mbt_lines(text : String) -> Array[String] {
   let out : Array[String] = []
-  let mut buf = StringBuilder::new()
+  let mut buf = StringBuilder()
   for c in text.iter() {
     if c == '\n' {
       out.push(buf.to_string())
-      buf = StringBuilder::new()
+      buf = StringBuilder()
     } else {
       buf.write_char(c)
     }
@@ -79,8 +79,8 @@ fn mbt_lines(text : String) -> Array[String] {
 }
 
 ///|
-fn mbt_join(lines : Array[String], start : Int, end : Int) -> String {
-  let out = StringBuilder::new()
+fn mbt_join(lines : Array[String], start : Int32, end : Int32) -> String {
+  let out = StringBuilder()
   let mut i = start
   while i < end && i < lines.length() {
     if i > start {
@@ -93,7 +93,7 @@ fn mbt_join(lines : Array[String], start : Int, end : Int) -> String {
 }
 
 ///|
-fn mbt_fence_length(line : String) -> Int {
+fn mbt_fence_length(line : String) -> Int32 {
   let t = mbt_trim(line)
   let mut count = 0
   while count < t.length() && t.get_char(count) == Some('`') {
@@ -108,7 +108,7 @@ fn mbt_fence_kind(line : String) -> String? {
   if mbt_fence_length(t) != 3 {
     return None
   }
-  let body = mbt_trim(t.substring(start=3))
+  let body = mbt_trim(t[3:].to_owned())
   if body == "mbt" ||
     body == "mbt check" ||
     body == "mbt nocheck" ||
@@ -127,8 +127,8 @@ fn mbt_marker_id(line : String) -> String? {
   let suffix = " -->"
   if mbt_has_prefix(t, prefix) && t.length() > prefix.length() + suffix.length() {
     let end = t.length() - suffix.length()
-    if t.substring(start=end, end=t.length()) == suffix {
-      let id = mbt_trim(t.substring(start=prefix.length(), end~))
+    if t[end:t.length()].to_owned() == suffix {
+      let id = mbt_trim(t[prefix.length():end].to_owned())
       if id != "" {
         return Some(id)
       }
@@ -144,14 +144,14 @@ fn mbt_field(front : String, key : String) -> String {
   for line in lines.iter() {
     let t = mbt_trim(line)
     if mbt_has_prefix(t, prefix) {
-      return mbt_trim(t.substring(start=prefix.length()))
+      return mbt_trim(t[prefix.length():].to_owned())
     }
   }
   ""
 }
 
 ///|
-fn mbt_int(text : String) -> Int {
+fn mbt_int(text : String) -> Int32 {
   let t = mbt_trim(text)
   let mut sign = 1
   let mut i = 0
@@ -224,7 +224,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
       // 注释可跨行；`<!-- moonviz:...` 是引擎锚标记，不属宿主数据。
       let t = mbt_trim(lines[i])
       if mbt_has_prefix(t, "<!--") {
-        let raw = StringBuilder::new()
+        let raw = StringBuilder()
         raw.write_string(t)
         let mut close = t.find("-->") is Some(_)
         let mut j = i
@@ -244,7 +244,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
           while k < lines.length() && !(anchor is Some(_)) {
             let l = mbt_trim(lines[k])
             if mbt_has_prefix(l, "## ") {
-              anchor = Some(mbt_trim(l.substring(start=3)))
+              anchor = Some(mbt_trim(l[3:].to_owned()))
               break
             }
             k = k + 1
@@ -264,7 +264,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
     while j < lines.length() {
       let candidate = mbt_trim(lines[j])
       if mbt_fence_length(candidate) >= opening_length {
-        let rest = mbt_trim(candidate.substring(start=opening_length))
+        let rest = mbt_trim(candidate[opening_length:].to_owned())
         if rest == "" {
           close = j
           break
@@ -320,7 +320,7 @@ pub fn scan_mbt(text : String) -> Result[MbtDocument, String] {
 }
 
 ///|
-pub fn MbtDocument::visual_count(self : MbtDocument) -> Int {
+pub fn MbtDocument::visual_count(self : MbtDocument) -> Int32 {
   self.visual_blocks.length()
 }
 
@@ -362,7 +362,7 @@ pub(all) struct MbtProject {
 /// `,()` 不计数，`\x` 转义序列整体跳过。否则节点文本含单个不配对括号
 /// （decl_escape 转义为 `\(`）时会被误计数，多行语句归并提前断句或永不
 /// 归并，引擎导出的 canonical .mbt.md 自己都无法重载。
-fn mbt_paren_delta(line : String) -> Int {
+fn mbt_paren_delta(line : String) -> Int32 {
   let mut delta = 0
   let mut in_quotes = false
   let mut esc = false
@@ -397,7 +397,7 @@ fn mbt_visual_line(line : String) -> Bool {
 /// 不执行其它 MoonBit 语句。多行 page.add(...) 在抽取时规范为单行。
 fn mbt_visual_decl(block : MbtCodeBlock) -> Result[String, String] {
   let lines = mbt_lines(block.text)
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   let mut i = 0
   let mut found = 0
   while i < lines.length() {
@@ -417,7 +417,7 @@ fn mbt_visual_decl(block : MbtCodeBlock) -> Result[String, String] {
         "not_renderable_visual_logic_line:" + (block.start_line + i).to_string(),
       )
     }
-    let statement = StringBuilder::new()
+    let statement = StringBuilder()
     let mut balance = 0
     let mut started = false
     while i < lines.length() {
@@ -467,7 +467,7 @@ fn mbt_root_size(root : @core.Node) -> (Double, Double) {
 ///|
 /// frontmatter `tokens:` 段解析：`  <role>: "<value>"` 两空格缩进键值对。
 fn mbt_parse_token_overrides(front : String) -> Map[String, String] {
-  let out : Map[String, String] = Map::new()
+  let out : Map[String, String] = Map([])
   let lines = mbt_lines(front)
   let mut in_tokens = false
   for raw in lines.iter() {
@@ -486,13 +486,13 @@ fn mbt_parse_token_overrides(front : String) -> Map[String, String] {
     let colon = line.find(":")
     match colon {
       Some(idx) => {
-        let key = mbt_trim(line.substring(start=0, end=idx))
-        let mut value = mbt_trim(line.substring(start=idx + 1))
+        let key = mbt_trim(line[0:idx].to_owned())
+        let mut value = mbt_trim(line[idx + 1:].to_owned())
         if value.length() >= 2 {
-          let q = value.substring(start=0, end=1)
+          let q = value[0:1].to_owned()
           if (q == "\"" || q == "'") &&
-            value.substring(start=value.length() - 1) == q {
-            value = value.substring(start=1, end=value.length() - 1)
+            value[value.length() - 1:].to_owned() == q {
+            value = value[1:value.length() - 1].to_owned()
           }
         }
         if key != "" && value != "" && !key.contains(" ") {
@@ -513,6 +513,7 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
   let mut from = ""
   let mut to = ""
   let mut trigger = ""
+  let mut transition = ""
   for raw in lines.iter() {
     let line = mbt_trim(raw)
     if line == "flows:" {
@@ -532,15 +533,23 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
           } else {
             trigger
           },
+          transition: if transition == "" {
+            "push"
+          } else {
+            transition
+          },
         })
       }
-      from = mbt_trim(line.substring(start=7))
+      from = mbt_trim(line[7:].to_owned())
       to = ""
       trigger = ""
+      transition = ""
     } else if mbt_has_prefix(line, "to:") {
-      to = mbt_trim(line.substring(start=3))
+      to = mbt_trim(line[3:].to_owned())
     } else if mbt_has_prefix(line, "trigger:") {
-      trigger = mbt_trim(line.substring(start=8))
+      trigger = mbt_trim(line[8:].to_owned())
+    } else if mbt_has_prefix(line, "transition:") {
+      transition = mbt_trim(line[11:].to_owned())
     } else if line != "" &&
       !mbt_has_prefix(line, "-") &&
       !mbt_has_prefix(line, " ") {
@@ -556,6 +565,11 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
       } else {
         trigger
       },
+      transition: if transition == "" {
+        "push"
+      } else {
+        transition
+      },
     })
   }
   flows
@@ -565,13 +579,36 @@ fn mbt_parse_flows(front : String) -> Array[@core.FlowEdge] {
 pub fn mbt_validate_flows(project : @core.Project) -> Result[Unit, String] {
   for flow in project.flows.iter() {
     match (project.artboards.get(flow.from), project.artboards.get(flow.to)) {
-      (Some(from), Some(_)) =>
-        if mbt_has_prefix(flow.trigger, "tap:") {
-          let node_id = flow.trigger.substring(start=4)
-          if !from.doc.has(node_id) {
-            return Err("mbt_flow_unknown_node:" + flow.from + ":" + node_id)
-          }
+      (Some(from), Some(_)) => {
+        // 分板过渡：只认 Transition::name() 的七值（空 = 默认 push）
+        match @core.normalize_transition(flow.transition) {
+          Ok(_) => ()
+          Err(e) => return Err("mbt_flow_" + e)
         }
+        // trigger spec 走 core 的同一规范化：swipe_left / long_press:0.8 /
+        // focus[:node] / scroll_end / keyboard_enter 合法；未知触发 Err
+        let trigger = match @core.normalize_flow_trigger(flow.trigger) {
+          Ok(t) => t
+          Err(e) => return Err("mbt_flow_" + e)
+        }
+        // 节点级触发（tap:/focus:/blur:）必须指向存在的节点
+        let node = if trigger.has_prefix("tap:") {
+          Some(trigger[4:].to_owned())
+        } else if trigger.has_prefix("focus:") {
+          Some(trigger[6:].to_owned())
+        } else if trigger.has_prefix("blur:") {
+          Some(trigger[5:].to_owned())
+        } else {
+          None
+        }
+        match node {
+          Some(node_id) =>
+            if !from.doc.has(node_id) {
+              return Err("mbt_flow_unknown_node:" + flow.from + ":" + node_id)
+            }
+          None => ()
+        }
+      }
       _ => return Err("mbt_flow_unknown_artboard:" + flow.from + ":" + flow.to)
     }
   }
@@ -649,7 +686,8 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
         ""
       }
       // 空态不校验 entry（issue #27）；有视觉块的文档仍强校验漂移。
-      if document.visual_blocks.length() > 0 && !project.artboards.contains(entry) {
+      if document.visual_blocks.length() > 0 &&
+        !project.artboards.contains(entry) {
         return Err("mbt_unknown_entry:" + entry)
       }
       project.revision = document.revision
@@ -682,7 +720,7 @@ pub fn load_mbt_project(text : String) -> Result[MbtProject, String] {
 pub fn project_gate_check(
   p : @core.Project,
   gate : @core.Gate,
-) -> Result[Int, String] {
+) -> Result[Int32, String] {
   // issue #25-A3 / #26-A3：交互冲突硬门（仅 AgentGate）——同一节点多条
   // tap flow、可点热区相交（父子包含除外）→ 拒绝并给出定位。
   match gate {
@@ -727,7 +765,7 @@ pub fn project_gate_check(
 pub fn MbtProject::validate_for(
   self : MbtProject,
   gate : @core.Gate,
-) -> Result[Int, String] {
+) -> Result[Int32, String] {
   let mut debt_count = 0
   for artboard_id in self.project.artboards.keys() {
     match self.project.artboards.get(artboard_id) {
@@ -763,8 +801,8 @@ pub fn MbtProject::validate_for(
 /// 生成的文本重新加载，Project 不会成为独立的持久事实源。
 pub fn project_to_mbt(
   project : @core.Project,
-  title? : String = "MoonViz 文档",
-  entry? : String = "",
+  title~ : String = "MoonViz 文档",
+  entry~ : String = "",
 ) -> Result[MbtProject, String] {
   let ids : Array[String] = []
   for id in project.artboards.keys() {
@@ -823,7 +861,7 @@ fn mbt_function_name(id : String) -> String {
 /// 多画板被规范化为多个 `mbt` visual block；每个 block 都是有效 MoonBit
 /// 函数，避免多个画板在同一文学化源码文件中重复定义顶层 `page` 变量。
 pub fn MbtProject::to_mbt(self : MbtProject) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_string("---\n")
   out.write_string("moonbit:\n")
   out.write_string("  backend: native\n")
@@ -838,15 +876,26 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
   }
   match self.project.token_overrides {
     Some(ov) => {
-      // 与默认调色板同值的覆盖不序列化：set 回原值即撤销自定义，
-      // canonical 里不该留下 primary: "#4B6BFB" 这类恒真条目
+      // 与默认值相同的覆盖不序列化：set 回默认即撤销自定义，
+      // canonical 里不该留下 primary: "#4B6BFB" / motion.base: 240 这类
+      // 恒真条目。motion.* 是数字（ms），按 `motion.base: 320` 免引号写出，
+      // 与颜色角色的引号形态区分（解析端按前缀分流）。
+      let default_tokens = @core.DesignTokens::default()
       let entries : Array[(String, String)] = []
       for role in ov.keys() {
         match ov.get(role) {
           Some(v) => {
-            let is_default = match @core.DesignTokens::default().colors.get(role) {
-              Some(dv) => v == dv
-              None => false
+            let is_default = if role.has_prefix("motion.") {
+              let key = role[7:].to_owned()
+              match default_tokens.motion.get(key) {
+                Some(dv) => @core.parse_double(v) == dv
+                None => false
+              }
+            } else {
+              match default_tokens.colors.get(role) {
+                Some(dv) => v == dv
+                None => false
+              }
             }
             if !is_default {
               entries.push((role, v))
@@ -859,7 +908,11 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
         out.write_string("  tokens:\n")
         for entry in entries.iter() {
           let (role, v) = entry
-          out.write_string("    " + role + ": \"" + v + "\"\n")
+          if role.has_prefix("motion.") {
+            out.write_string("    " + role + ": " + v + "\n")
+          } else {
+            out.write_string("    " + role + ": \"" + v + "\"\n")
+          }
         }
       }
     }
@@ -891,6 +944,10 @@ pub fn MbtProject::to_mbt(self : MbtProject) -> String {
       out.write_string("    - from: " + flow.from + "\n")
       out.write_string("      to: " + flow.to + "\n")
       out.write_string("      trigger: " + flow.trigger + "\n")
+      // 默认 push 不写：旧文档字节稳定，只有显式分板过渡才落 frontmatter
+      if flow.transition != "push" {
+        out.write_string("      transition: " + flow.transition + "\n")
+      }
     }
   }
   // issue #20：frontmatter 未知键原样回写——宿主扩展通道（如
@@ -1002,7 +1059,7 @@ pub fn MbtProject::commit_and_render(
             "{\"ok\":true,\"debt\":" +
             debt.to_string() +
             "," +
-            rendered.substring(start=11),
+            rendered[11:].to_owned(),
           )
         }
       }
@@ -1010,12 +1067,12 @@ pub fn MbtProject::commit_and_render(
 }
 
 ///|
+
 ///|
 /// 单板渲染对象（issue #28 增量快照的复用单元）：{id,name,width,height,
 /// nodes,svg} 的 JSON 文本；板不存在或渲染失败返回 None。
 pub fn MbtProject::render_board_json(self : MbtProject, id : String) -> String? {
-  match
-    (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
+  match (self.project.artboards.get(id), self.project.export_svg(artboard=id)) {
     (Some(artboard), Ok(svg)) => {
       let nodes = match self.project.query_nodes(artboard=id) {
         Ok(json) => json
@@ -1050,7 +1107,7 @@ pub fn MbtProject::render_json(self : MbtProject) -> String {
       None => ()
     }
   }
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_string(
     "{\"ok\":true,\"entry\":\"" + @core.json_escape(self.entry) + "\",",
   )
@@ -1080,7 +1137,7 @@ pub fn MbtProject::render_json(self : MbtProject) -> String {
 
 ///|
 /// 行首空格数（frontmatter 缩进判定用；仅 ASCII 空格）。
-fn mbt_indent(s : String) -> Int {
+fn mbt_indent(s : String) -> Int32 {
   let mut i = 0
   for c in s.iter() {
     if c == ' ' {

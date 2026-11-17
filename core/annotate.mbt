@@ -60,7 +60,7 @@ pub fn Project::generate_spec(
     Some(ab) => {
       let layout = solve(ab.doc)
       let tokens = self.tokens
-      let sb = StringBuilder::new()
+      let sb = StringBuilder()
 
       // 头部
       sb.write_string("# Design Spec: \{ab.name}\n\n")
@@ -295,7 +295,7 @@ fn match_font_token(tokens : DesignTokens, size : Double) -> String {
 
 ///|
 fn jstr20(parts : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i in 0..<parts.length() {
     if i > 0 {
       sb.write_string(",")
