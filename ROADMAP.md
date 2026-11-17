@@ -1,6 +1,6 @@
 # MoonViz 发展路线图
 
-> 当前基线：**v0.1.11**（moonc ≥ 0.10.14 · tag engine-v0.1.11 已挂，GitHub Release / mooncakes 待发布） · `moon test` 全绿（默认目标 + native） · 组件目录 65×118 · 仓库 190+ commits
+> 当前基线：**v0.2.0**（moonc ≥ 0.10.14 · tag engine-v0.2.0 待打，GitHub Release / mooncakes 待发布） · `moon test` 全绿（默认目标 + native） · 组件目录 65×118 · 仓库 200+ commits
 
 ## 0.1.9 · 组件规范（norms）——弱模型的"能用但不精致"三类根因
 
@@ -124,7 +124,7 @@ Status Dot / Hover Lift……90+ 词汇）。dev 线的深化目标与之对齐�
 | 维度 | 现状 |
 |---|---|
 | 引擎内核 | 100% MoonBit，52 个核心模块、300+ 公开函数；不崩谓词 5 项 + 双门禁 |
-| 工具面 | CLI 63 命令（cli_help 文档化口径）· MCP 58 工具（含 inputSchema 字典）· WASM 双产物 77/77 导出· Node SDK |
+| 工具面 | CLI 68 命令（cli_help 文档化口径，含 generate-doc/spec-extract/comply 强制规范流程）· MCP 58 工具（含 inputSchema 字典）· WASM 双产物 77/77 导出· Node SDK |
 | 组件与模板 | 65 组件 × 118 变体 · 17 个整页模板（移动 + Web/桌面） |
 | 分发 | npm 7 包 + GitHub Releases 全产物 10 项（4 平台 tarball + 双 wasm + npm 全家族） |
 | 人类体验 | Playground 设计工作台（设计/预览双模式）+ deepDesign Studio 画布 |
