@@ -127,7 +127,10 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <table>
 <tr><th>命令</th><th>说明</th></tr>
 <tr><td><code>template &lt;tplId&gt; &lt;name&gt; &lt;w&gt; &lt;h&gt;</code></td><td>从内置模板实例化画板（登录页、仪表盘、Web 落地页、桌面应用等 17 个完整页面模板）</td></tr>
-<tr><td><code>generate &lt;意图一句话&gt; [spec=&lt;b64&gt;] [as &lt;name&gt;]</code></td><td><b>生成式入口（第一优先，spec 必带）</b>：一句话 → 完整画板 + 报告（autofix/missing/score/候选）；<code>spec</code> = design spec JSON 的 base64（调色板/字号阶/圆角档/rules，issue #24）——缺 spec 回 <code>design_spec_required</code> + 可编辑草案，落盘后带 spec 重试；组合意图 <code>登录+注册</code>（+ 连接 ≤4 段）展开多画板 + 相邻自动导航流，纯主题段（dark）全局生效不生成板。<b>0.1.11 起 generate 必带 design spec</b>（调色板/字号阶/圆角档/rules，issue #24）：缺省回 <code>design_spec_required</code> + 可编辑草案，落盘后带 spec 重试；norms 档位按 spec 裁决，白名单/禁用偏差随信封 <code>spec_violations</code> 上报，空壳/占位进 <code>mock_missing</code> 由 Agent 填充语义样例</td></tr>
+<tr><td><code>generate &lt;意图一句话&gt; [spec=&lt;b64&gt;] [as &lt;name&gt;]</code></td><td><b>生成式入口（第一优先，spec 必带）</b>：一句话 → 完整画板 + 报告（autofix/missing/score/候选）；<code>spec</code> = design spec JSON 的 base64（调色板/字号阶/圆角档/rules，issue #24）——缺 spec 回 <code>design_spec_required</code> + 可编辑草案，落盘后带 spec 重试；组合意图 <code>登录+注册</code>（+ 连接 ≤4 段）展开多画板 + 相邻自动导航流，纯主题段（dark）全局生效不生成板。<b>0.2 起 spec 可由引擎从设计文档确定性提取</b>——走 <code>generate-doc</code> 强制规范流程（见下行），UI 的设计与交互完全遵守设计规范；norms 档位按 spec 裁决，白名单/禁用偏差随信封 <code>spec_violations</code> 上报，空壳/占位进 <code>mock_missing</code> 由 Agent 填充语义样例</td></tr>
+<tr><td><code>generate-doc &lt;意图一句话&gt; doc=&lt;b64(设计文档)&gt; [as &lt;name&gt;]</code></td><td><b>强制规范流程（0.2）</b>：引擎从设计文档<b>确定性提取</b> design spec（配色/字号/圆角/间距/动效/触控六章节），缺关键项返回 <code>design_doc_spec_gaps</code> <b>拒绝生成</b>（不静默回退内置规范），成功信封带 <code>spec_source:"design_doc"</code>——需求 → 文档 → spec → UI 全链有据可查</td></tr>
+<tr><td><code>spec-extract doc=&lt;b64(设计文档)&gt;</code></td><td>预览设计规范提取：返回从设计文档解析出的 spec JSON（palette/typography/radius/motion/touch），缺口随信封上报——先看提取结果再决定是否 generate-doc</td></tr>
+<tr><td><code>comply &lt;ab&gt;</code></td><td><b>design_compliance 四项机械校验</b>（0.2）：color / type / radius / motion——生成 UI 的配色、字号、圆角、交互节拍必须<b>完全遵守</b>所在会话的 design spec（交互节拍 = spec.motion 令牌），偏差逐项上报</td></tr>
 <tr><td><code>autofill &lt;artboard&gt;</code></td><td>一键补缺：物化 infer_missing 报告为真实节点（幂等），auto_fix 清偿布局</td></tr>
 <tr><td><code>ops-batch-b64 &lt;b64&gt;</code></td><td>多条 op 一次提交（换行分隔 base64，≤64；遇错即停回传断点索引）</td></tr>
 <tr><td><code>create &lt;name&gt; &lt;w&gt; &lt;h&gt;</code></td><td>新建空白画板</td></tr>
@@ -140,7 +143,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>flip &lt;artboard&gt; &lt;node&gt; h|v|both|none</code></td><td>翻转</td></tr>
 <tr><td><code>reorder &lt;artboard&gt; &lt;node&gt; front|back|up|down</code></td><td>Z 序调整</td></tr>
 <tr><td><code>group</code> / <code>ungroup</code> / <code>align</code></td><td>编组 / 解组 / 对齐</td></tr>
-<tr><td><code>flow &lt;from&gt; &lt;to&gt; &lt;triggerNode&gt;</code></td><td>建立交互流（tap 触发跳转）</td></tr>
+<tr><td><code>flow &lt;from&gt; &lt;to&gt; &lt;trigger|node&gt; [transition]</code></td><td>建立交互流。触发词表（0.2）：裸节点 id = <code>tap:&lt;node&gt;</code>；<code>swipe_left</code> / <code>long_press[:秒]</code> / <code>focus[:node]</code> / <code>scroll_end</code> / <code>keyboard_enter</code>；<code>transition</code> 分板过渡 7 型（push/modal/fade…，缺省 push）随 <code>FlowEdge.transition</code> 进导出</td></tr>
 <tr><td><code>resize-canvas</code> / <code>restyle</code> / <code>theme</code></td><td>画布尺寸 / 重排版式 / 主题</td></tr>
 <tr><td><code>collab-merge</code></td><td>多 Agent 三方合并（OT 冲突检测，规格：<code>&lt;base_rev&gt; &lt;agent&gt;=&lt;op&gt;[+op...]</code>）</td></tr>
 <tr><td><code>history</code></td><td>设计版本控制：init / commit / log / undo / redo / checkout / diff</td></tr>
@@ -149,7 +152,7 @@ validate-mbt-b64 &lt;base64(mbt)&gt;
 <tr><td><code>export-mbt-human</code></td><td><b>HumanGate</b> 导出 canonical <code>.mbt.md</code>（结构违规硬阻断）</td></tr>
 <tr><td><code>export-mbt-agent</code></td><td><b>AgentGate</b> 导出（语义级校验）</td></tr>
 <tr><td><code>export-svg</code> / <code>export-artifact</code> / <code>export-decl</code></td><td>导出 SVG / 工件 / 声明物料</td></tr>
-<tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（65 组件 × 118 变体）/ 主题 / 设计 token</td></tr>
+<tr><td><code>list-templates</code> / <code>list-components</code> / <code>list-themes</code> / <code>list-tokens</code></td><td>枚举模板 / 组件（65 组件 × 118 变体）/ 主题（13 套预设：apple/apple_dark/harmony/harmony_dark 为官方色板的 WCAG 校准翻译，vivid/editorial/playful 三套风格画像，经典 6 套同权）/ 设计 token</td></tr>
 <tr><td><code>constrain &lt;ab&gt; &lt;intent&gt;</code></td><td>布局意图：居中|垂直居中|垂直排列|水平排列|等宽|等高|等间距|网格 N|顶部|底部|放大 N|缩小 N|边距 N|间距 N（层级/z-order 走 reorder；全包含背景直通）</td></tr>
 <tr><td><code>lint</code> / <code>critique</code> / <code>infer</code></td><td>设计 Lint / AI 设计批评 / 布局推理</td></tr>
 <tr><td><code>export-design-system &lt;ab&gt;</code></td><td>设计系统导出：tokens JSON + CSS 自定义属性（交付物形态）</td></tr>
@@ -449,6 +452,10 @@ echo '{"operation":"decrypt","ddp_b64":"…","password":"p@ss"}' | ddp_codec
 </table>
 <h2>规范先行 + 原子快照（0.1.11 起）</h2>
 <p><b>design spec 驱动生成</b>：generate 必带 design spec（JSON：palette / typography / radius / rules）。spec 在场 = 第一权威——调色板 → token 覆盖 + 全板重着色；字号阶与圆角档按默认阶→spec 阶重映射；norms 档位（按钮圆角基准/对比度/触控阈值）按 spec 裁决，内置默认仅补 spec 未覆盖的项。spec 缺失 → <code>design_spec_required</code> + 可编辑草案（按 intent 推荐强调色），落盘后重试。</p>
+<h2>强制规范流程（0.2 起）</h2>
+<p><b>spec 从「建议」升级为「流程」</b>：<code>generate-doc</code> 由引擎从设计文档<b>确定性提取</b> spec——解析设计文档的配色/字号/圆角/间距/动效/触控六章节，行内关键词归类，缺关键项返回 <code>design_doc_spec_gaps</code> <b>拒绝生成</b>（不静默回退内置规范），成功信封带 <code>spec_source:"design_doc"</code>。<code>spec-extract</code> 预览提取结果；<code>comply</code>（<code>design_compliance</code>）对生成 UI 做四项机械校验（color/type/radius/motion）——交互节拍必须等于 spec.motion 令牌。<b>需求 → 设计文档 → spec → UI 与交互完全遵守</b>，全链有据可查。</p>
+<p><b>视觉语言一等预设（0.2）</b>：13 套主题预设——apple / apple_dark / harmony / harmony_dark 为官方色板的 WCAG 校准翻译（逐档对比度断言入测，不照抄官方原值），vivid / editorial / playful 三套风格画像同权；三通道等价：意图美学词 / spec <code>style</code> 键 / <code>theme</code> 命令；容器色角色（info/三容器）进全预设，inverse chrome（深色侧栏）从 spec 色相派生；导出 HTML 的 chrome 全部由主题令牌派生，不硬编码颜色。</p>
+<p><b>动画与手势（0.2）</b>：动效单一来源——<code>motion</code> 令牌进 spec/theme（fast/base/slow/tick/stagger/stagger_max），导出不再手写时长/贝塞尔；<code>Spring(k)</code> 过冲随刚度调制（k=1 兼容旧导出）；分板过渡 7 型由 <code>FlowEdge.transition</code> 声明；手势链（long_press 带时长 / swipe / focus / blur / scroll_end / keyboard_enter）与 tap 同链派发标记与 flow，wasm 宿主经 <code>session_event</code>（classic <code>session_event_in</code>）送事件；入场级联并发上限 ≤9/板（第 10 个起 <code>animation:none</code>）——动效密度可控，帧预算有界。</p>
 <p><b>交互与内容 QA（critique norms 维度）</b>：可交互组件（button/chip/fab/tab_bar/list_item）必须有去向（flow/标记/返回兜底）；占位符残留（TBD/TODO/Lorem/xxx/Item 1/项目一/占位）与空壳 list/table/card 进 <code>mock_missing</code> 缺口报告——<b>引擎只检测不造内容</b>，真实样例由 Agent 填充；非组件库组件一并报告。同节点多 flow 与可点热区相交是 AgentGate 硬错误（带板/节点定位）。</p>
 <p><b>可读性硬标准</b>：正文对比度 ≥4.5（≥24px 大字号 ≥3.0）；纯黑/近黑灰背景禁令；不可见叶子检测；选中态必须设置视觉字段；纯黑选中色禁令。</p>
 <p><b>原子快照（wasm <code>session_snapshot</code>）</b>：单调用返回 <code>{revision, seq, canonical, render, animations, delta}</code>——seq 随改文档路径严格递增（三视图按 seq 配对同帧），delta 按板 content_seq 增量（未变板零成本），渲染对象按板缓存复用；<code>animations</code> 随帧携带 motion 令牌与预设。</p>
