@@ -153,6 +153,16 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink3);font-si
     <div class="card"><h3>📐 横平竖直</h3><p>rotate 非 90° 倍数归零——圆角档与对齐网格共同构成几何标准。</p></div>
     <div class="card"><h3>🛡 规范闭环</h3><p>critique 偏差计分并自带建议尺寸；auto_fix 一键规范预修（不动 fill/hug 策略）；list_components 每条目携带 norm 字段——指导与规范，不做硬门。</p></div>
   </div>
+  <h2 class="sec">0.2.0 新能力：设计规范第一权威 + 强制规范流程</h2>
+  <p class="lead">设计规范从「建议」升级为「流程」——引擎从设计文档确定性提取 spec，缺关键项拒绝生成；UI 的设计与交互完全遵守设计规范；Apple HIG / 鸿蒙官方美学为 WCAG 校准一等预设；完整的动画系统与手势交互。</p>
+  <div class="grid c3">
+    <div class="card"><h3>⛓ 强制规范流程</h3><p><code>generate-doc</code> 从设计文档确定性提取 spec（配色/字号/圆角/间距/动效/触控六章节），缺关键项回 <code>design_doc_spec_gaps</code> 拒绝生成；<code>comply</code> 四项机械校验（color/type/radius/motion）——交互节拍必须等于 spec.motion 令牌。</p></div>
+    <div class="card"><h3>🎨 视觉语言 13 预设</h3><p>apple / apple_dark / harmony / harmony_dark 为官方色板的 WCAG 校准翻译（逐档对比度断言入测）；vivid / editorial / playful 风格画像同权；inverse chrome 从 spec 色相派生，导出 chrome 全由主题令牌派生。</p></div>
+    <div class="card"><h3>✨ 动画系统</h3><p>动效单一来源：<code>motion</code> 令牌进 spec/theme，导出不再手写时长/贝塞尔；<code>Spring(k)</code> 过冲随刚度调制；分板过渡 7 型由 <code>FlowEdge.transition</code> 声明；入场级联并发上限 ≤9/板——帧预算有界。</p></div>
+    <div class="card"><h3>👆 手势交互</h3><p>long_press（带时长）/ swipe / focus / blur / scroll_end / keyboard_enter 与 tap 同链派发标记与 flow；Action 词表闭环（SubmitForm 可往返、可导出执行）；wasm 经 <code>session_event</code> 送事件。</p></div>
+    <div class="card"><h3>🫁 呼吸感系统化</h3><p>17 模板 × 5 面板全域审计 + 6 轮修复包：8pt 栅格 / 内容线 / 行尾控件 / 底部动作栏 / 两级字阶 / 分组留白；组件 elevation 三档、按钮文字居中。</p></div>
+    <div class="card"><h3>🆚 Playground 双规范对比</h3><p>五套需求 spec 预设 + 同意图双规范并排对比（独立会话）——同一句话，两套设计规范，两份真实 UI，规范第一权威直观可见。</p></div>
+  </div>
   <h2 class="sec">0.1.11 新能力：规范先行 + 交互 QA</h2>
   <p class="lead">生成必须携带 design spec（调色板/字号阶/圆角档/rules）——spec 是第一权威，norms 档位按 spec 裁决；可交互组件必须有去向，占位与空壳进 <code>mock_missing</code> 缺口报告由 Agent 填充；<code>session_snapshot</code> 原子快照让三视图与动画同帧。</p>
   <h2 class="sec">内置返回导航 + 交互校验</h2>
@@ -225,7 +235,7 @@ echo '{"operation":"encrypt","mbt_b64":"…","password":""}' | ddp/target/releas
   <div class="grid c3">
     <div class="card"><h3>P0 · 能力平权</h3><p>搁浅模块出井：collab 多 Agent 协作、history 版本控制、animation 动画、protest 原型测试——core 已实现的能力补齐 CLI/MCP/WASM 边界。classic wasm 写路径（Rust 宿主双向调用）。</p></div>
     <div class="card"><h3>P1 · 体验深化</h3><p>deepDesign Studio 全面接入新引擎（撤销/组件库/交互面板）；Playground 补动画系统、用户组件编译、原型测试面板；ddpView 只读加密文档查看器。</p></div>
-    <div class="card"><h3>P2 · 生态扩展</h3><p>npm 0.2.0 发版（session API 全量）；在线 API 参考与示例库；collab 落地双 Agent 同源协作；性能基线进 CI。</p></div>
+    <div class="card"><h3>P2 · 生态扩展</h3><p>npm 镜像包随 Release 归档（0.2.0 起，registry 暂不入驻）；在线 API 参考与示例库；collab 落地双 Agent 同源协作；性能基线进 CI。</p></div>
   </div>
 </div></section>
 
